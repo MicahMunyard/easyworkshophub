@@ -52,7 +52,12 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans dark;
+    @apply bg-background text-foreground font-sans;
+  }
+
+  /* Apply dark mode directly to html */
+  html {
+    @apply dark;
   }
 
   /* Smooth transitions for theme changes */
