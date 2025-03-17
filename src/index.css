@@ -55,9 +55,14 @@
     @apply bg-background text-foreground font-sans;
   }
 
-  /* Apply dark mode directly to html */
+  /* Apply dark mode with class selector instead of @apply */
+  html.dark {
+    color-scheme: dark;
+  }
+
+  /* Force dark mode for the entire application */
   html {
-    @apply dark;
+    class: 'dark';
   }
 
   /* Smooth transitions for theme changes */

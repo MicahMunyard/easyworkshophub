@@ -39,6 +39,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     }
   }, [location.pathname, isMobile]);
 
+  // Apply dark mode class to HTML element
+  useEffect(() => {
+    document.documentElement.classList.add('dark');
+  }, []);
+
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
       <Navbar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
