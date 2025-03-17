@@ -41,22 +41,29 @@ const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
       {/* Overlay for mobile */}
       {open && (
         <div
-          className="fixed inset-0 z-20 bg-black/50 lg:hidden"
+          className="fixed inset-0 z-20 bg-black/70 lg:hidden"
           onClick={() => setOpen(false)}
         />
       )}
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 z-20 h-full w-64 transform overflow-y-auto border-r bg-background pt-16 transition-transform duration-300 ease-in-out lg:static lg:z-0 lg:pt-0 ${
+        className={`fixed top-0 left-0 z-20 h-full w-64 transform overflow-y-auto border-r border-sidebar-border bg-sidebar pt-16 transition-transform duration-300 ease-in-out lg:static lg:z-0 lg:pt-0 ${
           open ? "translate-x-0" : "-translate-x-full lg:translate-x-0 lg:w-0"
         }`}
       >
         <div className="px-3 py-4 h-full flex flex-col">
           <div className="mb-8 px-3">
-            <p className="text-xs uppercase font-medium text-muted-foreground tracking-wider">
-              TOLICCS Workshop Management
-            </p>
+            <div className="flex items-center gap-2">
+              <img 
+                src="/lovable-uploads/81d792e6-3434-4c42-a968-ea14a4bfa07b.png" 
+                alt="TOLICCS Logo" 
+                className="h-8 w-auto lg:hidden"
+              />
+              <p className="text-xs uppercase font-medium text-muted-foreground tracking-wider">
+                Workshop Management
+              </p>
+            </div>
           </div>
 
           <nav className="space-y-1 flex-1">
@@ -75,7 +82,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
             ))}
           </nav>
 
-          <div className="border-t pt-4 mt-4">
+          <div className="border-t border-sidebar-border pt-4 mt-4">
             <NavLink
               to="/settings"
               className={({ isActive }) => 

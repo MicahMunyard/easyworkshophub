@@ -34,11 +34,12 @@ const Navbar: React.FC<NavbarProps> = ({ sidebarOpen, setSidebarOpen }) => {
               <Menu className="h-5 w-5 text-muted-foreground" />
             )}
           </Button>
-          <div className="hidden md:flex items-center gap-1.5">
-            <span className="font-semibold text-xl tracking-tight text-workshop-blue">
-              TOLICCS
-            </span>
-            <span className="text-sm text-muted-foreground">Workshop</span>
+          <div className="hidden md:flex items-center gap-3">
+            <img 
+              src="/lovable-uploads/81d792e6-3434-4c42-a968-ea14a4bfa07b.png" 
+              alt="TOLICCS Logo" 
+              className="h-10 w-auto"
+            />
           </div>
         </div>
 
@@ -69,7 +70,7 @@ const Navbar: React.FC<NavbarProps> = ({ sidebarOpen, setSidebarOpen }) => {
                 aria-label="User menu"
               >
                 <span className="sr-only">User menu</span>
-                <div className="flex h-full w-full items-center justify-center bg-workshop-blue text-primary-foreground">
+                <div className="flex h-full w-full items-center justify-center bg-workshop-red text-primary-foreground">
                   <span className="text-xs font-medium">JD</span>
                 </div>
               </Button>
