@@ -5,83 +5,83 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 11%;
+    --background: 0 0% 97%;
+    --foreground: 0 0% 9%;
 
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 11%;
+    --card-foreground: 0 0% 9%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 11%;
+    --popover-foreground: 0 0% 9%;
 
-    --primary: 210 100% 52%;
+    --primary: 0 80% 50%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 210 10% 97%;
-    --secondary-foreground: 0 0% 11%;
+    --secondary-foreground: 0 0% 9%;
 
     --muted: 0 0% 96%;
     --muted-foreground: 0 0% 46%;
 
     --accent: 210 10% 95%;
-    --accent-foreground: 0 0% 11%;
+    --accent-foreground: 0 0% 9%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
     --border: 0 0% 90%;
     --input: 0 0% 90%;
-    --ring: 210 100% 52%;
+    --ring: 0 80% 50%;
 
-    --radius: 0.5rem;
+    --radius: 0.25rem;
 
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 0 0% 30%;
-    --sidebar-primary: 210 100% 52%;
+    --sidebar-background: 0 0% 12%;
+    --sidebar-foreground: 0 0% 90%;
+    --sidebar-primary: 0 80% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 95%;
-    --sidebar-accent-foreground: 0 0% 11%;
-    --sidebar-border: 0 0% 90%;
-    --sidebar-ring: 210 100% 52%;
+    --sidebar-accent: 0 0% 18%;
+    --sidebar-accent-foreground: 0 0% 90%;
+    --sidebar-border: 0 0% 20%;
+    --sidebar-ring: 0 80% 50%;
   }
 
   .dark {
-    --background: 0 0% 11%;
+    --background: 0 0% 9%;
     --foreground: 0 0% 98%;
 
-    --card: 0 0% 13%;
+    --card: 0 0% 12%;
     --card-foreground: 0 0% 98%;
 
-    --popover: 0 0% 13%;
+    --popover: 0 0% 12%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: 210 100% 52%;
+    --primary: 0 80% 50%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 17%;
+    --secondary: 0 0% 16%;
     --secondary-foreground: 0 0% 98%;
 
-    --muted: 0 0% 17%;
+    --muted: 0 0% 16%;
     --muted-foreground: 0 0% 65%;
 
-    --accent: 0 0% 17%;
+    --accent: 0 0% 16%;
     --accent-foreground: 0 0% 98%;
 
     --destructive: 0 62% 30%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 0 0% 17%;
-    --input: 0 0% 17%;
-    --ring: 210 100% 52%;
+    --border: 0 0% 16%;
+    --input: 0 0% 16%;
+    --ring: 0 80% 50%;
 
-    --sidebar-background: 0 0% 13%;
-    --sidebar-foreground: 0 0% 85%;
-    --sidebar-primary: 210 100% 52%;
+    --sidebar-background: 0 0% 8%;
+    --sidebar-foreground: 0 0% 90%;
+    --sidebar-primary: 0 80% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 17%;
-    --sidebar-accent-foreground: 0 0% 85%;
+    --sidebar-accent: 0 0% 14%;
+    --sidebar-accent-foreground: 0 0% 90%;
     --sidebar-border: 0 0% 20%;
-    --sidebar-ring: 210 100% 52%;
+    --sidebar-ring: 0 80% 50%;
   }
 }
 
@@ -101,8 +101,8 @@
 
   /* Custom scrollbar */
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 5px;
+    height: 5px;
   }
   
   ::-webkit-scrollbar-track {
@@ -110,12 +110,11 @@
   }
   
   ::-webkit-scrollbar-thumb {
-    background: hsl(var(--muted-foreground) / 0.3);
-    border-radius: 4px;
+    @apply bg-workshop-red/30 rounded;
   }
   
   ::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--muted-foreground) / 0.5);
+    @apply bg-workshop-red/50;
   }
 }
 
@@ -125,10 +124,18 @@
   }
   
   .nav-item {
-    @apply flex items-center gap-2 px-3 py-2 rounded-md text-muted-foreground transition-all duration-200 hover:text-foreground hover:bg-secondary;
+    @apply flex items-center gap-2 px-3 py-2 rounded-md text-sidebar-foreground transition-all duration-200 hover:text-white hover:bg-sidebar-accent border-l-2 border-transparent hover:border-workshop-red;
   }
   
   .nav-item.active {
-    @apply bg-secondary text-foreground;
+    @apply bg-sidebar-accent text-white border-l-2 border-workshop-red;
+  }
+
+  .performance-card {
+    @apply border-0 bg-gradient-to-br from-card to-secondary/80 shadow-md hover:shadow-lg transition-all duration-300;
+  }
+
+  .carbon-texture {
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23222222' fill-opacity='0.12'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
   }
 }
