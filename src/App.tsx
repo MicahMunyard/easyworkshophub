@@ -10,6 +10,11 @@ import BookingDiary from "./pages/BookingDiary";
 import Jobs from "./pages/Jobs";
 import Inventory from "./pages/Inventory";
 import Customers from "./pages/Customers";
+import Invoices from "./pages/Invoices";
+import PointOfSale from "./pages/PointOfSale";
+import Suppliers from "./pages/Suppliers";
+import Reports from "./pages/Reports";
+import Marketing from "./pages/Marketing";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -58,6 +63,46 @@ const App = () => (
             element={
               <Layout>
                 <Customers />
+              </Layout>
+            } 
+          />
+          <Route 
+            path="/invoices" 
+            element={
+              <Layout>
+                <Invoices />
+              </Layout>
+            } 
+          />
+          <Route 
+            path="/pos" 
+            element={
+              <Layout>
+                <PointOfSale />
+              </Layout>
+            } 
+          />
+          <Route 
+            path="/suppliers" 
+            element={
+              <Layout>
+                <Suppliers />
+              </Layout>
+            } 
+          />
+          <Route 
+            path="/reports" 
+            element={
+              <Layout>
+                <Reports />
+              </Layout>
+            } 
+          />
+          <Route 
+            path="/marketing" 
+            element={
+              <Layout>
+                <Marketing />
               </Layout>
             } 
           />

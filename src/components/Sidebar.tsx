@@ -14,6 +14,7 @@ import {
   Truck,
   HelpCircle,
   ChevronRight,
+  Megaphone
 } from "lucide-react";
 
 interface SidebarProps {
@@ -31,6 +32,7 @@ const navItems = [
   { name: "Point of Sale", icon: ShoppingCart, path: "/pos" },
   { name: "Suppliers", icon: Truck, path: "/suppliers" },
   { name: "Reports", icon: BarChart3, path: "/reports" },
+  { name: "Marketing", icon: Megaphone, path: "/marketing" },
 ];
 
 const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
