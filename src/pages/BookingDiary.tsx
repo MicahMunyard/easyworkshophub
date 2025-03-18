@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   Calendar as CalendarIcon,
@@ -341,7 +340,7 @@ const BookingDiary = () => {
                     <ChevronRight className="h-4 w-4" />
                   </Button>
                 </div>
-                <Tabs defaultValue="day" value={view} onValueChange={setView as any}>
+                <Tabs defaultValue="day" value={view} onValueChange={setView}>
                   <TabsList>
                     <TabsTrigger value="day">Day</TabsTrigger>
                     <TabsTrigger value="week">Week</TabsTrigger>
@@ -352,15 +351,17 @@ const BookingDiary = () => {
             </CardHeader>
             <CardContent className="p-0 pt-4 overflow-auto">
               <div className="min-w-[600px]">
-                <TabsContent value="day" className="m-0">
-                  {renderDayView()}
-                </TabsContent>
-                <TabsContent value="week" className="m-0">
-                  {renderWeekView()}
-                </TabsContent>
-                <TabsContent value="month" className="m-0">
-                  {renderMonthView()}
-                </TabsContent>
+                <Tabs value={view}>
+                  <TabsContent value="day" className="m-0">
+                    {renderDayView()}
+                  </TabsContent>
+                  <TabsContent value="week" className="m-0">
+                    {renderWeekView()}
+                  </TabsContent>
+                  <TabsContent value="month" className="m-0">
+                    {renderMonthView()}
+                  </TabsContent>
+                </Tabs>
               </div>
             </CardContent>
           </Card>
