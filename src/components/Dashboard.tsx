@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { useNavigate } from "react-router-dom";
 
 const StatsCard = ({ title, value, icon: Icon, trend, description }: { 
   title: string; 
@@ -54,6 +55,8 @@ const StatsCard = ({ title, value, icon: Icon, trend, description }: {
 );
 
 const Dashboard: React.FC = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -70,7 +73,10 @@ const Dashboard: React.FC = () => {
           <Button variant="outline" className="h-9">
             <Clock className="h-4 w-4 mr-2" /> Last 30 days
           </Button>
-          <Button className="h-9 bg-workshop-red hover:bg-workshop-red/90">
+          <Button 
+            className="h-9 bg-workshop-red hover:bg-workshop-red/90"
+            onClick={() => navigate("/reports")}
+          >
             <TrendingUp className="h-4 w-4 mr-2" /> View Reports
           </Button>
         </div>
@@ -111,7 +117,12 @@ const Dashboard: React.FC = () => {
                 <Calendar className="mr-2 h-5 w-5 text-workshop-red" />
                 Upcoming Appointments
               </CardTitle>
-              <Button variant="ghost" size="sm" className="text-sm gap-1 hover:text-workshop-red">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-sm gap-1 hover:text-workshop-red"
+                onClick={() => navigate("/booking-diary")}
+              >
                 View All <ArrowUpRight className="h-3 w-3" />
               </Button>
             </div>
@@ -252,7 +263,11 @@ const Dashboard: React.FC = () => {
               ))}
             </div>
             <div className="p-4 pt-2">
-              <Button variant="outline" className="w-full hover:bg-workshop-red hover:text-white">
+              <Button 
+                variant="outline" 
+                className="w-full hover:bg-workshop-red hover:text-white"
+                onClick={() => navigate("/suppliers")}
+              >
                 Order Supplies
               </Button>
             </div>

@@ -1,5 +1,4 @@
-
-import React from "react";
+import React, { useState } from "react";
 import { 
   Search, 
   Filter, 
@@ -9,7 +8,13 @@ import {
   Clock, 
   AlertCircle,
   MoreHorizontal,
-  ArrowUpDown
+  ArrowUpDown,
+  X,
+  Eye,
+  Edit2,
+  UserPlus,
+  FileText,
+  XCircle
 } from "lucide-react";
 import { 
   Card, 
@@ -29,7 +34,23 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import { JobType } from "@/types/job";
+import { useToast } from "@/hooks/use-toast";
+import NewJobModal from "@/components/NewJobModal";
+import JobDetailsModal from "@/components/JobDetailsModal";
+import EditJobModal from "@/components/EditJobModal";
+import ReassignJobModal from "@/components/ReassignJobModal";
 
 const jobStatuses = {
   pending: { label: "Pending", icon: Clock, color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" },
@@ -37,7 +58,7 @@ const jobStatuses = {
   completed: { label: "Completed", icon: CheckCircle2, color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" }
 };
 
-const dummyJobs = [
+const dummyJobs: JobType[] = [
   {
     id: "JOB-1234",
     customer: "John Smith",
@@ -96,6 +117,105 @@ const dummyJobs = [
 ];
 
 const Jobs = () => {
+  const [jobs, setJobs] = useState<JobType[]>(dummyJobs);
+  const [selectedJob, setSelectedJob] = useState<JobType | null>(null);
+  const [isNewJobModalOpen, setIsNewJobModalOpen] = useState(false);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isReassignModalOpen, setIsReassignModalOpen] = useState(false);
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("all");
+  const { toast } = useToast();
+
+  const handleAddNewJob = (newJob: JobType) => {
+    setJobs([...jobs, newJob]);
+    setIsNewJobModalOpen(false);
+    
+    toast({
+      title: "Job Created",
+      description: `Job ${newJob.id} has been created successfully.`
+    });
+  };
+
+  const handleViewDetails = (job: JobType) => {
+    setSelectedJob(job);
+    setIsDetailsModalOpen(true);
+  };
+
+  const handleEditJob = (job: JobType) => {
+    setSelectedJob(job);
+    setIsDetailsModalOpen(false);
+    setIsEditModalOpen(true);
+  };
+
+  const handleUpdateJob = (updatedJob: JobType) => {
+    const updatedJobs = jobs.map(job => 
+      job.id === updatedJob.id ? updatedJob : job
+    );
+    setJobs(updatedJobs);
+    setIsEditModalOpen(false);
+    
+    toast({
+      title: "Job Updated",
+      description: `Job ${updatedJob.id} has been updated successfully.`
+    });
+  };
+
+  const handleReassignJob = (job: JobType) => {
+    setSelectedJob(job);
+    setIsReassignModalOpen(true);
+  };
+
+  const handleReassignConfirm = (job: JobType, newTechnician: string) => {
+    const updatedJob = { ...job, assignedTo: newTechnician };
+    const updatedJobs = jobs.map(j => 
+      j.id === job.id ? updatedJob : j
+    );
+    setJobs(updatedJobs);
+    setIsReassignModalOpen(false);
+    
+    toast({
+      title: "Job Reassigned",
+      description: `Job ${job.id} has been reassigned to ${newTechnician}.`
+    });
+  };
+
+  const handleCancelJobClick = (job: JobType) => {
+    setSelectedJob(job);
+    setIsCancelDialogOpen(true);
+  };
+
+  const handleCancelJobConfirm = () => {
+    if (selectedJob) {
+      const updatedJobs = jobs.filter(job => job.id !== selectedJob.id);
+      setJobs(updatedJobs);
+      setIsCancelDialogOpen(false);
+      
+      toast({
+        title: "Job Cancelled",
+        description: `Job ${selectedJob.id} has been cancelled.`,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const filteredJobs = jobs.filter(job => {
+    const matchesSearch = 
+      job.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      job.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      job.vehicle.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      job.service.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      job.assignedTo.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    if (activeTab === "all") return matchesSearch;
+    if (activeTab === "active") return matchesSearch && (job.status === "pending" || job.status === "inProgress");
+    if (activeTab === "completed") return matchesSearch && job.status === "completed";
+    
+    return matchesSearch;
+  });
+
   return (
     <div className="space-y-6 animate-fadeIn">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -106,21 +226,58 @@ const Jobs = () => {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="h-9">
+          <Button 
+            variant="outline" 
+            className="h-9"
+            onClick={() => setIsFilterOpen(!isFilterOpen)}
+          >
             <Filter className="h-4 w-4 mr-2" /> Filter
           </Button>
-          <Button className="h-9">
+          <Button 
+            className="h-9"
+            onClick={() => setIsNewJobModalOpen(true)}
+          >
             <Plus className="h-4 w-4 mr-2" /> New Job
           </Button>
         </div>
       </div>
+
+      {isFilterOpen && (
+        <div className="bg-muted/30 p-4 rounded-md border animate-fadeIn">
+          <div className="flex items-center gap-2">
+            <Search className="h-4 w-4 text-muted-foreground" />
+            <input
+              type="search"
+              placeholder="Search jobs by ID, customer, vehicle, service..."
+              className="flex-1 bg-transparent border-none outline-none text-sm"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            {searchTerm && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-6 w-6"
+                onClick={() => setSearchTerm("")}
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-col md:flex-row gap-4">
         <Card className="w-full">
           <CardHeader className="p-4 pb-0">
             <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
               <CardTitle>Workshop Jobs</CardTitle>
-              <Tabs defaultValue="all" className="w-full md:w-auto">
+              <Tabs 
+                defaultValue="all" 
+                value={activeTab} 
+                onValueChange={setActiveTab} 
+                className="w-full md:w-auto"
+              >
                 <TabsList>
                   <TabsTrigger value="all">All Jobs</TabsTrigger>
                   <TabsTrigger value="active">Active</TabsTrigger>
@@ -135,6 +292,8 @@ const Jobs = () => {
                   type="search"
                   placeholder="Search jobs..."
                   className="w-full rounded-md border border-input bg-transparent pl-8 pr-4 py-2 text-sm focus-visible:ring-1 focus-visible:ring-ring"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
               <Button variant="outline" size="sm" className="gap-1">
@@ -152,53 +311,70 @@ const Jobs = () => {
                 <div className="col-span-3 md:col-span-2">Assigned To</div>
                 <div className="col-span-2 text-right">Actions</div>
               </div>
-              {dummyJobs.map((job) => {
-                const StatusIcon = jobStatuses[job.status as keyof typeof jobStatuses].icon;
-                return (
-                  <div key={job.id} className="px-4 py-3 grid grid-cols-12 gap-4 items-center hover:bg-muted/50">
-                    <div className="col-span-4 md:col-span-3">
-                      <div className="font-medium">{job.id}</div>
-                      <div className="text-sm text-muted-foreground">{job.customer}</div>
+              {filteredJobs.length === 0 ? (
+                <div className="px-4 py-8 text-center text-muted-foreground">
+                  No jobs found matching your criteria.
+                </div>
+              ) : (
+                filteredJobs.map((job) => {
+                  const StatusIcon = jobStatuses[job.status].icon;
+                  return (
+                    <div key={job.id} className="px-4 py-3 grid grid-cols-12 gap-4 items-center hover:bg-muted/50">
+                      <div className="col-span-4 md:col-span-3">
+                        <div className="font-medium">{job.id}</div>
+                        <div className="text-sm text-muted-foreground">{job.customer}</div>
+                      </div>
+                      <div className="hidden md:block md:col-span-3">
+                        <div className="text-sm">{job.vehicle}</div>
+                        <div className="text-sm text-muted-foreground">{job.service}</div>
+                      </div>
+                      <div className="col-span-3 md:col-span-2">
+                        <Badge variant="outline" className={cn(
+                          "gap-1 font-normal text-xs",
+                          jobStatuses[job.status].color
+                        )}>
+                          <StatusIcon className="h-3 w-3" />
+                          {jobStatuses[job.status].label}
+                        </Badge>
+                      </div>
+                      <div className="col-span-3 md:col-span-2 text-sm">
+                        {job.assignedTo}
+                      </div>
+                      <div className="col-span-2 flex justify-end">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuItem onClick={() => handleViewDetails(job)}>
+                              <Eye className="h-4 w-4 mr-2" /> View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleEditJob(job)}>
+                              <Edit2 className="h-4 w-4 mr-2" /> Edit Job
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleReassignJob(job)}>
+                              <UserPlus className="h-4 w-4 mr-2" /> Reassign
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem>
+                              <FileText className="h-4 w-4 mr-2" /> Create Invoice
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              className="text-destructive"
+                              onClick={() => handleCancelJobClick(job)}
+                            >
+                              <XCircle className="h-4 w-4 mr-2" /> Cancel Job
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </div>
-                    <div className="hidden md:block md:col-span-3">
-                      <div className="text-sm">{job.vehicle}</div>
-                      <div className="text-sm text-muted-foreground">{job.service}</div>
-                    </div>
-                    <div className="col-span-3 md:col-span-2">
-                      <Badge variant="outline" className={cn(
-                        "gap-1 font-normal text-xs",
-                        jobStatuses[job.status as keyof typeof jobStatuses].color
-                      )}>
-                        <StatusIcon className="h-3 w-3" />
-                        {jobStatuses[job.status as keyof typeof jobStatuses].label}
-                      </Badge>
-                    </div>
-                    <div className="col-span-3 md:col-span-2 text-sm">
-                      {job.assignedTo}
-                    </div>
-                    <div className="col-span-2 flex justify-end">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                          <DropdownMenuItem>View Details</DropdownMenuItem>
-                          <DropdownMenuItem>Edit Job</DropdownMenuItem>
-                          <DropdownMenuItem>Reassign</DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem>Create Invoice</DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-destructive">
-                            Cancel Job
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
           </CardContent>
         </Card>
@@ -272,6 +448,59 @@ const Jobs = () => {
           </CardContent>
         </Card>
       </div>
+
+      <NewJobModal
+        isOpen={isNewJobModalOpen}
+        onClose={() => setIsNewJobModalOpen(false)}
+        onSave={handleAddNewJob}
+      />
+
+      <JobDetailsModal
+        isOpen={isDetailsModalOpen}
+        onClose={() => setIsDetailsModalOpen(false)}
+        job={selectedJob}
+        onEdit={handleEditJob}
+      />
+
+      <EditJobModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        job={selectedJob}
+        onSave={handleUpdateJob}
+      />
+
+      <ReassignJobModal
+        isOpen={isReassignModalOpen}
+        onClose={() => setIsReassignModalOpen(false)}
+        job={selectedJob}
+        onReassign={handleReassignConfirm}
+      />
+
+      <AlertDialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel Job</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to cancel this job? This action cannot be undone.
+              {selectedJob && (
+                <div className="mt-2 p-3 bg-muted rounded-md">
+                  <p className="font-medium">{selectedJob.id}</p>
+                  <p className="text-sm">{selectedJob.customer} - {selectedJob.service}</p>
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>No, Keep Job</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleCancelJobConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Yes, Cancel Job
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
