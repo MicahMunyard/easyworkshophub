@@ -20,6 +20,9 @@ import {
 } from "@/components/ui/popover";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
+import BookingModal from "@/components/BookingModal";
+import { BookingType } from "@/types/booking";
 
 const timeSlots = [
   "8:00 AM", "8:30 AM", "9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM",
@@ -28,7 +31,7 @@ const timeSlots = [
   "5:00 PM", "5:30 PM"
 ];
 
-const dummyBookings = [
+const dummyBookings: BookingType[] = [
   { 
     id: 1, 
     customer: "John Smith", 
@@ -71,17 +74,15 @@ const dummyBookings = [
   }
 ];
 
-const getDayBookings = (day: string) => {
-  // This would be replaced with actual API call in a real app
-  return dummyBookings;
-};
-
 const BookingDiary = () => {
   const [date, setDate] = useState<Date>(new Date());
   const [view, setView] = useState("day");
+  const [bookings, setBookings] = useState<BookingType[]>(dummyBookings);
+  const [selectedBooking, setSelectedBooking] = useState<BookingType | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { toast } = useToast();
   
   const formattedDate = format(date, "EEEE, MMMM d, yyyy");
-  const bookings = getDayBookings(format(date, "yyyy-MM-dd"));
 
   const navigateDate = (direction: "prev" | "next") => {
     const newDate = new Date(date);
@@ -93,6 +94,30 @@ const BookingDiary = () => {
       newDate.setMonth(date.getMonth() + (direction === "next" ? 1 : -1));
     }
     setDate(newDate);
+  };
+
+  const handleBookingClick = (booking: BookingType) => {
+    setSelectedBooking(booking);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedBooking(null);
+  };
+
+  const handleSaveBooking = (updatedBooking: BookingType) => {
+    const updatedBookings = bookings.map(booking => 
+      booking.id === updatedBooking.id ? updatedBooking : booking
+    );
+    setBookings(updatedBookings);
+    setIsModalOpen(false);
+    setSelectedBooking(null);
+    
+    toast({
+      title: "Booking Updated",
+      description: `${updatedBooking.customer}'s booking has been updated.`,
+    });
   };
 
   return (
@@ -152,7 +177,11 @@ const BookingDiary = () => {
                   <div className="bg-muted px-3 py-2 text-xs font-medium">Today's Bookings</div>
                   <div className="divide-y max-h-[300px] overflow-y-auto">
                     {bookings.map((booking) => (
-                      <div key={booking.id} className="p-3 hover:bg-muted/50">
+                      <div 
+                        key={booking.id} 
+                        className="p-3 hover:bg-muted/50 cursor-pointer transition-colors"
+                        onClick={() => handleBookingClick(booking)}
+                      >
                         <div className="font-medium flex justify-between">
                           <span>{booking.time}</span>
                           <span className={cn(
@@ -226,7 +255,7 @@ const BookingDiary = () => {
                             <div
                               key={booking.id}
                               className={cn(
-                                "absolute left-1 right-1 p-2 rounded-md overflow-hidden text-sm",
+                                "absolute left-1 right-1 p-2 rounded-md overflow-hidden text-sm cursor-pointer",
                                 "animate-slideRight transition-all hover:ring-1 hover:ring-ring",
                                 booking.status === "confirmed"
                                   ? "bg-workshop-blue/10 border-l-4 border-workshop-blue"
@@ -236,6 +265,7 @@ const BookingDiary = () => {
                                 top: "4px",
                                 height: `calc(${booking.duration / 30} * 4rem - 8px)`,
                               }}
+                              onClick={() => handleBookingClick(booking)}
                             >
                               <div className="font-medium truncate">{booking.customer}</div>
                               <div className="text-xs flex gap-1 items-center text-muted-foreground truncate">
@@ -254,6 +284,14 @@ const BookingDiary = () => {
           </Card>
         </div>
       </div>
+      
+      {/* Modal for editing bookings */}
+      <BookingModal 
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        booking={selectedBooking}
+        onSave={handleSaveBooking}
+      />
     </div>
   );
 };
