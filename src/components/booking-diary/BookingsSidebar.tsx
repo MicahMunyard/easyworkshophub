@@ -1,0 +1,93 @@
+
+import React from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { format } from "date-fns";
+import { Search, Users, CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { BookingsSidebarProps } from "./types";
+
+const BookingsSidebar: React.FC<BookingsSidebarProps> = ({
+  date,
+  setDate,
+  searchTerm,
+  setSearchTerm,
+  filteredBookings,
+  handleBookingClick
+}) => {
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <div className="space-y-4">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className="w-full justify-start text-left font-normal"
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {format(date, "PPP")}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={date}
+                onSelect={(newDate) => newDate && setDate(newDate)}
+                initialFocus
+                className="p-3 pointer-events-auto"
+              />
+            </PopoverContent>
+          </Popover>
+
+          <div className="relative">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <input
+              placeholder="Search appointments..."
+              className="pl-8 h-9 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          <div className="border rounded-md overflow-hidden">
+            <div className="bg-muted px-3 py-2 text-xs font-medium">Today's Bookings</div>
+            <div className="divide-y max-h-[300px] overflow-y-auto">
+              {filteredBookings.map((booking) => (
+                <div 
+                  key={booking.id} 
+                  className="p-3 hover:bg-muted/50 cursor-pointer transition-colors"
+                  onClick={() => handleBookingClick(booking)}
+                >
+                  <div className="font-medium flex justify-between">
+                    <span>{booking.time}</span>
+                    <span className={cn(
+                      "text-xs px-1.5 py-0.5 rounded-full",
+                      booking.status === "confirmed" 
+                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" 
+                        : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                    )}>
+                      {booking.status === "confirmed" ? "Confirmed" : "Pending"}
+                    </span>
+                  </div>
+                  <div className="text-sm">{booking.customer}</div>
+                  <div className="text-xs text-muted-foreground flex gap-1 items-center mt-1">
+                    <Users className="h-3 w-3" /> {booking.service}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default BookingsSidebar;
