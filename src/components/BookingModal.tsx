@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,7 +44,12 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, booking, o
   };
 
   const handleSelectChange = (name: string, value: string) => {
-    setEditedBooking((prev) => prev ? { ...prev, [name]: value } : null);
+    if (name === "status") {
+      const typedStatus = value as "pending" | "confirmed" | "cancelled" | "completed";
+      setEditedBooking((prev) => prev ? { ...prev, status: typedStatus } : null);
+    } else {
+      setEditedBooking((prev) => prev ? { ...prev, [name]: value } : null);
+    }
   };
 
   const handleDateChange = (newDate: Date | undefined) => {
@@ -181,7 +185,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, booking, o
                 </Label>
                 <Select 
                   value={editedBooking.status} 
-                  onValueChange={(value) => handleSelectChange("status", value as "pending" | "confirmed")}
+                  onValueChange={(value) => handleSelectChange("status", value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select status" />
@@ -189,6 +193,8 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, booking, o
                   <SelectContent>
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="confirmed">Confirmed</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

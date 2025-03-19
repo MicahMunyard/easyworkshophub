@@ -7,6 +7,6 @@ export interface BookingType {
   time: string;
   duration: number;
   car: string;
-  status: "pending" | "confirmed";
+  status: "pending" | "confirmed" | "cancelled" | "completed";
   date: string; // Date in YYYY-MM-DD format
 }

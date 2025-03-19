@@ -134,7 +134,7 @@ const BookingDiary = () => {
             time: booking.booking_time,
             duration: booking.duration,
             car: booking.car,
-            status: booking.status === 'confirmed' ? 'confirmed' : 'pending',
+            status: (booking.status === 'confirmed' ? 'confirmed' : 'pending') as 'confirmed' | 'pending',
             date: booking.booking_date
           }));
           
@@ -166,7 +166,7 @@ const BookingDiary = () => {
       const nextWeek = new Date();
       nextWeek.setDate(nextWeek.getDate() + 7);
       
-      const extendedDummyBookings = [
+      const extendedDummyBookings: BookingType[] = [
         ...dummyBookings,
         {
           id: 5,

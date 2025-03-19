@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -49,6 +48,9 @@ const NewBookingModal: React.FC<NewBookingModalProps> = ({ isOpen, onClose, onSa
   const handleSelectChange = (name: string, value: string) => {
     if (name === "duration") {
       setNewBooking((prev) => ({ ...prev, [name]: parseInt(value) }));
+    } else if (name === "status") {
+      const typedStatus = value as "pending" | "confirmed" | "cancelled" | "completed";
+      setNewBooking((prev) => ({ ...prev, status: typedStatus }));
     } else {
       setNewBooking((prev) => ({ ...prev, [name]: value }));
     }
@@ -64,19 +66,18 @@ const NewBookingModal: React.FC<NewBookingModalProps> = ({ isOpen, onClose, onSa
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Generate a random ID for the new booking
     const bookingWithId = {
       ...newBooking,
       id: Date.now()
     };
     onSave(bookingWithId);
-    setNewBooking({...defaultBooking}); // Reset form
-    setDate(new Date()); // Reset date
+    setNewBooking({...defaultBooking});
+    setDate(new Date());
   };
 
   const handleCloseModal = () => {
-    setNewBooking({...defaultBooking}); // Reset form
-    setDate(new Date()); // Reset date
+    setNewBooking({...defaultBooking});
+    setDate(new Date());
     onClose();
   };
 
@@ -202,7 +203,7 @@ const NewBookingModal: React.FC<NewBookingModalProps> = ({ isOpen, onClose, onSa
                 </Label>
                 <Select 
                   value={newBooking.status} 
-                  onValueChange={(value) => handleSelectChange("status", value as "pending" | "confirmed")}
+                  onValueChange={(value) => handleSelectChange("status", value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select status" />
@@ -210,6 +211,8 @@ const NewBookingModal: React.FC<NewBookingModalProps> = ({ isOpen, onClose, onSa
                   <SelectContent>
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="confirmed">Confirmed</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
