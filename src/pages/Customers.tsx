@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { 
   Card, 
@@ -120,7 +119,7 @@ const convertBookingToCustomer = (booking: BookingType): CustomerType => {
     id: booking.id + 1000, // Ensure unique ID (in real app, would be proper unique ID)
     name: booking.customer,
     phone: booking.phone,
-    status: "active",
+    status: "active" as const, // Explicitly type as "active"
     totalBookings: 1,
     vehicleInfo: [booking.car],
     lastVisit: format(new Date(), 'yyyy-MM-dd')
@@ -204,7 +203,7 @@ const Customers = () => {
             vehicleInfo: c.vehicleInfo 
               ? [...new Set([...c.vehicleInfo, booking.car])] 
               : [booking.car],
-            status: "active"
+            status: "active" as const  // Use type assertion here
           };
         }
         return c;

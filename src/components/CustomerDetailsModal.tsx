@@ -25,7 +25,7 @@ import {
   Mail, 
   Calendar, 
   Car, 
-  Tool, 
+  Wrench, 
   DollarSign, 
   Clock,
   UserCheck 
@@ -150,7 +150,7 @@ const CustomerDetailsModal: React.FC<CustomerDetailsModalProps> = ({
                       <TableCell>{booking.date}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Tool className="h-4 w-4 text-muted-foreground" />
+                          <Wrench className="h-4 w-4 text-muted-foreground" />
                           {booking.service}
                         </div>
                       </TableCell>
