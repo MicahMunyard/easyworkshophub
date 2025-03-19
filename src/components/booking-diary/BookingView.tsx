@@ -10,7 +10,8 @@ const BookingView: React.FC<BookingViewProps> = ({
   view,
   filteredBookings,
   handleBookingClick,
-  timeSlots
+  timeSlots,
+  date
 }) => {
   return (
     <div className="min-w-[600px]">
@@ -23,10 +24,19 @@ const BookingView: React.FC<BookingViewProps> = ({
           />
         </TabsContent>
         <TabsContent value="week" className="m-0">
-          <WeekView />
+          <WeekView 
+            filteredBookings={filteredBookings} 
+            handleBookingClick={handleBookingClick} 
+            timeSlots={timeSlots}
+            date={date}
+          />
         </TabsContent>
         <TabsContent value="month" className="m-0">
-          <MonthView />
+          <MonthView 
+            filteredBookings={filteredBookings} 
+            handleBookingClick={handleBookingClick} 
+            date={date}
+          />
         </TabsContent>
       </Tabs>
     </div>

@@ -12,8 +12,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Car, Wrench, User, Phone, Clock } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { Car, Wrench, User, Phone, Clock, CalendarIcon } from "lucide-react";
 import { BookingType } from "@/types/booking";
+import { cn } from "@/lib/utils";
 
 interface NewBookingModalProps {
   isOpen: boolean;
@@ -29,11 +33,13 @@ const defaultBooking: BookingType = {
   time: "9:00 AM",
   duration: 30,
   car: "",
-  status: "pending"
+  status: "pending",
+  date: format(new Date(), 'yyyy-MM-dd')
 };
 
 const NewBookingModal: React.FC<NewBookingModalProps> = ({ isOpen, onClose, onSave }) => {
   const [newBooking, setNewBooking] = useState<BookingType>({...defaultBooking});
+  const [date, setDate] = useState<Date | undefined>(new Date());
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -48,6 +54,14 @@ const NewBookingModal: React.FC<NewBookingModalProps> = ({ isOpen, onClose, onSa
     }
   };
 
+  const handleDateChange = (newDate: Date | undefined) => {
+    if (newDate) {
+      setDate(newDate);
+      const formattedDate = format(newDate, 'yyyy-MM-dd');
+      setNewBooking((prev) => ({ ...prev, date: formattedDate }));
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // Generate a random ID for the new booking
@@ -57,10 +71,12 @@ const NewBookingModal: React.FC<NewBookingModalProps> = ({ isOpen, onClose, onSa
     };
     onSave(bookingWithId);
     setNewBooking({...defaultBooking}); // Reset form
+    setDate(new Date()); // Reset date
   };
 
   const handleCloseModal = () => {
     setNewBooking({...defaultBooking}); // Reset form
+    setDate(new Date()); // Reset date
     onClose();
   };
 
@@ -125,6 +141,34 @@ const NewBookingModal: React.FC<NewBookingModalProps> = ({ isOpen, onClose, onSa
                 onChange={handleChange}
                 required
               />
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="date" className="flex items-center gap-2">
+                <CalendarIcon className="h-4 w-4" /> Date
+              </Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !date && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {date ? format(date, "PPP") : "Select date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={date}
+                    onSelect={handleDateChange}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             
             <div className="grid grid-cols-2 gap-4">

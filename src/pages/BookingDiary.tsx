@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Plus, Filter, X } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import CalendarNavigation from "@/components/booking-diary/CalendarNavigation";
 import BookingsSidebar from "@/components/booking-diary/BookingsSidebar";
 import BookingView from "@/components/booking-diary/BookingView";
 import { Search } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const timeSlots = [
   "8:00 AM", "8:30 AM", "9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM",
@@ -20,6 +21,7 @@ const timeSlots = [
   "5:00 PM", "5:30 PM"
 ];
 
+// Sample data for initial development
 const dummyBookings: BookingType[] = [
   { 
     id: 1, 
@@ -29,7 +31,8 @@ const dummyBookings: BookingType[] = [
     time: "9:00 AM", 
     duration: 30, 
     car: "2018 Toyota Camry",
-    status: "confirmed" 
+    status: "confirmed",
+    date: format(new Date(), 'yyyy-MM-dd')
   },
   { 
     id: 2, 
@@ -39,7 +42,8 @@ const dummyBookings: BookingType[] = [
     time: "11:00 AM", 
     duration: 60,
     car: "2020 Honda Civic",
-    status: "confirmed" 
+    status: "confirmed",
+    date: format(new Date(), 'yyyy-MM-dd')
   },
   { 
     id: 3, 
@@ -49,7 +53,8 @@ const dummyBookings: BookingType[] = [
     time: "1:30 PM", 
     duration: 45,
     car: "2019 Ford F-150",
-    status: "pending" 
+    status: "pending",
+    date: format(new Date(), 'yyyy-MM-dd')
   },
   { 
     id: 4, 
@@ -59,7 +64,8 @@ const dummyBookings: BookingType[] = [
     time: "3:00 PM", 
     duration: 120,
     car: "2021 Tesla Model 3",
-    status: "confirmed" 
+    status: "confirmed",
+    date: format(new Date(), 'yyyy-MM-dd')
   }
 ];
 
@@ -72,9 +78,124 @@ const BookingDiary = () => {
   const [isNewBookingModalOpen, setIsNewBookingModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   
   const formattedDate = format(date, "EEEE, MMMM d, yyyy");
+
+  // Fetch bookings from Supabase
+  useEffect(() => {
+    const fetchBookings = async () => {
+      setIsLoading(true);
+      try {
+        const formattedDateString = format(date, 'yyyy-MM-dd');
+        
+        // Fetch bookings based on the view
+        let startDate, endDate;
+        
+        if (view === 'day') {
+          startDate = formattedDateString;
+          endDate = formattedDateString;
+        } else if (view === 'week') {
+          // Get start and end of week
+          const start = new Date(date);
+          start.setDate(date.getDate() - date.getDay()); // Sunday
+          const end = new Date(date);
+          end.setDate(date.getDate() + (6 - date.getDay())); // Saturday
+          
+          startDate = format(start, 'yyyy-MM-dd');
+          endDate = format(end, 'yyyy-MM-dd');
+        } else if (view === 'month') {
+          // Get start and end of month
+          const start = new Date(date.getFullYear(), date.getMonth(), 1);
+          const end = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+          
+          startDate = format(start, 'yyyy-MM-dd');
+          endDate = format(end, 'yyyy-MM-dd');
+        }
+
+        const { data, error } = await supabase
+          .from('bookings')
+          .select('*')
+          .gte('booking_date', startDate)
+          .lte('booking_date', endDate);
+
+        if (error) {
+          throw error;
+        }
+
+        if (data) {
+          // Transform data to match our BookingType interface
+          const transformedData: BookingType[] = data.map(booking => ({
+            id: booking.id ? parseInt(booking.id.toString().replace(/-/g, '').substring(0, 8), 16) : Math.floor(Math.random() * 1000),
+            customer: booking.customer_name,
+            phone: booking.customer_phone,
+            service: booking.service,
+            time: booking.booking_time,
+            duration: booking.duration,
+            car: booking.car,
+            status: booking.status === 'confirmed' ? 'confirmed' : 'pending',
+            date: booking.booking_date
+          }));
+          
+          setBookings(transformedData);
+        }
+      } catch (error) {
+        console.error('Error fetching bookings:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load bookings. Please try again.",
+          variant: "destructive"
+        });
+        // Fall back to dummy data for development
+        setBookings(dummyBookings);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    // Comment out during development if needed
+    // fetchBookings();
+    
+    // For development, simulate fetching data
+    setTimeout(() => {
+      // Add a booking with a different date for testing week and month views
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      const nextWeek = new Date();
+      nextWeek.setDate(nextWeek.getDate() + 7);
+      
+      const extendedDummyBookings = [
+        ...dummyBookings,
+        {
+          id: 5,
+          customer: "Alex Brown",
+          phone: "(555) 567-8901",
+          service: "Wheel Alignment",
+          time: "10:00 AM",
+          duration: 60,
+          car: "2022 Ford Mustang",
+          status: "confirmed",
+          date: format(tomorrow, 'yyyy-MM-dd')
+        },
+        {
+          id: 6,
+          customer: "Linda Green",
+          phone: "(555) 678-9012",
+          service: "Battery Replacement",
+          time: "2:00 PM",
+          duration: 30,
+          car: "2019 Chevrolet Equinox",
+          status: "pending",
+          date: format(nextWeek, 'yyyy-MM-dd')
+        }
+      ];
+      
+      setBookings(extendedDummyBookings);
+      setIsLoading(false);
+    }, 500);
+  }, [date, view]);
 
   const navigateDate = (direction: "prev" | "next") => {
     const newDate = new Date(date);
@@ -98,28 +219,84 @@ const BookingDiary = () => {
     setSelectedBooking(null);
   };
 
-  const handleSaveBooking = (updatedBooking: BookingType) => {
-    const updatedBookings = bookings.map(booking => 
-      booking.id === updatedBooking.id ? updatedBooking : booking
-    );
-    setBookings(updatedBookings);
-    setIsModalOpen(false);
-    setSelectedBooking(null);
-    
-    toast({
-      title: "Booking Updated",
-      description: `${updatedBooking.customer}'s booking has been updated.`,
-    });
+  const handleSaveBooking = async (updatedBooking: BookingType) => {
+    try {
+      // First update our local state
+      const updatedBookings = bookings.map(booking => 
+        booking.id === updatedBooking.id ? updatedBooking : booking
+      );
+      setBookings(updatedBookings);
+      
+      // Save to Supabase (commented out during development)
+      // const { error } = await supabase
+      //   .from('bookings')
+      //   .update({
+      //     customer_name: updatedBooking.customer,
+      //     customer_phone: updatedBooking.phone,
+      //     service: updatedBooking.service,
+      //     booking_time: updatedBooking.time,
+      //     duration: updatedBooking.duration,
+      //     car: updatedBooking.car,
+      //     status: updatedBooking.status,
+      //     // Additional fields like mechanic, notes, cost would be included here in a real application
+      //   })
+      //   .eq('id', updatedBooking.id);
+      
+      // if (error) throw error;
+      
+      setIsModalOpen(false);
+      setSelectedBooking(null);
+      
+      toast({
+        title: "Booking Updated",
+        description: `${updatedBooking.customer}'s booking has been updated.`,
+      });
+    } catch (error) {
+      console.error('Error updating booking:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update booking. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleAddNewBooking = (newBooking: BookingType) => {
-    setBookings([...bookings, newBooking]);
-    setIsNewBookingModalOpen(false);
-    
-    toast({
-      title: "Booking Created",
-      description: `${newBooking.customer}'s booking has been added.`,
-    });
+  const handleAddNewBooking = async (newBooking: BookingType) => {
+    try {
+      // Add to local state first
+      setBookings([...bookings, newBooking]);
+      
+      // Save to Supabase (commented out during development)
+      // const { error } = await supabase
+      //   .from('bookings')
+      //   .insert({
+      //     customer_name: newBooking.customer,
+      //     customer_phone: newBooking.phone,
+      //     service: newBooking.service,
+      //     booking_time: newBooking.time,
+      //     duration: newBooking.duration,
+      //     car: newBooking.car,
+      //     status: newBooking.status,
+      //     booking_date: newBooking.date
+      //     // Additional fields like mechanic, notes, cost would be included here in a real application
+      //   });
+      
+      // if (error) throw error;
+      
+      setIsNewBookingModalOpen(false);
+      
+      toast({
+        title: "Booking Created",
+        description: `${newBooking.customer}'s booking has been added.`,
+      });
+    } catch (error) {
+      console.error('Error creating booking:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create booking. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const filteredBookings = bookings.filter(booking => 
@@ -204,12 +381,19 @@ const BookingDiary = () => {
               />
             </CardHeader>
             <CardContent className="p-0 pt-4 overflow-auto">
-              <BookingView
-                view={view}
-                filteredBookings={filteredBookings}
-                handleBookingClick={handleBookingClick}
-                timeSlots={timeSlots}
-              />
+              {isLoading ? (
+                <div className="flex justify-center items-center h-64">
+                  <p>Loading bookings...</p>
+                </div>
+              ) : (
+                <BookingView
+                  view={view}
+                  filteredBookings={filteredBookings}
+                  handleBookingClick={handleBookingClick}
+                  timeSlots={timeSlots}
+                  date={date}
+                />
+              )}
             </CardContent>
           </Card>
         </div>

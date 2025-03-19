@@ -12,8 +12,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Car, Wrench, User, Phone, Clock } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { Car, Wrench, User, Phone, Clock, CalendarIcon } from "lucide-react";
 import { BookingType } from "@/types/booking";
+import { cn } from "@/lib/utils";
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -24,9 +28,13 @@ interface BookingModalProps {
 
 const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, booking, onSave }) => {
   const [editedBooking, setEditedBooking] = React.useState<BookingType | null>(booking);
+  const [date, setDate] = React.useState<Date | undefined>(
+    booking?.date ? new Date(booking.date) : undefined
+  );
 
   React.useEffect(() => {
     setEditedBooking(booking);
+    setDate(booking?.date ? new Date(booking.date) : undefined);
   }, [booking]);
 
   if (!editedBooking) return null;
@@ -38,6 +46,14 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, booking, o
 
   const handleSelectChange = (name: string, value: string) => {
     setEditedBooking((prev) => prev ? { ...prev, [name]: value } : null);
+  };
+
+  const handleDateChange = (newDate: Date | undefined) => {
+    if (newDate) {
+      setDate(newDate);
+      const formattedDate = format(newDate, 'yyyy-MM-dd');
+      setEditedBooking((prev) => prev ? { ...prev, date: formattedDate } : null);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -106,6 +122,34 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, booking, o
               />
             </div>
             
+            <div className="grid gap-2">
+              <Label htmlFor="date" className="flex items-center gap-2">
+                <CalendarIcon className="h-4 w-4" /> Date
+              </Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !date && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {date ? format(date, "PPP") : "Select date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={date}
+                    onSelect={handleDateChange}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="time" className="flex items-center gap-2">
@@ -137,7 +181,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, booking, o
                 </Label>
                 <Select 
                   value={editedBooking.status} 
-                  onValueChange={(value) => handleSelectChange("status", value)}
+                  onValueChange={(value) => handleSelectChange("status", value as "pending" | "confirmed")}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select status" />

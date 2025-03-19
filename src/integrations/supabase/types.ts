@@ -9,6 +9,57 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      bookings: {
+        Row: {
+          booking_date: string
+          booking_time: string
+          car: string
+          cost: number | null
+          created_at: string | null
+          customer_name: string
+          customer_phone: string
+          duration: number
+          id: string
+          mechanic: string | null
+          notes: string | null
+          service: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          booking_date: string
+          booking_time: string
+          car: string
+          cost?: number | null
+          created_at?: string | null
+          customer_name: string
+          customer_phone: string
+          duration: number
+          id?: string
+          mechanic?: string | null
+          notes?: string | null
+          service: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          booking_date?: string
+          booking_time?: string
+          car?: string
+          cost?: number | null
+          created_at?: string | null
+          customer_name?: string
+          customer_phone?: string
+          duration?: number
+          id?: string
+          mechanic?: string | null
+          notes?: string | null
+          service?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

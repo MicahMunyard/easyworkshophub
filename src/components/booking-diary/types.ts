@@ -29,4 +29,18 @@ export interface BookingViewProps {
   filteredBookings: BookingType[];
   handleBookingClick: (booking: BookingType) => void;
   timeSlots: string[];
+  date: Date;
+}
+
+export interface WeekViewProps {
+  filteredBookings: BookingType[];
+  handleBookingClick: (booking: BookingType) => void;
+  timeSlots: string[];
+  date: Date;
+}
+
+export interface MonthViewProps {
+  filteredBookings: BookingType[];
+  handleBookingClick: (booking: BookingType) => void;
+  date: Date;
 }
