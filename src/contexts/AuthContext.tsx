@@ -64,7 +64,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', userId)
+        .eq('user_id', userId)  // Changed from 'id' to 'user_id' to match the database schema
         .single();
 
       if (error) throw error;
@@ -154,7 +154,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { error } = await supabase
         .from('profiles')
         .update(data)
-        .eq('id', user.id);
+        .eq('user_id', user.id);  // Changed from 'id' to 'user_id' to match the database schema
       
       if (error) throw error;
       
