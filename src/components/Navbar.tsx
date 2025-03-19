@@ -1,6 +1,7 @@
 
 import React from "react";
-import { Menu, Bell, Search, X } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Menu, Bell, Search, X, User, Settings, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -10,6 +11,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface NavbarProps {
   sidebarOpen: boolean;
@@ -17,6 +20,19 @@ interface NavbarProps {
 }
 
 const Navbar: React.FC<NavbarProps> = ({ sidebarOpen, setSidebarOpen }) => {
+  const { user, profile, signOut, loading } = useAuth();
+
+  const getInitials = () => {
+    if (profile?.full_name) {
+      return profile.full_name
+        .split(' ')
+        .map((n: string) => n[0])
+        .join('')
+        .toUpperCase();
+    }
+    return user?.email?.substring(0, 2).toUpperCase() || 'JD';
+  };
+
   return (
     <header className="sticky top-0 z-30 border-b bg-background/90 backdrop-blur-sm">
       <div className="flex h-16 items-center px-4 md:px-6">
@@ -70,18 +86,64 @@ const Navbar: React.FC<NavbarProps> = ({ sidebarOpen, setSidebarOpen }) => {
                 aria-label="User menu"
               >
                 <span className="sr-only">User menu</span>
-                <div className="flex h-full w-full items-center justify-center bg-workshop-red text-primary-foreground">
-                  <span className="text-xs font-medium">JD</span>
-                </div>
+                {user ? (
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={profile?.avatar_url || ''} alt={profile?.full_name || user.email || ''} />
+                    <AvatarFallback className="bg-workshop-red text-primary-foreground">
+                      {getInitials()}
+                    </AvatarFallback>
+                  </Avatar>
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-workshop-red text-primary-foreground">
+                    <span className="text-xs font-medium">JD</span>
+                  </div>
+                )}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56 mt-1 animate-slideUp">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuLabel>
+                {user ? (
+                  <div className="flex flex-col space-y-1">
+                    <p className="font-medium">{profile?.full_name || 'Workshop Owner'}</p>
+                    <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                  </div>
+                ) : (
+                  'My Account'
+                )}
+              </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>Profile</DropdownMenuItem>
-              <DropdownMenuItem>Settings</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>Log out</DropdownMenuItem>
+              
+              {user ? (
+                <>
+                  <DropdownMenuItem asChild>
+                    <Link to="/profile" className="cursor-pointer flex w-full items-center">
+                      <User className="mr-2 h-4 w-4" />
+                      Profile
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/settings" className="cursor-pointer flex w-full items-center">
+                      <Settings className="mr-2 h-4 w-4" />
+                      Settings
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    onClick={() => signOut()}
+                    className="cursor-pointer text-red-500 focus:text-red-500"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Log out
+                  </DropdownMenuItem>
+                </>
+              ) : (
+                <DropdownMenuItem asChild>
+                  <Link to="/auth/signin" className="cursor-pointer flex w-full items-center">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign In
+                  </Link>
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
