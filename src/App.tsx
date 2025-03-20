@@ -15,6 +15,8 @@ import PointOfSale from "./pages/PointOfSale";
 import Suppliers from "./pages/Suppliers";
 import Reports from "./pages/Reports";
 import Marketing from "./pages/Marketing";
+import EmailMarketing from "./pages/EmailMarketing";
+import Reviews from "./pages/Reviews";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import Profile from "./pages/Profile";
@@ -111,6 +113,22 @@ const App = () => (
               element={
                 <Layout>
                   <Marketing />
+                </Layout>
+              } 
+            />
+            <Route 
+              path="/email-marketing" 
+              element={
+                <Layout>
+                  <EmailMarketing />
+                </Layout>
+              } 
+            />
+            <Route 
+              path="/reviews" 
+              element={
+                <Layout>
+                  <Reviews />
                 </Layout>
               } 
             />
