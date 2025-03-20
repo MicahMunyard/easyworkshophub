@@ -94,7 +94,21 @@ const ServiceReminders: React.FC<ServiceRemindersProps> = ({ customerId, custome
         .order('due_date', { ascending: true });
 
       if (error) throw error;
-      setReminders(data || []);
+      
+      // Type casting to ensure data matches ServiceReminder interface
+      const typedReminders: ServiceReminder[] = data?.map(reminder => ({
+        id: reminder.id,
+        vehicle_info: reminder.vehicle_info,
+        service_type: reminder.service_type,
+        due_date: reminder.due_date,
+        status: reminder.status as 'pending' | 'sent' | 'completed' | 'cancelled',
+        notification_method: reminder.notification_method || ['email'],
+        created_at: reminder.created_at,
+        last_sent_at: reminder.last_sent_at,
+        reminder_text: reminder.reminder_text
+      })) || [];
+      
+      setReminders(typedReminders);
     } catch (error: any) {
       console.error("Error fetching service reminders:", error.message);
       toast({

@@ -75,7 +75,20 @@ const CommunicationLog: React.FC<CommunicationLogProps> = ({ customerId }) => {
         .order('timestamp', { ascending: false });
 
       if (error) throw error;
-      setLogs(data || []);
+      
+      // Type casting the data to ensure it matches CommunicationLogEntry
+      const typedLogs: CommunicationLogEntry[] = data?.map(log => ({
+        id: log.id,
+        type: log.type as 'phone' | 'email' | 'sms',
+        direction: log.direction as 'inbound' | 'outbound',
+        content: log.content,
+        timestamp: log.timestamp,
+        staff_member: log.staff_member,
+        duration: log.duration,
+        status: log.status
+      })) || [];
+      
+      setLogs(typedLogs);
     } catch (error: any) {
       console.error("Error fetching communication logs:", error.message);
       toast({
