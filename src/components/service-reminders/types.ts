@@ -26,6 +26,6 @@ export interface AddReminderFormProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   customerVehicles: string[];
-  onAddReminder: (reminderData: Omit<ServiceReminder, 'id' | 'created_at' | 'last_sent_at'> & { customer_id: number }) => Promise<void>;
+  onAddReminder: (reminderData: Omit<ServiceReminder, 'id' | 'created_at' | 'last_sent_at'> & { customer_id: number }) => Promise<boolean>;
   customerId: number;
 }
