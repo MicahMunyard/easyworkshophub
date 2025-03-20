@@ -60,6 +60,145 @@ export type Database = {
         }
         Relationships: []
       }
+      communication_logs: {
+        Row: {
+          content: string | null
+          customer_id: number
+          direction: string
+          duration: number | null
+          id: string
+          staff_member: string | null
+          status: string | null
+          timestamp: string | null
+          type: string
+        }
+        Insert: {
+          content?: string | null
+          customer_id: number
+          direction: string
+          duration?: number | null
+          id?: string
+          staff_member?: string | null
+          status?: string | null
+          timestamp?: string | null
+          type: string
+        }
+        Update: {
+          content?: string | null
+          customer_id?: number
+          direction?: string
+          duration?: number | null
+          id?: string
+          staff_member?: string | null
+          status?: string | null
+          timestamp?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "communication_logs_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_notes: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          customer_id: number
+          id: string
+          note: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          customer_id: number
+          id?: string
+          note: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          customer_id?: number
+          id?: string
+          note?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_notes_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_tag_relations: {
+        Row: {
+          created_at: string | null
+          customer_id: number
+          id: string
+          tag_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          customer_id: number
+          id?: string
+          tag_id: string
+        }
+        Update: {
+          created_at?: string | null
+          customer_id?: number
+          id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_tag_relations_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_tag_relations_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "customer_tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_tags: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -95,6 +234,53 @@ export type Database = {
           workshop_name?: string | null
         }
         Relationships: []
+      }
+      service_reminders: {
+        Row: {
+          created_at: string | null
+          customer_id: number
+          due_date: string
+          id: string
+          last_sent_at: string | null
+          notification_method: string[] | null
+          reminder_text: string | null
+          service_type: string
+          status: string | null
+          vehicle_info: string
+        }
+        Insert: {
+          created_at?: string | null
+          customer_id: number
+          due_date: string
+          id?: string
+          last_sent_at?: string | null
+          notification_method?: string[] | null
+          reminder_text?: string | null
+          service_type: string
+          status?: string | null
+          vehicle_info: string
+        }
+        Update: {
+          created_at?: string | null
+          customer_id?: number
+          due_date?: string
+          id?: string
+          last_sent_at?: string | null
+          notification_method?: string[] | null
+          reminder_text?: string | null
+          service_type?: string
+          status?: string | null
+          vehicle_info?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_reminders_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
