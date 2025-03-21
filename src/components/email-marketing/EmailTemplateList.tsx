@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import { FileText, Edit, Copy, Plus, Calendar } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 
 const EmailTemplateList: React.FC<EmailTemplateListProps> = ({ templates, isLoading, onSave }) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -193,15 +194,15 @@ const EmailTemplateList: React.FC<EmailTemplateListProps> = ({ templates, isLoad
               <div className="space-y-2">
                 <Label htmlFor="content">Email Content</Label>
                 <div className="text-xs text-muted-foreground mb-1">
-                  Use {{customer_name}}, {{vehicle}}, {{service_date}}, {{workshop_name}}, {{service_type}}, {{expiry_date}} as placeholders.
+                  Use &#123;&#123;customer_name&#125;&#125;, &#123;&#123;vehicle&#125;&#125;, &#123;&#123;service_date&#125;&#125;, &#123;&#123;workshop_name&#125;&#125;, &#123;&#123;service_type&#125;&#125;, &#123;&#123;expiry_date&#125;&#125; as placeholders.
                 </div>
-                <textarea
+                <Textarea
                   id="content"
                   name="content"
                   value={formData.content}
                   onChange={handleInputChange}
                   placeholder="Enter email content (HTML supported)"
-                  className="min-h-[200px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                  className="min-h-[200px]"
                   required
                 />
               </div>

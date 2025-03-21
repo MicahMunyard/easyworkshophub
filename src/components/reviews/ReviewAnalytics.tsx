@@ -1,4 +1,3 @@
-
 import React from "react";
 import { ReviewAnalyticsProps } from "./types";
 import { Card, CardContent } from "@/components/ui/card";
@@ -33,12 +32,10 @@ const ReviewAnalytics: React.FC<ReviewAnalyticsProps> = ({ reviews, isLoading })
     return <div className="text-center py-8">No review data available.</div>;
   }
 
-  // Calculate average rating
   const averageRating = reviews.length 
     ? (reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length).toFixed(1)
     : "0.0";
 
-  // Prepare data for platform distribution
   const platformCounts = reviews.reduce((acc, review) => {
     acc[review.platform] = (acc[review.platform] || 0) + 1;
     return acc;
@@ -49,7 +46,6 @@ const ReviewAnalytics: React.FC<ReviewAnalyticsProps> = ({ reviews, isLoading })
     value
   }));
 
-  // Prepare data for rating distribution
   const ratingCounts = reviews.reduce((acc, review) => {
     acc[review.rating] = (acc[review.rating] || 0) + 1;
     return acc;
@@ -60,7 +56,6 @@ const ReviewAnalytics: React.FC<ReviewAnalyticsProps> = ({ reviews, isLoading })
     count: ratingCounts[rating] || 0
   }));
 
-  // Prepare data for volume over time (last 6 months)
   const now = new Date();
   const months = Array.from({ length: 6 }, (_, i) => {
     const month = subMonths(now, i);
@@ -78,7 +73,6 @@ const ReviewAnalytics: React.FC<ReviewAnalyticsProps> = ({ reviews, isLoading })
     };
   });
 
-  // Colors for pie chart
   const PLATFORM_COLORS = {
     google: '#4285F4',
     facebook: '#1877F2',
@@ -100,7 +94,7 @@ const ReviewAnalytics: React.FC<ReviewAnalyticsProps> = ({ reviews, isLoading })
                 {Array.from({ length: 5 }).map((_, i) => (
                   <svg
                     key={i}
-                    className={`h-5 w-5 ${i < Math.round(parseFloat(averageRating)) ? 'text-yellow-400' : 'text-gray-300'}`}
+                    className={`h-5 w-5 ${i < Math.round(Number(averageRating)) ? 'text-yellow-400' : 'text-gray-300'}`}
                     fill="currentColor"
                     viewBox="0 0 20 20"
                   >
