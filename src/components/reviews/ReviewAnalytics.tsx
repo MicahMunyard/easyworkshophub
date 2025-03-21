@@ -88,6 +88,12 @@ const ReviewAnalytics: React.FC<ReviewAnalyticsProps> = ({ reviews, isLoading })
     ? Math.round((reviews.filter(r => r.response_text).length / reviews.length) * 100) 
     : 0;
 
+  // Calculate percentages for tooltip displays safely
+  const calculatePercentage = (value: number, total: number): string => {
+    if (total === 0) return "0.0";
+    return ((value / total) * 100).toFixed(1);
+  };
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -196,7 +202,7 @@ const ReviewAnalytics: React.FC<ReviewAnalyticsProps> = ({ reviews, isLoading })
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    label={({ name, percent }) => `${name} ${(Number(percent) * 100).toFixed(0)}%`}
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="value"
@@ -211,11 +217,15 @@ const ReviewAnalytics: React.FC<ReviewAnalyticsProps> = ({ reviews, isLoading })
                   <Tooltip
                     content={({ active, payload }) => {
                       if (active && payload && payload.length) {
+                        const total = reviews.length;
+                        const value = Number(payload[0].value);
+                        const percentage = calculatePercentage(value, total);
+                        
                         return (
                           <div className="bg-background border border-border rounded p-2 shadow-md">
                             <p className="font-medium">{payload[0].name}</p>
                             <p className="text-sm text-muted-foreground">
-                              {payload[0].value} reviews ({((payload[0].value / reviews.length) * 100).toFixed(1)}%)
+                              {value} reviews ({percentage}%)
                             </p>
                           </div>
                         );
