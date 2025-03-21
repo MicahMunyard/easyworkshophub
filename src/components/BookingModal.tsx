@@ -1,4 +1,5 @@
-import React from "react";
+
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -14,9 +15,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
-import { Car, Wrench, User, Phone, Clock, CalendarIcon } from "lucide-react";
+import { Car, Wrench, User, Phone, Clock, CalendarIcon, Warehouse } from "lucide-react";
 import { BookingType } from "@/types/booking";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -25,16 +27,93 @@ interface BookingModalProps {
   onSave: (booking: BookingType) => void;
 }
 
+interface TechnicianOption {
+  id: string;
+  name: string;
+}
+
+interface ServiceOption {
+  id: string;
+  name: string;
+  duration: number;
+  price: number;
+}
+
+interface BayOption {
+  id: string;
+  name: string;
+}
+
 const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, booking, onSave }) => {
-  const [editedBooking, setEditedBooking] = React.useState<BookingType | null>(booking);
-  const [date, setDate] = React.useState<Date | undefined>(
+  const [editedBooking, setEditedBooking] = useState<BookingType | null>(booking);
+  const [date, setDate] = useState<Date | undefined>(
     booking?.date ? new Date(booking.date) : undefined
   );
+  const [technicians, setTechnicians] = useState<TechnicianOption[]>([]);
+  const [services, setServices] = useState<ServiceOption[]>([]);
+  const [bays, setBays] = useState<BayOption[]>([]);
+  const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
+  const [selectedTechnicianId, setSelectedTechnicianId] = useState<string | null>(null);
+  const [selectedBayId, setSelectedBayId] = useState<string | null>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     setEditedBooking(booking);
     setDate(booking?.date ? new Date(booking.date) : undefined);
-  }, [booking]);
+    
+    // When booking changes, reset selected IDs
+    setSelectedServiceId(booking?.service_id || null);
+    setSelectedTechnicianId(booking?.technician_id || null);
+    setSelectedBayId(booking?.bay_id || null);
+
+    // Fetch data if modal is open
+    if (isOpen) {
+      fetchTechnicians();
+      fetchServices();
+      fetchBays();
+    }
+  }, [booking, isOpen]);
+
+  const fetchTechnicians = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('technicians')
+        .select('id, name')
+        .order('name');
+        
+      if (error) throw error;
+      setTechnicians(data || []);
+    } catch (error) {
+      console.error('Error fetching technicians:', error);
+    }
+  };
+
+  const fetchServices = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('services')
+        .select('id, name, duration, price')
+        .order('name');
+        
+      if (error) throw error;
+      setServices(data || []);
+    } catch (error) {
+      console.error('Error fetching services:', error);
+    }
+  };
+
+  const fetchBays = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('service_bays')
+        .select('id, name')
+        .order('name');
+        
+      if (error) throw error;
+      setBays(data || []);
+    } catch (error) {
+      console.error('Error fetching service bays:', error);
+    }
+  };
 
   if (!editedBooking) return null;
 
@@ -47,6 +126,33 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, booking, o
     if (name === "status") {
       const typedStatus = value as "pending" | "confirmed" | "cancelled" | "completed";
       setEditedBooking((prev) => prev ? { ...prev, status: typedStatus } : null);
+    } else if (name === "serviceId") {
+      setSelectedServiceId(value);
+      const selectedService = services.find(service => service.id === value);
+      if (selectedService && editedBooking) {
+        setEditedBooking({
+          ...editedBooking,
+          service: selectedService.name,
+          duration: selectedService.duration,
+          service_id: selectedService.id
+        });
+      }
+    } else if (name === "technicianId") {
+      setSelectedTechnicianId(value);
+      if (editedBooking) {
+        setEditedBooking({
+          ...editedBooking,
+          technician_id: value
+        });
+      }
+    } else if (name === "bayId") {
+      setSelectedBayId(value);
+      if (editedBooking) {
+        setEditedBooking({
+          ...editedBooking,
+          bay_id: value
+        });
+      }
     } else {
       setEditedBooking((prev) => prev ? { ...prev, [name]: value } : null);
     }
@@ -63,7 +169,12 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, booking, o
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (editedBooking) {
-      onSave(editedBooking);
+      onSave({
+        ...editedBooking,
+        technician_id: selectedTechnicianId,
+        service_id: selectedServiceId,
+        bay_id: selectedBayId
+      });
     }
   };
 
@@ -115,15 +226,66 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, booking, o
             </div>
             
             <div className="grid gap-2">
-              <Label htmlFor="service" className="flex items-center gap-2">
+              <Label htmlFor="serviceId" className="flex items-center gap-2">
                 <Wrench className="h-4 w-4" /> Service
               </Label>
-              <Input
-                id="service"
-                name="service"
-                value={editedBooking.service}
-                onChange={handleChange}
-              />
+              <Select 
+                value={selectedServiceId || ""} 
+                onValueChange={(value) => handleSelectChange("serviceId", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select service" />
+                </SelectTrigger>
+                <SelectContent>
+                  {services.map((service) => (
+                    <SelectItem key={service.id} value={service.id}>
+                      {service.name} - ${service.price.toFixed(2)} - {service.duration} min
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="technicianId" className="flex items-center gap-2">
+                <User className="h-4 w-4" /> Technician
+              </Label>
+              <Select 
+                value={selectedTechnicianId || ""} 
+                onValueChange={(value) => handleSelectChange("technicianId", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select technician" />
+                </SelectTrigger>
+                <SelectContent>
+                  {technicians.map((tech) => (
+                    <SelectItem key={tech.id} value={tech.id}>
+                      {tech.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="bayId" className="flex items-center gap-2">
+                <Warehouse className="h-4 w-4" /> Service Bay
+              </Label>
+              <Select 
+                value={selectedBayId || ""} 
+                onValueChange={(value) => handleSelectChange("bayId", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select service bay" />
+                </SelectTrigger>
+                <SelectContent>
+                  {bays.map((bay) => (
+                    <SelectItem key={bay.id} value={bay.id}>
+                      {bay.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             
             <div className="grid gap-2">
@@ -198,27 +360,6 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, booking, o
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-            
-            <div className="grid gap-2">
-              <Label htmlFor="duration" className="flex items-center gap-2">
-                Duration (minutes)
-              </Label>
-              <Select 
-                value={editedBooking.duration.toString()} 
-                onValueChange={(value) => handleSelectChange("duration", value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select duration" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="30">30 minutes</SelectItem>
-                  <SelectItem value="45">45 minutes</SelectItem>
-                  <SelectItem value="60">60 minutes</SelectItem>
-                  <SelectItem value="90">90 minutes</SelectItem>
-                  <SelectItem value="120">120 minutes</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
           </div>
           <DialogFooter>

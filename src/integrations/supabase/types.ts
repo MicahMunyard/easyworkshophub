@@ -11,6 +11,7 @@ export type Database = {
     Tables: {
       bookings: {
         Row: {
+          bay_id: string | null
           booking_date: string
           booking_time: string
           car: string
@@ -23,10 +24,13 @@ export type Database = {
           mechanic: string | null
           notes: string | null
           service: string
+          service_id: string | null
           status: string
+          technician_id: string | null
           updated_at: string | null
         }
         Insert: {
+          bay_id?: string | null
           booking_date: string
           booking_time: string
           car: string
@@ -39,10 +43,13 @@ export type Database = {
           mechanic?: string | null
           notes?: string | null
           service: string
+          service_id?: string | null
           status?: string
+          technician_id?: string | null
           updated_at?: string | null
         }
         Update: {
+          bay_id?: string | null
           booking_date?: string
           booking_time?: string
           car?: string
@@ -55,10 +62,34 @@ export type Database = {
           mechanic?: string | null
           notes?: string | null
           service?: string
+          service_id?: string | null
           status?: string
+          technician_id?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "bookings_bay_id_fkey"
+            columns: ["bay_id"]
+            isOneToOne: false
+            referencedRelation: "service_bays"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_technician_id_fkey"
+            columns: ["technician_id"]
+            isOneToOne: false
+            referencedRelation: "technicians"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       communication_logs: {
         Row: {
@@ -235,6 +266,33 @@ export type Database = {
         }
         Relationships: []
       }
+      service_bays: {
+        Row: {
+          created_at: string | null
+          equipment: string | null
+          id: string
+          name: string
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          equipment?: string | null
+          id?: string
+          name: string
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          equipment?: string | null
+          id?: string
+          name?: string
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       service_reminders: {
         Row: {
           created_at: string | null
@@ -281,6 +339,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      services: {
+        Row: {
+          created_at: string | null
+          duration: number
+          id: string
+          name: string
+          price: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          duration: number
+          id?: string
+          name: string
+          price: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          duration?: number
+          id?: string
+          name?: string
+          price?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      technicians: {
+        Row: {
+          created_at: string | null
+          experience: string | null
+          id: string
+          name: string
+          specialty: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          experience?: string | null
+          id?: string
+          name: string
+          specialty?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          experience?: string | null
+          id?: string
+          name?: string
+          specialty?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
     }
     Views: {

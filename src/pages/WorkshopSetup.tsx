@@ -1,11 +1,365 @@
-import React from "react";
+
+import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Settings, Users, Wrench, Ruler, Clock, Warehouse } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import TechnicianForm from "@/components/workshop/TechnicianForm";
+import ServiceForm from "@/components/workshop/ServiceForm";
+import ServiceBayForm from "@/components/workshop/ServiceBayForm";
+
+interface Technician {
+  id: string;
+  name: string;
+  specialty: string | null;
+  experience: string | null;
+}
+
+interface Service {
+  id: string;
+  name: string;
+  duration: number;
+  price: number;
+}
+
+interface ServiceBay {
+  id: string;
+  name: string;
+  type: string;
+  equipment: string | null;
+}
 
 const WorkshopSetup: React.FC = () => {
+  const { toast } = useToast();
+  const [technicians, setTechnicians] = useState<Technician[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+  const [serviceBays, setServiceBays] = useState<ServiceBay[]>([]);
+  
+  const [isAddingTechnician, setIsAddingTechnician] = useState(false);
+  const [isEditingTechnician, setIsEditingTechnician] = useState<Technician | null>(null);
+  
+  const [isAddingService, setIsAddingService] = useState(false);
+  const [isEditingService, setIsEditingService] = useState<Service | null>(null);
+  
+  const [isAddingBay, setIsAddingBay] = useState(false);
+  const [isEditingBay, setIsEditingBay] = useState<ServiceBay | null>(null);
+
+  // Fetch Technicians
+  const fetchTechnicians = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('technicians')
+        .select('*')
+        .order('name');
+      
+      if (error) throw error;
+      setTechnicians(data || []);
+    } catch (error) {
+      console.error('Error fetching technicians:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load technicians",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  // Fetch Services
+  const fetchServices = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('services')
+        .select('*')
+        .order('name');
+      
+      if (error) throw error;
+      setServices(data || []);
+    } catch (error) {
+      console.error('Error fetching services:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load services",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  // Fetch Service Bays
+  const fetchServiceBays = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('service_bays')
+        .select('*')
+        .order('name');
+      
+      if (error) throw error;
+      setServiceBays(data || []);
+    } catch (error) {
+      console.error('Error fetching service bays:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load service bays",
+        variant: "destructive",
+      });
+    }
+  };
+
+  useEffect(() => {
+    fetchTechnicians();
+    fetchServices();
+    fetchServiceBays();
+  }, []);
+
+  // Technician handlers
+  const handleAddTechnician = async (values: any) => {
+    try {
+      const { data, error } = await supabase
+        .from('technicians')
+        .insert([values])
+        .select();
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "Technician added successfully",
+      });
+      
+      setIsAddingTechnician(false);
+      fetchTechnicians();
+    } catch (error) {
+      console.error('Error adding technician:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add technician",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUpdateTechnician = async (values: any) => {
+    if (!isEditingTechnician) return;
+    
+    try {
+      const { error } = await supabase
+        .from('technicians')
+        .update(values)
+        .eq('id', isEditingTechnician.id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "Technician updated successfully",
+      });
+      
+      setIsEditingTechnician(null);
+      fetchTechnicians();
+    } catch (error) {
+      console.error('Error updating technician:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update technician",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteTechnician = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this technician?")) return;
+    
+    try {
+      const { error } = await supabase
+        .from('technicians')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "Technician removed successfully",
+      });
+      
+      fetchTechnicians();
+    } catch (error) {
+      console.error('Error deleting technician:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete technician. It may be referenced in bookings.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Service handlers
+  const handleAddService = async (values: any) => {
+    try {
+      const { data, error } = await supabase
+        .from('services')
+        .insert([values])
+        .select();
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "Service added successfully",
+      });
+      
+      setIsAddingService(false);
+      fetchServices();
+    } catch (error) {
+      console.error('Error adding service:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add service",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUpdateService = async (values: any) => {
+    if (!isEditingService) return;
+    
+    try {
+      const { error } = await supabase
+        .from('services')
+        .update(values)
+        .eq('id', isEditingService.id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "Service updated successfully",
+      });
+      
+      setIsEditingService(null);
+      fetchServices();
+    } catch (error) {
+      console.error('Error updating service:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update service",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteService = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this service?")) return;
+    
+    try {
+      const { error } = await supabase
+        .from('services')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "Service removed successfully",
+      });
+      
+      fetchServices();
+    } catch (error) {
+      console.error('Error deleting service:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete service. It may be referenced in bookings.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Service Bay handlers
+  const handleAddBay = async (values: any) => {
+    try {
+      const { data, error } = await supabase
+        .from('service_bays')
+        .insert([values])
+        .select();
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "Service bay added successfully",
+      });
+      
+      setIsAddingBay(false);
+      fetchServiceBays();
+    } catch (error) {
+      console.error('Error adding service bay:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add service bay",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUpdateBay = async (values: any) => {
+    if (!isEditingBay) return;
+    
+    try {
+      const { error } = await supabase
+        .from('service_bays')
+        .update(values)
+        .eq('id', isEditingBay.id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "Service bay updated successfully",
+      });
+      
+      setIsEditingBay(null);
+      fetchServiceBays();
+    } catch (error) {
+      console.error('Error updating service bay:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update service bay",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteBay = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this service bay?")) return;
+    
+    try {
+      const { error } = await supabase
+        .from('service_bays')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "Service bay removed successfully",
+      });
+      
+      fetchServiceBays();
+    } catch (error) {
+      console.error('Error deleting service bay:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete service bay. It may be referenced in bookings.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -25,6 +379,7 @@ const WorkshopSetup: React.FC = () => {
           <TabsTrigger value="services">Services</TabsTrigger>
           <TabsTrigger value="bays">Service Bays</TabsTrigger>
         </TabsList>
+        
         <TabsContent value="general" className="space-y-4">
           <Card>
             <CardHeader>
@@ -129,42 +484,87 @@ const WorkshopSetup: React.FC = () => {
                   Manage technicians and their specialties.
                 </CardDescription>
               </div>
-              <Button className="bg-workshop-red hover:bg-workshop-red/90">
+              <Button 
+                className="bg-workshop-red hover:bg-workshop-red/90"
+                onClick={() => setIsAddingTechnician(true)}
+              >
                 Add Technician
               </Button>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {[
-                  { name: 'John Smith', specialty: 'Engine, Transmission', experience: '8 years' },
-                  { name: 'Maria Garcia', specialty: 'Electrical, Diagnostics', experience: '5 years' },
-                  { name: 'David Chen', specialty: 'Brakes, Suspension', experience: '3 years' },
-                  { name: 'Sarah Johnson', specialty: 'General Maintenance', experience: '4 years' },
-                ].map((tech, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <div className="font-medium">{tech.name}</div>
-                      <div className="text-sm text-muted-foreground">
-                        <span className="inline-flex items-center">
-                          <Wrench className="h-3.5 w-3.5 mr-1" />
-                          {tech.specialty}
-                        </span>
-                        <span className="mx-2">•</span>
-                        <span className="inline-flex items-center">
-                          <Clock className="h-3.5 w-3.5 mr-1" />
-                          {tech.experience}
-                        </span>
+                {technicians.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No technicians added yet. Add your first technician to get started.
+                  </div>
+                ) : (
+                  technicians.map((tech) => (
+                    <div key={tech.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div>
+                        <div className="font-medium">{tech.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          <span className="inline-flex items-center">
+                            <Wrench className="h-3.5 w-3.5 mr-1" />
+                            {tech.specialty || "No specialty listed"}
+                          </span>
+                          <span className="mx-2">•</span>
+                          <span className="inline-flex items-center">
+                            <Clock className="h-3.5 w-3.5 mr-1" />
+                            {tech.experience || "Experience not specified"}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => setIsEditingTechnician(tech)}
+                        >
+                          Edit
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-red-500"
+                          onClick={() => handleDeleteTechnician(tech.id)}
+                        >
+                          Remove
+                        </Button>
                       </div>
                     </div>
-                    <div className="flex gap-2">
-                      <Button variant="ghost" size="sm">Edit</Button>
-                      <Button variant="ghost" size="sm" className="text-red-500">Remove</Button>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>
+          
+          {/* Technician Form Dialogs */}
+          <Dialog open={isAddingTechnician} onOpenChange={setIsAddingTechnician}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Technician</DialogTitle>
+              </DialogHeader>
+              <TechnicianForm 
+                onSubmit={handleAddTechnician}
+                onCancel={() => setIsAddingTechnician(false)}
+              />
+            </DialogContent>
+          </Dialog>
+          
+          <Dialog open={!!isEditingTechnician} onOpenChange={() => setIsEditingTechnician(null)}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Edit Technician</DialogTitle>
+              </DialogHeader>
+              {isEditingTechnician && (
+                <TechnicianForm 
+                  technician={isEditingTechnician}
+                  onSubmit={handleUpdateTechnician}
+                  onCancel={() => setIsEditingTechnician(null)}
+                />
+              )}
+            </DialogContent>
+          </Dialog>
         </TabsContent>
         
         <TabsContent value="services" className="space-y-4">
@@ -179,40 +579,84 @@ const WorkshopSetup: React.FC = () => {
                   Manage service offerings and pricing.
                 </CardDescription>
               </div>
-              <Button className="bg-workshop-red hover:bg-workshop-red/90">
+              <Button 
+                className="bg-workshop-red hover:bg-workshop-red/90"
+                onClick={() => setIsAddingService(true)}
+              >
                 Add Service
               </Button>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {[
-                  { name: 'Oil Change', duration: '30 min', price: '$45.00' },
-                  { name: 'Brake Inspection', duration: '45 min', price: '$65.00' },
-                  { name: 'Tire Rotation', duration: '30 min', price: '$35.00' },
-                  { name: 'Full Service', duration: '180 min', price: '$250.00' },
-                  { name: 'Engine Diagnostics', duration: '60 min', price: '$85.00' },
-                ].map((service, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <div className="font-medium">{service.name}</div>
-                      <div className="text-sm text-muted-foreground">
-                        <span className="inline-flex items-center">
-                          <Clock className="h-3.5 w-3.5 mr-1" />
-                          {service.duration}
-                        </span>
-                        <span className="mx-2">•</span>
-                        <span className="font-medium">{service.price}</span>
+                {services.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No services added yet. Add your first service to get started.
+                  </div>
+                ) : (
+                  services.map((service) => (
+                    <div key={service.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div>
+                        <div className="font-medium">{service.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          <span className="inline-flex items-center">
+                            <Clock className="h-3.5 w-3.5 mr-1" />
+                            {service.duration} min
+                          </span>
+                          <span className="mx-2">•</span>
+                          <span className="font-medium">${service.price.toFixed(2)}</span>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => setIsEditingService(service)}
+                        >
+                          Edit
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-red-500"
+                          onClick={() => handleDeleteService(service.id)}
+                        >
+                          Remove
+                        </Button>
                       </div>
                     </div>
-                    <div className="flex gap-2">
-                      <Button variant="ghost" size="sm">Edit</Button>
-                      <Button variant="ghost" size="sm" className="text-red-500">Remove</Button>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>
+          
+          {/* Service Form Dialogs */}
+          <Dialog open={isAddingService} onOpenChange={setIsAddingService}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Service</DialogTitle>
+              </DialogHeader>
+              <ServiceForm 
+                onSubmit={handleAddService}
+                onCancel={() => setIsAddingService(false)}
+              />
+            </DialogContent>
+          </Dialog>
+          
+          <Dialog open={!!isEditingService} onOpenChange={() => setIsEditingService(null)}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Edit Service</DialogTitle>
+              </DialogHeader>
+              {isEditingService && (
+                <ServiceForm 
+                  service={isEditingService}
+                  onSubmit={handleUpdateService}
+                  onCancel={() => setIsEditingService(null)}
+                />
+              )}
+            </DialogContent>
+          </Dialog>
         </TabsContent>
         
         <TabsContent value="bays" className="space-y-4">
@@ -227,39 +671,88 @@ const WorkshopSetup: React.FC = () => {
                   Configure workshop service bays.
                 </CardDescription>
               </div>
-              <Button className="bg-workshop-red hover:bg-workshop-red/90">
+              <Button 
+                className="bg-workshop-red hover:bg-workshop-red/90"
+                onClick={() => setIsAddingBay(true)}
+              >
                 Add Bay
               </Button>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {[
-                  { name: 'Bay 1', type: 'General Maintenance', equipment: 'Lift, Oil Drain' },
-                  { name: 'Bay 2', type: 'Engine Work', equipment: 'Heavy Lift, Diagnostic Tools' },
-                  { name: 'Bay 3', type: 'Quick Service', equipment: 'Fast Lift, Tire Machine' },
-                  { name: 'Bay 4', type: 'Alignment', equipment: 'Alignment System, Medium Lift' },
-                ].map((bay, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <div className="font-medium">{bay.name}</div>
-                      <div className="text-sm text-muted-foreground">
-                        <span className="inline-flex items-center">
-                          <Ruler className="h-3.5 w-3.5 mr-1" />
-                          {bay.type}
-                        </span>
-                        <span className="mx-2">•</span>
-                        <span>{bay.equipment}</span>
+                {serviceBays.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No service bays added yet. Add your first bay to get started.
+                  </div>
+                ) : (
+                  serviceBays.map((bay) => (
+                    <div key={bay.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div>
+                        <div className="font-medium">{bay.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          <span className="inline-flex items-center">
+                            <Ruler className="h-3.5 w-3.5 mr-1" />
+                            {bay.type}
+                          </span>
+                          {bay.equipment && (
+                            <>
+                              <span className="mx-2">•</span>
+                              <span>{bay.equipment}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => setIsEditingBay(bay)}
+                        >
+                          Edit
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-red-500"
+                          onClick={() => handleDeleteBay(bay.id)}
+                        >
+                          Remove
+                        </Button>
                       </div>
                     </div>
-                    <div className="flex gap-2">
-                      <Button variant="ghost" size="sm">Edit</Button>
-                      <Button variant="ghost" size="sm" className="text-red-500">Remove</Button>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>
+          
+          {/* Service Bay Form Dialogs */}
+          <Dialog open={isAddingBay} onOpenChange={setIsAddingBay}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Service Bay</DialogTitle>
+              </DialogHeader>
+              <ServiceBayForm 
+                onSubmit={handleAddBay}
+                onCancel={() => setIsAddingBay(false)}
+              />
+            </DialogContent>
+          </Dialog>
+          
+          <Dialog open={!!isEditingBay} onOpenChange={() => setIsEditingBay(null)}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Edit Service Bay</DialogTitle>
+              </DialogHeader>
+              {isEditingBay && (
+                <ServiceBayForm 
+                  bay={isEditingBay}
+                  onSubmit={handleUpdateBay}
+                  onCancel={() => setIsEditingBay(null)}
+                />
+              )}
+            </DialogContent>
+          </Dialog>
         </TabsContent>
       </Tabs>
     </div>
