@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   Calendar, 
@@ -14,11 +14,14 @@ import {
   Gauge,
   Wrench,
   Car,
-  Settings
+  Settings,
+  Play,
+  Video
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useNavigate } from "react-router-dom";
+import { ResizablePanel, ResizablePanelGroup, ResizableHandle } from "@/components/ui/resizable";
 
 const StatsCard = ({ title, value, icon: Icon, trend, description }: { 
   title: string; 
@@ -53,6 +56,46 @@ const StatsCard = ({ title, value, icon: Icon, trend, description }: {
     <div className="absolute inset-0 border-b-2 border-workshop-red/0 group-hover:border-workshop-red/100 transition-all duration-300"></div>
   </Card>
 );
+
+const VideoWidget = () => {
+  const [playing, setPlaying] = useState(false);
+  
+  return (
+    <Card className="h-full">
+      <CardHeader className="p-4 pb-2 border-b border-border/50">
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center">
+            <Video className="mr-2 h-5 w-5 text-workshop-red" />
+            Tutorial Video
+          </CardTitle>
+        </div>
+      </CardHeader>
+      <CardContent className="p-4 flex flex-col items-center justify-center h-[calc(100%-4rem)]">
+        <div className="relative w-full h-full bg-black/90 rounded-lg flex items-center justify-center">
+          {!playing ? (
+            <Button 
+              variant="outline" 
+              size="icon" 
+              className="h-16 w-16 rounded-full bg-white/20 hover:bg-white/30"
+              onClick={() => setPlaying(true)}
+            >
+              <Play className="h-8 w-8 text-white" />
+            </Button>
+          ) : (
+            <iframe 
+              className="w-full h-full rounded-lg" 
+              src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1" 
+              title="Workshop Tutorial"
+              frameBorder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+              allowFullScreen
+            ></iframe>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -109,98 +152,116 @@ const Dashboard: React.FC = () => {
         />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-7">
-        <Card className="col-span-7 md:col-span-4 overflow-hidden performance-card">
-          <CardHeader className="p-4 pb-2 border-b border-border/50">
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center">
-                <Calendar className="mr-2 h-5 w-5 text-workshop-red" />
-                Upcoming Appointments
-              </CardTitle>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="text-sm gap-1 hover:text-workshop-red"
-                onClick={() => navigate("/booking-diary")}
-              >
-                View All <ArrowUpRight className="h-3 w-3" />
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="divide-y">
-              {[
-                { time: "9:30 AM", customer: "John Smith", service: "Oil Change", car: "2018 Toyota Camry" },
-                { time: "11:00 AM", customer: "Sara Johnson", service: "Brake Inspection", car: "2020 Honda Civic" },
-                { time: "1:30 PM", customer: "Mike Davis", service: "Tire Rotation", car: "2019 Ford F-150" },
-                { time: "3:00 PM", customer: "Emma Wilson", service: "Full Service", car: "2021 Tesla Model 3" },
-              ].map((appointment, i) => (
-                <div key={i} className="px-4 py-3 flex items-center justify-between group hover:bg-muted/40">
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-full bg-workshop-red/10 text-workshop-red flex items-center justify-center font-medium text-sm">
-                      {appointment.time.split(" ")[0]}
+      <ResizablePanelGroup direction="horizontal" className="min-h-[600px] rounded-lg border">
+        <ResizablePanel defaultSize={65}>
+          <ResizablePanelGroup direction="vertical">
+            <ResizablePanel defaultSize={60}>
+              <div className="flex h-full items-center justify-center p-4">
+                <Card className="w-full h-full overflow-hidden performance-card">
+                  <CardHeader className="p-4 pb-2 border-b border-border/50">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="flex items-center">
+                        <Calendar className="mr-2 h-5 w-5 text-workshop-red" />
+                        Upcoming Appointments
+                      </CardTitle>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-sm gap-1 hover:text-workshop-red"
+                        onClick={() => navigate("/booking-diary")}
+                      >
+                        View All <ArrowUpRight className="h-3 w-3" />
+                      </Button>
                     </div>
-                    <div>
-                      <div className="font-medium">{appointment.customer}</div>
-                      <div className="text-sm text-muted-foreground flex items-center">
-                        <Car className="h-3 w-3 mr-1" /> {appointment.car} • <Wrench className="h-3 w-3 mx-1" /> {appointment.service}
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="divide-y">
+                      {[
+                        { time: "9:30 AM", customer: "John Smith", service: "Oil Change", car: "2018 Toyota Camry" },
+                        { time: "11:00 AM", customer: "Sara Johnson", service: "Brake Inspection", car: "2020 Honda Civic" },
+                        { time: "1:30 PM", customer: "Mike Davis", service: "Tire Rotation", car: "2019 Ford F-150" },
+                        { time: "3:00 PM", customer: "Emma Wilson", service: "Full Service", car: "2021 Tesla Model 3" },
+                      ].map((appointment, i) => (
+                        <div key={i} className="px-4 py-3 flex items-center justify-between group hover:bg-muted/40">
+                          <div className="flex items-center gap-3">
+                            <div className="h-8 w-8 rounded-full bg-workshop-red/10 text-workshop-red flex items-center justify-center font-medium text-sm">
+                              {appointment.time.split(" ")[0]}
+                            </div>
+                            <div>
+                              <div className="font-medium">{appointment.customer}</div>
+                              <div className="text-sm text-muted-foreground flex items-center">
+                                <Car className="h-3 w-3 mr-1" /> {appointment.car} • <Wrench className="h-3 w-3 mx-1" /> {appointment.service}
+                              </div>
+                            </div>
+                          </div>
+                          <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity hover:bg-workshop-red hover:text-white">
+                            Details
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </ResizablePanel>
+            <ResizableHandle withHandle />
+            <ResizablePanel defaultSize={40}>
+              <div className="flex h-full items-center justify-center p-4">
+                <Card className="w-full h-full overflow-hidden performance-card carbon-texture">
+                  <CardHeader className="p-4 pb-2 border-b border-border/50">
+                    <div className="flex items-center">
+                      <Settings className="mr-2 h-5 w-5 text-workshop-red" />
+                      <div>
+                        <CardTitle>Workshop Stats</CardTitle>
+                        <CardDescription>Current performance metrics</CardDescription>
                       </div>
                     </div>
-                  </div>
-                  <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity hover:bg-workshop-red hover:text-white">
-                    Details
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="col-span-7 md:col-span-3 overflow-hidden performance-card carbon-texture">
-          <CardHeader className="p-4 pb-2 border-b border-border/50">
-            <div className="flex items-center">
-              <Settings className="mr-2 h-5 w-5 text-workshop-red" />
-              <div>
-                <CardTitle>Workshop Stats</CardTitle>
-                <CardDescription>Current performance metrics</CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-4 space-y-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span>Technician Efficiency</span>
+                        <span className="font-medium">87%</span>
+                      </div>
+                      <Progress value={87} className="h-2 bg-muted" indicatorClassName="bg-workshop-red" />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span>Job Completion Rate</span>
+                        <span className="font-medium">92%</span>
+                      </div>
+                      <Progress value={92} className="h-2 bg-muted" indicatorClassName="bg-workshop-red" />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span>Customer Satisfaction</span>
+                        <span className="font-medium">94%</span>
+                      </div>
+                      <Progress value={94} className="h-2 bg-muted" indicatorClassName="bg-workshop-red" />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span>Parts Availability</span>
+                        <span className="font-medium">78%</span>
+                      </div>
+                      <Progress value={78} className="h-2 bg-muted" indicatorClassName="bg-workshop-red" />
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
-            </div>
-          </CardHeader>
-          <CardContent className="p-4 space-y-4">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span>Technician Efficiency</span>
-                <span className="font-medium">87%</span>
-              </div>
-              <Progress value={87} className="h-2 bg-muted" indicatorClassName="bg-workshop-red" />
-            </div>
-            
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span>Job Completion Rate</span>
-                <span className="font-medium">92%</span>
-              </div>
-              <Progress value={92} className="h-2 bg-muted" indicatorClassName="bg-workshop-red" />
-            </div>
-            
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span>Customer Satisfaction</span>
-                <span className="font-medium">94%</span>
-              </div>
-              <Progress value={94} className="h-2 bg-muted" indicatorClassName="bg-workshop-red" />
-            </div>
-            
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span>Parts Availability</span>
-                <span className="font-medium">78%</span>
-              </div>
-              <Progress value={78} className="h-2 bg-muted" indicatorClassName="bg-workshop-red" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        </ResizablePanel>
+        <ResizableHandle withHandle />
+        <ResizablePanel defaultSize={35}>
+          <div className="flex h-full items-center justify-center p-4">
+            <VideoWidget />
+          </div>
+        </ResizablePanel>
+      </ResizablePanelGroup>
 
       <div className="grid gap-4 md:grid-cols-12">
         <Card className="col-span-12 md:col-span-8 performance-card">

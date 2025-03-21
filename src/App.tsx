@@ -8,6 +8,7 @@ import Layout from "./components/Layout";
 import Index from "./pages/Index";
 import BookingDiary from "./pages/BookingDiary";
 import Jobs from "./pages/Jobs";
+import WorkshopSetup from "./pages/WorkshopSetup";
 import Inventory from "./pages/Inventory";
 import Customers from "./pages/Customers";
 import Invoices from "./pages/Invoices";
@@ -57,6 +58,14 @@ const App = () => (
               element={
                 <Layout>
                   <Jobs />
+                </Layout>
+              } 
+            />
+            <Route 
+              path="/workshop-setup" 
+              element={
+                <Layout>
+                  <WorkshopSetup />
                 </Layout>
               } 
             />

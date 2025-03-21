@@ -22,24 +22,39 @@ import {
 interface SidebarProps {
   open: boolean;
   setOpen: (open: boolean) => void;
+  activeSidebarSection: string | null;
+  sidebarSections: Record<string, { name: string; path: string; icon: string }[]>;
 }
 
-const navItems = [
-  { name: "Dashboard", icon: Home, path: "/" },
-  { name: "Booking Diary", icon: Calendar, path: "/booking-diary" },
-  { name: "Jobs", icon: Briefcase, path: "/jobs" },
-  { name: "Inventory", icon: Package, path: "/inventory" },
-  { name: "Customers", icon: Users, path: "/customers" },
-  { name: "Invoices", icon: FileText, path: "/invoices" },
-  { name: "Point of Sale", icon: ShoppingCart, path: "/pos" },
-  { name: "Suppliers", icon: Truck, path: "/suppliers" },
-  { name: "Reports", icon: BarChart3, path: "/reports" },
-  { name: "Marketing", icon: Megaphone, path: "/marketing" },
-  { name: "Email Marketing", icon: Mail, path: "/email-marketing" },
-  { name: "Reviews", icon: Star, path: "/reviews" },
-];
+// Icon mapping
+const iconMap: Record<string, React.ReactElement> = {
+  Home: <Home className="h-5 w-5" />,
+  Calendar: <Calendar className="h-5 w-5" />,
+  Package: <Package className="h-5 w-5" />,
+  Users: <Users className="h-5 w-5" />,
+  Briefcase: <Briefcase className="h-5 w-5" />,
+  FileText: <FileText className="h-5 w-5" />,
+  ShoppingCart: <ShoppingCart className="h-5 w-5" />,
+  BarChart3: <BarChart3 className="h-5 w-5" />,
+  Settings: <Settings className="h-5 w-5" />,
+  Truck: <Truck className="h-5 w-5" />,
+  HelpCircle: <HelpCircle className="h-5 w-5" />,
+  Megaphone: <Megaphone className="h-5 w-5" />,
+  Mail: <Mail className="h-5 w-5" />,
+  Star: <Star className="h-5 w-5" />
+};
 
-const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
+const Sidebar: React.FC<SidebarProps> = ({ open, setOpen, activeSidebarSection, sidebarSections }) => {
+  // Get active sidebar items based on active section
+  const getActiveItems = () => {
+    if (!activeSidebarSection || !sidebarSections[activeSidebarSection]) {
+      return [];
+    }
+    return sidebarSections[activeSidebarSection];
+  };
+
+  const activeItems = getActiveItems();
+
   return (
     <>
       {/* Overlay for mobile */}
@@ -71,7 +86,20 @@ const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
           </div>
 
           <nav className="space-y-1 flex-1">
-            {navItems.map((item) => (
+            {!activeSidebarSection && (
+              <NavLink
+                to="/"
+                className={({ isActive }) => 
+                  `nav-item group ${isActive ? "active" : ""}`
+                }
+              >
+                <Home className="h-5 w-5" />
+                <span>Dashboard</span>
+                <ChevronRight className="h-4 w-4 ml-auto opacity-0 group-hover:opacity-70 transition-opacity" />
+              </NavLink>
+            )}
+
+            {activeItems.length > 0 && activeItems.map((item) => (
               <NavLink
                 key={item.name}
                 to={item.path}
@@ -79,7 +107,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
                   `nav-item group ${isActive ? "active" : ""}`
                 }
               >
-                <item.icon className="h-5 w-5" />
+                {iconMap[item.icon]}
                 <span>{item.name}</span>
                 <ChevronRight className="h-4 w-4 ml-auto opacity-0 group-hover:opacity-70 transition-opacity" />
               </NavLink>
