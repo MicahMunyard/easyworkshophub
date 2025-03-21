@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,6 +8,7 @@ import Index from "./pages/Index";
 import BookingDiary from "./pages/BookingDiary";
 import Jobs from "./pages/Jobs";
 import WorkshopSetup from "./pages/WorkshopSetup";
+import Workshop from "./pages/Workshop";
 import Inventory from "./pages/Inventory";
 import Customers from "./pages/Customers";
 import Invoices from "./pages/Invoices";
@@ -42,6 +42,14 @@ const App = () => (
               element={
                 <Layout>
                   <Index />
+                </Layout>
+              } 
+            />
+            <Route 
+              path="/workshop" 
+              element={
+                <Layout>
+                  <Workshop />
                 </Layout>
               } 
             />
