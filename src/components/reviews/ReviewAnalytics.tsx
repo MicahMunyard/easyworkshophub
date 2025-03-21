@@ -1,3 +1,4 @@
+
 import React from "react";
 import { ReviewAnalyticsProps } from "./types";
 import { Card, CardContent } from "@/components/ui/card";
@@ -82,6 +83,11 @@ const ReviewAnalytics: React.FC<ReviewAnalyticsProps> = ({ reviews, isLoading })
 
   const RATING_COLORS = ['#22C55E', '#10B981', '#FBBF24', '#F59E0B', '#EF4444'];
 
+  // Calculate the response rate as a number
+  const responseRate = reviews.length > 0 
+    ? Math.round((reviews.filter(r => r.response_text).length / reviews.length) * 100) 
+    : 0;
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -111,7 +117,7 @@ const ReviewAnalytics: React.FC<ReviewAnalyticsProps> = ({ reviews, isLoading })
           <CardContent className="p-6">
             <div className="text-sm font-medium text-muted-foreground mb-2">Response Rate</div>
             <div className="text-3xl font-bold">
-              {Math.round((reviews.filter(r => r.response_text).length / reviews.length) * 100)}%
+              {responseRate}%
             </div>
             <div className="text-sm text-muted-foreground mt-1">
               {reviews.filter(r => r.response_text).length} of {reviews.length} reviews responded to
