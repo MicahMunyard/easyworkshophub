@@ -1,10 +1,9 @@
-
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Settings, Users, Wrench, Ruler, Clock, BuildingWarehouse } from "lucide-react";
+import { Settings, Users, Wrench, Ruler, Clock, Warehouse } from "lucide-react";
 
 const WorkshopSetup: React.FC = () => {
   return (
@@ -221,7 +220,7 @@ const WorkshopSetup: React.FC = () => {
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <div className="space-y-1">
                 <CardTitle className="flex items-center">
-                  <BuildingWarehouse className="mr-2 h-5 w-5 text-workshop-red" />
+                  <Warehouse className="mr-2 h-5 w-5 text-workshop-red" />
                   Service Bays
                 </CardTitle>
                 <CardDescription>
