@@ -12,6 +12,7 @@ import BookingDiaryHeader from "@/components/booking-diary/BookingDiaryHeader";
 import BookingFilter from "@/components/booking-diary/BookingFilter";
 import { useBookings } from "@/hooks/useBookings";
 import { BookingView as BookingViewType } from "@/hooks/bookings/types";
+import { useToast } from "@/hooks/use-toast";
 
 const timeSlots = [
   "8:00 AM", "8:30 AM", "9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM",
@@ -21,6 +22,7 @@ const timeSlots = [
 ];
 
 const BookingDiary = () => {
+  const { toast } = useToast();
   const { 
     date, 
     setDate, 
@@ -58,9 +60,18 @@ const BookingDiary = () => {
       if (success) {
         setIsModalOpen(false);
         setSelectedBooking(null);
+        toast({
+          title: "Booking Updated",
+          description: `${updatedBooking.customer}'s booking has been updated.`,
+        });
       }
     } catch (error) {
       console.error("Error saving booking:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update booking. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -69,22 +80,44 @@ const BookingDiary = () => {
       const success = await addBooking(newBooking);
       if (success) {
         setIsNewBookingModalOpen(false);
+        toast({
+          title: "Booking Created",
+          description: `${newBooking.customer}'s booking has been added.`,
+        });
       }
     } catch (error) {
       console.error("Error adding booking:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create booking. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
   const handleDeleteBooking = async (bookingToDelete: BookingType) => {
     try {
-      console.log("Deleting booking in BookingDiary:", bookingToDelete);
+      console.log("Attempting to delete booking in BookingDiary:", bookingToDelete);
       const success = await deleteBooking(bookingToDelete);
+      
       if (success) {
         setIsModalOpen(false);
         setSelectedBooking(null);
+        toast({
+          title: "Booking Deleted",
+          description: `${bookingToDelete.customer}'s booking has been deleted.`,
+          variant: "destructive"
+        });
+      } else {
+        throw new Error("Delete operation failed");
       }
     } catch (error) {
       console.error("Error deleting booking:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete booking. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 

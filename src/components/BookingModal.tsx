@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -27,6 +27,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
   onSave,
   onDelete 
 }) => {
+  const [isDeleting, setIsDeleting] = useState(false);
+  
   const {
     editedBooking,
     date,
@@ -47,16 +49,27 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
   if (!editedBooking) return null;
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (editedBooking && onDelete) {
-      onDelete(editedBooking);
+      setIsDeleting(true);
+      try {
+        await onDelete(editedBooking);
+      } catch (error) {
+        console.error("Error deleting booking:", error);
+      } finally {
+        setIsDeleting(false);
+        setIsDeleteDialogOpen(false);
+      }
     }
-    setIsDeleteDialogOpen(false);
   };
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={onClose}>
+      <Dialog open={isOpen && !isDeleting} onOpenChange={(open) => {
+        if (!isDeleting) {
+          onClose();
+        }
+      }}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Edit Booking</DialogTitle>
@@ -89,6 +102,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
         onOpenChange={setIsDeleteDialogOpen}
         booking={editedBooking}
         onConfirm={handleDeleteConfirm}
+        isDeleting={isDeleting}
       />
     </>
   );
