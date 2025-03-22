@@ -50,9 +50,9 @@ const DataCleanupTool = () => {
     try {
       for (const table of tablesToClean) {
         try {
-          // Type assertion to any as a workaround for TypeScript error
+          // Use explicit string type assertion to avoid TypeScript error
           const { error } = await supabase
-            .from(table as any)
+            .from(table as string)
             .delete()
             .eq('user_id', user.id);
           

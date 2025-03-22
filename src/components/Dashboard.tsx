@@ -153,15 +153,8 @@ const Dashboard: React.FC = () => {
     car: appointment.car,
   }));
 
-  // Use dummy data when no appointments are available or user is not logged in
-  const displayAppointments = formattedAppointments.length > 0 
-    ? formattedAppointments 
-    : [
-        { time: "9:30 AM", customer: "Sample", service: "Oil Change", car: "Toyota Camry" },
-        { time: "11:00 AM", customer: "Sample", service: "Brake Inspection", car: "Honda Civic" },
-        { time: "1:30 PM", customer: "Sample", service: "Tire Rotation", car: "Ford F-150" },
-        { time: "3:00 PM", customer: "Sample", service: "Full Service", car: "Tesla Model 3" },
-      ];
+  // No longer using dummy data when no appointments are available
+  // Just show an empty state message instead
 
   return (
     <div className="space-y-8">
@@ -248,24 +241,46 @@ const Dashboard: React.FC = () => {
                   </CardHeader>
                   <CardContent className="p-0">
                     <div className="divide-y">
-                      {displayAppointments.map((appointment, i) => (
-                        <div key={i} className="px-4 py-3 flex items-center justify-between group hover:bg-muted/40">
-                          <div className="flex items-center gap-3">
-                            <div className="h-8 w-8 rounded-full bg-workshop-red/10 text-workshop-red flex items-center justify-center font-medium text-sm">
-                              {appointment.time.split(" ")[0]}
-                            </div>
-                            <div>
-                              <div className="font-medium">{appointment.customer}</div>
-                              <div className="text-sm text-muted-foreground flex items-center">
-                                <Car className="h-3 w-3 mr-1" /> {appointment.car} • <Wrench className="h-3 w-3 mx-1" /> {appointment.service}
+                      {!user ? (
+                        <div className="p-6 text-center">
+                          <p className="text-muted-foreground">Sign in to view your upcoming appointments</p>
+                        </div>
+                      ) : isLoading ? (
+                        <div className="p-6 text-center">
+                          <p className="text-muted-foreground">Loading appointments...</p>
+                        </div>
+                      ) : formattedAppointments.length > 0 ? (
+                        formattedAppointments.map((appointment, i) => (
+                          <div key={i} className="px-4 py-3 flex items-center justify-between group hover:bg-muted/40">
+                            <div className="flex items-center gap-3">
+                              <div className="h-8 w-8 rounded-full bg-workshop-red/10 text-workshop-red flex items-center justify-center font-medium text-sm">
+                                {appointment.time.split(" ")[0]}
+                              </div>
+                              <div>
+                                <div className="font-medium">{appointment.customer}</div>
+                                <div className="text-sm text-muted-foreground flex items-center">
+                                  <Car className="h-3 w-3 mr-1" /> {appointment.car} • <Wrench className="h-3 w-3 mx-1" /> {appointment.service}
+                                </div>
                               </div>
                             </div>
+                            <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity hover:bg-workshop-red hover:text-white">
+                              Details
+                            </Button>
                           </div>
-                          <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity hover:bg-workshop-red hover:text-white">
-                            Details
+                        ))
+                      ) : (
+                        <div className="p-6 text-center">
+                          <p className="text-muted-foreground">No upcoming appointments</p>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="mt-2"
+                            onClick={() => navigate("/booking-diary")}
+                          >
+                            Schedule an appointment
                           </Button>
                         </div>
-                      ))}
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -371,7 +386,11 @@ const Dashboard: React.FC = () => {
                 <div className="p-6 text-center">
                   <p className="text-muted-foreground">Sign in to view your recent activities</p>
                 </div>
-              ) : formattedAppointments.length > 0 ? (
+              ) : isLoading ? (
+                <div className="p-6 text-center">
+                  <p className="text-muted-foreground">Loading activities...</p>
+                </div>
+              ) : appointments.length > 0 ? (
                 appointments.map((appointment, i) => (
                   <div key={i} className="px-4 py-3 flex items-start gap-3 hover:bg-muted/40">
                     <div className="h-8 w-8 rounded-full bg-workshop-red/10 flex items-center justify-center mt-0.5 text-workshop-red">
