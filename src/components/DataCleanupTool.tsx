@@ -26,6 +26,21 @@ type TableName =
   | "services"
   | "service_reminders";
 
+// Define which tables have user_id columns
+const tablesWithUserId: TableName[] = [
+  'user_bookings',
+  'user_jobs',
+  'user_inventory_items'
+];
+
+// Define tables that should be completely cleared for the current user
+const tablesToTruncate: TableName[] = [
+  'service_bays',
+  'technicians',
+  'services',
+  'service_reminders'
+];
+
 const DataCleanupTool = () => {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -33,17 +48,6 @@ const DataCleanupTool = () => {
   const [showResults, setShowResults] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
-
-  // Define tables to clean up with proper typing
-  const tablesToClean: TableName[] = [
-    'user_bookings',
-    'user_jobs',
-    'user_inventory_items',
-    'service_bays',
-    'technicians',
-    'services',
-    'service_reminders'
-  ];
 
   const handleCleanupData = async () => {
     if (!user) {
@@ -62,7 +66,8 @@ const DataCleanupTool = () => {
     const cleanupResults: { table: string; deleted: number }[] = [];
 
     try {
-      for (const table of tablesToClean) {
+      // First handle tables that have user_id column
+      for (const table of tablesWithUserId) {
         try {
           // First, count how many records will be deleted
           const { count, error: countError } = await supabase
@@ -82,6 +87,42 @@ const DataCleanupTool = () => {
             .from(table as any)
             .delete()
             .eq('user_id', user.id);
+          
+          if (error) {
+            console.error(`Error cleaning ${table}:`, error);
+            cleanupResults.push({ table, deleted: 0 });
+            errorCount++;
+          } else {
+            cleanupResults.push({ table, deleted: count || 0 });
+            successCount++;
+          }
+        } catch (err) {
+          console.error(`Error cleaning ${table}:`, err);
+          cleanupResults.push({ table, deleted: 0 });
+          errorCount++;
+        }
+      }
+
+      // Then handle tables that need to be truncated for this user
+      for (const table of tablesToTruncate) {
+        try {
+          // First, count how many records will be deleted
+          const { count, error: countError } = await supabase
+            .from(table as any)
+            .select('*', { count: 'exact', head: true });
+          
+          if (countError) {
+            console.error(`Error counting ${table}:`, countError);
+            cleanupResults.push({ table, deleted: 0 });
+            errorCount++;
+            continue;
+          }
+          
+          // Delete all records in the table
+          const { error } = await supabase
+            .from(table as any)
+            .delete()
+            .neq('id', 'dummy-id'); // This will delete all records
           
           if (error) {
             console.error(`Error cleaning ${table}:`, error);
