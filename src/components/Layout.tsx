@@ -3,7 +3,6 @@ import React, { useState, useEffect } from "react";
 import Sidebar from "./Sidebar";
 import Navbar from "./Navbar";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -95,57 +94,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     document.documentElement.classList.add('dark');
   }, []);
 
-  // Handle tab change
-  const handleTabChange = (value: string) => {
-    const section = mainNavSections.find(section => section.name.toLowerCase() === value.toLowerCase());
-    if (section) {
-      navigate(section.path);
-      
-      // Set the sidebar section based on the tab
-      if (value.toLowerCase() === 'workshop') {
-        setActiveSidebarSection('workshop');
-      } else if (value.toLowerCase() === 'inventory') {
-        setActiveSidebarSection('inventory');
-      } else if (value.toLowerCase() === 'customers') {
-        setActiveSidebarSection('customers');
-      } else if (value.toLowerCase() === 'marketing') {
-        setActiveSidebarSection('marketing');
-      } else {
-        setActiveSidebarSection(null);
-      }
-    }
-  };
-
-  // Determine the current active tab based on location
-  const getCurrentTab = () => {
-    const path = location.pathname;
-    if (path === '/') return 'Dashboard';
-    if (path === '/workshop' || path.includes('/booking-diary') || path.includes('/jobs') || path.includes('/workshop-setup')) return 'Workshop';
-    if (path.includes('/inventory') || path.includes('/suppliers')) return 'Inventory';
-    if (path.includes('/customers')) return 'Customers';
-    if (path.includes('/marketing') || path.includes('/email-marketing') || path.includes('/reviews')) return 'Marketing';
-    if (path.includes('/reports')) return 'Reports';
-    return 'Dashboard';
-  };
-
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
-      <Navbar />
-      <div className="h-14 border-b flex items-center px-4 md:px-6">
-        <Tabs value={getCurrentTab().toLowerCase()} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="bg-transparent h-12 w-full justify-start px-0 gap-1">
-            {mainNavSections.map((section) => (
-              <TabsTrigger 
-                key={section.name} 
-                value={section.name.toLowerCase()}
-                className="h-10 px-4 data-[state=active]:bg-muted data-[state=active]:shadow-none transition-all"
-              >
-                {section.name}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
-      </div>
+      <Navbar 
+        mainNavSections={mainNavSections} 
+        currentPath={location.pathname}
+        onNavigate={(path) => navigate(path)}
+      />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar 
           open={sidebarOpen} 
