@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { CleanupResult, CleanupResponse } from "./data-cleanup/types";
+import { CleanupResult, CleanupResponse, TableName } from "./data-cleanup/types";
 import { tablesWithUserId, tablesToTruncate } from "./data-cleanup/tables-config";
 import { cleanTableWithUserId, cleanTableToTruncate } from "./data-cleanup/cleanup-handlers";
 
