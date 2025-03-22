@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
@@ -57,7 +56,15 @@ const StatsCard = ({ title, value, icon: Icon, trend, description }: {
   </Card>
 );
 
-const VideoWidget = () => {
+interface VideoWidgetProps {
+  videoId?: string;
+  title?: string;
+}
+
+const VideoWidget: React.FC<VideoWidgetProps> = ({ 
+  videoId = "dQw4w9WgXcQ", 
+  title = "Tutorial Video" 
+}) => {
   const [playing, setPlaying] = useState(false);
   
   return (
@@ -66,7 +73,7 @@ const VideoWidget = () => {
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center">
             <Video className="mr-2 h-5 w-5 text-workshop-red" />
-            Tutorial Video
+            {title}
           </CardTitle>
         </div>
       </CardHeader>
@@ -84,8 +91,8 @@ const VideoWidget = () => {
           ) : (
             <iframe 
               className="w-full h-full rounded-lg" 
-              src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1" 
-              title="Workshop Tutorial"
+              src={`https://www.youtube.com/embed/${videoId}?autoplay=1`} 
+              title={title}
               frameBorder="0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
               allowFullScreen
@@ -99,6 +106,9 @@ const VideoWidget = () => {
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
+  // This should be fetched from your backend based on the current account
+  // For now, we're hardcoding a demonstration video ID
+  const accountVideoId = "dQw4w9WgXcQ"; // Replace with API call to get account-specific video
 
   return (
     <div className="space-y-8">
@@ -123,6 +133,14 @@ const Dashboard: React.FC = () => {
             <TrendingUp className="h-4 w-4 mr-2" /> View Reports
           </Button>
         </div>
+      </div>
+
+      {/* Featured Video Widget */}
+      <div className="w-full" style={{ height: "400px" }}>
+        <VideoWidget 
+          videoId={accountVideoId} 
+          title="Workshop Tutorial: Getting Started"
+        />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
