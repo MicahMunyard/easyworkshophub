@@ -52,30 +52,35 @@ const BookingModal: React.FC<BookingModalProps> = ({
   if (!editedBooking) return null;
 
   const handleDeleteConfirm = async () => {
-    if (editedBooking && onDelete) {
-      setIsDeleting(true);
-      try {
-        console.log("Starting booking deletion process for:", editedBooking);
-        await onDelete(editedBooking);
-        
+    if (!editedBooking || !onDelete) return;
+    
+    setIsDeleting(true);
+    console.log("Starting booking deletion process for:", editedBooking);
+    
+    try {
+      const success = await onDelete(editedBooking);
+      
+      if (success) {
         toast({
           title: "Success",
           description: "Booking was successfully deleted",
         });
         
-        // Close dialogs only after successful deletion
+        // Only close dialogs after successful deletion
         setIsDeleteDialogOpen(false);
         onClose();
-      } catch (error) {
-        console.error("Error deleting booking in BookingModal:", error);
-        toast({
-          title: "Error",
-          description: "An unexpected error occurred while deleting the booking.",
-          variant: "destructive"
-        });
-      } finally {
-        setIsDeleting(false);
+      } else {
+        throw new Error("Delete operation returned false");
       }
+    } catch (error) {
+      console.error("Error deleting booking in BookingModal:", error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred while deleting the booking.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsDeleting(false);
     }
   };
 

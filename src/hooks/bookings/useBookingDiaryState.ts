@@ -86,6 +86,10 @@ export const useBookingDiaryState = () => {
       const success = await deleteBooking(bookingToDelete);
       
       if (success) {
+        toast({
+          title: "Success",
+          description: `${bookingToDelete.customer}'s booking has been deleted.`,
+        });
         return true;
       } else {
         throw new Error("Delete operation failed");

@@ -14,18 +14,17 @@ export const useDeleteBooking = (
     try {
       console.log("Attempting to delete booking:", bookingToDelete);
       
+      // Handle case where ID might be different formats
+      const bookingId = bookingToDelete.id;
+      console.log("Deleting booking ID:", bookingId, "Type:", typeof bookingId);
+      
       // Optimistically update UI for responsiveness
       setBookings(prev => prev.filter(b => b.id !== bookingToDelete.id));
       
-      // Handle different ID formats
-      const bookingId = bookingToDelete.id;
-      const isUuid = typeof bookingId === 'string' && 
-                    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(bookingId);
-      
-      console.log("Booking ID:", bookingId, "Is UUID format:", isUuid);
-      
-      if (isUuid) {
-        // If it's a UUID format, use it directly
+      // If it's a string UUID format
+      if (typeof bookingId === 'string' && bookingId.includes('-')) {
+        console.log("Deleting booking with direct UUID:", bookingId);
+        
         const { error: deleteError } = await supabase
           .from('bookings')
           .delete()
@@ -36,9 +35,11 @@ export const useDeleteBooking = (
           throw deleteError;
         }
         
-        console.log("Successfully deleted booking with UUID:", bookingId);
-      } else {
-        // Try to find the actual UUID in Supabase by matching customer and date
+        console.log("Successfully deleted booking with UUID");
+      } 
+      // If it's a numeric ID or a string that doesn't look like a UUID
+      else {
+        // Find by customer name and date as a fallback
         console.log("Looking for booking by customer and date:", bookingToDelete.customer, bookingToDelete.date);
         
         const { data: matchingBookings, error: fetchError } = await supabase
@@ -67,7 +68,7 @@ export const useDeleteBooking = (
             throw deleteError;
           }
           
-          console.log("Successfully deleted booking with found ID:", actualBookingId);
+          console.log("Successfully deleted booking with found ID");
         } else {
           console.error("No matching booking found to delete");
           throw new Error("Booking not found in database");
@@ -82,7 +83,6 @@ export const useDeleteBooking = (
       return true;
     } catch (error) {
       console.error('Error in deleteBooking:', error);
-      
       // Refresh bookings to ensure UI is in sync with database
       await fetchBookings();
       return false;
