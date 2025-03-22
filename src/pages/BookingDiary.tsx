@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Plus, Filter, X } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -214,8 +213,22 @@ const BookingDiary = () => {
       );
       setBookings(updatedBookings);
       
-      // Convert numeric id to string when sending to Supabase
-      const { error } = await supabase
+      console.log("Updating booking with ID:", updatedBooking.id);
+      console.log("Booking data being sent:", {
+        customer_name: updatedBooking.customer,
+        customer_phone: updatedBooking.phone,
+        service: updatedBooking.service,
+        booking_time: updatedBooking.time,
+        duration: updatedBooking.duration,
+        car: updatedBooking.car,
+        status: updatedBooking.status,
+        booking_date: updatedBooking.date,
+        technician_id: updatedBooking.technician_id,
+        service_id: updatedBooking.service_id,
+        bay_id: updatedBooking.bay_id
+      });
+      
+      const { data, error } = await supabase
         .from('bookings')
         .update({
           customer_name: updatedBooking.customer,
@@ -225,10 +238,17 @@ const BookingDiary = () => {
           duration: updatedBooking.duration,
           car: updatedBooking.car,
           status: updatedBooking.status,
+          booking_date: updatedBooking.date,
+          technician_id: updatedBooking.technician_id || null,
+          service_id: updatedBooking.service_id || null,
+          bay_id: updatedBooking.bay_id || null
         })
         .eq('id', updatedBooking.id.toString());
       
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error details:', error);
+        throw error;
+      }
       
       setIsModalOpen(false);
       setSelectedBooking(null);
@@ -287,13 +307,17 @@ const BookingDiary = () => {
       const updatedBookings = bookings.filter(booking => booking.id !== bookingToDelete.id);
       setBookings(updatedBookings);
       
-      // Convert numeric id to string when sending to Supabase
+      console.log("Deleting booking with ID:", bookingToDelete.id);
+      
       const { error } = await supabase
         .from('bookings')
         .delete()
         .eq('id', bookingToDelete.id.toString());
       
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error details:', error);
+        throw error;
+      }
       
       setIsModalOpen(false);
       setSelectedBooking(null);
