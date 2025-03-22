@@ -109,11 +109,11 @@ export const useDataCleanup = () => {
             continue;
           }
           
-          // Delete all records in the table
+          // Delete all records in the table using a direct delete without the problematic condition
           const { error } = await supabase
             .from(table as any)
             .delete()
-            .neq('id', 'dummy-id'); // This will delete all records
+            .gte('id', '00000000-0000-0000-0000-000000000000'); // This will match all valid UUIDs
           
           if (error) {
             console.error(`Error cleaning ${table}:`, error);
