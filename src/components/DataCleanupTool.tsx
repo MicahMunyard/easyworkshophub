@@ -22,6 +22,7 @@ const DataCleanupTool = () => {
   const { toast } = useToast();
   const { user } = useAuth();
 
+  // Define tables as a typed array of valid table names
   const tablesToClean = [
     'user_bookings',
     'user_jobs',
@@ -30,7 +31,7 @@ const DataCleanupTool = () => {
     'technicians',
     'services',
     'service_reminders'
-  ];
+  ] as const; // This makes it a readonly tuple with specific string literals
 
   const handleCleanupData = async () => {
     if (!user) {
@@ -49,14 +50,7 @@ const DataCleanupTool = () => {
     try {
       for (const table of tablesToClean) {
         try {
-          let query = supabase.from(table).delete();
-          
-          // Add user_id filter for user-specific tables
-          if (table.startsWith('user_')) {
-            query = query.eq('user_id', user.id);
-          }
-          
-          const { error } = await query;
+          let { error } = await supabase.from(table).delete().eq('user_id', user.id);
           
           if (error) {
             console.error(`Error cleaning ${table}:`, error);

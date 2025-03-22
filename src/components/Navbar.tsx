@@ -2,7 +2,7 @@
 import React from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { User, LogOut, Settings, Menu, X } from "lucide-react";
-import { useMobileMenu } from "@/hooks/use-mobile";
+import { useMobileMenu } from "@/hooks/use-mobile-menu";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { ModeToggle } from "./ui/mode-toggle";
+import { ModeToggle } from "@/components/ui/mode-toggle";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";

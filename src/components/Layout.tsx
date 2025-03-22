@@ -130,7 +130,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
-      <Navbar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+      <Navbar />
       <div className="h-14 border-b flex items-center px-4 md:px-6">
         <Tabs value={getCurrentTab().toLowerCase()} onValueChange={handleTabChange} className="w-full">
           <TabsList className="bg-transparent h-12 w-full justify-start px-0 gap-1">
