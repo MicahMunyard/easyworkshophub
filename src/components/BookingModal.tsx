@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import {
   Dialog,
@@ -9,6 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { BookingType } from "@/types/booking";
 import { supabase } from "@/integrations/supabase/client";
+import { format } from "date-fns";
 import BookingForm from "./booking/BookingForm";
 import DeleteConfirmationDialog from "./booking/DeleteConfirmationDialog";
 

@@ -14,7 +14,7 @@ export const useBookings = (initialDate = new Date(), initialView: BookingView =
     date,
     setDate,
     view,
-    setView,
+    setView: (newView: BookingView) => setView(newView),
     bookings,
     isLoading,
     navigateDate,
