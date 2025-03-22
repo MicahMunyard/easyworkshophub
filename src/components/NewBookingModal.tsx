@@ -9,16 +9,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
-import { Car, Wrench, User, Phone, Clock, CalendarIcon, Warehouse } from "lucide-react";
 import { BookingType } from "@/types/booking";
-import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+
+// Import our new components
+import CustomerInfoFields from "./booking/CustomerInfoFields";
+import ServiceSelector from "./booking/ServiceSelector";
+import TechnicianSelector from "./booking/TechnicianSelector";
+import ServiceBaySelector from "./booking/ServiceBaySelector";
+import DateSelector from "./booking/DateSelector";
+import TimeStatusSelector from "./booking/TimeStatusSelector";
 
 interface NewBookingModalProps {
   isOpen: boolean;
@@ -208,181 +209,41 @@ const NewBookingModal: React.FC<NewBookingModalProps> = ({ isOpen, onClose, onSa
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="customer" className="flex items-center gap-2">
-                <User className="h-4 w-4" /> Customer Name
-              </Label>
-              <Input
-                id="customer"
-                name="customer"
-                value={newBooking.customer}
-                onChange={handleChange}
-                required
-              />
-            </div>
+            <CustomerInfoFields
+              customer={newBooking.customer}
+              phone={newBooking.phone}
+              car={newBooking.car}
+              handleChange={handleChange}
+            />
             
-            <div className="grid gap-2">
-              <Label htmlFor="phone" className="flex items-center gap-2">
-                <Phone className="h-4 w-4" /> Phone Number
-              </Label>
-              <Input
-                id="phone"
-                name="phone"
-                value={newBooking.phone}
-                onChange={handleChange}
-                required
-              />
-            </div>
+            <ServiceSelector
+              selectedServiceId={selectedServiceId}
+              services={services}
+              onServiceChange={(value) => handleSelectChange("serviceId", value)}
+            />
             
-            <div className="grid gap-2">
-              <Label htmlFor="car" className="flex items-center gap-2">
-                <Car className="h-4 w-4" /> Vehicle
-              </Label>
-              <Input
-                id="car"
-                name="car"
-                value={newBooking.car}
-                onChange={handleChange}
-                required
-              />
-            </div>
+            <TechnicianSelector
+              selectedTechnicianId={selectedTechnicianId}
+              technicians={technicians}
+              onTechnicianChange={(value) => handleSelectChange("technicianId", value)}
+            />
             
-            <div className="grid gap-2">
-              <Label htmlFor="serviceId" className="flex items-center gap-2">
-                <Wrench className="h-4 w-4" /> Service
-              </Label>
-              <Select 
-                value={selectedServiceId || ""} 
-                onValueChange={(value) => handleSelectChange("serviceId", value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select service" />
-                </SelectTrigger>
-                <SelectContent>
-                  {services.map((service) => (
-                    <SelectItem key={service.id} value={service.id}>
-                      {service.name} - ${service.price.toFixed(2)} - {service.duration} min
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <ServiceBaySelector
+              selectedBayId={selectedBayId}
+              bays={bays}
+              onBayChange={(value) => handleSelectChange("bayId", value)}
+            />
             
-            <div className="grid gap-2">
-              <Label htmlFor="technicianId" className="flex items-center gap-2">
-                <User className="h-4 w-4" /> Technician
-              </Label>
-              <Select 
-                value={selectedTechnicianId || ""} 
-                onValueChange={(value) => handleSelectChange("technicianId", value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select technician" />
-                </SelectTrigger>
-                <SelectContent>
-                  {technicians.map((tech) => (
-                    <SelectItem key={tech.id} value={tech.id}>
-                      {tech.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <DateSelector
+              date={date}
+              onDateChange={handleDateChange}
+            />
             
-            <div className="grid gap-2">
-              <Label htmlFor="bayId" className="flex items-center gap-2">
-                <Warehouse className="h-4 w-4" /> Service Bay
-              </Label>
-              <Select 
-                value={selectedBayId || ""} 
-                onValueChange={(value) => handleSelectChange("bayId", value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select service bay" />
-                </SelectTrigger>
-                <SelectContent>
-                  {bays.map((bay) => (
-                    <SelectItem key={bay.id} value={bay.id}>
-                      {bay.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="grid gap-2">
-              <Label htmlFor="date" className="flex items-center gap-2">
-                <CalendarIcon className="h-4 w-4" /> Date
-              </Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !date && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {date ? format(date, "PPP") : "Select date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={date}
-                    onSelect={handleDateChange}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="time" className="flex items-center gap-2">
-                  <Clock className="h-4 w-4" /> Time
-                </Label>
-                <Select 
-                  value={newBooking.time} 
-                  onValueChange={(value) => handleSelectChange("time", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select time" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {["8:00 AM", "8:30 AM", "9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM",
-                      "11:00 AM", "11:30 AM", "12:00 PM", "12:30 PM", "1:00 PM", "1:30 PM",
-                      "2:00 PM", "2:30 PM", "3:00 PM", "3:30 PM", "4:00 PM", "4:30 PM",
-                      "5:00 PM", "5:30 PM"].map((time) => (
-                      <SelectItem key={time} value={time}>
-                        {time}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="grid gap-2">
-                <Label htmlFor="status" className="flex items-center gap-2">
-                  Status
-                </Label>
-                <Select 
-                  value={newBooking.status} 
-                  onValueChange={(value) => handleSelectChange("status", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="confirmed">Confirmed</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+            <TimeStatusSelector
+              time={newBooking.time}
+              status={newBooking.status}
+              onSelectChange={handleSelectChange}
+            />
           </div>
           <DialogFooter>
             <Button variant="outline" type="button" onClick={handleCloseModal}>
