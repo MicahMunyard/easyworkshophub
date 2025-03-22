@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -299,34 +300,51 @@ export const useBookings = (initialDate = new Date(), initialView = "day") => {
 
   const deleteBooking = async (bookingToDelete: BookingType) => {
     try {
+      // Immediately update the UI by removing the booking
       const updatedBookings = bookings.filter(booking => booking.id !== bookingToDelete.id);
       setBookings(updatedBookings);
       
-      const bookingIdStr = bookingToDelete.id.toString();
+      // Convert bookingId to string, ensuring it's in the correct format
+      let bookingIdStr = String(bookingToDelete.id);
       
       console.log("Deleting booking with ID:", bookingIdStr);
       
+      // First, find any matching jobs to delete
+      const { data: matchingJobs, error: jobsError } = await supabase
+        .from('jobs')
+        .select('*')
+        .eq('customer', bookingToDelete.customer)
+        .eq('date', bookingToDelete.date);
+      
+      if (jobsError) {
+        console.error('Error finding matching jobs:', jobsError);
+        throw jobsError;
+      }
+      
+      // Delete the booking from Supabase
       const { error } = await supabase
         .from('bookings')
         .delete()
         .eq('id', bookingIdStr);
       
       if (error) {
-        console.error('Supabase error details:', error);
+        console.error('Error deleting booking:', error);
         throw error;
       }
       
-      const { data: matchingJobs } = await supabase
-        .from('jobs')
-        .select('*')
-        .eq('customer', bookingToDelete.customer)
-        .eq('date', bookingToDelete.date);
-      
+      // Then delete any matching jobs if they exist
       if (matchingJobs && matchingJobs.length > 0) {
-        await supabase
-          .from('jobs')
-          .delete()
-          .eq('id', matchingJobs[0].id);
+        for (const job of matchingJobs) {
+          const { error: deleteJobError } = await supabase
+            .from('jobs')
+            .delete()
+            .eq('id', job.id);
+          
+          if (deleteJobError) {
+            console.error('Error deleting associated job:', deleteJobError);
+            // Continue with other deletions even if one fails
+          }
+        }
       }
       
       toast({
@@ -337,12 +355,14 @@ export const useBookings = (initialDate = new Date(), initialView = "day") => {
       
       return true;
     } catch (error) {
-      console.error('Error deleting booking:', error);
+      console.error('Error in deleteBooking:', error);
       toast({
         title: "Error",
         description: "Failed to delete booking. Please try again.",
         variant: "destructive"
       });
+      
+      // Re-fetch bookings to ensure UI is in sync with database
       await fetchBookings();
       return false;
     }

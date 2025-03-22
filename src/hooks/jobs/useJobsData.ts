@@ -49,7 +49,7 @@ export const useJobsData = () => {
     }
   };
 
-  // Also set up a subscription for real-time updates from both jobs and bookings tables
+  // Set up a subscription for real-time updates from both jobs and bookings tables
   useEffect(() => {
     fetchJobs();
     
@@ -62,7 +62,8 @@ export const useJobsData = () => {
           schema: 'public', 
           table: 'jobs' 
         }, 
-        () => {
+        (payload) => {
+          console.log("Jobs table change detected:", payload);
           fetchJobs();
         }
       )
@@ -77,7 +78,8 @@ export const useJobsData = () => {
           schema: 'public', 
           table: 'bookings' 
         }, 
-        () => {
+        (payload) => {
+          console.log("Bookings table change detected:", payload);
           fetchJobs();
         }
       )
