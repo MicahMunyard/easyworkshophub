@@ -31,6 +31,7 @@ const TechnicianSelector: React.FC<TechnicianSelectorProps> = ({
       <Select 
         value={selectedTechnicianId || ""} 
         onValueChange={onTechnicianChange}
+        disabled={!user}
       >
         <SelectTrigger>
           <SelectValue placeholder="Select technician" />
@@ -43,6 +44,11 @@ const TechnicianSelector: React.FC<TechnicianSelectorProps> = ({
           ))}
         </SelectContent>
       </Select>
+      {!user && (
+        <p className="text-xs text-muted-foreground mt-1">
+          Please sign in to select a technician
+        </p>
+      )}
     </div>
   );
 };

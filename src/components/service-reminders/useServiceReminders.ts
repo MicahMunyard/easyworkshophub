@@ -14,6 +14,12 @@ export const useServiceReminders = (customerId: number) => {
   const fetchReminders = async () => {
     setIsLoading(true);
     try {
+      if (!user) {
+        setReminders([]);
+        setIsLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('service_reminders')
         .select('*')
@@ -159,7 +165,7 @@ export const useServiceReminders = (customerId: number) => {
     if (customerId) {
       fetchReminders();
     }
-  }, [customerId]);
+  }, [customerId, user]); // Added user dependency to refetch when auth state changes
 
   return {
     reminders,

@@ -31,6 +31,7 @@ const ServiceBaySelector: React.FC<ServiceBaySelectorProps> = ({
       <Select 
         value={selectedBayId || ""} 
         onValueChange={onBayChange}
+        disabled={!user}
       >
         <SelectTrigger>
           <SelectValue placeholder="Select service bay" />
@@ -43,6 +44,11 @@ const ServiceBaySelector: React.FC<ServiceBaySelectorProps> = ({
           ))}
         </SelectContent>
       </Select>
+      {!user && (
+        <p className="text-xs text-muted-foreground mt-1">
+          Please sign in to select a service bay
+        </p>
+      )}
     </div>
   );
 };
