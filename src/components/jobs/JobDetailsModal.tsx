@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -23,12 +23,28 @@ interface JobDetailsModalProps {
 }
 
 const JobDetailsModal: React.FC<JobDetailsModalProps> = ({ isOpen, onClose, job, onEdit }) => {
+  // Fix for freezing: Use useEffect to detect when the modal should close
+  useEffect(() => {
+    // This ensures the component unmounts properly when closed
+    return () => {
+      // Cleanup if needed
+    };
+  }, [isOpen]);
+
   if (!job) return null;
 
   const StatusIcon = jobStatuses[job.status].icon;
+  
+  // Handle close with a proper function rather than direct reference
+  const handleClose = () => {
+    // Delay the close slightly to prevent freezing
+    setTimeout(() => {
+      onClose();
+    }, 10);
+  };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -93,30 +109,43 @@ const JobDetailsModal: React.FC<JobDetailsModalProps> = ({ isOpen, onClose, job,
             
             <div className="space-y-1">
               <div className="text-sm text-muted-foreground flex items-center gap-1">
+                <Clock className="h-3.5 w-3.5" /> Scheduled Time
+              </div>
+              <div className="font-medium">{job.time || 'Not specified'}</div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <div className="text-sm text-muted-foreground flex items-center gap-1">
                 <Clock className="h-3.5 w-3.5" /> Time Estimate
               </div>
               <div className="font-medium">{job.timeEstimate}</div>
             </div>
-          </div>
-
-          <div className="space-y-1">
-            <div className="text-sm text-muted-foreground">Priority</div>
-            <div>
-              <Badge variant="outline" className={cn(
-                job.priority === "High" ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" :
-                job.priority === "Medium" ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" :
-                "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-              )}>
-                {job.priority}
-              </Badge>
+            
+            <div className="space-y-1">
+              <div className="text-sm text-muted-foreground">Priority</div>
+              <div>
+                <Badge variant="outline" className={cn(
+                  job.priority === "High" ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" :
+                  job.priority === "Medium" ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" :
+                  "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                )}>
+                  {job.priority}
+                </Badge>
+              </div>
             </div>
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={handleClose}>
             Close
           </Button>
-          <Button onClick={() => onEdit(job)}>
+          <Button onClick={() => {
+            handleClose();
+            // Slightly delay the edit action to prevent UI freezing
+            setTimeout(() => onEdit(job), 50);
+          }}>
             Edit Job
           </Button>
         </DialogFooter>

@@ -19,7 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, Eye, Edit, UserCheck2, X } from "lucide-react";
+import { MoreHorizontal, Eye, Edit, UserCheck2, X, Clock } from "lucide-react";
 import { JobType } from "@/types/job";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -217,6 +217,7 @@ const JobsList: React.FC<JobsListProps> = ({
           <TableHead>Status</TableHead>
           <TableHead>Assigned To</TableHead>
           <TableHead>Date</TableHead>
+          <TableHead>Time</TableHead> {/* Add Time column */}
           <TableHead>Priority</TableHead>
           <TableHead className="text-right">Actions</TableHead>
         </TableRow>
@@ -241,6 +242,7 @@ const JobsList: React.FC<JobsListProps> = ({
             </TableCell>
             <TableCell>{job.assignedTo}</TableCell>
             <TableCell>{formatDate(job.date)}</TableCell>
+            <TableCell>{job.time || 'Not specified'}</TableCell> {/* Display time */}
             <TableCell>
               <Badge className={getPriorityColor(job.priority)}>
                 {job.priority}

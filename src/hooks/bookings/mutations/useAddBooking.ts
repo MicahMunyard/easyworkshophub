@@ -81,6 +81,7 @@ export const useAddBooking = (
           status: newBooking.status === 'confirmed' ? 'pending' : 'pending',
           assigned_to: assignedTo,
           date: newBooking.date,
+          time: newBooking.time, // Adding the time from the booking
           time_estimate: `${newBooking.duration} minutes`,
           priority: 'Medium',
           created_at: new Date().toISOString(),
