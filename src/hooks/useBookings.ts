@@ -1,11 +1,10 @@
-
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { BookingType } from "@/types/booking";
 import { useToast } from "@/hooks/use-toast";
+import { v4 as uuidv4 } from 'uuid';
 
-// These are dummy bookings for fallback
 const dummyBookings: BookingType[] = [
   { 
     id: 1, 
@@ -177,9 +176,12 @@ export const useBookings = (initialDate = new Date(), initialView = "day") => {
       const updatedBookings = [...bookings, newBooking];
       setBookings(updatedBookings);
       
+      const bookingId = newBooking.id ? newBooking.id.toString() : uuidv4();
+      
       const { error } = await supabase
         .from('bookings')
         .insert({
+          id: bookingId,
           customer_name: newBooking.customer,
           customer_phone: newBooking.phone,
           service: newBooking.service,
@@ -194,6 +196,21 @@ export const useBookings = (initialDate = new Date(), initialView = "day") => {
         });
       
       if (error) throw error;
+      
+      await supabase
+        .from('jobs')
+        .insert({
+          id: uuidv4().substring(0, 8),
+          customer: newBooking.customer,
+          vehicle: newBooking.car,
+          service: newBooking.service,
+          status: newBooking.status === 'confirmed' ? 'pending' : 'pending',
+          assigned_to: newBooking.technician_id || 'Unassigned',
+          date: newBooking.date,
+          time_estimate: `${newBooking.duration} minutes`,
+          priority: 'Medium'
+        })
+        .single();
       
       toast({
         title: "Booking Created",
@@ -219,22 +236,9 @@ export const useBookings = (initialDate = new Date(), initialView = "day") => {
       );
       setBookings(updatedBookings);
       
-      console.log("Updating booking with ID:", updatedBooking.id);
-      console.log("Booking data being sent:", {
-        customer_name: updatedBooking.customer,
-        customer_phone: updatedBooking.phone,
-        service: updatedBooking.service,
-        booking_time: updatedBooking.time,
-        duration: updatedBooking.duration,
-        car: updatedBooking.car,
-        status: updatedBooking.status,
-        booking_date: updatedBooking.date,
-        technician_id: updatedBooking.technician_id,
-        service_id: updatedBooking.service_id,
-        bay_id: updatedBooking.bay_id
-      });
+      const bookingIdStr = updatedBooking.id.toString();
       
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('bookings')
         .update({
           customer_name: updatedBooking.customer,
@@ -249,11 +253,31 @@ export const useBookings = (initialDate = new Date(), initialView = "day") => {
           service_id: updatedBooking.service_id || null,
           bay_id: updatedBooking.bay_id || null
         })
-        .eq('id', updatedBooking.id.toString());
+        .eq('id', bookingIdStr);
       
       if (error) {
         console.error('Supabase error details:', error);
         throw error;
+      }
+      
+      const { data: matchingJobs } = await supabase
+        .from('jobs')
+        .select('*')
+        .eq('customer', updatedBooking.customer)
+        .eq('date', updatedBooking.date);
+      
+      if (matchingJobs && matchingJobs.length > 0) {
+        await supabase
+          .from('jobs')
+          .update({
+            vehicle: updatedBooking.car,
+            service: updatedBooking.service,
+            status: updatedBooking.status === 'confirmed' ? 'pending' : 
+                   updatedBooking.status === 'completed' ? 'completed' : 'pending',
+            assigned_to: updatedBooking.technician_id || 'Unassigned',
+            time_estimate: `${updatedBooking.duration} minutes`
+          })
+          .eq('id', matchingJobs[0].id);
       }
       
       toast({
@@ -278,16 +302,31 @@ export const useBookings = (initialDate = new Date(), initialView = "day") => {
       const updatedBookings = bookings.filter(booking => booking.id !== bookingToDelete.id);
       setBookings(updatedBookings);
       
-      console.log("Deleting booking with ID:", bookingToDelete.id);
+      const bookingIdStr = bookingToDelete.id.toString();
+      
+      console.log("Deleting booking with ID:", bookingIdStr);
       
       const { error } = await supabase
         .from('bookings')
         .delete()
-        .eq('id', bookingToDelete.id.toString());
+        .eq('id', bookingIdStr);
       
       if (error) {
         console.error('Supabase error details:', error);
         throw error;
+      }
+      
+      const { data: matchingJobs } = await supabase
+        .from('jobs')
+        .select('*')
+        .eq('customer', bookingToDelete.customer)
+        .eq('date', bookingToDelete.date);
+      
+      if (matchingJobs && matchingJobs.length > 0) {
+        await supabase
+          .from('jobs')
+          .delete()
+          .eq('id', matchingJobs[0].id);
       }
       
       toast({
@@ -304,11 +343,11 @@ export const useBookings = (initialDate = new Date(), initialView = "day") => {
         description: "Failed to delete booking. Please try again.",
         variant: "destructive"
       });
+      await fetchBookings();
       return false;
     }
   };
 
-  // Initial fetch
   useEffect(() => {
     fetchBookings();
   }, [date, view]);

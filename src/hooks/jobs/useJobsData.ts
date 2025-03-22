@@ -49,8 +49,45 @@ export const useJobsData = () => {
     }
   };
 
+  // Also set up a subscription for real-time updates from both jobs and bookings tables
   useEffect(() => {
     fetchJobs();
+    
+    // Set up real-time subscription to jobs changes
+    const jobsChannel = supabase
+      .channel('jobs-changes')
+      .on('postgres_changes', 
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'jobs' 
+        }, 
+        () => {
+          fetchJobs();
+        }
+      )
+      .subscribe();
+      
+    // Also listen to booking changes since bookings can affect jobs
+    const bookingsChannel = supabase
+      .channel('bookings-jobs-sync')
+      .on('postgres_changes', 
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'bookings' 
+        }, 
+        () => {
+          fetchJobs();
+        }
+      )
+      .subscribe();
+    
+    // Clean up subscriptions
+    return () => {
+      supabase.removeChannel(jobsChannel);
+      supabase.removeChannel(bookingsChannel);
+    };
   }, []);
 
   return {
