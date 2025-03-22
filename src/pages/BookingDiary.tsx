@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Plus, Filter, X } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -21,7 +20,6 @@ const timeSlots = [
   "5:00 PM", "5:30 PM"
 ];
 
-// Sample data for initial development
 const dummyBookings: BookingType[] = [
   { 
     id: 1, 
@@ -83,21 +81,18 @@ const BookingDiary = () => {
   
   const formattedDate = format(date, "EEEE, MMMM d, yyyy");
 
-  // Fetch bookings from Supabase
   useEffect(() => {
     const fetchBookings = async () => {
       setIsLoading(true);
       try {
         const formattedDateString = format(date, 'yyyy-MM-dd');
         
-        // Fetch bookings based on the view
         let startDate, endDate;
         
         if (view === 'day') {
           startDate = formattedDateString;
           endDate = formattedDateString;
         } else if (view === 'week') {
-          // Get start and end of week
           const start = new Date(date);
           start.setDate(date.getDate() - date.getDay()); // Sunday
           const end = new Date(date);
@@ -106,7 +101,6 @@ const BookingDiary = () => {
           startDate = format(start, 'yyyy-MM-dd');
           endDate = format(end, 'yyyy-MM-dd');
         } else if (view === 'month') {
-          // Get start and end of month
           const start = new Date(date.getFullYear(), date.getMonth(), 1);
           const end = new Date(date.getFullYear(), date.getMonth() + 1, 0);
           
@@ -125,7 +119,6 @@ const BookingDiary = () => {
         }
 
         if (data) {
-          // Transform data to match our BookingType interface
           const transformedData: BookingType[] = data.map(booking => ({
             id: booking.id ? parseInt(booking.id.toString().replace(/-/g, '').substring(0, 8), 16) : Math.floor(Math.random() * 1000),
             customer: booking.customer_name,
@@ -147,19 +140,13 @@ const BookingDiary = () => {
           description: "Failed to load bookings. Please try again.",
           variant: "destructive"
         });
-        // Fall back to dummy data for development
         setBookings(dummyBookings);
       } finally {
         setIsLoading(false);
       }
     };
 
-    // Comment out during development if needed
-    // fetchBookings();
-    
-    // For development, simulate fetching data
     setTimeout(() => {
-      // Add a booking with a different date for testing week and month views
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       
@@ -221,28 +208,25 @@ const BookingDiary = () => {
 
   const handleSaveBooking = async (updatedBooking: BookingType) => {
     try {
-      // First update our local state
       const updatedBookings = bookings.map(booking => 
         booking.id === updatedBooking.id ? updatedBooking : booking
       );
       setBookings(updatedBookings);
       
-      // Save to Supabase (commented out during development)
-      // const { error } = await supabase
-      //   .from('bookings')
-      //   .update({
-      //     customer_name: updatedBooking.customer,
-      //     customer_phone: updatedBooking.phone,
-      //     service: updatedBooking.service,
-      //     booking_time: updatedBooking.time,
-      //     duration: updatedBooking.duration,
-      //     car: updatedBooking.car,
-      //     status: updatedBooking.status,
-      //     // Additional fields like mechanic, notes, cost would be included here in a real application
-      //   })
-      //   .eq('id', updatedBooking.id);
+      const { error } = await supabase
+        .from('bookings')
+        .update({
+          customer_name: updatedBooking.customer,
+          customer_phone: updatedBooking.phone,
+          service: updatedBooking.service,
+          booking_time: updatedBooking.time,
+          duration: updatedBooking.duration,
+          car: updatedBooking.car,
+          status: updatedBooking.status,
+        })
+        .eq('id', updatedBooking.id);
       
-      // if (error) throw error;
+      if (error) throw error;
       
       setIsModalOpen(false);
       setSelectedBooking(null);
@@ -263,25 +247,22 @@ const BookingDiary = () => {
 
   const handleAddNewBooking = async (newBooking: BookingType) => {
     try {
-      // Add to local state first
       setBookings([...bookings, newBooking]);
       
-      // Save to Supabase (commented out during development)
-      // const { error } = await supabase
-      //   .from('bookings')
-      //   .insert({
-      //     customer_name: newBooking.customer,
-      //     customer_phone: newBooking.phone,
-      //     service: newBooking.service,
-      //     booking_time: newBooking.time,
-      //     duration: newBooking.duration,
-      //     car: newBooking.car,
-      //     status: newBooking.status,
-      //     booking_date: newBooking.date
-      //     // Additional fields like mechanic, notes, cost would be included here in a real application
-      //   });
+      const { error } = await supabase
+        .from('bookings')
+        .insert({
+          customer_name: newBooking.customer,
+          customer_phone: newBooking.phone,
+          service: newBooking.service,
+          booking_time: newBooking.time,
+          duration: newBooking.duration,
+          car: newBooking.car,
+          status: newBooking.status,
+          booking_date: newBooking.date
+        });
       
-      // if (error) throw error;
+      if (error) throw error;
       
       setIsNewBookingModalOpen(false);
       
@@ -294,6 +275,36 @@ const BookingDiary = () => {
       toast({
         title: "Error",
         description: "Failed to create booking. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDeleteBooking = async (bookingToDelete: BookingType) => {
+    try {
+      const updatedBookings = bookings.filter(booking => booking.id !== bookingToDelete.id);
+      setBookings(updatedBookings);
+      
+      const { error } = await supabase
+        .from('bookings')
+        .delete()
+        .eq('id', bookingToDelete.id);
+      
+      if (error) throw error;
+      
+      setIsModalOpen(false);
+      setSelectedBooking(null);
+      
+      toast({
+        title: "Booking Deleted",
+        description: `${bookingToDelete.customer}'s booking has been deleted.`,
+        variant: "destructive"
+      });
+    } catch (error) {
+      console.error('Error deleting booking:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete booking. Please try again.",
         variant: "destructive"
       });
     }
@@ -399,15 +410,14 @@ const BookingDiary = () => {
         </div>
       </div>
       
-      {/* Modal for editing bookings */}
       <BookingModal 
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         booking={selectedBooking}
         onSave={handleSaveBooking}
+        onDelete={handleDeleteBooking}
       />
 
-      {/* Modal for adding new bookings */}
       <NewBookingModal
         isOpen={isNewBookingModalOpen}
         onClose={() => setIsNewBookingModalOpen(false)}

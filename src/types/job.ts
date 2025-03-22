@@ -4,9 +4,9 @@ export interface JobType {
   customer: string;
   vehicle: string;
   service: string;
-  status: "pending" | "inProgress" | "completed" | "cancelled";
+  status: "pending" | "inProgress" | "working" | "completed" | "cancelled";
   assignedTo: string;
   date: string;
   timeEstimate: string;
-  priority: "Low" | "Medium" | "High";
+  priority: string;
 }

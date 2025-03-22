@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
@@ -24,6 +23,7 @@ import { useNavigate } from "react-router-dom";
 import { ResizablePanel, ResizablePanelGroup, ResizableHandle } from "@/components/ui/resizable";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { format } from "date-fns";
 
 const StatsCard = ({ title, value, icon: Icon, trend, description }: { 
   title: string; 
@@ -111,50 +111,83 @@ const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [appointments, setAppointments] = useState<any[]>([]);
+  const [todayBookingsCount, setTodayBookingsCount] = useState<number>(0);
+  const [activeJobsCount, setActiveJobsCount] = useState<number>(0);
+  const [todayRevenue, setTodayRevenue] = useState<number>(0);
+  const [lowStockItems, setLowStockItems] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
 
-  // This should be fetched from your backend based on the current account
-  // For now, we're hardcoding a demonstration video ID
-  const accountVideoId = "dQw4w9WgXcQ"; // Replace with API call to get account-specific video
+  const accountVideoId = "dQw4w9WgXcQ";
 
   useEffect(() => {
-    const fetchUserAppointments = async () => {
+    const fetchDashboardData = async () => {
       if (!user) {
         setAppointments([]);
+        setTodayBookingsCount(0);
+        setActiveJobsCount(0);
+        setTodayRevenue(0);
+        setLowStockItems(0);
         setIsLoading(false);
         return;
       }
 
+      setIsLoading(true);
+      
       try {
-        const { data, error } = await supabase
+        const today = format(new Date(), 'yyyy-MM-dd');
+        
+        const { data: bookingsData, error: bookingsError } = await supabase
           .from('user_bookings')
           .select('*')
+          .eq('booking_date', today)
+          .eq('user_id', user.id);
+          
+        if (bookingsError) throw bookingsError;
+        
+        setAppointments(bookingsData || []);
+        
+        const revenue = bookingsData?.reduce((sum, booking) => sum + (booking.cost || 0), 0) || 0;
+        setTodayRevenue(revenue);
+        
+        const { data: jobsData, error: jobsError } = await supabase
+          .from('jobs')
+          .select('*')
+          .eq('status', 'inProgress');
+          
+        if (jobsError) throw jobsError;
+        
+        setActiveJobsCount(jobsData?.length || 0);
+        
+        const { data: inventoryData, error: inventoryError } = await supabase
+          .from('user_inventory_items')
+          .select('*')
           .eq('user_id', user.id)
-          .order('booking_date', { ascending: true })
-          .limit(4);
-
-        if (error) throw error;
-        setAppointments(data || []);
+          .lt('in_stock', supabase.raw('min_stock'));
+          
+        if (inventoryError) throw inventoryError;
+        
+        setLowStockItems(inventoryData?.length || 0);
+        
       } catch (error) {
-        console.error('Error fetching appointments:', error);
+        console.error('Error fetching dashboard data:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchUserAppointments();
+    fetchDashboardData();
+    
+    const intervalId = setInterval(fetchDashboardData, 60000);
+    
+    return () => clearInterval(intervalId);
   }, [user]);
 
-  // Format appointments for display
   const formattedAppointments = appointments.map(appointment => ({
     time: appointment.booking_time,
     customer: appointment.customer_name,
     service: appointment.service,
     car: appointment.car,
   }));
-
-  // No longer using dummy data when no appointments are available
-  // Just show an empty state message instead
 
   return (
     <div className="space-y-8">
@@ -181,7 +214,6 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Featured Video Widget - Now positioned above the stats cards */}
       <div className="w-full" style={{ height: "400px" }}>
         <VideoWidget 
           videoId={accountVideoId} 
@@ -192,31 +224,30 @@ const Dashboard: React.FC = () => {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatsCard 
           title="Today's Bookings" 
-          value={isLoading ? "..." : String(appointments.length || "0")} 
+          value={isLoading ? "..." : String(todayBookingsCount)} 
           icon={Calendar} 
-          trend="Based on your scheduled appointments"
+          trend={todayBookingsCount > 0 ? `${todayBookingsCount} scheduled today` : "No bookings today"}
         />
         <StatsCard 
           title="Active Jobs" 
-          value="0" 
+          value={isLoading ? "..." : String(activeJobsCount)} 
           icon={Briefcase} 
-          description="No overdue jobs"
+          description={activeJobsCount > 0 ? `${activeJobsCount} jobs in progress` : "No active jobs"}
         />
         <StatsCard 
           title="Revenue (Today)" 
-          value="$0" 
+          value={isLoading ? "..." : `$${todayRevenue.toFixed(2)}`} 
           icon={FileText} 
-          trend="Start adding jobs to track revenue"
+          trend={todayRevenue > 0 ? `From ${todayBookingsCount} bookings` : "No revenue today"}
         />
         <StatsCard 
           title="Low Stock Items" 
-          value="0" 
+          value={isLoading ? "..." : String(lowStockItems)} 
           icon={Package} 
-          description="Add inventory to track stock"
+          description={lowStockItems > 0 ? `${lowStockItems} items below minimum` : "All items in stock"}
         />
       </div>
 
-      {/* Remove the duplicate VideoWidget in the right panel */}
       <ResizablePanelGroup direction="horizontal" className="min-h-[600px] rounded-lg border">
         <ResizablePanel defaultSize={65}>
           <ResizablePanelGroup direction="vertical">
@@ -340,7 +371,6 @@ const Dashboard: React.FC = () => {
         <ResizableHandle withHandle />
         <ResizablePanel defaultSize={35}>
           <div className="flex h-full items-center justify-center p-4">
-            {/* This would be a good place to add additional content or information */}
             <Card className="w-full h-full overflow-hidden performance-card">
               <CardHeader className="p-4 pb-2 border-b border-border/50">
                 <CardTitle className="flex items-center">
