@@ -300,16 +300,22 @@ export const useBookings = (initialDate = new Date(), initialView = "day") => {
 
   const deleteBooking = async (bookingToDelete: BookingType) => {
     try {
-      // Immediately update the UI by removing the booking
+      // First save a copy of the current bookings for rollback if needed
+      const originalBookings = [...bookings];
+      
+      // Immediately update the UI by removing the booking to prevent freezing
       const updatedBookings = bookings.filter(booking => booking.id !== bookingToDelete.id);
       setBookings(updatedBookings);
       
-      // Convert bookingId to string, ensuring it's in the correct format
-      let bookingIdStr = String(bookingToDelete.id);
+      // Convert bookingId to the correct format for Supabase
+      // Use string for straightforward string comparison
+      const bookingIdStr = String(bookingToDelete.id);
       
-      console.log("Deleting booking with ID:", bookingIdStr);
+      console.log("Attempting to delete booking with ID:", bookingIdStr);
+      console.log("Booking details:", bookingToDelete);
       
-      // First, find any matching jobs to delete
+      // First, we'll find any associated jobs to delete
+      console.log("Looking for associated jobs with customer:", bookingToDelete.customer, "and date:", bookingToDelete.date);
       const { data: matchingJobs, error: jobsError } = await supabase
         .from('jobs')
         .select('*')
@@ -318,23 +324,40 @@ export const useBookings = (initialDate = new Date(), initialView = "day") => {
       
       if (jobsError) {
         console.error('Error finding matching jobs:', jobsError);
-        throw jobsError;
+        // Continue with the booking deletion even if we can't find associated jobs
+      } else {
+        console.log("Found matching jobs:", matchingJobs?.length || 0);
       }
       
       // Delete the booking from Supabase
-      const { error } = await supabase
+      console.log("Deleting booking with ID:", bookingIdStr);
+      const { error: deleteError } = await supabase
         .from('bookings')
         .delete()
         .eq('id', bookingIdStr);
       
-      if (error) {
-        console.error('Error deleting booking:', error);
-        throw error;
+      if (deleteError) {
+        console.error('Error deleting booking:', deleteError);
+        
+        // Try with a different approach if the first one fails - sometimes IDs can be UUIDs
+        console.log("Trying alternate deletion method for UUID format");
+        const { error: altDeleteError } = await supabase
+          .from('bookings')
+          .delete()
+          .filter('id::text', 'eq', bookingIdStr);
+        
+        if (altDeleteError) {
+          console.error('Alternative deletion also failed:', altDeleteError);
+          throw altDeleteError;
+        }
       }
       
-      // Then delete any matching jobs if they exist
+      // Now delete any associated jobs if they exist
       if (matchingJobs && matchingJobs.length > 0) {
+        console.log("Deleting associated jobs:", matchingJobs.length);
+        
         for (const job of matchingJobs) {
+          console.log("Deleting job with ID:", job.id);
           const { error: deleteJobError } = await supabase
             .from('jobs')
             .delete()
@@ -343,6 +366,8 @@ export const useBookings = (initialDate = new Date(), initialView = "day") => {
           if (deleteJobError) {
             console.error('Error deleting associated job:', deleteJobError);
             // Continue with other deletions even if one fails
+          } else {
+            console.log("Successfully deleted job with ID:", job.id);
           }
         }
       }
@@ -363,7 +388,7 @@ export const useBookings = (initialDate = new Date(), initialView = "day") => {
       });
       
       // Re-fetch bookings to ensure UI is in sync with database
-      await fetchBookings();
+      fetchBookings();
       return false;
     }
   };
