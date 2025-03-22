@@ -6,57 +6,10 @@ import { BookingType } from "@/types/booking";
 import { useToast } from "@/hooks/use-toast";
 import { v4 as uuidv4 } from 'uuid';
 
-const dummyBookings: BookingType[] = [
-  { 
-    id: 1, 
-    customer: "John Smith", 
-    phone: "(555) 123-4567", 
-    service: "Oil Change", 
-    time: "9:00 AM", 
-    duration: 30, 
-    car: "2018 Toyota Camry",
-    status: "confirmed",
-    date: format(new Date(), 'yyyy-MM-dd')
-  },
-  { 
-    id: 2, 
-    customer: "Sara Johnson", 
-    phone: "(555) 234-5678", 
-    service: "Brake Inspection", 
-    time: "11:00 AM", 
-    duration: 60,
-    car: "2020 Honda Civic",
-    status: "confirmed",
-    date: format(new Date(), 'yyyy-MM-dd')
-  },
-  { 
-    id: 3, 
-    customer: "Mike Davis", 
-    phone: "(555) 345-6789", 
-    service: "Tire Rotation", 
-    time: "1:30 PM", 
-    duration: 45,
-    car: "2019 Ford F-150",
-    status: "pending",
-    date: format(new Date(), 'yyyy-MM-dd')
-  },
-  { 
-    id: 4, 
-    customer: "Emma Wilson", 
-    phone: "(555) 456-7890", 
-    service: "Full Service", 
-    time: "3:00 PM", 
-    duration: 120,
-    car: "2021 Tesla Model 3",
-    status: "confirmed",
-    date: format(new Date(), 'yyyy-MM-dd')
-  }
-];
-
 export const useBookings = (initialDate = new Date(), initialView = "day") => {
   const [date, setDate] = useState<Date>(initialDate);
   const [view, setView] = useState(initialView);
-  const [bookings, setBookings] = useState<BookingType[]>(dummyBookings);
+  const [bookings, setBookings] = useState<BookingType[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
@@ -86,6 +39,7 @@ export const useBookings = (initialDate = new Date(), initialView = "day") => {
         endDate = format(end, 'yyyy-MM-dd');
       }
 
+      console.log(`Fetching bookings from ${startDate} to ${endDate}`);
       const { data, error } = await supabase
         .from('bookings')
         .select('*')
@@ -97,6 +51,7 @@ export const useBookings = (initialDate = new Date(), initialView = "day") => {
       }
 
       if (data) {
+        console.log(`Fetched ${data.length} bookings:`, data);
         const transformedData: BookingType[] = data.map(booking => ({
           id: booking.id ? parseInt(booking.id.toString().replace(/-/g, '').substring(0, 8), 16) : Math.floor(Math.random() * 1000),
           customer: booking.customer_name,
@@ -105,7 +60,9 @@ export const useBookings = (initialDate = new Date(), initialView = "day") => {
           time: booking.booking_time,
           duration: booking.duration,
           car: booking.car,
-          status: (booking.status === 'confirmed' ? 'confirmed' : 'pending') as 'confirmed' | 'pending',
+          status: (booking.status === 'confirmed' ? 'confirmed' : 
+                 booking.status === 'completed' ? 'completed' : 
+                 booking.status === 'cancelled' ? 'cancelled' : 'pending') as 'confirmed' | 'pending' | 'cancelled' | 'completed',
           date: booking.booking_date,
           technician_id: booking.technician_id,
           service_id: booking.service_id,
@@ -121,40 +78,6 @@ export const useBookings = (initialDate = new Date(), initialView = "day") => {
         description: "Failed to load bookings. Please try again.",
         variant: "destructive"
       });
-      // Load dummy data as fallback
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      
-      const nextWeek = new Date();
-      nextWeek.setDate(nextWeek.getDate() + 7);
-      
-      const extendedDummyBookings: BookingType[] = [
-        ...dummyBookings,
-        {
-          id: 5,
-          customer: "Alex Brown",
-          phone: "(555) 567-8901",
-          service: "Wheel Alignment",
-          time: "10:00 AM",
-          duration: 60,
-          car: "2022 Ford Mustang",
-          status: "confirmed",
-          date: format(tomorrow, 'yyyy-MM-dd')
-        },
-        {
-          id: 6,
-          customer: "Linda Green",
-          phone: "(555) 678-9012",
-          service: "Battery Replacement",
-          time: "2:00 PM",
-          duration: 30,
-          car: "2019 Chevrolet Equinox",
-          status: "pending",
-          date: format(nextWeek, 'yyyy-MM-dd')
-        }
-      ];
-      
-      setBookings(extendedDummyBookings);
     } finally {
       setIsLoading(false);
     }
@@ -174,12 +97,13 @@ export const useBookings = (initialDate = new Date(), initialView = "day") => {
 
   const addBooking = async (newBooking: BookingType) => {
     try {
-      const updatedBookings = [...bookings, newBooking];
-      setBookings(updatedBookings);
+      console.log("Adding new booking:", newBooking);
       
-      const bookingId = newBooking.id ? newBooking.id.toString() : uuidv4();
+      // Generate a proper UUID for the booking
+      const bookingId = uuidv4();
       
-      const { error } = await supabase
+      // Insert into Supabase
+      const { error: bookingError } = await supabase
         .from('bookings')
         .insert({
           id: bookingId,
@@ -196,28 +120,48 @@ export const useBookings = (initialDate = new Date(), initialView = "day") => {
           bay_id: newBooking.bay_id || null
         });
       
-      if (error) throw error;
+      if (bookingError) {
+        console.error('Error creating booking in Supabase:', bookingError);
+        throw bookingError;
+      }
       
-      await supabase
+      // Create associated job
+      const jobId = uuidv4().substring(0, 8);
+      console.log(`Creating job with ID ${jobId} for booking ${bookingId}`);
+      
+      const { error: jobError } = await supabase
         .from('jobs')
         .insert({
-          id: uuidv4().substring(0, 8),
+          id: jobId,
           customer: newBooking.customer,
           vehicle: newBooking.car,
           service: newBooking.service,
           status: newBooking.status === 'confirmed' ? 'pending' : 'pending',
-          assigned_to: newBooking.technician_id || 'Unassigned',
+          assigned_to: newBooking.technician_id ? newBooking.technician_id : 'Unassigned',
           date: newBooking.date,
           time_estimate: `${newBooking.duration} minutes`,
           priority: 'Medium'
-        })
-        .single();
+        });
+      
+      if (jobError) {
+        console.error('Error creating job in Supabase:', jobError);
+        // Continue despite job creation error
+      }
+      
+      // Update local state with the new booking
+      const bookingWithProperID: BookingType = {
+        ...newBooking,
+        id: parseInt(bookingId.replace(/-/g, '').substring(0, 8), 16)
+      };
+      
+      setBookings(prev => [...prev, bookingWithProperID]);
       
       toast({
         title: "Booking Created",
         description: `${newBooking.customer}'s booking has been added.`,
       });
       
+      await fetchBookings(); // Refresh bookings to ensure consistency
       return true;
     } catch (error) {
       console.error('Error creating booking:', error);
@@ -232,14 +176,38 @@ export const useBookings = (initialDate = new Date(), initialView = "day") => {
 
   const updateBooking = async (updatedBooking: BookingType) => {
     try {
+      console.log("Updating booking:", updatedBooking);
+      
+      // Update UI first for better UX
       const updatedBookings = bookings.map(booking => 
         booking.id === updatedBooking.id ? updatedBooking : booking
       );
       setBookings(updatedBookings);
       
-      const bookingIdStr = updatedBooking.id.toString();
+      // Find the original booking ID in Supabase format
+      const { data: matchingBookings, error: fetchError } = await supabase
+        .from('bookings')
+        .select('id')
+        .eq('customer_name', updatedBooking.customer)
+        .eq('booking_date', updatedBooking.date);
       
-      const { error } = await supabase
+      if (fetchError) {
+        console.error('Error finding original booking:', fetchError);
+        throw fetchError;
+      }
+      
+      let bookingIdStr = '';
+      if (matchingBookings && matchingBookings.length > 0) {
+        bookingIdStr = matchingBookings[0].id;
+        console.log("Found matching booking ID:", bookingIdStr);
+      } else {
+        // Fallback if we can't find the booking
+        console.warn("Could not find matching booking, using converted ID");
+        bookingIdStr = updatedBooking.id.toString();
+      }
+      
+      // Update in Supabase
+      const { error: updateError } = await supabase
         .from('bookings')
         .update({
           customer_name: updatedBooking.customer,
@@ -256,25 +224,30 @@ export const useBookings = (initialDate = new Date(), initialView = "day") => {
         })
         .eq('id', bookingIdStr);
       
-      if (error) {
-        console.error('Supabase error details:', error);
-        throw error;
+      if (updateError) {
+        console.error('Supabase update error:', updateError);
+        throw updateError;
       }
       
-      const { data: matchingJobs } = await supabase
+      // Update associated job
+      const { data: matchingJobs, error: jobsError } = await supabase
         .from('jobs')
         .select('*')
         .eq('customer', updatedBooking.customer)
         .eq('date', updatedBooking.date);
       
-      if (matchingJobs && matchingJobs.length > 0) {
+      if (jobsError) {
+        console.error('Error finding matching jobs:', jobsError);
+      } else if (matchingJobs && matchingJobs.length > 0) {
+        console.log("Updating associated job:", matchingJobs[0].id);
         await supabase
           .from('jobs')
           .update({
             vehicle: updatedBooking.car,
             service: updatedBooking.service,
             status: updatedBooking.status === 'confirmed' ? 'pending' : 
-                   updatedBooking.status === 'completed' ? 'completed' : 'pending',
+                  updatedBooking.status === 'completed' ? 'completed' : 
+                  updatedBooking.status === 'cancelled' ? 'cancelled' : 'pending',
             assigned_to: updatedBooking.technician_id || 'Unassigned',
             time_estimate: `${updatedBooking.duration} minutes`
           })
@@ -286,6 +259,7 @@ export const useBookings = (initialDate = new Date(), initialView = "day") => {
         description: `${updatedBooking.customer}'s booking has been updated.`,
       });
       
+      await fetchBookings(); // Refresh bookings to ensure consistency
       return true;
     } catch (error) {
       console.error('Error updating booking:', error);
@@ -294,67 +268,73 @@ export const useBookings = (initialDate = new Date(), initialView = "day") => {
         description: "Failed to update booking. Please try again.",
         variant: "destructive"
       });
+      await fetchBookings(); // Refresh to ensure UI is in sync with database
       return false;
     }
   };
 
   const deleteBooking = async (bookingToDelete: BookingType) => {
     try {
-      // First save a copy of the current bookings for rollback if needed
-      const originalBookings = [...bookings];
+      console.log("Attempting to delete booking:", bookingToDelete);
       
-      // Immediately update the UI by removing the booking to prevent freezing
-      const updatedBookings = bookings.filter(booking => booking.id !== bookingToDelete.id);
-      setBookings(updatedBookings);
+      // Update UI immediately for better UX
+      setBookings(prev => prev.filter(b => b.id !== bookingToDelete.id));
       
-      // Convert bookingId to the correct format for Supabase
-      // Use string for straightforward string comparison
-      const bookingIdStr = String(bookingToDelete.id);
+      // First, try to find the actual UUID of the booking in Supabase
+      const { data: matchingBookings, error: fetchError } = await supabase
+        .from('bookings')
+        .select('id')
+        .eq('customer_name', bookingToDelete.customer)
+        .eq('booking_date', bookingToDelete.date);
       
-      console.log("Attempting to delete booking with ID:", bookingIdStr);
-      console.log("Booking details:", bookingToDelete);
+      if (fetchError) {
+        console.error('Error finding booking to delete:', fetchError);
+      }
       
-      // First, we'll find any associated jobs to delete
-      console.log("Looking for associated jobs with customer:", bookingToDelete.customer, "and date:", bookingToDelete.date);
+      let actualBookingId: string | null = null;
+      
+      if (matchingBookings && matchingBookings.length > 0) {
+        actualBookingId = matchingBookings[0].id;
+        console.log("Found matching booking with ID:", actualBookingId);
+      }
+      
+      // Delete by customer name and date if we couldn't find the ID
+      if (!actualBookingId) {
+        console.log("No exact ID match found, deleting by customer and date");
+        const { error: deleteByCustomerError } = await supabase
+          .from('bookings')
+          .delete()
+          .eq('customer_name', bookingToDelete.customer)
+          .eq('booking_date', bookingToDelete.date);
+        
+        if (deleteByCustomerError) {
+          throw deleteByCustomerError;
+        }
+      } else {
+        // Delete using the actual ID
+        console.log("Deleting booking with ID:", actualBookingId);
+        const { error: deleteError } = await supabase
+          .from('bookings')
+          .delete()
+          .eq('id', actualBookingId);
+        
+        if (deleteError) {
+          throw deleteError;
+        }
+      }
+      
+      // Delete any associated jobs
+      console.log("Looking for jobs to delete with customer:", bookingToDelete.customer);
       const { data: matchingJobs, error: jobsError } = await supabase
         .from('jobs')
-        .select('*')
+        .select('id')
         .eq('customer', bookingToDelete.customer)
         .eq('date', bookingToDelete.date);
       
       if (jobsError) {
         console.error('Error finding matching jobs:', jobsError);
-        // Continue with the booking deletion even if we can't find associated jobs
-      } else {
-        console.log("Found matching jobs:", matchingJobs?.length || 0);
-      }
-      
-      // Delete the booking from Supabase
-      console.log("Deleting booking with ID:", bookingIdStr);
-      const { error: deleteError } = await supabase
-        .from('bookings')
-        .delete()
-        .eq('id', bookingIdStr);
-      
-      if (deleteError) {
-        console.error('Error deleting booking:', deleteError);
-        
-        // Try with a different approach if the first one fails - sometimes IDs can be UUIDs
-        console.log("Trying alternate deletion method for UUID format");
-        const { error: altDeleteError } = await supabase
-          .from('bookings')
-          .delete()
-          .filter('id::text', 'eq', bookingIdStr);
-        
-        if (altDeleteError) {
-          console.error('Alternative deletion also failed:', altDeleteError);
-          throw altDeleteError;
-        }
-      }
-      
-      // Now delete any associated jobs if they exist
-      if (matchingJobs && matchingJobs.length > 0) {
-        console.log("Deleting associated jobs:", matchingJobs.length);
+      } else if (matchingJobs && matchingJobs.length > 0) {
+        console.log(`Found ${matchingJobs.length} jobs to delete`);
         
         for (const job of matchingJobs) {
           console.log("Deleting job with ID:", job.id);
@@ -364,12 +344,13 @@ export const useBookings = (initialDate = new Date(), initialView = "day") => {
             .eq('id', job.id);
           
           if (deleteJobError) {
-            console.error('Error deleting associated job:', deleteJobError);
-            // Continue with other deletions even if one fails
+            console.error('Error deleting job:', deleteJobError);
           } else {
             console.log("Successfully deleted job with ID:", job.id);
           }
         }
+      } else {
+        console.log("No matching jobs found to delete");
       }
       
       toast({
@@ -378,6 +359,8 @@ export const useBookings = (initialDate = new Date(), initialView = "day") => {
         variant: "destructive"
       });
       
+      // Refresh bookings after deletion to ensure we're in sync with the database
+      await fetchBookings();
       return true;
     } catch (error) {
       console.error('Error in deleteBooking:', error);
@@ -387,14 +370,40 @@ export const useBookings = (initialDate = new Date(), initialView = "day") => {
         variant: "destructive"
       });
       
-      // Re-fetch bookings to ensure UI is in sync with database
-      fetchBookings();
+      // Refresh bookings to ensure UI is in sync with database
+      await fetchBookings();
       return false;
     }
   };
 
+  // Set up real-time subscription to booking changes
   useEffect(() => {
+    console.log("Setting up real-time subscription for bookings");
     fetchBookings();
+    
+    // Subscribe to booking changes
+    const bookingsChannel = supabase
+      .channel('bookings-changes')
+      .on('postgres_changes', 
+        {
+          event: '*',
+          schema: 'public',
+          table: 'bookings'
+        },
+        (payload) => {
+          console.log("Booking change detected:", payload);
+          fetchBookings();
+        }
+      )
+      .subscribe((status) => {
+        console.log("Bookings subscription status:", status);
+      });
+    
+    // Clean up subscription
+    return () => {
+      console.log("Cleaning up bookings subscription");
+      supabase.removeChannel(bookingsChannel);
+    };
   }, [date, view]);
 
   return {
