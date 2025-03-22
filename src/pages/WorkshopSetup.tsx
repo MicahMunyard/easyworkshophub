@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import TechnicianForm from "@/components/workshop/TechnicianForm";
 import ServiceForm from "@/components/workshop/ServiceForm";
 import ServiceBayForm from "@/components/workshop/ServiceBayForm";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Technician {
   id: string;
@@ -35,6 +35,7 @@ interface ServiceBay {
 
 const WorkshopSetup: React.FC = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [serviceBays, setServiceBays] = useState<ServiceBay[]>([]);
@@ -51,9 +52,12 @@ const WorkshopSetup: React.FC = () => {
   // Fetch Technicians
   const fetchTechnicians = async () => {
     try {
+      if (!user) return;
+      
       const { data, error } = await supabase
-        .from('technicians')
+        .from('user_technicians')
         .select('*')
+        .eq('user_id', user.id)
         .order('name');
       
       if (error) throw error;
@@ -71,9 +75,12 @@ const WorkshopSetup: React.FC = () => {
   // Fetch Services
   const fetchServices = async () => {
     try {
+      if (!user) return;
+      
       const { data, error } = await supabase
-        .from('services')
+        .from('user_services')
         .select('*')
+        .eq('user_id', user.id)
         .order('name');
       
       if (error) throw error;
@@ -91,9 +98,12 @@ const WorkshopSetup: React.FC = () => {
   // Fetch Service Bays
   const fetchServiceBays = async () => {
     try {
+      if (!user) return;
+      
       const { data, error } = await supabase
-        .from('service_bays')
+        .from('user_service_bays')
         .select('*')
+        .eq('user_id', user.id)
         .order('name');
       
       if (error) throw error;
@@ -109,17 +119,31 @@ const WorkshopSetup: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchTechnicians();
-    fetchServices();
-    fetchServiceBays();
-  }, []);
+    if (user) {
+      fetchTechnicians();
+      fetchServices();
+      fetchServiceBays();
+    }
+  }, [user]);
 
   // Technician handlers
   const handleAddTechnician = async (values: any) => {
     try {
+      if (!user) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to add technicians",
+          variant: "destructive"
+        });
+        return;
+      }
+      
       const { data, error } = await supabase
-        .from('technicians')
-        .insert([values])
+        .from('user_technicians')
+        .insert([{
+          ...values,
+          user_id: user.id
+        }])
         .select();
       
       if (error) throw error;
@@ -142,13 +166,14 @@ const WorkshopSetup: React.FC = () => {
   };
 
   const handleUpdateTechnician = async (values: any) => {
-    if (!isEditingTechnician) return;
+    if (!isEditingTechnician || !user) return;
     
     try {
       const { error } = await supabase
-        .from('technicians')
+        .from('user_technicians')
         .update(values)
-        .eq('id', isEditingTechnician.id);
+        .eq('id', isEditingTechnician.id)
+        .eq('user_id', user.id);
       
       if (error) throw error;
       
@@ -170,13 +195,14 @@ const WorkshopSetup: React.FC = () => {
   };
 
   const handleDeleteTechnician = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this technician?")) return;
+    if (!confirm("Are you sure you want to delete this technician?") || !user) return;
     
     try {
       const { error } = await supabase
-        .from('technicians')
+        .from('user_technicians')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('user_id', user.id);
       
       if (error) throw error;
       
@@ -199,9 +225,21 @@ const WorkshopSetup: React.FC = () => {
   // Service handlers
   const handleAddService = async (values: any) => {
     try {
+      if (!user) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to add services",
+          variant: "destructive"
+        });
+        return;
+      }
+      
       const { data, error } = await supabase
-        .from('services')
-        .insert([values])
+        .from('user_services')
+        .insert([{
+          ...values,
+          user_id: user.id
+        }])
         .select();
       
       if (error) throw error;
@@ -224,13 +262,14 @@ const WorkshopSetup: React.FC = () => {
   };
 
   const handleUpdateService = async (values: any) => {
-    if (!isEditingService) return;
+    if (!isEditingService || !user) return;
     
     try {
       const { error } = await supabase
-        .from('services')
+        .from('user_services')
         .update(values)
-        .eq('id', isEditingService.id);
+        .eq('id', isEditingService.id)
+        .eq('user_id', user.id);
       
       if (error) throw error;
       
@@ -252,13 +291,14 @@ const WorkshopSetup: React.FC = () => {
   };
 
   const handleDeleteService = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this service?")) return;
+    if (!confirm("Are you sure you want to delete this service?") || !user) return;
     
     try {
       const { error } = await supabase
-        .from('services')
+        .from('user_services')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('user_id', user.id);
       
       if (error) throw error;
       
@@ -281,9 +321,21 @@ const WorkshopSetup: React.FC = () => {
   // Service Bay handlers
   const handleAddBay = async (values: any) => {
     try {
+      if (!user) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to add service bays",
+          variant: "destructive"
+        });
+        return;
+      }
+      
       const { data, error } = await supabase
-        .from('service_bays')
-        .insert([values])
+        .from('user_service_bays')
+        .insert([{
+          ...values,
+          user_id: user.id
+        }])
         .select();
       
       if (error) throw error;
@@ -306,13 +358,14 @@ const WorkshopSetup: React.FC = () => {
   };
 
   const handleUpdateBay = async (values: any) => {
-    if (!isEditingBay) return;
+    if (!isEditingBay || !user) return;
     
     try {
       const { error } = await supabase
-        .from('service_bays')
+        .from('user_service_bays')
         .update(values)
-        .eq('id', isEditingBay.id);
+        .eq('id', isEditingBay.id)
+        .eq('user_id', user.id);
       
       if (error) throw error;
       
@@ -334,13 +387,14 @@ const WorkshopSetup: React.FC = () => {
   };
 
   const handleDeleteBay = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this service bay?")) return;
+    if (!confirm("Are you sure you want to delete this service bay?") || !user) return;
     
     try {
       const { error } = await supabase
-        .from('service_bays')
+        .from('user_service_bays')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('user_id', user.id);
       
       if (error) throw error;
       

@@ -1,8 +1,8 @@
-
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { BookingType } from "@/types/booking";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface TechnicianOption {
   id: string;
@@ -46,6 +46,7 @@ export const useNewBookingForm = (
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
   const [selectedTechnicianId, setSelectedTechnicianId] = useState<string | null>(null);
   const [selectedBayId, setSelectedBayId] = useState<string | null>(null);
+  const { user } = useAuth();
 
   useEffect(() => {
     // Fetch technicians, services, and bays when the modal is opened
@@ -58,9 +59,12 @@ export const useNewBookingForm = (
 
   const fetchTechnicians = async () => {
     try {
+      if (!user) return;
+      
       const { data, error } = await supabase
-        .from('technicians')
+        .from('user_technicians')
         .select('id, name')
+        .eq('user_id', user.id)
         .order('name');
         
       if (error) throw error;
@@ -72,9 +76,12 @@ export const useNewBookingForm = (
 
   const fetchServices = async () => {
     try {
+      if (!user) return;
+      
       const { data, error } = await supabase
-        .from('services')
+        .from('user_services')
         .select('id, name, duration, price')
+        .eq('user_id', user.id)
         .order('name');
         
       if (error) throw error;
@@ -86,9 +93,12 @@ export const useNewBookingForm = (
 
   const fetchBays = async () => {
     try {
+      if (!user) return;
+      
       const { data, error } = await supabase
-        .from('service_bays')
+        .from('user_service_bays')
         .select('id, name')
+        .eq('user_id', user.id)
         .order('name');
         
       if (error) throw error;
