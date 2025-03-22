@@ -22,7 +22,7 @@ const DataCleanupTool = () => {
   const { toast } = useToast();
   const { user } = useAuth();
 
-  // Define tables as an array with explicit type
+  // Define tables to clean up
   const tablesToClean = [
     'user_bookings',
     'user_jobs',
@@ -31,10 +31,7 @@ const DataCleanupTool = () => {
     'technicians',
     'services',
     'service_reminders'
-  ] as const;
-  
-  // Create a type from the array values
-  type TableName = typeof tablesToClean[number];
+  ];
 
   const handleCleanupData = async () => {
     if (!user) {
@@ -53,9 +50,9 @@ const DataCleanupTool = () => {
     try {
       for (const table of tablesToClean) {
         try {
-          // Use table as a typed parameter
+          // Type assertion to any as a workaround for TypeScript error
           const { error } = await supabase
-            .from(table)
+            .from(table as any)
             .delete()
             .eq('user_id', user.id);
           
