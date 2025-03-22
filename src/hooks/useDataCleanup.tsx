@@ -60,9 +60,11 @@ export const useDataCleanup = () => {
       // First handle tables that have user_id column
       for (const table of tablesWithUserId) {
         try {
+          console.log(`Processing table ${table} with user_id filter for user ${user.id}`);
+          
           // First, count how many records will be deleted
           const { count, error: countError } = await supabase
-            .from(table as any)
+            .from(table)
             .select('*', { count: 'exact', head: true })
             .eq('user_id', user.id);
           
@@ -73,9 +75,10 @@ export const useDataCleanup = () => {
             continue;
           }
           
-          // TypeScript workaround: use type assertion to any to avoid deep instantiation error
+          console.log(`Found ${count} records to delete in ${table}`);
+          
           const { error } = await supabase
-            .from(table as any)
+            .from(table)
             .delete()
             .eq('user_id', user.id);
           
@@ -86,6 +89,7 @@ export const useDataCleanup = () => {
           } else {
             cleanupResults.push({ table, deleted: count || 0 });
             successCount++;
+            console.log(`Successfully deleted ${count} records from ${table}`);
           }
         } catch (err) {
           console.error(`Error cleaning ${table}:`, err);
@@ -97,9 +101,11 @@ export const useDataCleanup = () => {
       // Then handle tables that need to be truncated for this user
       for (const table of tablesToTruncate) {
         try {
-          // First, count how many records will be deleted
+          console.log(`Processing table ${table} for complete truncation`);
+          
+          // First, count how many records exist
           const { count, error: countError } = await supabase
-            .from(table as any)
+            .from(table)
             .select('*', { count: 'exact', head: true });
           
           if (countError) {
@@ -109,19 +115,52 @@ export const useDataCleanup = () => {
             continue;
           }
           
-          // Delete all records in the table using a direct delete without the problematic condition
-          const { error } = await supabase
-            .from(table as any)
-            .delete()
-            .gte('id', '00000000-0000-0000-0000-000000000000'); // This will match all valid UUIDs
+          console.log(`Found ${count} records to delete in ${table}`);
           
-          if (error) {
-            console.error(`Error cleaning ${table}:`, error);
-            cleanupResults.push({ table, deleted: 0 });
-            errorCount++;
+          if (count && count > 0) {
+            // Use a different approach - delete all records one by one
+            const { data: allRecords, error: fetchError } = await supabase
+              .from(table)
+              .select('id');
+              
+            if (fetchError) {
+              console.error(`Error fetching records from ${table}:`, fetchError);
+              cleanupResults.push({ table, deleted: 0 });
+              errorCount++;
+              continue;
+            }
+            
+            let deletedCount = 0;
+            
+            for (const record of allRecords) {
+              const { error: deleteError } = await supabase
+                .from(table)
+                .delete()
+                .eq('id', record.id);
+                
+              if (!deleteError) {
+                deletedCount++;
+              }
+            }
+            
+            if (deletedCount === allRecords.length) {
+              cleanupResults.push({ table, deleted: deletedCount });
+              successCount++;
+              console.log(`Successfully deleted ${deletedCount} records from ${table}`);
+            } else {
+              cleanupResults.push({ table, deleted: deletedCount });
+              console.warn(`Partially deleted ${deletedCount}/${allRecords.length} records from ${table}`);
+              if (deletedCount === 0) {
+                errorCount++;
+              } else {
+                successCount++;
+              }
+            }
           } else {
-            cleanupResults.push({ table, deleted: count || 0 });
+            // No records to delete
+            cleanupResults.push({ table, deleted: 0 });
             successCount++;
+            console.log(`No records to delete in ${table}`);
           }
         } catch (err) {
           console.error(`Error cleaning ${table}:`, err);
