@@ -1,5 +1,5 @@
 
-import { Clock, AlertCircle, CheckCircle2, XCircle, Tool } from "lucide-react";
+import { Clock, AlertCircle, CheckCircle2, XCircle, Wrench } from "lucide-react";
 
 export const jobStatuses = {
   pending: { 
@@ -14,7 +14,7 @@ export const jobStatuses = {
   },
   working: { 
     label: "Working", 
-    icon: Tool, 
+    icon: Wrench, 
     color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400" 
   },
   completed: { 
