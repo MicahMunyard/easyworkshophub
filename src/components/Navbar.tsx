@@ -66,11 +66,13 @@ const Navbar: React.FC<NavbarProps> = ({
         <div className="container h-full flex items-center justify-between">
           <div className="flex items-center">
             <Link to="/" className="flex items-center gap-2">
-              <img
-                src="/lovable-uploads/toliccs-logo.png"
-                alt="Toliccs Logo"
-                className="w-8 h-8 object-contain"
-              />
+              <div className="w-8 h-8 flex items-center justify-center">
+                <img
+                  src="/lovable-uploads/toliccs-logo.png"
+                  alt="Toliccs Logo"
+                  className="max-w-full max-h-full object-contain"
+                />
+              </div>
               <span className="font-bold text-xl hidden sm:inline-block">
                 Toliccs
               </span>
@@ -85,11 +87,13 @@ const Navbar: React.FC<NavbarProps> = ({
           >
             <div className="flex items-center justify-between lg:hidden">
               <Link to="/" className="flex items-center gap-2">
-                <img
-                  src="/lovable-uploads/toliccs-logo.png"
-                  alt="Toliccs Logo"
-                  className="w-8 h-8 object-contain"
-                />
+                <div className="w-8 h-8 flex items-center justify-center">
+                  <img
+                    src="/lovable-uploads/toliccs-logo.png"
+                    alt="Toliccs Logo"
+                    className="max-w-full max-h-full object-contain"
+                  />
+                </div>
                 <span className="font-bold text-xl">Toliccs</span>
               </Link>
               <Button
