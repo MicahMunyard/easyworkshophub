@@ -58,7 +58,7 @@ export const useDeleteBooking = (
       
       console.log("Delete result:", deleteResult);
       
-      // Delete associated jobs
+      // Find and delete associated jobs
       await deleteAssociatedJobs(bookingToDelete);
       
       // Refresh bookings to ensure we're in sync with the database
@@ -76,9 +76,12 @@ export const useDeleteBooking = (
   const deleteAssociatedJobs = async (booking: BookingType) => {
     try {
       console.log("Looking for jobs to delete with customer:", booking.customer);
+      
+      // First try to find jobs with BKG- prefix in the ID that match the customer and date
       const { data: matchingJobs, error: jobsError } = await supabase
         .from('jobs')
         .select('id')
+        .ilike('id', 'BKG-%')
         .eq('customer', booking.customer)
         .eq('date', booking.date);
       
@@ -86,28 +89,49 @@ export const useDeleteBooking = (
         console.error('Error finding matching jobs:', jobsError);
         return;
       }
-
-      if (matchingJobs && matchingJobs.length > 0) {
-        console.log(`Found ${matchingJobs.length} jobs to delete`);
-        
-        for (const job of matchingJobs) {
-          console.log("Deleting job with ID:", job.id);
-          const { error: deleteJobError } = await supabase
-            .from('jobs')
-            .delete()
-            .eq('id', job.id);
+      
+      // If no jobs with BKG- prefix, try to find any jobs that match customer and date
+      if (!matchingJobs || matchingJobs.length === 0) {
+        const { data: backupJobs, error: backupJobsError } = await supabase
+          .from('jobs')
+          .select('id')
+          .eq('customer', booking.customer)
+          .eq('date', booking.date);
           
-          if (deleteJobError) {
-            console.error('Error deleting job:', deleteJobError);
-          } else {
-            console.log("Successfully deleted job with ID:", job.id);
-          }
+        if (backupJobsError) {
+          console.error('Error finding backup matching jobs:', backupJobsError);
+          return;
+        }
+        
+        if (backupJobs && backupJobs.length > 0) {
+          console.log(`Found ${backupJobs.length} backup jobs to delete`);
+          await deleteJobBatch(backupJobs);
+        } else {
+          console.log("No matching jobs found to delete");
         }
       } else {
-        console.log("No matching jobs found to delete");
+        console.log(`Found ${matchingJobs.length} jobs to delete with BKG- prefix`);
+        await deleteJobBatch(matchingJobs);
       }
     } catch (error) {
       console.error("Error deleting associated jobs:", error);
+    }
+  };
+  
+  // Helper function to delete a batch of jobs
+  const deleteJobBatch = async (jobs: { id: string }[]) => {
+    for (const job of jobs) {
+      console.log("Deleting job with ID:", job.id);
+      const { error: deleteJobError } = await supabase
+        .from('jobs')
+        .delete()
+        .eq('id', job.id);
+      
+      if (deleteJobError) {
+        console.error('Error deleting job:', deleteJobError);
+      } else {
+        console.log("Successfully deleted job with ID:", job.id);
+      }
     }
   };
 

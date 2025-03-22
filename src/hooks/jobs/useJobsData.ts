@@ -3,11 +3,13 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { JobType } from "@/types/job";
+import { useAuth } from "@/contexts/AuthContext";
 
 export const useJobsData = () => {
   const [jobs, setJobs] = useState<JobType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   // Fetch jobs from Supabase
   const fetchJobs = async () => {
@@ -16,7 +18,8 @@ export const useJobsData = () => {
       console.log("Fetching jobs from Supabase...");
       const { data, error } = await supabase
         .from('jobs')
-        .select('*');
+        .select('*')
+        .order('created_at', { ascending: false });
       
       if (error) {
         throw error;
@@ -30,7 +33,7 @@ export const useJobsData = () => {
           customer: job.customer,
           vehicle: job.vehicle,
           service: job.service,
-          status: job.status,
+          status: job.status as "pending" | "inProgress" | "working" | "completed" | "cancelled",
           assignedTo: job.assigned_to,
           date: job.date,
           timeEstimate: job.time_estimate,
@@ -53,7 +56,12 @@ export const useJobsData = () => {
 
   // Set up a subscription for real-time updates from both jobs and bookings tables
   useEffect(() => {
-    console.log("Setting up real-time subscriptions for jobs and bookings");
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
+    
+    console.log("Setting up real-time subscriptions for jobs");
     fetchJobs();
     
     // Set up real-time subscription to jobs changes
@@ -74,22 +82,22 @@ export const useJobsData = () => {
         console.log("Jobs subscription status:", status);
       });
       
-    // Also listen to booking changes since bookings can affect jobs
+    // Also listen to user_bookings changes since bookings affect jobs
     const bookingsChannel = supabase
       .channel('bookings-jobs-sync')
       .on('postgres_changes', 
         { 
           event: '*', 
           schema: 'public', 
-          table: 'bookings' 
+          table: 'user_bookings' 
         }, 
         (payload) => {
-          console.log("Bookings table change detected:", payload);
+          console.log("User bookings table change detected:", payload);
           fetchJobs();
         }
       )
       .subscribe((status) => {
-        console.log("Bookings subscription status:", status);
+        console.log("User bookings subscription status:", status);
       });
     
     // Clean up subscriptions
@@ -98,7 +106,7 @@ export const useJobsData = () => {
       supabase.removeChannel(jobsChannel);
       supabase.removeChannel(bookingsChannel);
     };
-  }, []);
+  }, [user]);
 
   return {
     jobs,

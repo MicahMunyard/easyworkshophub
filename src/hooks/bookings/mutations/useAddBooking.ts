@@ -34,7 +34,7 @@ export const useAddBooking = (
         .from('user_bookings')
         .insert({
           id: bookingId,
-          user_id: user.id, // Add the user ID to associate the booking with the logged-in user
+          user_id: user.id,
           customer_name: newBooking.customer,
           customer_phone: newBooking.phone,
           service: newBooking.service,
@@ -53,9 +53,23 @@ export const useAddBooking = (
         throw bookingError;
       }
       
-      // Create associated job
-      const jobId = uuidv4().substring(0, 8);
+      // Create associated job - use a unique ID prefix to identify it's from a booking
+      const jobId = `BKG-${uuidv4().substring(0, 8)}`;
       console.log(`Creating job with ID ${jobId} for booking ${bookingId}`);
+      
+      // Get technician name if available
+      let assignedTo = 'Unassigned';
+      if (newBooking.technician_id) {
+        const { data: techData } = await supabase
+          .from('user_technicians')
+          .select('name')
+          .eq('id', newBooking.technician_id)
+          .single();
+          
+        if (techData) {
+          assignedTo = techData.name;
+        }
+      }
       
       const { error: jobError } = await supabase
         .from('jobs')
@@ -65,28 +79,37 @@ export const useAddBooking = (
           vehicle: newBooking.car,
           service: newBooking.service,
           status: newBooking.status === 'confirmed' ? 'pending' : 'pending',
-          assigned_to: newBooking.technician_id ? newBooking.technician_id : 'Unassigned',
+          assigned_to: assignedTo,
           date: newBooking.date,
           time_estimate: `${newBooking.duration} minutes`,
-          priority: 'Medium'
+          priority: 'Medium',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         });
       
       if (jobError) {
         console.error('Error creating job in Supabase:', jobError);
-        // Continue despite job creation error
+        // Log the error but continue (don't fail the booking creation)
+        toast({
+          title: "Warning",
+          description: "Booking created, but there was an issue creating the associated job.",
+          variant: "default"
+        });
+      } else {
+        console.log("Successfully created job:", jobId);
       }
       
       // Update local state with the new booking
       const bookingWithProperID: BookingType = {
         ...newBooking,
-        id: parseInt(bookingId.replace(/-/g, '').substring(0, 8), 16)
+        id: bookingId
       };
       
       setBookings(prev => [...prev, bookingWithProperID]);
       
       toast({
         title: "Booking Created",
-        description: `${newBooking.customer}'s booking has been added.`,
+        description: `${newBooking.customer}'s booking has been added and job created.`,
       });
       
       await fetchBookings(); // Refresh bookings to ensure consistency
