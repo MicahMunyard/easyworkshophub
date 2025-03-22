@@ -11,9 +11,8 @@ export async function cleanTableWithUserId(
   
   try {
     // First, count how many records will be deleted
-    // Explicitly type the table parameter to avoid deep instantiation
     const { count, error: countError } = await supabase
-      .from(table as string)
+      .from(table)
       .select('*', { count: 'exact', head: true })
       .eq('user_id', userId);
     
@@ -25,7 +24,7 @@ export async function cleanTableWithUserId(
     console.log(`Found ${count} records to delete in ${table}`);
     
     const { error } = await supabase
-      .from(table as string)
+      .from(table)
       .delete()
       .eq('user_id', userId);
     
@@ -51,7 +50,7 @@ export async function cleanTableToTruncate(
   try {
     // First, count how many records exist
     const { count, error: countError } = await supabase
-      .from(table as string)
+      .from(table)
       .select('*', { count: 'exact', head: true });
     
     if (countError) {
@@ -64,7 +63,7 @@ export async function cleanTableToTruncate(
     if (count && count > 0) {
       // Use a different approach - delete all records one by one
       const { data: allRecords, error: fetchError } = await supabase
-        .from(table as string)
+        .from(table)
         .select('id');
         
       if (fetchError) {
@@ -76,7 +75,7 @@ export async function cleanTableToTruncate(
       
       for (const record of allRecords) {
         const { error: deleteError } = await supabase
-          .from(table as string)
+          .from(table)
           .delete()
           .eq('id', record.id);
           
