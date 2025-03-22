@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Plus, Filter, X } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -213,6 +214,7 @@ const BookingDiary = () => {
       );
       setBookings(updatedBookings);
       
+      // Convert numeric id to string when sending to Supabase
       const { error } = await supabase
         .from('bookings')
         .update({
@@ -224,7 +226,7 @@ const BookingDiary = () => {
           car: updatedBooking.car,
           status: updatedBooking.status,
         })
-        .eq('id', updatedBooking.id);
+        .eq('id', updatedBooking.id.toString());
       
       if (error) throw error;
       
@@ -285,10 +287,11 @@ const BookingDiary = () => {
       const updatedBookings = bookings.filter(booking => booking.id !== bookingToDelete.id);
       setBookings(updatedBookings);
       
+      // Convert numeric id to string when sending to Supabase
       const { error } = await supabase
         .from('bookings')
         .delete()
-        .eq('id', bookingToDelete.id);
+        .eq('id', bookingToDelete.id.toString());
       
       if (error) throw error;
       
