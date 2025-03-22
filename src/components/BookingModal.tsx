@@ -11,6 +11,7 @@ import { BookingType } from "@/types/booking";
 import BookingForm from "./booking/BookingForm";
 import DeleteConfirmationDialog from "./booking/DeleteConfirmationDialog";
 import { useEditBookingForm } from "@/hooks/bookings/useEditBookingForm";
+import { useToast } from "@/hooks/use-toast";
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -28,6 +29,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
   onDelete 
 }) => {
   const [isDeleting, setIsDeleting] = useState(false);
+  const { toast } = useToast();
   
   const {
     editedBooking,
@@ -53,12 +55,33 @@ const BookingModal: React.FC<BookingModalProps> = ({
     if (editedBooking && onDelete) {
       setIsDeleting(true);
       try {
-        await onDelete(editedBooking);
+        console.log("Starting booking deletion process for:", editedBooking);
+        const result = await onDelete(editedBooking);
+        console.log("Deletion result:", result);
+        
+        if (result) {
+          toast({
+            title: "Success",
+            description: "Booking was successfully deleted",
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: "Failed to delete booking. Please try again.",
+            variant: "destructive"
+          });
+        }
       } catch (error) {
-        console.error("Error deleting booking:", error);
+        console.error("Error deleting booking in BookingModal:", error);
+        toast({
+          title: "Error",
+          description: "An unexpected error occurred while deleting the booking.",
+          variant: "destructive"
+        });
       } finally {
         setIsDeleting(false);
         setIsDeleteDialogOpen(false);
+        onClose();
       }
     }
   };

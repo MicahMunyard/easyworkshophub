@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
 import { BookingType } from "@/types/booking";
+import { Loader2 } from "lucide-react";
 
 interface DeleteConfirmationDialogProps {
   isOpen: boolean;
@@ -29,12 +30,18 @@ const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> = ({
   isDeleting = false,
 }) => {
   return (
-    <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
+    <AlertDialog open={isOpen} onOpenChange={(open) => {
+      if (!isDeleting) {
+        onOpenChange(open);
+      }
+    }}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Delete Booking</AlertDialogTitle>
-          <AlertDialogDescription>
-            Are you sure you want to delete this booking? This action cannot be undone.
+          <AlertDialogDescription className="space-y-2">
+            <div>
+              Are you sure you want to delete this booking? This action cannot be undone.
+            </div>
             {booking && (
               <div className="mt-2 p-3 bg-muted rounded-md">
                 <p className="font-medium">{booking.customer}</p>
@@ -50,7 +57,14 @@ const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> = ({
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             disabled={isDeleting}
           >
-            {isDeleting ? "Deleting..." : "Delete Booking"}
+            {isDeleting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 
+                Deleting...
+              </>
+            ) : (
+              "Delete Booking"
+            )}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

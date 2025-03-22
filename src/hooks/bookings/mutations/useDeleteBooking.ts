@@ -17,23 +17,32 @@ export const useDeleteBooking = (
       // Update UI immediately for better UX
       setBookings(prev => prev.filter(b => b.id !== bookingToDelete.id));
       
-      // First, check if the ID is in UUID format or if we need to find the actual UUID
-      const isUuid = typeof bookingToDelete.id === 'string' && 
-                    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(bookingToDelete.id.toString());
+      // First, check if the ID is in UUID format
+      const bookingId = bookingToDelete.id;
+      const bookingIdString = typeof bookingId === 'number' ? String(bookingId) : bookingId;
+      
+      const isUuid = typeof bookingIdString === 'string' && 
+                    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(bookingIdString);
+      
+      console.log("Booking ID:", bookingId, "Is UUID format:", isUuid);
       
       if (isUuid) {
         // If it's already a UUID format, use it directly
         const { error: deleteError } = await supabase
           .from('bookings')
           .delete()
-          .eq('id', bookingToDelete.id);
+          .eq('id', bookingIdString);
         
         if (deleteError) {
           console.error('Error deleting booking with direct ID:', deleteError);
           throw deleteError;
         }
+        
+        console.log("Successfully deleted booking with UUID:", bookingIdString);
       } else {
         // Try to find the actual UUID of the booking in Supabase
+        console.log("Looking for booking by customer and date:", bookingToDelete.customer, bookingToDelete.date);
+        
         const { data: matchingBookings, error: fetchError } = await supabase
           .from('bookings')
           .select('id')
@@ -59,6 +68,8 @@ export const useDeleteBooking = (
             console.error('Error deleting booking:', deleteError);
             throw deleteError;
           }
+          
+          console.log("Successfully deleted booking with found ID:", actualBookingId);
         } else {
           // Fallback: try to delete by customer name and date
           console.log("No exact ID match found, deleting by customer and date");
@@ -72,17 +83,31 @@ export const useDeleteBooking = (
             console.error('Error deleting booking by customer:', deleteByCustomerError);
             throw deleteByCustomerError;
           }
+          
+          console.log("Successfully deleted booking by customer name and date");
         }
       }
       
       // Delete associated jobs
       await deleteAssociatedJobs(bookingToDelete);
       
+      toast({
+        title: "Booking Deleted",
+        description: `${bookingToDelete.customer}'s booking has been deleted.`,
+        variant: "destructive"
+      });
+      
       // Refresh bookings after deletion to ensure we're in sync with the database
       await fetchBookings();
       return true;
     } catch (error) {
       console.error('Error in deleteBooking:', error);
+      
+      toast({
+        title: "Error",
+        description: "Failed to delete booking. Please try again.",
+        variant: "destructive"
+      });
       
       // Refresh bookings to ensure UI is in sync with database
       await fetchBookings();
