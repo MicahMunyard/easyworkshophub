@@ -100,9 +100,13 @@ export const useAddBooking = (
       }
       
       // Update local state with the new booking
+      // Convert the string bookingId to a number for the BookingType
+      // Here's the fix: We need to generate a number ID from the UUID for local state
+      const numericId = parseInt(bookingId.replace(/-/g, '').substring(0, 8), 16);
+      
       const bookingWithProperID: BookingType = {
         ...newBooking,
-        id: bookingId
+        id: numericId // Using the numeric ID here instead of the string UUID
       };
       
       setBookings(prev => [...prev, bookingWithProperID]);
