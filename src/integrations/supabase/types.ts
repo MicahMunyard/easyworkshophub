@@ -394,6 +394,165 @@ export type Database = {
         }
         Relationships: []
       }
+      user_bookings: {
+        Row: {
+          bay_id: string | null
+          booking_date: string
+          booking_time: string
+          car: string
+          cost: number | null
+          created_at: string | null
+          customer_name: string
+          customer_phone: string
+          duration: number
+          id: string
+          notes: string | null
+          service: string
+          service_id: string | null
+          status: string | null
+          technician_id: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          bay_id?: string | null
+          booking_date: string
+          booking_time: string
+          car: string
+          cost?: number | null
+          created_at?: string | null
+          customer_name: string
+          customer_phone: string
+          duration: number
+          id?: string
+          notes?: string | null
+          service: string
+          service_id?: string | null
+          status?: string | null
+          technician_id?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          bay_id?: string | null
+          booking_date?: string
+          booking_time?: string
+          car?: string
+          cost?: number | null
+          created_at?: string | null
+          customer_name?: string
+          customer_phone?: string
+          duration?: number
+          id?: string
+          notes?: string | null
+          service?: string
+          service_id?: string | null
+          status?: string | null
+          technician_id?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_inventory_items: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          id: string
+          in_stock: number
+          last_order: string | null
+          location: string | null
+          min_stock: number
+          name: string
+          price: number | null
+          status: string | null
+          supplier: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          in_stock?: number
+          last_order?: string | null
+          location?: string | null
+          min_stock?: number
+          name: string
+          price?: number | null
+          status?: string | null
+          supplier?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          in_stock?: number
+          last_order?: string | null
+          location?: string | null
+          min_stock?: number
+          name?: string
+          price?: number | null
+          status?: string | null
+          supplier?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_jobs: {
+        Row: {
+          bay_id: string | null
+          cost: number | null
+          created_at: string | null
+          customer_name: string | null
+          description: string | null
+          end_date: string | null
+          id: string
+          start_date: string | null
+          status: string | null
+          technician_id: string | null
+          title: string
+          updated_at: string | null
+          user_id: string
+          vehicle: string | null
+        }
+        Insert: {
+          bay_id?: string | null
+          cost?: number | null
+          created_at?: string | null
+          customer_name?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          start_date?: string | null
+          status?: string | null
+          technician_id?: string | null
+          title: string
+          updated_at?: string | null
+          user_id: string
+          vehicle?: string | null
+        }
+        Update: {
+          bay_id?: string | null
+          cost?: number | null
+          created_at?: string | null
+          customer_name?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          start_date?: string | null
+          status?: string | null
+          technician_id?: string | null
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+          vehicle?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

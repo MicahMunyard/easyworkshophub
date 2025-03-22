@@ -3,11 +3,13 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ServiceReminder } from "./types";
+import { useAuth } from "@/contexts/AuthContext";
 
 export const useServiceReminders = (customerId: number) => {
   const [reminders, setReminders] = useState<ServiceReminder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const fetchReminders = async () => {
     setIsLoading(true);
@@ -48,6 +50,15 @@ export const useServiceReminders = (customerId: number) => {
 
   const addReminder = async (reminderData: Omit<ServiceReminder, 'id' | 'created_at' | 'last_sent_at'> & { customer_id: number }) => {
     try {
+      if (!user) {
+        toast({
+          variant: "destructive",
+          title: "Authentication required",
+          description: "You must be logged in to add reminders",
+        });
+        return false;
+      }
+
       const { error } = await supabase
         .from('service_reminders')
         .insert(reminderData);
@@ -75,6 +86,15 @@ export const useServiceReminders = (customerId: number) => {
 
   const deleteReminder = async (reminderId: string) => {
     try {
+      if (!user) {
+        toast({
+          variant: "destructive",
+          title: "Authentication required",
+          description: "You must be logged in to delete reminders",
+        });
+        return;
+      }
+
       const { error } = await supabase
         .from('service_reminders')
         .delete()
@@ -100,6 +120,15 @@ export const useServiceReminders = (customerId: number) => {
 
   const updateReminderStatus = async (reminderId: string, status: 'pending' | 'sent' | 'completed' | 'cancelled') => {
     try {
+      if (!user) {
+        toast({
+          variant: "destructive",
+          title: "Authentication required",
+          description: "You must be logged in to update reminders",
+        });
+        return;
+      }
+
       const { error } = await supabase
         .from('service_reminders')
         .update({ 
