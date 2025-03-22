@@ -56,21 +56,12 @@ const BookingModal: React.FC<BookingModalProps> = ({
       setIsDeleting(true);
       try {
         console.log("Starting booking deletion process for:", editedBooking);
-        const result = await onDelete(editedBooking);
-        console.log("Deletion result:", result);
+        await onDelete(editedBooking);
         
-        if (result) {
-          toast({
-            title: "Success",
-            description: "Booking was successfully deleted",
-          });
-        } else {
-          toast({
-            title: "Error",
-            description: "Failed to delete booking. Please try again.",
-            variant: "destructive"
-          });
-        }
+        toast({
+          title: "Success",
+          description: "Booking was successfully deleted",
+        });
       } catch (error) {
         console.error("Error deleting booking in BookingModal:", error);
         toast({
