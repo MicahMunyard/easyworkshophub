@@ -1,15 +1,16 @@
 
 import React from "react";
-import { Navigate, Outlet, Route, Routes } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
-import { Settings, Calendar, Wrench } from "lucide-react";
+import { Calendar, Settings, Wrench } from "lucide-react";
 
 /**
  * Workshop page that serves as the main container for all workshop-related functionality
  */
 const Workshop: React.FC = () => {
+  const navigate = useNavigate();
+  
   return (
     <div className="space-y-6">
       <div>
@@ -26,8 +27,11 @@ const Workshop: React.FC = () => {
               <Calendar className="h-12 w-12 text-workshop-red mb-2" />
               <h3 className="font-medium text-lg">Booking Diary</h3>
               <p className="text-sm text-muted-foreground">View and manage appointments</p>
-              <Button asChild className="mt-4 w-full">
-                <Link to="/booking-diary">Open Booking Diary</Link>
+              <Button 
+                onClick={() => navigate("/booking-diary")} 
+                className="mt-4 w-full"
+              >
+                Open Booking Diary
               </Button>
             </div>
           </CardContent>
@@ -39,8 +43,11 @@ const Workshop: React.FC = () => {
               <Settings className="h-12 w-12 text-workshop-red mb-2" />
               <h3 className="font-medium text-lg">Workshop Setup</h3>
               <p className="text-sm text-muted-foreground">Configure workshop settings</p>
-              <Button asChild className="mt-4 w-full">
-                <Link to="/workshop-setup">Configure Workshop</Link>
+              <Button 
+                onClick={() => navigate("/workshop-setup")} 
+                className="mt-4 w-full"
+              >
+                Configure Workshop
               </Button>
             </div>
           </CardContent>
@@ -52,8 +59,11 @@ const Workshop: React.FC = () => {
               <Wrench className="h-12 w-12 text-workshop-red mb-2" />
               <h3 className="font-medium text-lg">Jobs</h3>
               <p className="text-sm text-muted-foreground">Manage ongoing and completed jobs</p>
-              <Button asChild className="mt-4 w-full">
-                <Link to="/jobs">View Jobs</Link>
+              <Button 
+                onClick={() => navigate("/jobs")} 
+                className="mt-4 w-full"
+              >
+                View Jobs
               </Button>
             </div>
           </CardContent>

@@ -70,7 +70,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   useEffect(() => {
     const path = location.pathname;
     
-    if (path.includes('/booking-diary') || path.includes('/jobs') || path.includes('/workshop-setup')) {
+    if (path === '/workshop' || path.includes('/booking-diary') || path.includes('/jobs') || path.includes('/workshop-setup')) {
       setActiveSidebarSection('workshop');
     } else if (path.includes('/inventory') || path.includes('/suppliers')) {
       setActiveSidebarSection('inventory');
@@ -120,7 +120,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const getCurrentTab = () => {
     const path = location.pathname;
     if (path === '/') return 'Dashboard';
-    if (path.includes('/booking-diary') || path.includes('/jobs') || path.includes('/workshop-setup')) return 'Workshop';
+    if (path === '/workshop' || path.includes('/booking-diary') || path.includes('/jobs') || path.includes('/workshop-setup')) return 'Workshop';
     if (path.includes('/inventory') || path.includes('/suppliers')) return 'Inventory';
     if (path.includes('/customers')) return 'Customers';
     if (path.includes('/marketing') || path.includes('/email-marketing') || path.includes('/reviews')) return 'Marketing';

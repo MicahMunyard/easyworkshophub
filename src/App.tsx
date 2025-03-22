@@ -77,94 +77,18 @@ const App = () => (
                 </Layout>
               } 
             />
-            <Route 
-              path="/inventory" 
-              element={
-                <Layout>
-                  <Inventory />
-                </Layout>
-              } 
-            />
-            <Route 
-              path="/customers" 
-              element={
-                <Layout>
-                  <Customers />
-                </Layout>
-              } 
-            />
-            <Route 
-              path="/invoices" 
-              element={
-                <Layout>
-                  <Invoices />
-                </Layout>
-              } 
-            />
-            <Route 
-              path="/pos" 
-              element={
-                <Layout>
-                  <PointOfSale />
-                </Layout>
-              } 
-            />
-            <Route 
-              path="/suppliers" 
-              element={
-                <Layout>
-                  <Suppliers />
-                </Layout>
-              } 
-            />
-            <Route 
-              path="/reports" 
-              element={
-                <Layout>
-                  <Reports />
-                </Layout>
-              } 
-            />
-            <Route 
-              path="/marketing" 
-              element={
-                <Layout>
-                  <Marketing />
-                </Layout>
-              } 
-            />
-            <Route 
-              path="/email-marketing" 
-              element={
-                <Layout>
-                  <EmailMarketing />
-                </Layout>
-              } 
-            />
-            <Route 
-              path="/reviews" 
-              element={
-                <Layout>
-                  <Reviews />
-                </Layout>
-              } 
-            />
-            <Route 
-              path="/profile" 
-              element={
-                <Layout>
-                  <Profile />
-                </Layout>
-              } 
-            />
-            <Route 
-              path="/settings" 
-              element={
-                <Layout>
-                  <Settings />
-                </Layout>
-              } 
-            />
+            
+            <Route path="/inventory" element={<Layout><Inventory /></Layout>} />
+            <Route path="/customers" element={<Layout><Customers /></Layout>} />
+            <Route path="/invoices" element={<Layout><Invoices /></Layout>} />
+            <Route path="/pos" element={<Layout><PointOfSale /></Layout>} />
+            <Route path="/suppliers" element={<Layout><Suppliers /></Layout>} />
+            <Route path="/reports" element={<Layout><Reports /></Layout>} />
+            <Route path="/marketing" element={<Layout><Marketing /></Layout>} />
+            <Route path="/email-marketing" element={<Layout><EmailMarketing /></Layout>} />
+            <Route path="/reviews" element={<Layout><Reviews /></Layout>} />
+            <Route path="/profile" element={<Layout><Profile /></Layout>} />
+            <Route path="/settings" element={<Layout><Settings /></Layout>} />
             
             <Route path="/auth" element={<Navigate to="/auth/signin" replace />} />
             <Route path="*" element={<NotFound />} />
