@@ -60,9 +60,9 @@ const DataCleanupTool = () => {
     try {
       for (const table of tablesToClean) {
         try {
-          // Use the properly typed table name
+          // TypeScript workaround: use type assertion to any to avoid deep instantiation error
           const { error } = await supabase
-            .from(table)
+            .from(table as any)
             .delete()
             .eq('user_id', user.id);
           
