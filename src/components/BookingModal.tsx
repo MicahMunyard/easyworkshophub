@@ -67,7 +67,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
           description: "Booking was successfully deleted",
         });
         
-        // Only close dialogs after successful deletion
+        // Close dialogs after successful deletion
         setIsDeleteDialogOpen(false);
         onClose();
       } else {

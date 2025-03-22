@@ -31,6 +31,8 @@ const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> = ({
 }) => {
   const handleConfirmClick = async (event: React.MouseEvent) => {
     event.preventDefault();
+    if (isDeleting) return; // Prevent multiple clicks
+    
     try {
       await onConfirm();
     } catch (error) {
