@@ -61,6 +61,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
       const success = await onDelete(editedBooking);
       
       if (success) {
+        console.log("Delete successful, closing dialogs");
         toast({
           title: "Success",
           description: "Booking was successfully deleted",
