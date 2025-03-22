@@ -41,6 +41,7 @@ const BookingDiary = () => {
   const [isNewBookingModalOpen, setIsNewBookingModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   const formattedDate = format(date, "EEEE, MMMM d, yyyy");
 
@@ -50,8 +51,10 @@ const BookingDiary = () => {
   };
 
   const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setSelectedBooking(null);
+    if (!isDeleting) {
+      setIsModalOpen(false);
+      setSelectedBooking(null);
+    }
   };
 
   const handleSaveBooking = async (updatedBooking: BookingType) => {
@@ -95,19 +98,15 @@ const BookingDiary = () => {
     }
   };
 
-  const handleDeleteBooking = async (bookingToDelete: BookingType) => {
+  const handleDeleteBooking = async (bookingToDelete: BookingType): Promise<boolean> => {
     try {
+      setIsDeleting(true);
       console.log("Attempting to delete booking in BookingDiary:", bookingToDelete);
       const success = await deleteBooking(bookingToDelete);
       
       if (success) {
-        setIsModalOpen(false);
-        setSelectedBooking(null);
-        toast({
-          title: "Booking Deleted",
-          description: `${bookingToDelete.customer}'s booking has been deleted.`,
-          variant: "destructive"
-        });
+        // This will be handled in the BookingModal component
+        return true;
       } else {
         throw new Error("Delete operation failed");
       }
@@ -118,6 +117,9 @@ const BookingDiary = () => {
         description: "Failed to delete booking. Please try again.",
         variant: "destructive"
       });
+      return false;
+    } finally {
+      setIsDeleting(false);
     }
   };
 

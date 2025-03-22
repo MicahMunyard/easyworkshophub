@@ -18,7 +18,7 @@ interface DeleteConfirmationDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   booking: BookingType | null;
-  onConfirm: () => void;
+  onConfirm: () => Promise<void>;
   isDeleting?: boolean;
 }
 
@@ -29,6 +29,14 @@ const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> = ({
   onConfirm,
   isDeleting = false,
 }) => {
+  const handleConfirmClick = async () => {
+    try {
+      await onConfirm();
+    } catch (error) {
+      console.error("Error in DeleteConfirmationDialog confirmation:", error);
+    }
+  };
+
   return (
     <AlertDialog open={isOpen} onOpenChange={(open) => {
       if (!isDeleting) {
@@ -53,7 +61,7 @@ const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> = ({
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
           <AlertDialogAction 
-            onClick={onConfirm}
+            onClick={handleConfirmClick}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             disabled={isDeleting}
           >

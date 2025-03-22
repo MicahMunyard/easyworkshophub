@@ -18,7 +18,7 @@ interface BookingModalProps {
   onClose: () => void;
   booking: BookingType | null;
   onSave: (booking: BookingType) => void;
-  onDelete?: (booking: BookingType) => void;
+  onDelete?: (booking: BookingType) => Promise<boolean>;
 }
 
 const BookingModal: React.FC<BookingModalProps> = ({ 
@@ -62,6 +62,10 @@ const BookingModal: React.FC<BookingModalProps> = ({
           title: "Success",
           description: "Booking was successfully deleted",
         });
+        
+        // Close dialogs only after successful deletion
+        setIsDeleteDialogOpen(false);
+        onClose();
       } catch (error) {
         console.error("Error deleting booking in BookingModal:", error);
         toast({
@@ -71,8 +75,6 @@ const BookingModal: React.FC<BookingModalProps> = ({
         });
       } finally {
         setIsDeleting(false);
-        setIsDeleteDialogOpen(false);
-        onClose();
       }
     }
   };
@@ -80,7 +82,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
   return (
     <>
       <Dialog open={isOpen && !isDeleting} onOpenChange={(open) => {
-        if (!isDeleting) {
+        if (!isDeleting && !open) {
           onClose();
         }
       }}>
