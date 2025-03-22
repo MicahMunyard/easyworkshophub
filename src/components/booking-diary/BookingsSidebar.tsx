@@ -9,9 +9,11 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { format } from "date-fns";
-import { Search, Users, CalendarIcon } from "lucide-react";
+import { Search, Users, CalendarIcon, LogIn } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BookingsSidebarProps } from "./types";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 const BookingsSidebar: React.FC<BookingsSidebarProps> = ({
   date,
@@ -21,6 +23,9 @@ const BookingsSidebar: React.FC<BookingsSidebarProps> = ({
   filteredBookings,
   handleBookingClick
 }) => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
   return (
     <Card>
       <CardContent className="p-4">
@@ -56,34 +61,56 @@ const BookingsSidebar: React.FC<BookingsSidebarProps> = ({
             />
           </div>
 
-          <div className="border rounded-md overflow-hidden">
-            <div className="bg-muted px-3 py-2 text-xs font-medium">Today's Bookings</div>
-            <div className="divide-y max-h-[300px] overflow-y-auto">
-              {filteredBookings.map((booking) => (
-                <div 
-                  key={booking.id} 
-                  className="p-3 hover:bg-muted/50 cursor-pointer transition-colors"
-                  onClick={() => handleBookingClick(booking)}
-                >
-                  <div className="font-medium flex justify-between">
-                    <span>{booking.time}</span>
-                    <span className={cn(
-                      "text-xs px-1.5 py-0.5 rounded-full",
-                      booking.status === "confirmed" 
-                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" 
-                        : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-                    )}>
-                      {booking.status === "confirmed" ? "Confirmed" : "Pending"}
-                    </span>
-                  </div>
-                  <div className="text-sm">{booking.customer}</div>
-                  <div className="text-xs text-muted-foreground flex gap-1 items-center mt-1">
-                    <Users className="h-3 w-3" /> {booking.service}
-                  </div>
-                </div>
-              ))}
+          {!user ? (
+            <div className="border rounded-md p-4 text-center">
+              <p className="text-sm text-muted-foreground mb-3">
+                Sign in to view and manage your bookings
+              </p>
+              <Button 
+                variant="default" 
+                size="sm" 
+                className="w-full"
+                onClick={() => navigate("/auth/signin")}
+              >
+                <LogIn className="h-4 w-4 mr-2" /> Sign In
+              </Button>
             </div>
-          </div>
+          ) : (
+            <div className="border rounded-md overflow-hidden">
+              <div className="bg-muted px-3 py-2 text-xs font-medium">Today's Bookings</div>
+              <div className="divide-y max-h-[300px] overflow-y-auto">
+                {filteredBookings.length > 0 ? (
+                  filteredBookings.map((booking) => (
+                    <div 
+                      key={booking.id} 
+                      className="p-3 hover:bg-muted/50 cursor-pointer transition-colors"
+                      onClick={() => handleBookingClick(booking)}
+                    >
+                      <div className="font-medium flex justify-between">
+                        <span>{booking.time}</span>
+                        <span className={cn(
+                          "text-xs px-1.5 py-0.5 rounded-full",
+                          booking.status === "confirmed" 
+                            ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" 
+                            : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                        )}>
+                          {booking.status === "confirmed" ? "Confirmed" : "Pending"}
+                        </span>
+                      </div>
+                      <div className="text-sm">{booking.customer}</div>
+                      <div className="text-xs text-muted-foreground flex gap-1 items-center mt-1">
+                        <Users className="h-3 w-3" /> {booking.service}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-4 text-center text-sm text-muted-foreground">
+                    No bookings found
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

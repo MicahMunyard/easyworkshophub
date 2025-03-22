@@ -5,6 +5,7 @@ import DayView from "./DayView";
 import WeekView from "./WeekView";
 import MonthView from "./MonthView";
 import { BookingViewProps } from "./types";
+import { useAuth } from "@/contexts/AuthContext";
 
 const BookingView: React.FC<BookingViewProps> = ({
   view,
@@ -13,6 +14,22 @@ const BookingView: React.FC<BookingViewProps> = ({
   timeSlots,
   date
 }) => {
+  const { user } = useAuth();
+
+  // Show empty state if user is not authenticated
+  if (!user) {
+    return (
+      <div className="min-w-[600px] flex items-center justify-center h-96 border rounded-md bg-muted/20">
+        <div className="text-center p-6">
+          <h3 className="font-medium text-lg mb-2">Please sign in</h3>
+          <p className="text-muted-foreground text-sm">
+            You need to sign in to view and manage your bookings
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-w-[600px]">
       <Tabs value={view}>
