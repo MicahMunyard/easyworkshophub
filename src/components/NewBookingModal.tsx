@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
-import { Car, Wrench, User, Phone, Clock, CalendarIcon } from "lucide-react";
+import { Car, Wrench, User, Phone, Clock, CalendarIcon, Warehouse } from "lucide-react";
 import { BookingType } from "@/types/booking";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
