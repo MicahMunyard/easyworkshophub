@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -32,7 +31,6 @@ export const useDataCleanup = () => {
     const cleanupResults: CleanupResult[] = [];
 
     try {
-      // First handle tables that have user_id column
       for (const table of tablesWithUserId) {
         const result = await cleanTableWithUserId(table, user.id);
         cleanupResults.push(result);
@@ -44,14 +42,11 @@ export const useDataCleanup = () => {
         }
       }
 
-      // Then handle tables that need to be truncated for this user
       for (const table of tablesToTruncate) {
         const result = await cleanTableToTruncate(table);
         cleanupResults.push(result);
         
         if (result.deleted > 0 || result.deleted === 0 && table !== 'service_reminders') {
-          // Count as success if we deleted records or if there were no records to delete
-          // (except for service_reminders which we expect to have records)
           successCount++;
         } else {
           errorCount++;

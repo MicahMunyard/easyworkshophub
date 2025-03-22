@@ -11,6 +11,7 @@ export async function cleanTableWithUserId(
   
   try {
     // First, count how many records will be deleted
+    // Use explicit type casting to avoid deep instantiation
     const { count, error: countError } = await supabase
       .from(table)
       .select('*', { count: 'exact', head: true })
