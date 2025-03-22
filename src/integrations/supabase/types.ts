@@ -240,6 +240,7 @@ export type Database = {
           priority: string
           service: string
           status: string
+          time: string | null
           time_estimate: string
           updated_at: string
           vehicle: string
@@ -253,6 +254,7 @@ export type Database = {
           priority: string
           service: string
           status: string
+          time?: string | null
           time_estimate: string
           updated_at?: string
           vehicle: string
@@ -266,6 +268,7 @@ export type Database = {
           priority?: string
           service?: string
           status?: string
+          time?: string | null
           time_estimate?: string
           updated_at?: string
           vehicle?: string

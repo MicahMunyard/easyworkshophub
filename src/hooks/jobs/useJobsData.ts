@@ -36,7 +36,7 @@ export const useJobsData = () => {
           status: job.status as "pending" | "inProgress" | "working" | "completed" | "cancelled",
           assignedTo: job.assigned_to,
           date: job.date,
-          time: job.time, // Include the time field
+          time: job.time || '', // Properly handle the time field and provide a default empty string
           timeEstimate: job.time_estimate,
           priority: job.priority
         })) as JobType[];

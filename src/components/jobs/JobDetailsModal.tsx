@@ -40,7 +40,7 @@ const JobDetailsModal: React.FC<JobDetailsModalProps> = ({ isOpen, onClose, job,
     // Delay the close slightly to prevent freezing
     setTimeout(() => {
       onClose();
-    }, 10);
+    }, 50);
   };
 
   return (
@@ -144,7 +144,7 @@ const JobDetailsModal: React.FC<JobDetailsModalProps> = ({ isOpen, onClose, job,
           <Button onClick={() => {
             handleClose();
             // Slightly delay the edit action to prevent UI freezing
-            setTimeout(() => onEdit(job), 50);
+            setTimeout(() => onEdit(job), 100);
           }}>
             Edit Job
           </Button>

@@ -1,4 +1,3 @@
-
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { JobType } from "@/types/job";
@@ -19,6 +18,7 @@ export const useJobMutations = (fetchJobs: () => Promise<void>) => {
           status: newJob.status,
           assigned_to: newJob.assignedTo,
           date: newJob.date,
+          time: newJob.time || null,
           time_estimate: newJob.timeEstimate,
           priority: newJob.priority
         }])
@@ -59,6 +59,7 @@ export const useJobMutations = (fetchJobs: () => Promise<void>) => {
           status: updatedJob.status,
           assigned_to: updatedJob.assignedTo,
           date: updatedJob.date,
+          time: updatedJob.time || null,
           time_estimate: updatedJob.timeEstimate,
           priority: updatedJob.priority
         })

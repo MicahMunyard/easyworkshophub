@@ -116,24 +116,36 @@ const JobForm: React.FC<JobFormProps> = ({ job, handleChange, handleSelectChange
         </div>
         
         <div className="grid gap-2">
-          <Label htmlFor="timeEstimate">Time Estimate</Label>
-          <Select 
-            value={job.timeEstimate} 
-            onValueChange={(value) => handleSelectChange("timeEstimate", value)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select time" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="30 mins">30 mins</SelectItem>
-              <SelectItem value="1 hour">1 hour</SelectItem>
-              <SelectItem value="2 hours">2 hours</SelectItem>
-              <SelectItem value="3 hours">3 hours</SelectItem>
-              <SelectItem value="4 hours">4 hours</SelectItem>
-              <SelectItem value="Full Day">Full Day</SelectItem>
-            </SelectContent>
-          </Select>
+          <Label htmlFor="time">Time</Label>
+          <Input
+            id="time"
+            name="time"
+            type="time"
+            value={job.time || ''}
+            onChange={handleChange}
+            placeholder="Select time"
+          />
         </div>
+      </div>
+
+      <div className="grid gap-2">
+        <Label htmlFor="timeEstimate">Time Estimate</Label>
+        <Select 
+          value={job.timeEstimate} 
+          onValueChange={(value) => handleSelectChange("timeEstimate", value)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select estimate" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="30 mins">30 mins</SelectItem>
+            <SelectItem value="1 hour">1 hour</SelectItem>
+            <SelectItem value="2 hours">2 hours</SelectItem>
+            <SelectItem value="3 hours">3 hours</SelectItem>
+            <SelectItem value="4 hours">4 hours</SelectItem>
+            <SelectItem value="Full Day">Full Day</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
     </div>
   );
