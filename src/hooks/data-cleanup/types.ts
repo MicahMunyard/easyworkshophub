@@ -1,5 +1,5 @@
 
-// Define a type for our table names to ensure type safety
+// Define a type for our table names with literal type strings
 export type TableName = 
   | "user_bookings"
   | "user_jobs"
