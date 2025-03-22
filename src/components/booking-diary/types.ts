@@ -1,5 +1,6 @@
 
 import { BookingType } from "@/types/booking";
+import { BookingView } from "@/hooks/bookings/types";
 
 export interface DayViewProps {
   filteredBookings: BookingType[];
@@ -10,8 +11,8 @@ export interface DayViewProps {
 export interface CalendarNavigationProps {
   date: Date;
   formattedDate: string;
-  view: string;
-  setView: (view: string) => void;
+  view: BookingView;
+  setView: (view: BookingView) => void;
   navigateDate: (direction: "prev" | "next") => void;
 }
 
@@ -25,7 +26,7 @@ export interface BookingsSidebarProps {
 }
 
 export interface BookingViewProps {
-  view: string;
+  view: BookingView;
   filteredBookings: BookingType[];
   handleBookingClick: (booking: BookingType) => void;
   timeSlots: string[];

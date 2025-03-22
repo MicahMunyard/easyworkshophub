@@ -6,8 +6,8 @@ export type BookingView = "day" | "week" | "month";
 export interface UseBookingsReturn {
   date: Date;
   setDate: (date: Date) => void;
-  view: string;
-  setView: (view: string) => void;
+  view: BookingView;
+  setView: (view: BookingView) => void;
   bookings: BookingType[];
   isLoading: boolean;
   navigateDate: (direction: "prev" | "next") => void;

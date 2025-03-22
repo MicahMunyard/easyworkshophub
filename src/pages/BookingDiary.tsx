@@ -11,6 +11,7 @@ import BookingView from "@/components/booking-diary/BookingView";
 import BookingDiaryHeader from "@/components/booking-diary/BookingDiaryHeader";
 import BookingFilter from "@/components/booking-diary/BookingFilter";
 import { useBookings } from "@/hooks/useBookings";
+import { BookingView as BookingViewType } from "@/hooks/bookings/types";
 
 const timeSlots = [
   "8:00 AM", "8:30 AM", "9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM",
