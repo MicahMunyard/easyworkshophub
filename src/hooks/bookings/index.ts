@@ -4,6 +4,8 @@ import { useBookingNavigation } from "./useBookingNavigation";
 import { useBookingFetch } from "./useBookingFetch";
 import { useBookingMutations } from "./useBookingMutations";
 import { UseBookingsReturn, BookingView } from "./types";
+import { useNewBookingForm } from "./useNewBookingForm";
+import { useEditBookingForm } from "./useEditBookingForm";
 
 export const useBookings = (initialDate = new Date(), initialView: BookingView = "day"): UseBookingsReturn => {
   const { date, setDate, view, setView, navigateDate } = useBookingNavigation(initialDate, initialView);
@@ -14,7 +16,7 @@ export const useBookings = (initialDate = new Date(), initialView: BookingView =
     date,
     setDate,
     view,
-    setView: (newView: BookingView) => setView(newView),
+    setView,
     bookings,
     isLoading,
     navigateDate,
@@ -24,3 +26,5 @@ export const useBookings = (initialDate = new Date(), initialView: BookingView =
     fetchBookings
   };
 };
+
+export { useNewBookingForm, useEditBookingForm };
