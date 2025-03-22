@@ -56,7 +56,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={() => onClose()}>
+      <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Edit Booking</DialogTitle>

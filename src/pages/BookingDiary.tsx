@@ -53,25 +53,38 @@ const BookingDiary = () => {
   };
 
   const handleSaveBooking = async (updatedBooking: BookingType) => {
-    const success = await updateBooking(updatedBooking);
-    if (success) {
-      setIsModalOpen(false);
-      setSelectedBooking(null);
+    try {
+      const success = await updateBooking(updatedBooking);
+      if (success) {
+        setIsModalOpen(false);
+        setSelectedBooking(null);
+      }
+    } catch (error) {
+      console.error("Error saving booking:", error);
     }
   };
 
   const handleAddNewBooking = async (newBooking: BookingType) => {
-    const success = await addBooking(newBooking);
-    if (success) {
-      setIsNewBookingModalOpen(false);
+    try {
+      const success = await addBooking(newBooking);
+      if (success) {
+        setIsNewBookingModalOpen(false);
+      }
+    } catch (error) {
+      console.error("Error adding booking:", error);
     }
   };
 
   const handleDeleteBooking = async (bookingToDelete: BookingType) => {
-    const success = await deleteBooking(bookingToDelete);
-    if (success) {
-      setIsModalOpen(false);
-      setSelectedBooking(null);
+    try {
+      console.log("Deleting booking in BookingDiary:", bookingToDelete);
+      const success = await deleteBooking(bookingToDelete);
+      if (success) {
+        setIsModalOpen(false);
+        setSelectedBooking(null);
+      }
+    } catch (error) {
+      console.error("Error deleting booking:", error);
     }
   };
 

@@ -206,6 +206,7 @@ export const useBookingMutations = (
       
       if (fetchError) {
         console.error('Error finding booking to delete:', fetchError);
+        throw fetchError;
       }
       
       let actualBookingId: string | null = null;
@@ -213,21 +214,7 @@ export const useBookingMutations = (
       if (matchingBookings && matchingBookings.length > 0) {
         actualBookingId = matchingBookings[0].id;
         console.log("Found matching booking with ID:", actualBookingId);
-      }
-      
-      // Delete by customer name and date if we couldn't find the ID
-      if (!actualBookingId) {
-        console.log("No exact ID match found, deleting by customer and date");
-        const { error: deleteByCustomerError } = await supabase
-          .from('bookings')
-          .delete()
-          .eq('customer_name', bookingToDelete.customer)
-          .eq('booking_date', bookingToDelete.date);
         
-        if (deleteByCustomerError) {
-          throw deleteByCustomerError;
-        }
-      } else {
         // Delete using the actual ID
         console.log("Deleting booking with ID:", actualBookingId);
         const { error: deleteError } = await supabase
@@ -236,7 +223,21 @@ export const useBookingMutations = (
           .eq('id', actualBookingId);
         
         if (deleteError) {
+          console.error('Error deleting booking:', deleteError);
           throw deleteError;
+        }
+      } else {
+        // Delete by customer name and date if we couldn't find the ID
+        console.log("No exact ID match found, deleting by customer and date");
+        const { error: deleteByCustomerError } = await supabase
+          .from('bookings')
+          .delete()
+          .eq('customer_name', bookingToDelete.customer)
+          .eq('booking_date', bookingToDelete.date);
+        
+        if (deleteByCustomerError) {
+          console.error('Error deleting booking by customer:', deleteByCustomerError);
+          throw deleteByCustomerError;
         }
       }
       
