@@ -64,19 +64,36 @@ const Navbar: React.FC<NavbarProps> = ({
       {/* Top Bar */}
       <div className="h-16 border-b bg-background">
         <div className="container h-full flex items-center justify-between">
-          <div className="flex items-center">
+          <div className="flex items-center gap-4">
             <Link to="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 flex items-center justify-center">
-                <img
-                  src="/lovable-uploads/toliccs-logo.png"
-                  alt="Toliccs Logo"
-                  className="max-w-full max-h-full object-contain"
-                />
-              </div>
+              <img
+                src="/lovable-uploads/toliccs-logo.png"
+                alt="Toliccs Logo"
+                className="w-8 h-8"
+                width={32}
+                height={32}
+              />
               <span className="font-bold text-xl hidden sm:inline-block">
                 Toliccs
               </span>
             </Link>
+
+            {/* Main Navigation Tabs - Moved to be next to the logo */}
+            <div className="hidden md:block">
+              <Tabs value={getCurrentTab()} onValueChange={handleTabChange} className="w-full">
+                <TabsList className="bg-transparent h-12 justify-start px-0 gap-1">
+                  {mainNavSections.map((section) => (
+                    <TabsTrigger 
+                      key={section.name} 
+                      value={section.name.toLowerCase()}
+                      className="h-10 px-4 data-[state=active]:bg-muted data-[state=active]:shadow-none transition-all"
+                    >
+                      {section.name}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
+            </div>
           </div>
 
           <nav
@@ -87,13 +104,13 @@ const Navbar: React.FC<NavbarProps> = ({
           >
             <div className="flex items-center justify-between lg:hidden">
               <Link to="/" className="flex items-center gap-2">
-                <div className="w-8 h-8 flex items-center justify-center">
-                  <img
-                    src="/lovable-uploads/toliccs-logo.png"
-                    alt="Toliccs Logo"
-                    className="max-w-full max-h-full object-contain"
-                  />
-                </div>
+                <img
+                  src="/lovable-uploads/toliccs-logo.png"
+                  alt="Toliccs Logo"
+                  className="w-8 h-8"
+                  width={32}
+                  height={32}
+                />
                 <span className="font-bold text-xl">Toliccs</span>
               </Link>
               <Button
@@ -104,6 +121,23 @@ const Navbar: React.FC<NavbarProps> = ({
               >
                 <X className="h-6 w-6" />
               </Button>
+            </div>
+
+            {/* Mobile Navigation Tabs */}
+            <div className="lg:hidden mt-4">
+              <Tabs value={getCurrentTab()} onValueChange={handleTabChange} className="w-full">
+                <TabsList className="bg-transparent h-auto w-full flex-col items-stretch justify-start px-0 gap-1">
+                  {mainNavSections.map((section) => (
+                    <TabsTrigger 
+                      key={section.name} 
+                      value={section.name.toLowerCase()}
+                      className="h-10 w-full justify-start px-4 data-[state=active]:bg-muted data-[state=active]:shadow-none transition-all"
+                    >
+                      {section.name}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
             </div>
 
             <div className="mt-auto lg:mt-0 lg:ml-auto flex flex-col lg:flex-row items-center gap-4">
@@ -174,23 +208,6 @@ const Navbar: React.FC<NavbarProps> = ({
             </Button>
           </div>
         </div>
-      </div>
-      
-      {/* Main Navigation Tabs */}
-      <div className="h-14 border-b bg-background flex items-center px-4 md:px-6">
-        <Tabs value={getCurrentTab()} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="bg-transparent h-12 w-full justify-start px-0 gap-1">
-            {mainNavSections.map((section) => (
-              <TabsTrigger 
-                key={section.name} 
-                value={section.name.toLowerCase()}
-                className="h-10 px-4 data-[state=active]:bg-muted data-[state=active]:shadow-none transition-all"
-              >
-                {section.name}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
       </div>
     </header>
   );

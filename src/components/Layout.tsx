@@ -89,11 +89,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     }
   }, [location.pathname, isMobile]);
 
-  // Apply dark mode class to HTML element
-  useEffect(() => {
-    document.documentElement.classList.add('dark');
-  }, []);
-
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
       <Navbar 
@@ -112,7 +107,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           className={`flex-1 overflow-auto transition-all duration-300 ease-in-out
             ${sidebarOpen ? "lg:ml-64" : "ml-0"}`}
         >
-          <div className="container py-6 px-4 md:px-6 mx-auto min-h-[calc(100vh-8rem)] animate-fadeIn">
+          <div className="container py-6 px-4 md:px-6 mx-auto min-h-[calc(100vh-4rem)] animate-fadeIn">
             {children}
           </div>
         </main>

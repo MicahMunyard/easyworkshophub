@@ -10,22 +10,32 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export function ModeToggle() {
-  const [theme, setTheme] = React.useState("dark");
+  const [theme, setTheme] = React.useState<"dark" | "light">("dark");
 
   React.useEffect(() => {
-    const doc = document.documentElement;
-    const isDark = doc.classList.contains("dark");
-    setTheme(isDark ? "dark" : "light");
+    // Check for theme in localStorage first
+    const storedTheme = localStorage.getItem("theme");
+    const initialTheme = storedTheme === "light" ? "light" : "dark";
+    
+    setTheme(initialTheme);
+    applyTheme(initialTheme);
   }, []);
 
-  const toggleTheme = (newTheme: string) => {
-    const doc = document.documentElement;
+  const applyTheme = (newTheme: "dark" | "light") => {
+    const root = document.documentElement;
+    
     if (newTheme === "dark") {
-      doc.classList.add("dark");
+      root.classList.add("dark");
     } else {
-      doc.classList.remove("dark");
+      root.classList.remove("dark");
     }
+    
+    localStorage.setItem("theme", newTheme);
+  };
+
+  const toggleTheme = (newTheme: "dark" | "light") => {
     setTheme(newTheme);
+    applyTheme(newTheme);
   };
 
   return (
