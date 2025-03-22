@@ -5,15 +5,24 @@ import { BookingType } from "@/types/booking";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { BookingView } from "./types";
+import { useAuth } from "@/contexts/AuthContext";
 
 export const useBookingFetch = (date: Date, view: BookingView) => {
   const [bookings, setBookings] = useState<BookingType[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const fetchBookings = async () => {
     setIsLoading(true);
     try {
+      if (!user) {
+        // If no user is logged in, return empty bookings
+        setBookings([]);
+        setIsLoading(false);
+        return;
+      }
+
       const formattedDateString = format(date, 'yyyy-MM-dd');
       
       let startDate, endDate;
@@ -37,10 +46,13 @@ export const useBookingFetch = (date: Date, view: BookingView) => {
         endDate = format(end, 'yyyy-MM-dd');
       }
 
-      console.log(`Fetching bookings from ${startDate} to ${endDate}`);
+      console.log(`Fetching bookings from ${startDate} to ${endDate} for user ${user.id}`);
+      
+      // Query user_bookings table instead of bookings table
       const { data, error } = await supabase
-        .from('bookings')
+        .from('user_bookings')
         .select('*')
+        .eq('user_id', user.id)
         .gte('booking_date', startDate)
         .lte('booking_date', endDate);
 
@@ -49,7 +61,7 @@ export const useBookingFetch = (date: Date, view: BookingView) => {
       }
 
       if (data) {
-        console.log(`Fetched ${data.length} bookings:`, data);
+        console.log(`Fetched ${data.length} bookings for user ${user.id}:`, data);
         const transformedData: BookingType[] = data.map(booking => ({
           id: booking.id ? parseInt(booking.id.toString().replace(/-/g, '').substring(0, 8), 16) : Math.floor(Math.random() * 1000),
           customer: booking.customer_name,
@@ -84,24 +96,32 @@ export const useBookingFetch = (date: Date, view: BookingView) => {
   // Set up real-time subscription to booking changes
   useEffect(() => {
     console.log("Setting up real-time subscription for bookings");
+    
+    if (!user) {
+      // Don't attempt to fetch or subscribe if no user is logged in
+      setBookings([]);
+      return;
+    }
+    
     fetchBookings();
     
-    // Subscribe to booking changes
+    // Subscribe to booking changes for the current user
     const bookingsChannel = supabase
-      .channel('bookings-changes')
+      .channel('user-bookings-changes')
       .on('postgres_changes', 
         {
           event: '*',
           schema: 'public',
-          table: 'bookings'
+          table: 'user_bookings',
+          filter: `user_id=eq.${user.id}`
         },
         (payload) => {
-          console.log("Booking change detected:", payload);
+          console.log("User booking change detected:", payload);
           fetchBookings();
         }
       )
       .subscribe((status) => {
-        console.log("Bookings subscription status:", status);
+        console.log("User bookings subscription status:", status);
       });
     
     // Clean up subscription
@@ -109,7 +129,7 @@ export const useBookingFetch = (date: Date, view: BookingView) => {
       console.log("Cleaning up bookings subscription");
       supabase.removeChannel(bookingsChannel);
     };
-  }, [date, view]);
+  }, [date, view, user]);
 
   return {
     bookings,

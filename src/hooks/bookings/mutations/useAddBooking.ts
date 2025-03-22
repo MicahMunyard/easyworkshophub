@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { BookingType } from "@/types/booking";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 export const useAddBooking = (
   bookings: BookingType[],
@@ -10,19 +11,30 @@ export const useAddBooking = (
   fetchBookings: () => Promise<void>
 ) => {
   const { toast } = useToast();
+  const { user } = useAuth();
   
   const addBooking = async (newBooking: BookingType) => {
     try {
+      if (!user) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to create bookings.",
+          variant: "destructive"
+        });
+        return false;
+      }
+
       console.log("Adding new booking:", newBooking);
       
       // Generate a proper UUID for the booking
       const bookingId = uuidv4();
       
-      // Insert into Supabase
+      // Insert into user_bookings table instead of bookings
       const { error: bookingError } = await supabase
-        .from('bookings')
+        .from('user_bookings')
         .insert({
           id: bookingId,
+          user_id: user.id, // Add the user ID to associate the booking with the logged-in user
           customer_name: newBooking.customer,
           customer_phone: newBooking.phone,
           service: newBooking.service,

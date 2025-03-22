@@ -2,6 +2,7 @@
 import { BookingType } from "@/types/booking";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 export const useUpdateBooking = (
   bookings: BookingType[],
@@ -9,9 +10,19 @@ export const useUpdateBooking = (
   fetchBookings: () => Promise<void>
 ) => {
   const { toast } = useToast();
+  const { user } = useAuth();
   
   const updateBooking = async (updatedBooking: BookingType) => {
     try {
+      if (!user) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to update bookings.",
+          variant: "destructive"
+        });
+        return false;
+      }
+
       console.log("Updating booking:", updatedBooking);
       
       // Update UI first for better UX
@@ -22,8 +33,9 @@ export const useUpdateBooking = (
       
       // Find the original booking ID in Supabase format
       const { data: matchingBookings, error: fetchError } = await supabase
-        .from('bookings')
+        .from('user_bookings')
         .select('id')
+        .eq('user_id', user.id)
         .eq('customer_name', updatedBooking.customer)
         .eq('booking_date', updatedBooking.date);
       
@@ -44,7 +56,7 @@ export const useUpdateBooking = (
       
       // Update in Supabase
       const { error: updateError } = await supabase
-        .from('bookings')
+        .from('user_bookings')
         .update({
           customer_name: updatedBooking.customer,
           customer_phone: updatedBooking.phone,
@@ -58,7 +70,8 @@ export const useUpdateBooking = (
           service_id: updatedBooking.service_id || null,
           bay_id: updatedBooking.bay_id || null
         })
-        .eq('id', bookingIdStr);
+        .eq('id', bookingIdStr)
+        .eq('user_id', user.id); // Ensure we only update the user's own booking
       
       if (updateError) {
         console.error('Supabase update error:', updateError);

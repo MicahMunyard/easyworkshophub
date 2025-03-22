@@ -2,6 +2,7 @@
 import { BookingType } from "@/types/booking";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 export const useDeleteBooking = (
   bookings: BookingType[],
@@ -9,9 +10,19 @@ export const useDeleteBooking = (
   fetchBookings: () => Promise<void>
 ) => {
   const { toast } = useToast();
+  const { user } = useAuth();
   
   const deleteBooking = async (bookingToDelete: BookingType): Promise<boolean> => {
     try {
+      if (!user) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to delete bookings.",
+          variant: "destructive"
+        });
+        return false;
+      }
+
       console.log("Attempting to delete booking:", bookingToDelete);
       
       // Handle case where ID might be different formats
@@ -28,99 +39,57 @@ export const useDeleteBooking = (
       if (bookingIdStr.includes('-')) {
         console.log("Deleting booking with UUID format:", bookingIdStr);
         
-        // Try to delete from the bookings table
+        // Delete from user_bookings table
         const { error: deleteError } = await supabase
-          .from('bookings')
-          .delete()
-          .eq('id', bookingIdStr);
-        
-        if (deleteError) {
-          console.error('Error deleting from bookings table:', deleteError);
-          // Don't throw yet, try the user_bookings table
-        } else {
-          console.log("Successfully deleted booking from bookings table");
-        }
-        
-        // Also try to delete from user_bookings if it exists there
-        const { error: userBookingDeleteError } = await supabase
           .from('user_bookings')
           .delete()
-          .eq('id', bookingIdStr);
+          .eq('id', bookingIdStr)
+          .eq('user_id', user.id); // Ensure we only delete the user's own booking
         
-        if (userBookingDeleteError) {
-          console.error('Error deleting from user_bookings table:', userBookingDeleteError);
-          // If both failed, throw an error
-          if (deleteError) throw deleteError;
-        } else {
-          console.log("Successfully deleted booking from user_bookings table");
+        if (deleteError) {
+          console.error('Error deleting from user_bookings table:', deleteError);
+          throw deleteError;
         }
+        
+        console.log("Successfully deleted booking from user_bookings table");
       } 
       // If it's a numeric ID or a string that doesn't look like a UUID
       else {
-        // First check if the booking exists in the bookings table
+        // Check in user_bookings table by customer and date
         console.log("Looking for booking by customer and date:", bookingToDelete.customer, bookingToDelete.date);
         
-        // Check in bookings table
-        const { data: matchingBookings, error: fetchError } = await supabase
-          .from('bookings')
+        const { data: matchingUserBookings, error: userFetchError } = await supabase
+          .from('user_bookings')
           .select('id')
+          .eq('user_id', user.id)
           .eq('customer_name', bookingToDelete.customer)
           .eq('booking_date', bookingToDelete.date);
         
-        if (fetchError) {
-          console.error('Error finding booking in bookings table:', fetchError);
-          // Continue to try user_bookings
-        } else if (matchingBookings && matchingBookings.length > 0) {
-          const actualBookingId = matchingBookings[0].id;
-          console.log("Found matching booking in bookings table with ID:", actualBookingId);
+        if (userFetchError) {
+          console.error('Error finding booking in user_bookings table:', userFetchError);
+          throw userFetchError;
+        }
+        
+        if (matchingUserBookings && matchingUserBookings.length > 0) {
+          const actualBookingId = matchingUserBookings[0].id;
+          console.log("Found matching booking in user_bookings table with ID:", actualBookingId);
           
           // Delete using the actual ID
           const { error: deleteError } = await supabase
-            .from('bookings')
+            .from('user_bookings')
             .delete()
-            .eq('id', actualBookingId);
+            .eq('id', actualBookingId)
+            .eq('user_id', user.id);
           
           if (deleteError) {
-            console.error('Error deleting from bookings table:', deleteError);
+            console.error('Error deleting from user_bookings table:', deleteError);
             throw deleteError;
           }
           
-          console.log("Successfully deleted booking from bookings table");
+          console.log("Successfully deleted booking from user_bookings table");
         } else {
-          // If not found in bookings, check user_bookings
-          console.log("Booking not found in bookings table, checking user_bookings...");
-          
-          const { data: matchingUserBookings, error: userFetchError } = await supabase
-            .from('user_bookings')
-            .select('id')
-            .eq('customer_name', bookingToDelete.customer)
-            .eq('booking_date', bookingToDelete.date);
-          
-          if (userFetchError) {
-            console.error('Error finding booking in user_bookings table:', userFetchError);
-            throw userFetchError;
-          }
-          
-          if (matchingUserBookings && matchingUserBookings.length > 0) {
-            const actualBookingId = matchingUserBookings[0].id;
-            console.log("Found matching booking in user_bookings table with ID:", actualBookingId);
-            
-            // Delete using the actual ID
-            const { error: deleteError } = await supabase
-              .from('user_bookings')
-              .delete()
-              .eq('id', actualBookingId);
-            
-            if (deleteError) {
-              console.error('Error deleting from user_bookings table:', deleteError);
-              throw deleteError;
-            }
-            
-            console.log("Successfully deleted booking from user_bookings table");
-          } else {
-            console.error("No matching booking found to delete in either table");
-            throw new Error("Booking not found in database");
-          }
+          console.error("No matching booking found to delete");
+          throw new Error("Booking not found in database");
         }
       }
       
