@@ -13,7 +13,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/components/ui/use-toast";
 import { Loader2, Save, User, LogOut } from "lucide-react";
-import DataCleanupTool from "@/components/DataCleanupTool";
 
 const Profile = () => {
   const { user, profile, signOut, updateProfile, loading } = useAuth();
@@ -84,7 +83,6 @@ const Profile = () => {
           <Button variant="outline" onClick={() => signOut()}>
             <LogOut className="mr-2 h-4 w-4" /> Sign Out
           </Button>
-          <DataCleanupTool />
         </div>
       </div>
 
