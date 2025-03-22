@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
@@ -135,7 +136,7 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Featured Video Widget */}
+      {/* Featured Video Widget - Now positioned above the stats cards */}
       <div className="w-full" style={{ height: "400px" }}>
         <VideoWidget 
           videoId={accountVideoId} 
@@ -170,6 +171,7 @@ const Dashboard: React.FC = () => {
         />
       </div>
 
+      {/* Remove the duplicate VideoWidget in the right panel */}
       <ResizablePanelGroup direction="horizontal" className="min-h-[600px] rounded-lg border">
         <ResizablePanel defaultSize={65}>
           <ResizablePanelGroup direction="vertical">
@@ -276,7 +278,34 @@ const Dashboard: React.FC = () => {
         <ResizableHandle withHandle />
         <ResizablePanel defaultSize={35}>
           <div className="flex h-full items-center justify-center p-4">
-            <VideoWidget />
+            {/* This would be a good place to add additional content or information */}
+            <Card className="w-full h-full overflow-hidden performance-card">
+              <CardHeader className="p-4 pb-2 border-b border-border/50">
+                <CardTitle className="flex items-center">
+                  <AlertCircle className="mr-2 h-5 w-5 text-workshop-red" />
+                  Important Alerts
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4">
+                <div className="space-y-4">
+                  <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-900/30 rounded-lg">
+                    <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                      3 vehicles are awaiting parts that are currently on backorder.
+                    </p>
+                  </div>
+                  <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-900/30 rounded-lg">
+                    <p className="text-sm text-blue-800 dark:text-blue-200">
+                      New software update available for diagnostic equipment.
+                    </p>
+                  </div>
+                  <div className="p-3 bg-workshop-red/10 border border-workshop-red/20 rounded-lg">
+                    <p className="text-sm text-workshop-red">
+                      Safety recall notice for certain 2021-2022 model vehicles.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </ResizablePanel>
       </ResizablePanelGroup>
