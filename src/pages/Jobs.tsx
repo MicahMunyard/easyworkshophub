@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+
+import React, { useState, useEffect } from "react";
 import { 
   Search, 
   Filter, 
@@ -47,6 +48,7 @@ import {
 import { cn } from "@/lib/utils";
 import { JobType } from "@/types/job";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import NewJobModal from "@/components/NewJobModal";
 import JobDetailsModal from "@/components/JobDetailsModal";
 import EditJobModal from "@/components/EditJobModal";
@@ -55,69 +57,13 @@ import ReassignJobModal from "@/components/ReassignJobModal";
 const jobStatuses = {
   pending: { label: "Pending", icon: Clock, color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" },
   inProgress: { label: "In Progress", icon: AlertCircle, color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
-  completed: { label: "Completed", icon: CheckCircle2, color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" }
+  completed: { label: "Completed", icon: CheckCircle2, color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" },
+  cancelled: { label: "Cancelled", icon: XCircle, color: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" }
 };
 
-const dummyJobs: JobType[] = [
-  {
-    id: "JOB-1234",
-    customer: "John Smith",
-    vehicle: "2018 Toyota Camry",
-    service: "Oil Change & Tire Rotation",
-    status: "pending",
-    assignedTo: "Mike Johnson",
-    date: "2023-06-15",
-    timeEstimate: "1 hour",
-    priority: "Medium"
-  },
-  {
-    id: "JOB-1235",
-    customer: "Emma Wilson",
-    vehicle: "2021 Tesla Model 3",
-    service: "Diagnostic & Software Update",
-    status: "inProgress",
-    assignedTo: "Sarah Thomas",
-    date: "2023-06-15",
-    timeEstimate: "2 hours",
-    priority: "High"
-  },
-  {
-    id: "JOB-1236",
-    customer: "Michael Brown",
-    vehicle: "2019 Ford F-150",
-    service: "Brake Replacement",
-    status: "inProgress",
-    assignedTo: "Mike Johnson",
-    date: "2023-06-15",
-    timeEstimate: "3 hours",
-    priority: "High"
-  },
-  {
-    id: "JOB-1237",
-    customer: "Jessica Lee",
-    vehicle: "2020 Honda Civic",
-    service: "Wheel Alignment",
-    status: "completed",
-    assignedTo: "Alex Rodriguez",
-    date: "2023-06-14",
-    timeEstimate: "1 hour",
-    priority: "Medium"
-  },
-  {
-    id: "JOB-1238",
-    customer: "Robert Davis",
-    vehicle: "2017 BMW X5",
-    service: "AC Repair",
-    status: "completed",
-    assignedTo: "Sarah Thomas",
-    date: "2023-06-14",
-    timeEstimate: "4 hours",
-    priority: "Medium"
-  }
-];
-
 const Jobs = () => {
-  const [jobs, setJobs] = useState<JobType[]>(dummyJobs);
+  const [jobs, setJobs] = useState<JobType[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedJob, setSelectedJob] = useState<JobType | null>(null);
   const [isNewJobModalOpen, setIsNewJobModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
@@ -129,14 +75,87 @@ const Jobs = () => {
   const [activeTab, setActiveTab] = useState("all");
   const { toast } = useToast();
 
-  const handleAddNewJob = (newJob: JobType) => {
-    setJobs([...jobs, newJob]);
-    setIsNewJobModalOpen(false);
-    
-    toast({
-      title: "Job Created",
-      description: `Job ${newJob.id} has been created successfully.`
-    });
+  // Fetch jobs from Supabase
+  const fetchJobs = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('jobs')
+        .select('*');
+      
+      if (error) {
+        throw error;
+      }
+      
+      if (data) {
+        // Transform to match JobType interface
+        const transformedJobs = data.map(job => ({
+          id: job.id,
+          customer: job.customer,
+          vehicle: job.vehicle,
+          service: job.service,
+          status: job.status,
+          assignedTo: job.assigned_to,
+          date: job.date,
+          timeEstimate: job.time_estimate,
+          priority: job.priority
+        })) as JobType[];
+        
+        setJobs(transformedJobs);
+      }
+    } catch (error) {
+      console.error("Error fetching jobs:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch jobs",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchJobs();
+  }, []);
+
+  const handleAddNewJob = async (newJob: JobType) => {
+    try {
+      // Insert into Supabase
+      const { data, error } = await supabase
+        .from('jobs')
+        .insert([{
+          id: newJob.id,
+          customer: newJob.customer,
+          vehicle: newJob.vehicle,
+          service: newJob.service,
+          status: newJob.status,
+          assigned_to: newJob.assignedTo,
+          date: newJob.date,
+          time_estimate: newJob.timeEstimate,
+          priority: newJob.priority
+        }])
+        .select();
+      
+      if (error) {
+        throw error;
+      }
+      
+      setIsNewJobModalOpen(false);
+      fetchJobs(); // Refresh the jobs list
+      
+      toast({
+        title: "Job Created",
+        description: `Job ${newJob.id} has been created successfully.`
+      });
+    } catch (error) {
+      console.error("Error creating job:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create job",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleViewDetails = (job: JobType) => {
@@ -150,17 +169,42 @@ const Jobs = () => {
     setIsEditModalOpen(true);
   };
 
-  const handleUpdateJob = (updatedJob: JobType) => {
-    const updatedJobs = jobs.map(job => 
-      job.id === updatedJob.id ? updatedJob : job
-    );
-    setJobs(updatedJobs);
-    setIsEditModalOpen(false);
-    
-    toast({
-      title: "Job Updated",
-      description: `Job ${updatedJob.id} has been updated successfully.`
-    });
+  const handleUpdateJob = async (updatedJob: JobType) => {
+    try {
+      // Update in Supabase
+      const { error } = await supabase
+        .from('jobs')
+        .update({
+          customer: updatedJob.customer,
+          vehicle: updatedJob.vehicle,
+          service: updatedJob.service,
+          status: updatedJob.status,
+          assigned_to: updatedJob.assignedTo,
+          date: updatedJob.date,
+          time_estimate: updatedJob.timeEstimate,
+          priority: updatedJob.priority
+        })
+        .eq('id', updatedJob.id);
+      
+      if (error) {
+        throw error;
+      }
+      
+      setIsEditModalOpen(false);
+      fetchJobs(); // Refresh the jobs list
+      
+      toast({
+        title: "Job Updated",
+        description: `Job ${updatedJob.id} has been updated successfully.`
+      });
+    } catch (error) {
+      console.error("Error updating job:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update job",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleReassignJob = (job: JobType) => {
@@ -168,18 +212,35 @@ const Jobs = () => {
     setIsReassignModalOpen(true);
   };
 
-  const handleReassignConfirm = (job: JobType, newTechnician: string) => {
-    const updatedJob = { ...job, assignedTo: newTechnician };
-    const updatedJobs = jobs.map(j => 
-      j.id === job.id ? updatedJob : j
-    );
-    setJobs(updatedJobs);
-    setIsReassignModalOpen(false);
-    
-    toast({
-      title: "Job Reassigned",
-      description: `Job ${job.id} has been reassigned to ${newTechnician}.`
-    });
+  const handleReassignConfirm = async (job: JobType, newTechnician: string) => {
+    try {
+      // Update in Supabase
+      const { error } = await supabase
+        .from('jobs')
+        .update({
+          assigned_to: newTechnician
+        })
+        .eq('id', job.id);
+      
+      if (error) {
+        throw error;
+      }
+      
+      setIsReassignModalOpen(false);
+      fetchJobs(); // Refresh the jobs list
+      
+      toast({
+        title: "Job Reassigned",
+        description: `Job ${job.id} has been reassigned to ${newTechnician}.`
+      });
+    } catch (error) {
+      console.error("Error reassigning job:", error);
+      toast({
+        title: "Error",
+        description: "Failed to reassign job",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleCancelJobClick = (job: JobType) => {
@@ -187,17 +248,37 @@ const Jobs = () => {
     setIsCancelDialogOpen(true);
   };
 
-  const handleCancelJobConfirm = () => {
+  const handleCancelJobConfirm = async () => {
     if (selectedJob) {
-      const updatedJobs = jobs.filter(job => job.id !== selectedJob.id);
-      setJobs(updatedJobs);
-      setIsCancelDialogOpen(false);
-      
-      toast({
-        title: "Job Cancelled",
-        description: `Job ${selectedJob.id} has been cancelled.`,
-        variant: "destructive"
-      });
+      try {
+        // Update job status to 'cancelled' in Supabase
+        const { error } = await supabase
+          .from('jobs')
+          .update({
+            status: 'cancelled'
+          })
+          .eq('id', selectedJob.id);
+        
+        if (error) {
+          throw error;
+        }
+        
+        setIsCancelDialogOpen(false);
+        fetchJobs(); // Refresh the jobs list
+        
+        toast({
+          title: "Job Cancelled",
+          description: `Job ${selectedJob.id} has been cancelled.`,
+          variant: "destructive"
+        });
+      } catch (error) {
+        console.error("Error cancelling job:", error);
+        toast({
+          title: "Error",
+          description: "Failed to cancel job",
+          variant: "destructive"
+        });
+      }
     }
   };
 
