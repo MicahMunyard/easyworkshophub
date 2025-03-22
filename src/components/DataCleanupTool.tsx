@@ -16,14 +16,24 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+// Define a type for our table names to ensure type safety
+type TableName = 
+  | "user_bookings"
+  | "user_jobs"
+  | "user_inventory_items"
+  | "service_bays"
+  | "technicians"
+  | "services"
+  | "service_reminders";
+
 const DataCleanupTool = () => {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
-  // Define tables to clean up
-  const tablesToClean = [
+  // Define tables to clean up with proper typing
+  const tablesToClean: TableName[] = [
     'user_bookings',
     'user_jobs',
     'user_inventory_items',
@@ -50,9 +60,9 @@ const DataCleanupTool = () => {
     try {
       for (const table of tablesToClean) {
         try {
-          // Use explicit string type assertion to avoid TypeScript error
+          // Use the properly typed table name
           const { error } = await supabase
-            .from(table as string)
+            .from(table)
             .delete()
             .eq('user_id', user.id);
           
