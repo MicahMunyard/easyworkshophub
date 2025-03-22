@@ -21,8 +21,9 @@ export const useDeleteBooking = (
       // Optimistically update UI for responsiveness
       setBookings(prev => prev.filter(b => b.id !== bookingToDelete.id));
       
-      // If it's a string UUID format
-      if (typeof bookingId === 'string' && bookingId.includes('-')) {
+      // If it's a string UUID format (handle both string and number types)
+      const bookingIdStr = String(bookingId);
+      if (typeof bookingId === 'string' && bookingIdStr.includes('-')) {
         console.log("Deleting booking with direct UUID:", bookingId);
         
         const { error: deleteError } = await supabase
