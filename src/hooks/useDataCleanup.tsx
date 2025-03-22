@@ -2,37 +2,12 @@
 import { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { CleanupResult, CleanupResponse } from "./data-cleanup/types";
+import { tablesWithUserId, tablesToTruncate } from "./data-cleanup/tables-config";
+import { cleanTableWithUserId, cleanTableToTruncate } from "./data-cleanup/cleanup-handlers";
 
-// Define a type for our table names to ensure type safety
-export type TableName = 
-  | "user_bookings"
-  | "user_jobs"
-  | "user_inventory_items"
-  | "service_bays"
-  | "technicians"
-  | "services"
-  | "service_reminders";
-
-// Define which tables have user_id columns
-const tablesWithUserId: TableName[] = [
-  'user_bookings',
-  'user_jobs',
-  'user_inventory_items'
-];
-
-// Define tables that should be completely cleared for the current user
-const tablesToTruncate: TableName[] = [
-  'service_bays',
-  'technicians',
-  'services',
-  'service_reminders'
-];
-
-export type CleanupResult = { 
-  table: string; 
-  deleted: number 
-};
+export { CleanupResult };
+export type { CleanupResponse };
 
 export const useDataCleanup = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -40,7 +15,7 @@ export const useDataCleanup = () => {
   const { toast } = useToast();
   const { user } = useAuth();
 
-  const cleanupData = async () => {
+  const cleanupData = async (): Promise<CleanupResponse> => {
     if (!user) {
       toast({
         title: "Authentication required",
@@ -59,112 +34,26 @@ export const useDataCleanup = () => {
     try {
       // First handle tables that have user_id column
       for (const table of tablesWithUserId) {
-        try {
-          console.log(`Processing table ${table} with user_id filter for user ${user.id}`);
-          
-          // First, count how many records will be deleted
-          const { count, error: countError } = await supabase
-            .from(table)
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', user.id);
-          
-          if (countError) {
-            console.error(`Error counting ${table}:`, countError);
-            cleanupResults.push({ table, deleted: 0 });
-            errorCount++;
-            continue;
-          }
-          
-          console.log(`Found ${count} records to delete in ${table}`);
-          
-          const { error } = await supabase
-            .from(table)
-            .delete()
-            .eq('user_id', user.id);
-          
-          if (error) {
-            console.error(`Error cleaning ${table}:`, error);
-            cleanupResults.push({ table, deleted: 0 });
-            errorCount++;
-          } else {
-            cleanupResults.push({ table, deleted: count || 0 });
-            successCount++;
-            console.log(`Successfully deleted ${count} records from ${table}`);
-          }
-        } catch (err) {
-          console.error(`Error cleaning ${table}:`, err);
-          cleanupResults.push({ table, deleted: 0 });
+        const result = await cleanTableWithUserId(table, user.id);
+        cleanupResults.push(result);
+        
+        if (result.deleted > 0) {
+          successCount++;
+        } else {
           errorCount++;
         }
       }
 
       // Then handle tables that need to be truncated for this user
       for (const table of tablesToTruncate) {
-        try {
-          console.log(`Processing table ${table} for complete truncation`);
-          
-          // First, count how many records exist
-          const { count, error: countError } = await supabase
-            .from(table)
-            .select('*', { count: 'exact', head: true });
-          
-          if (countError) {
-            console.error(`Error counting ${table}:`, countError);
-            cleanupResults.push({ table, deleted: 0 });
-            errorCount++;
-            continue;
-          }
-          
-          console.log(`Found ${count} records to delete in ${table}`);
-          
-          if (count && count > 0) {
-            // Use a different approach - delete all records one by one
-            const { data: allRecords, error: fetchError } = await supabase
-              .from(table)
-              .select('id');
-              
-            if (fetchError) {
-              console.error(`Error fetching records from ${table}:`, fetchError);
-              cleanupResults.push({ table, deleted: 0 });
-              errorCount++;
-              continue;
-            }
-            
-            let deletedCount = 0;
-            
-            for (const record of allRecords) {
-              const { error: deleteError } = await supabase
-                .from(table)
-                .delete()
-                .eq('id', record.id);
-                
-              if (!deleteError) {
-                deletedCount++;
-              }
-            }
-            
-            if (deletedCount === allRecords.length) {
-              cleanupResults.push({ table, deleted: deletedCount });
-              successCount++;
-              console.log(`Successfully deleted ${deletedCount} records from ${table}`);
-            } else {
-              cleanupResults.push({ table, deleted: deletedCount });
-              console.warn(`Partially deleted ${deletedCount}/${allRecords.length} records from ${table}`);
-              if (deletedCount === 0) {
-                errorCount++;
-              } else {
-                successCount++;
-              }
-            }
-          } else {
-            // No records to delete
-            cleanupResults.push({ table, deleted: 0 });
-            successCount++;
-            console.log(`No records to delete in ${table}`);
-          }
-        } catch (err) {
-          console.error(`Error cleaning ${table}:`, err);
-          cleanupResults.push({ table, deleted: 0 });
+        const result = await cleanTableToTruncate(table);
+        cleanupResults.push(result);
+        
+        if (result.deleted > 0 || result.deleted === 0 && table !== 'service_reminders') {
+          // Count as success if we deleted records or if there were no records to delete
+          // (except for service_reminders which we expect to have records)
+          successCount++;
+        } else {
           errorCount++;
         }
       }
