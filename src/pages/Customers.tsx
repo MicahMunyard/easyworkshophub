@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { 
   Card, 
@@ -12,7 +11,7 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label"; // Add this import for Label
+import { Label } from "@/components/ui/label";
 import { CustomerType, CustomerDetailType } from "@/types/customer";
 import { BookingType } from "@/types/booking";
 import CustomerListItem from "@/components/CustomerListItem";
@@ -28,9 +27,11 @@ import {
   UserPlus, 
   Tag,
   Clock,
-  CalendarClock
+  CalendarClock,
+  Trash2
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Dialog,
   DialogContent,
@@ -39,7 +40,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 
-// Sample customer data (in a real app, this would come from an API)
 const dummyCustomers: CustomerType[] = [
   {
     id: 1,
@@ -91,7 +91,6 @@ const dummyCustomers: CustomerType[] = [
   }
 ];
 
-// Sample booking history data
 const dummyBookingHistory = [
   {
     id: 101,
@@ -135,13 +134,12 @@ const dummyBookingHistory = [
   }
 ] as const;
 
-// Conversion from BookingType to CustomerType
 const convertBookingToCustomer = (booking: BookingType): CustomerType => {
   return {
-    id: booking.id + 1000, // Ensure unique ID (in real app, would be proper unique ID)
+    id: booking.id + 1000,
     name: booking.customer,
     phone: booking.phone,
-    status: "active" as const, // Explicitly type as "active"
+    status: "active" as const,
     totalBookings: 1,
     vehicleInfo: [booking.car],
     lastVisit: format(new Date(), 'yyyy-MM-dd')
@@ -149,10 +147,11 @@ const convertBookingToCustomer = (booking: BookingType): CustomerType => {
 };
 
 const Customers = () => {
-  const [customers, setCustomers] = useState<CustomerType[]>(dummyCustomers);
+  const [customers, setCustomers] = useState<CustomerType[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerDetailType | null>(null);
   const [isCustomerDetailsOpen, setIsCustomerDetailsOpen] = useState(false);
   const [isNewCustomerModalOpen, setIsNewCustomerModalOpen] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<"all" | "active" | "inactive">("all");
@@ -164,18 +163,104 @@ const Customers = () => {
     vehicleInfo: [""]
   });
   const { toast } = useToast();
+  const { user } = useAuth();
+  const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
-    // In a real app, we would fetch customers from Supabase here
-    // For now, we'll use the dummy data
-  }, []);
+    if (user) {
+      fetchCustomers();
+    } else {
+      setCustomers([]);
+      setIsLoading(false);
+    }
+  }, [user]);
+
+  const fetchCustomers = async () => {
+    try {
+      setIsLoading(true);
+      
+      const { data: customerData, error } = await supabase
+        .from('user_customers')
+        .select('*')
+        .eq('user_id', user?.id);
+      
+      if (error) {
+        throw error;
+      }
+      
+      const customersWithVehicles = await Promise.all(
+        (customerData || []).map(async (customer) => {
+          const { data: vehicleData } = await supabase
+            .from('user_customer_vehicles')
+            .select('vehicle_info')
+            .eq('customer_id', customer.id);
+          
+          return {
+            id: customer.id,
+            name: customer.name,
+            phone: customer.phone || "",
+            email: customer.email,
+            status: customer.status as "active" | "inactive",
+            lastVisit: customer.last_visit,
+            totalBookings: 0,
+            vehicleInfo: vehicleData?.map(v => v.vehicle_info) || []
+          } as CustomerType;
+        })
+      );
+      
+      setCustomers(customersWithVehicles);
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+      toast({
+        variant: "destructive",
+        title: "Error fetching customers",
+        description: "Could not load customer data"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const handleDeleteAllCustomers = async () => {
+    try {
+      if (!user) return;
+      
+      for (const customer of customers) {
+        await supabase
+          .from('user_customer_vehicles')
+          .delete()
+          .eq('customer_id', customer.id);
+      }
+      
+      const { error } = await supabase
+        .from('user_customers')
+        .delete()
+        .eq('user_id', user.id);
+      
+      if (error) throw error;
+      
+      setCustomers([]);
+      
+      toast({
+        title: "Success",
+        description: "All customers have been deleted"
+      });
+      
+      setIsDeleteConfirmOpen(false);
+    } catch (error) {
+      console.error('Error deleting customers:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete customers"
+      });
+    }
+  };
 
   const handleCustomerClick = (id: number) => {
-    // Find the customer
     const customer = customers.find(c => c.id === id);
     if (!customer) return;
     
-    // Get booking history for this customer
     const bookingHistory = dummyBookingHistory
       .filter(booking => booking.customerId === id)
       .map(booking => ({
@@ -188,7 +273,6 @@ const Customers = () => {
         mechanic: booking.mechanic
       }));
     
-    // Create the detailed customer view
     const detailedCustomer: CustomerDetailType = {
       ...customer,
       bookingHistory
@@ -206,7 +290,6 @@ const Customers = () => {
   const handleCustomerSelect = (customer: CustomerType) => {
     setSelectedCustomerForDetail(customer);
     
-    // Get booking history for this customer (same as handleCustomerClick)
     const bookingHistory = dummyBookingHistory
       .filter(booking => booking.customerId === customer.id)
       .map(booking => ({
@@ -219,7 +302,6 @@ const Customers = () => {
         mechanic: booking.mechanic
       }));
     
-    // Create the detailed customer view
     const detailedCustomer: CustomerDetailType = {
       ...customer,
       bookingHistory
@@ -228,7 +310,6 @@ const Customers = () => {
     setSelectedCustomer(detailedCustomer);
   };
   
-  // Filter customers based on search term and active filter
   const filteredCustomers = customers.filter(customer => {
     const matchesSearch = 
       customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -242,19 +323,15 @@ const Customers = () => {
     return matchesSearch && matchesFilter;
   });
   
-  // Get statistics for the overview tab
   const totalCustomers = customers.length;
   const activeCustomers = customers.filter(c => c.status === "active").length;
   const inactiveCustomers = customers.filter(c => c.status === "inactive").length;
-  const newCustomersThisMonth = 12; // Placeholder, would be calculated based on real data
-  
-  // In a real app, this would be part of a useEffect hook that listens for new bookings
+  const newCustomersThisMonth = 12;
+
   const addCustomerFromBooking = (booking: BookingType) => {
-    // Check if customer already exists by phone number
     const existingCustomer = customers.find(c => c.phone === booking.phone);
     
     if (existingCustomer) {
-      // Update existing customer
       const updatedCustomers = customers.map(c => {
         if (c.phone === booking.phone) {
           return {
@@ -264,22 +341,19 @@ const Customers = () => {
             vehicleInfo: c.vehicleInfo 
               ? [...new Set([...c.vehicleInfo, booking.car])] 
               : [booking.car],
-            status: "active" as const  // Use type assertion here
+            status: "active" as const
           };
         }
         return c;
       });
       setCustomers(updatedCustomers);
     } else {
-      // Add new customer
       const newCustomer = convertBookingToCustomer(booking);
       setCustomers([...customers, newCustomer]);
     }
   };
 
-  // Handle adding a new customer
   const handleAddCustomer = () => {
-    // Validate form
     if (!newCustomer.name.trim() || !newCustomer.phone.trim()) {
       toast({
         variant: "destructive",
@@ -289,9 +363,8 @@ const Customers = () => {
       return;
     }
 
-    // Create new customer object
     const customerToAdd: CustomerType = {
-      id: Date.now(), // In a real app, this would be generated by the database
+      id: Date.now(),
       name: newCustomer.name.trim(),
       phone: newCustomer.phone.trim(),
       email: newCustomer.email.trim() || undefined,
@@ -301,10 +374,8 @@ const Customers = () => {
       vehicleInfo: newCustomer.vehicleInfo.filter(v => v.trim() !== "")
     };
 
-    // Add to customers list
     setCustomers([...customers, customerToAdd]);
     
-    // Reset form and close modal
     setNewCustomer({
       name: "",
       phone: "",
@@ -319,14 +390,12 @@ const Customers = () => {
     });
   };
 
-  // Handle vehicle input change
   const handleVehicleChange = (index: number, value: string) => {
     const updatedVehicles = [...newCustomer.vehicleInfo];
     updatedVehicles[index] = value;
     setNewCustomer({...newCustomer, vehicleInfo: updatedVehicles});
   };
 
-  // Add another vehicle input field
   const addVehicleField = () => {
     setNewCustomer({
       ...newCustomer, 
@@ -334,12 +403,22 @@ const Customers = () => {
     });
   };
 
-  // Remove a vehicle input field
   const removeVehicleField = (index: number) => {
     const updatedVehicles = [...newCustomer.vehicleInfo];
     updatedVehicles.splice(index, 1);
     setNewCustomer({...newCustomer, vehicleInfo: updatedVehicles});
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-[80vh]">
+        <div className="text-center">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"></div>
+          <p className="mt-2 text-sm text-muted-foreground">Loading customers...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -353,13 +432,17 @@ const Customers = () => {
           </TabsList>
           
           <TabsContent value="all-customers">
-            {/* Mobile Customer List View */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-bold tracking-tight">Customers</h1>
-                <Button onClick={() => setIsNewCustomerModalOpen(true)}>
-                  <UserPlus className="h-4 w-4 mr-2" /> New
-                </Button>
+                <div className="flex gap-2">
+                  <Button onClick={() => setIsNewCustomerModalOpen(true)}>
+                    <UserPlus className="h-4 w-4 mr-2" /> New
+                  </Button>
+                  <Button variant="destructive" onClick={() => setIsDeleteConfirmOpen(true)}>
+                    <Trash2 className="h-4 w-4 mr-2" /> Delete All
+                  </Button>
+                </div>
               </div>
               
               <div className="bg-muted/30 p-3 rounded-md border">
@@ -406,7 +489,6 @@ const Customers = () => {
           </TabsContent>
           
           <TabsContent value="customer-details">
-            {/* Mobile Customer Details View */}
             {selectedCustomer && (
               <CustomerDetails customer={selectedCustomer} />
             )}
@@ -417,9 +499,14 @@ const Customers = () => {
       <div className="hidden md:block">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold tracking-tight">Customers</h1>
-          <Button onClick={() => setIsNewCustomerModalOpen(true)}>
-            <UserPlus className="h-4 w-4 mr-2" /> New Customer
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => setIsNewCustomerModalOpen(true)}>
+              <UserPlus className="h-4 w-4 mr-2" /> New Customer
+            </Button>
+            <Button variant="destructive" onClick={() => setIsDeleteConfirmOpen(true)}>
+              <Trash2 className="h-4 w-4 mr-2" /> Delete All
+            </Button>
+          </div>
         </div>
 
         <Tabs defaultValue="overview" className="space-y-4 mt-6">
@@ -840,14 +927,12 @@ const Customers = () => {
         </Tabs>
       </div>
       
-      {/* Customer Details Modal */}
       <CustomerDetailsModal 
         isOpen={isCustomerDetailsOpen}
         onClose={closeCustomerDetails}
         customer={selectedCustomer}
       />
       
-      {/* Add New Customer Modal */}
       <Dialog open={isNewCustomerModalOpen} onOpenChange={setIsNewCustomerModalOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
@@ -932,6 +1017,25 @@ const Customers = () => {
             </Button>
             <Button onClick={handleAddCustomer}>
               Add Customer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p>Are you sure you want to delete all customers? This action cannot be undone.</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteConfirmOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteAllCustomers}>
+              Delete All
             </Button>
           </DialogFooter>
         </DialogContent>
