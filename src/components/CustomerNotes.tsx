@@ -18,7 +18,7 @@ interface CustomerNote {
 }
 
 interface CustomerNotesProps {
-  customerId: number;
+  customerId: string;
 }
 
 const CustomerNotes: React.FC<CustomerNotesProps> = ({ customerId }) => {

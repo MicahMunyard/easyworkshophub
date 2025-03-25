@@ -9,7 +9,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CustomerDetailType } from "@/types/customer";
 import CustomerDetails from "./CustomerDetails";
 import { supabase } from "@/integrations/supabase/client";

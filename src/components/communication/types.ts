@@ -19,5 +19,5 @@ export interface CommunicationLogFormData {
 }
 
 export interface CommunicationLogProps {
-  customerId: number;
+  customerId: string;
 }

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,7 +21,7 @@ interface CustomerTag {
 }
 
 interface CustomerTagsProps {
-  customerId: number;
+  customerId: string;
   onTagsUpdated?: () => void;
 }
 
