@@ -38,7 +38,7 @@ export const useServiceReminders = (customerId: string) => {
         service_type: item.service_type,
         due_date: item.due_date,
         status: (item.status as "pending" | "sent" | "completed" | "cancelled") || "pending",
-        notes: item.notes || undefined,  // Handle notes property even if it's null
+        notes: item.notes || undefined,
         customer_id: item.customer_id.toString(), // Convert number to string
         reminder_text: item.reminder_text || undefined,
         notification_method: item.notification_method || ["email"],
@@ -85,7 +85,7 @@ export const useServiceReminders = (customerId: string) => {
           notification_method: reminderData.notification_method,
           reminder_text: reminderData.reminder_text,
           status: reminderData.status || "pending",
-          notes: reminderData.notes // Add notes to the insert
+          notes: reminderData.notes
         });
 
       if (error) throw error;
