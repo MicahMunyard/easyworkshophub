@@ -6,6 +6,6 @@ export interface CustomerTag {
 }
 
 export interface CustomerTagsProps {
-  customerId: string;
+  customerId: string; // Changed from number to string
   onTagsUpdated?: () => void;
 }
