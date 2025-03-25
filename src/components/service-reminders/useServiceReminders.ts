@@ -20,15 +20,33 @@ export const useServiceReminders = (customerId: string) => {
         return;
       }
 
+      // Convert string customerId to number for database query
+      const numericCustomerId = parseInt(customerId, 10);
+
       const { data, error } = await supabase
         .from('service_reminders')
         .select('*')
-        .eq('customer_id', customerId)
+        .eq('customer_id', numericCustomerId)
         .order('due_date', { ascending: true });
 
       if (error) throw error;
       
-      setReminders(data || []);
+      // Transform the data to match our ServiceReminderType
+      const typedReminders: ServiceReminderType[] = data?.map(item => ({
+        id: item.id,
+        vehicle_info: item.vehicle_info,
+        service_type: item.service_type,
+        due_date: item.due_date,
+        status: (item.status as "pending" | "sent" | "completed" | "cancelled") || "pending",
+        notes: item.notes,
+        customer_id: item.customer_id.toString(), // Convert number to string
+        reminder_text: item.reminder_text || undefined,
+        notification_method: item.notification_method || ["email"],
+        created_at: item.created_at,
+        last_sent_at: item.last_sent_at
+      })) || [];
+      
+      setReminders(typedReminders);
     } catch (error: any) {
       console.error("Error fetching service reminders:", error.message);
       toast({
@@ -43,7 +61,7 @@ export const useServiceReminders = (customerId: string) => {
 
   const addReminder = async (
     reminderData: Omit<ServiceReminderType, "id" | "created_at" | "last_sent_at"> & { customer_id: string }
-  ) => {
+  ): Promise<void> => {
     try {
       if (!user) {
         toast({
@@ -51,12 +69,23 @@ export const useServiceReminders = (customerId: string) => {
           title: "Authentication required",
           description: "You must be logged in to add reminders",
         });
-        return false;
+        return;
       }
+
+      // Convert string customerId to number for database
+      const numericCustomerId = parseInt(reminderData.customer_id, 10);
 
       const { error } = await supabase
         .from('service_reminders')
-        .insert(reminderData);
+        .insert({
+          customer_id: numericCustomerId,
+          vehicle_info: reminderData.vehicle_info,
+          service_type: reminderData.service_type,
+          due_date: reminderData.due_date,
+          notification_method: reminderData.notification_method,
+          reminder_text: reminderData.reminder_text,
+          status: reminderData.status || "pending"
+        });
 
       if (error) throw error;
 
@@ -66,8 +95,6 @@ export const useServiceReminders = (customerId: string) => {
         title: "Reminder added",
         description: "Service reminder has been added successfully",
       });
-
-      return true;
     } catch (error: any) {
       console.error("Error adding service reminder:", error.message);
       toast({
@@ -75,7 +102,6 @@ export const useServiceReminders = (customerId: string) => {
         title: "Error adding reminder",
         description: error.message,
       });
-      return false;
     }
   };
 

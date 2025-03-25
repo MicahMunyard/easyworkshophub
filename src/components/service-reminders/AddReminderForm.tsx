@@ -65,7 +65,7 @@ const AddReminderForm: React.FC<AddReminderFormProps> = ({
     }
 
     if (onAddReminder) {
-      const success = await onAddReminder({
+      await onAddReminder({
         customer_id: customerId,
         vehicle_info: selectedVehicle.trim(),
         service_type: serviceType.trim(),
@@ -74,11 +74,9 @@ const AddReminderForm: React.FC<AddReminderFormProps> = ({
         reminder_text: reminderText.trim() || undefined,
         status: 'pending'
       });
-  
-      if (success) {
-        onReminderAdded();
-        resetForm();
-      }
+      
+      onReminderAdded();
+      resetForm();
     }
   };
 

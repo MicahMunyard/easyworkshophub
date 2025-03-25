@@ -5,7 +5,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { CommunicationLogEntryType, CommunicationLogFormData } from "./types";
 
-export const useCommunicationLog = (customerId: number) => {
+export const useCommunicationLog = (customerId: string) => { // Changed from number to string
   const [logs, setLogs] = useState<CommunicationLogEntryType[]>([]);
   const [isAddingLog, setIsAddingLog] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -64,10 +64,13 @@ export const useCommunicationLog = (customerId: number) => {
 
   const addLog = async (logData: CommunicationLogFormData) => {
     try {
+      // Use parseInt to convert the string ID to a number for the database
+      const numericCustomerId = parseInt(customerId, 10);
+      
       const { error } = await supabase
         .from('communication_logs')
         .insert({
-          customer_id: customerId,
+          customer_id: numericCustomerId,
           type: logData.type,
           direction: logData.direction,
           content: logData.content?.trim(),

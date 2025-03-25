@@ -4,41 +4,59 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { CustomerTag } from "./types";
 
-export const useCustomerTags = (customerId: string, onTagsUpdated?: () => void) => {
+export const useCustomerTags = (customerId: string) => {
   const [tags, setTags] = useState<CustomerTag[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [allTags, setAllTags] = useState<CustomerTag[]>([]);
   const [isAddingTag, setIsAddingTag] = useState(false);
   const [isCreatingTag, setIsCreatingTag] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchCustomerTags();
-    fetchAllTags();
+    fetchTags();
   }, [customerId]);
 
-  const fetchCustomerTags = async () => {
+  const fetchTags = async () => {
+    setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      // Fetch all customer tags first
+      const { data: allTagsData, error: allTagsError } = await supabase
+        .from('customer_tags')
+        .select('*')
+        .order('name');
+
+      if (allTagsError) throw allTagsError;
+      
+      setAllTags(allTagsData || []);
+
+      // Convert string customerId to number for database query
+      const numericCustomerId = parseInt(customerId, 10);
+      
+      // Fetch the customer-specific tag relations
+      const { data: relationData, error: relationError } = await supabase
         .from('customer_tag_relations')
         .select(`
           tag_id,
           customer_tags (
             id,
             name,
-            color
+            color,
+            description
           )
         `)
-        .eq('customer_id', customerId);
+        .eq('customer_id', numericCustomerId);
 
-      if (error) throw error;
+      if (relationError) throw relationError;
 
-      const formattedTags = data.map(item => ({
+      // Transform the data to get just the tags
+      const customerTags = relationData?.map(item => ({
         id: item.customer_tags.id,
         name: item.customer_tags.name,
-        color: item.customer_tags.color
-      }));
+        color: item.customer_tags.color,
+        description: item.customer_tags.description,
+      })) || [];
 
-      setTags(formattedTags);
+      setTags(customerTags);
     } catch (error: any) {
       console.error("Error fetching customer tags:", error.message);
       toast({
@@ -46,70 +64,64 @@ export const useCustomerTags = (customerId: string, onTagsUpdated?: () => void) 
         title: "Error fetching tags",
         description: error.message,
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const fetchAllTags = async () => {
+  const addTag = async (tagId: string) => {
     try {
-      const { data, error } = await supabase
-        .from('customer_tags')
-        .select('*');
-
-      if (error) throw error;
-      setAllTags(data);
-    } catch (error: any) {
-      console.error("Error fetching all tags:", error.message);
-    }
-  };
-
-  const addTagToCustomer = async (tagId: string) => {
-    try {
+      // Convert string customerId to number for database
+      const numericCustomerId = parseInt(customerId, 10);
+      
       const { error } = await supabase
         .from('customer_tag_relations')
         .insert({
-          customer_id: customerId,
+          customer_id: numericCustomerId,
           tag_id: tagId
         });
 
       if (error) throw error;
 
-      fetchCustomerTags();
-      if (onTagsUpdated) onTagsUpdated();
-      setIsAddingTag(false);
+      fetchTags();
       
       toast({
         title: "Tag added",
-        description: "Tag has been added to the customer successfully",
+        description: "Customer tag has been added successfully",
       });
     } catch (error: any) {
-      console.error("Error adding tag to customer:", error.message);
+      console.error("Error adding customer tag:", error.message);
       toast({
         variant: "destructive",
         title: "Error adding tag",
         description: error.message,
       });
+    } finally {
+      setIsAddingTag(false);
     }
   };
 
-  const removeTagFromCustomer = async (tagId: string) => {
+  const removeTag = async (tagId: string) => {
     try {
+      // Convert string customerId to number for database query
+      const numericCustomerId = parseInt(customerId, 10);
+      
       const { error } = await supabase
         .from('customer_tag_relations')
         .delete()
-        .eq('customer_id', customerId)
+        .eq('customer_id', numericCustomerId)
         .eq('tag_id', tagId);
 
       if (error) throw error;
 
-      fetchCustomerTags();
-      if (onTagsUpdated) onTagsUpdated();
+      fetchTags();
       
       toast({
         title: "Tag removed",
-        description: "Tag has been removed from the customer successfully",
+        description: "Customer tag has been removed successfully",
       });
     } catch (error: any) {
-      console.error("Error removing tag from customer:", error.message);
+      console.error("Error removing customer tag:", error.message);
       toast({
         variant: "destructive",
         title: "Error removing tag",
@@ -118,62 +130,47 @@ export const useCustomerTags = (customerId: string, onTagsUpdated?: () => void) 
     }
   };
 
-  const createNewTag = async (tagName: string, tagColor: string) => {
-    if (!tagName.trim()) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Tag name cannot be empty",
-      });
-      return;
-    }
-
+  const createTag = async (newTag: Omit<CustomerTag, "id">) => {
     try {
       const { data, error } = await supabase
         .from('customer_tags')
-        .insert({
-          name: tagName.trim(),
-          color: tagColor
-        })
+        .insert(newTag)
         .select();
 
       if (error) throw error;
 
+      if (data && data.length > 0) {
+        await addTag(data[0].id);
+        fetchTags();
+      }
+      
       toast({
         title: "Tag created",
-        description: "New tag has been created successfully",
+        description: "New customer tag has been created and added to customer",
       });
-
-      setIsCreatingTag(false);
-      fetchAllTags();
-      
-      // Automatically add the new tag to this customer
-      if (data && data.length > 0) {
-        addTagToCustomer(data[0].id);
-      }
     } catch (error: any) {
-      console.error("Error creating new tag:", error.message);
+      console.error("Error creating customer tag:", error.message);
       toast({
         variant: "destructive",
         title: "Error creating tag",
         description: error.message,
       });
+    } finally {
+      setIsCreatingTag(false);
     }
-  };
-
-  const getAvailableTags = () => {
-    return allTags.filter(tag => !tags.some(t => t.id === tag.id));
   };
 
   return {
     tags,
+    allTags,
+    isLoading,
     isAddingTag,
-    isCreatingTag,
     setIsAddingTag,
+    isCreatingTag,
     setIsCreatingTag,
-    addTagToCustomer,
-    removeTagFromCustomer,
-    createNewTag,
-    getAvailableTags
+    addTag,
+    removeTag,
+    createTag,
+    refreshTags: fetchTags
   };
 };

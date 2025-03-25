@@ -6,7 +6,7 @@ export interface ServiceReminderType {
   due_date: string;
   status: "pending" | "sent" | "completed" | "cancelled";
   notes?: string;
-  customer_id: string;
+  customer_id: string; // Changed from number to string to match usage in components
   reminder_text?: string;
   notification_method?: string[];
   created_at?: string;

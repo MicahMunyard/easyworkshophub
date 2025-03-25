@@ -1,7 +1,7 @@
 
 import React from "react";
 import ReminderCard from "./ReminderCard";
-import { ReminderListProps } from "./types";
+import { ReminderListProps, ServiceReminderType } from "./types";
 
 const ReminderList: React.FC<ReminderListProps> = ({ 
   reminders, 
@@ -27,7 +27,7 @@ const ReminderList: React.FC<ReminderListProps> = ({
 
   return (
     <div className="space-y-3">
-      {reminders.map((reminder) => (
+      {reminders.map((reminder: ServiceReminderType) => (
         <ReminderCard 
           key={reminder.id} 
           reminder={reminder}

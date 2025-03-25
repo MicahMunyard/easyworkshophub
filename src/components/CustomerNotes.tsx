@@ -34,10 +34,13 @@ const CustomerNotes: React.FC<CustomerNotesProps> = ({ customerId }) => {
 
   const fetchNotes = async () => {
     try {
+      // Use parseInt to convert the string ID to a number for the database
+      const numericCustomerId = parseInt(customerId, 10);
+      
       const { data, error } = await supabase
         .from('customer_notes')
         .select('*')
-        .eq('customer_id', customerId)
+        .eq('customer_id', numericCustomerId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -63,10 +66,13 @@ const CustomerNotes: React.FC<CustomerNotesProps> = ({ customerId }) => {
     }
 
     try {
+      // Use parseInt to convert the string ID to a number for the database
+      const numericCustomerId = parseInt(customerId, 10);
+      
       const { error } = await supabase
         .from('customer_notes')
         .insert({
-          customer_id: customerId,
+          customer_id: numericCustomerId,
           note: newNote.trim(),
           created_by: profile?.full_name || user?.email || 'Unknown'
         });
