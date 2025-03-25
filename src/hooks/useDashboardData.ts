@@ -12,11 +12,14 @@ interface DashboardData {
   lowStockItems: number;
   isLoading: boolean;
   formattedAppointments: {
+    id: number | string;
     time: string;
     customer: string;
     service: string;
     car: string;
     status: string;
+    date: string;
+    duration: number;
   }[];
 }
 
@@ -60,38 +63,48 @@ export const useDashboardData = (): DashboardData => {
         
         // Get active jobs (in progress or working status)
         const { data: activeJobsData, error: activeJobsError } = await supabase
-          .from('jobs')
+          .from('user_jobs')
           .select('*')
-          .in('status', ['inProgress', 'working']);
+          .in('status', ['inProgress', 'working'])
+          .eq('user_id', user.id);
           
         if (activeJobsError) throw activeJobsError;
         
         setActiveJobsCount(activeJobsData?.length || 0);
 
-        // Get completed jobs for today to calculate revenue from user_services table
+        // Get completed bookings for today to calculate revenue
         const { data: completedBookingsData, error: completedBookingsError } = await supabase
           .from('user_bookings')
-          .select('*, user_services(price)')
+          .select('*')
           .eq('booking_date', today)
           .eq('status', 'completed')
           .eq('user_id', user.id);
           
         if (completedBookingsError) throw completedBookingsError;
         
-        // Calculate revenue from completed bookings using service_id to get pricing info
+        // Calculate revenue from completed bookings
         let dailyRevenue = 0;
         
         for (const booking of completedBookingsData || []) {
           // First check if we have a direct cost on the booking
-          if (booking.cost && !isNaN(parseFloat(booking.cost))) {
-            dailyRevenue += parseFloat(booking.cost);
+          if (booking.cost && !isNaN(parseFloat(String(booking.cost)))) {
+            dailyRevenue += parseFloat(String(booking.cost));
             continue;
           }
           
-          // Then check if we have user_services data with pricing
-          if (booking.user_services && booking.user_services.price) {
-            dailyRevenue += parseFloat(booking.user_services.price);
-            continue;
+          // If no direct cost, try to get the service by ID
+          if (booking.service_id) {
+            const { data: serviceData, error: serviceError } = await supabase
+              .from('user_services')
+              .select('price')
+              .eq('id', booking.service_id)
+              .eq('user_id', user.id)
+              .single();
+              
+            if (!serviceError && serviceData && serviceData.price) {
+              dailyRevenue += parseFloat(String(serviceData.price));
+              continue;
+            }
           }
           
           // Finally, try to parse price from service description (Oil Change $50)
@@ -105,17 +118,33 @@ export const useDashboardData = (): DashboardData => {
         
         // Also check the jobs table for any completed jobs with revenue
         const { data: completedJobsData, error: completedJobsError } = await supabase
-          .from('jobs')
+          .from('user_jobs')
           .select('*')
           .eq('status', 'completed')
-          .eq('date', today);
+          .eq('user_id', user.id);
           
         if (completedJobsError) throw completedJobsError;
         
+        // Filter for jobs completed today
+        const todayCompletedJobs = completedJobsData?.filter(job => {
+          // Check if end_date is today
+          if (job.end_date) {
+            const jobEndDate = format(new Date(job.end_date), 'yyyy-MM-dd');
+            return jobEndDate === today;
+          }
+          return false;
+        }) || [];
+        
         // Calculate additional revenue from completed jobs
-        for (const job of completedJobsData || []) {
-          if (job.service) {
-            const pricingMatch = job.service.match(/\$(\d+(\.\d+)?)/);
+        for (const job of todayCompletedJobs) {
+          if (job.cost && !isNaN(parseFloat(String(job.cost)))) {
+            dailyRevenue += parseFloat(String(job.cost));
+            continue;
+          }
+          
+          // Try to parse from title if no cost field
+          if (job.title) {
+            const pricingMatch = job.title.match(/\$(\d+(\.\d+)?)/);
             if (pricingMatch && !isNaN(parseFloat(pricingMatch[1]))) {
               dailyRevenue += parseFloat(pricingMatch[1]);
             }
@@ -129,7 +158,7 @@ export const useDashboardData = (): DashboardData => {
           .from('user_inventory_items')
           .select('*')
           .eq('user_id', user.id)
-          .lt('in_stock', 'min_stock');
+          .filter('in_stock', 'lt', 'min_stock');
           
         if (inventoryError) throw inventoryError;
         
@@ -150,11 +179,14 @@ export const useDashboardData = (): DashboardData => {
   }, [user]);
 
   const formattedAppointments = appointments.map(appointment => ({
+    id: appointment.id,
     time: appointment.booking_time,
     customer: appointment.customer_name,
     service: appointment.service,
     car: appointment.car,
-    status: appointment.status || 'pending'
+    status: appointment.status || 'pending',
+    date: appointment.booking_date,
+    duration: appointment.duration
   }));
 
   return {
