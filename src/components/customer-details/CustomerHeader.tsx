@@ -4,7 +4,7 @@ import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Phone, Mail, Calendar, Car, Clock } from "lucide-react";
 import { CustomerDetailType } from "@/types/customer";
-import CustomerTags from "@/components/CustomerTags";
+import { CustomerTags } from "@/components/tags";
 
 interface CustomerHeaderProps {
   customer: CustomerDetailType;
