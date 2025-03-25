@@ -60,6 +60,20 @@ const MonthView: React.FC<MonthViewProps> = ({
     });
   };
 
+  // Function to get the appropriate color classes based on booking status
+  const getStatusClasses = (status: string) => {
+    switch (status) {
+      case "confirmed":
+        return "bg-workshop-blue/10 border-l-2 border-workshop-blue";
+      case "completed":
+        return "bg-green-50 border-l-2 border-green-500 dark:bg-green-900/20";
+      case "cancelled":
+        return "bg-red-50 border-l-2 border-red-500 dark:bg-red-900/20";
+      default: // pending
+        return "bg-amber-50 border-l-2 border-amber-400 dark:bg-amber-900/20";
+    }
+  };
+
   return (
     <div className="p-4">
       <div className="grid grid-cols-7 gap-1">
@@ -93,9 +107,7 @@ const MonthView: React.FC<MonthViewProps> = ({
                         key={booking.id}
                         className={cn(
                           "text-xs p-1 rounded truncate cursor-pointer",
-                          booking.status === "confirmed"
-                            ? "bg-workshop-blue/10 border-l-2 border-workshop-blue"
-                            : "bg-amber-50 border-l-2 border-amber-400 dark:bg-amber-900/20"
+                          getStatusClasses(booking.status)
                         )}
                         onClick={() => handleBookingClick(booking)}
                       >

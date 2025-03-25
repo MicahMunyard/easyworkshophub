@@ -26,6 +26,20 @@ const BookingsSidebar: React.FC<BookingsSidebarProps> = ({
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  // Function to get the appropriate color classes based on booking status
+  const getStatusClasses = (status: string) => {
+    switch (status) {
+      case "confirmed":
+        return "bg-workshop-blue/20 text-workshop-blue dark:bg-workshop-blue/30 dark:text-blue-400";
+      case "completed":
+        return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400";
+      case "cancelled":
+        return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400";
+      default: // pending
+        return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400";
+    }
+  };
+
   return (
     <Card>
       <CardContent className="p-4">
@@ -90,11 +104,11 @@ const BookingsSidebar: React.FC<BookingsSidebarProps> = ({
                         <span>{booking.time}</span>
                         <span className={cn(
                           "text-xs px-1.5 py-0.5 rounded-full",
-                          booking.status === "confirmed" 
-                            ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" 
-                            : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                          getStatusClasses(booking.status)
                         )}>
-                          {booking.status === "confirmed" ? "Confirmed" : "Pending"}
+                          {booking.status === "confirmed" ? "Confirmed" : 
+                           booking.status === "completed" ? "Completed" : 
+                           booking.status === "cancelled" ? "Cancelled" : "Pending"}
                         </span>
                       </div>
                       <div className="text-sm">{booking.customer}</div>

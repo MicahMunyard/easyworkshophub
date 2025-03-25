@@ -9,6 +9,20 @@ const DayView: React.FC<DayViewProps> = ({
   handleBookingClick, 
   timeSlots 
 }) => {
+  // Function to get the appropriate color classes based on booking status
+  const getStatusClasses = (status: string) => {
+    switch (status) {
+      case "confirmed":
+        return "bg-workshop-blue/10 border-l-4 border-workshop-blue";
+      case "completed":
+        return "bg-green-50 border-l-4 border-green-500 dark:bg-green-900/20";
+      case "cancelled":
+        return "bg-red-50 border-l-4 border-red-500 dark:bg-red-900/20";
+      default: // pending
+        return "bg-amber-50 border-l-4 border-amber-400 dark:bg-amber-900/20";
+    }
+  };
+
   return (
     <div className="grid grid-cols-[80px_1fr] divide-x divide-border">
       <div className="divide-y">
@@ -29,9 +43,7 @@ const DayView: React.FC<DayViewProps> = ({
                   className={cn(
                     "absolute left-1 right-1 p-2 rounded-md overflow-hidden text-sm cursor-pointer",
                     "animate-slideRight transition-all hover:ring-1 hover:ring-ring",
-                    booking.status === "confirmed"
-                      ? "bg-workshop-blue/10 border-l-4 border-workshop-blue"
-                      : "bg-amber-50 border-l-4 border-amber-400 dark:bg-amber-900/20"
+                    getStatusClasses(booking.status)
                   )}
                   style={{
                     top: "4px",
