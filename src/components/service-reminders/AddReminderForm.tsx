@@ -57,6 +57,7 @@ const AddReminderForm: React.FC<AddReminderFormProps> = ({
         notification_method: notificationMethods,
         reminder_text: reminderText.trim() || undefined,
         status: 'pending'
+        // Removed notes property as it doesn't exist in the database
       });
       
       onReminderAdded();

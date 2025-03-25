@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -38,7 +37,6 @@ export const useServiceReminders = (customerId: string) => {
         service_type: item.service_type,
         due_date: item.due_date,
         status: (item.status as "pending" | "sent" | "completed" | "cancelled") || "pending",
-        notes: item.notes || undefined,  // Handle notes property correctly
         customer_id: item.customer_id.toString(), // Convert number to string
         reminder_text: item.reminder_text || undefined,
         notification_method: item.notification_method || ["email"],
@@ -85,7 +83,6 @@ export const useServiceReminders = (customerId: string) => {
           notification_method: reminderData.notification_method,
           reminder_text: reminderData.reminder_text,
           status: reminderData.status || "pending",
-          notes: reminderData.notes
         });
 
       if (error) throw error;
