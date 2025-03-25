@@ -1,12 +1,24 @@
+
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { JobType } from "@/types/job";
+import { useAuth } from "@/contexts/AuthContext";
 
 export const useJobMutations = (fetchJobs: () => Promise<void>) => {
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const addJob = async (newJob: JobType) => {
     try {
+      if (!user) {
+        toast({
+          title: "Authentication Required",
+          description: "You must be logged in to create jobs.",
+          variant: "destructive"
+        });
+        return false;
+      }
+
       // Insert into Supabase
       const { data, error } = await supabase
         .from('jobs')
@@ -20,7 +32,8 @@ export const useJobMutations = (fetchJobs: () => Promise<void>) => {
           date: newJob.date,
           time: newJob.time || null,
           time_estimate: newJob.timeEstimate,
-          priority: newJob.priority
+          priority: newJob.priority,
+          user_id: user.id
         }])
         .select();
       
@@ -49,6 +62,15 @@ export const useJobMutations = (fetchJobs: () => Promise<void>) => {
 
   const updateJob = async (updatedJob: JobType) => {
     try {
+      if (!user) {
+        toast({
+          title: "Authentication Required",
+          description: "You must be logged in to update jobs.",
+          variant: "destructive"
+        });
+        return false;
+      }
+
       // Update in Supabase
       const { error } = await supabase
         .from('jobs')
@@ -63,7 +85,8 @@ export const useJobMutations = (fetchJobs: () => Promise<void>) => {
           time_estimate: updatedJob.timeEstimate,
           priority: updatedJob.priority
         })
-        .eq('id', updatedJob.id);
+        .eq('id', updatedJob.id)
+        .eq('user_id', user.id);
       
       if (error) {
         throw error;
@@ -90,13 +113,23 @@ export const useJobMutations = (fetchJobs: () => Promise<void>) => {
 
   const reassignJob = async (job: JobType, newTechnician: string) => {
     try {
+      if (!user) {
+        toast({
+          title: "Authentication Required", 
+          description: "You must be logged in to reassign jobs.",
+          variant: "destructive"
+        });
+        return false;
+      }
+
       // Update in Supabase
       const { error } = await supabase
         .from('jobs')
         .update({
           assigned_to: newTechnician
         })
-        .eq('id', job.id);
+        .eq('id', job.id)
+        .eq('user_id', user.id);
       
       if (error) {
         throw error;
@@ -123,13 +156,23 @@ export const useJobMutations = (fetchJobs: () => Promise<void>) => {
 
   const cancelJob = async (job: JobType) => {
     try {
+      if (!user) {
+        toast({
+          title: "Authentication Required",
+          description: "You must be logged in to cancel jobs.",
+          variant: "destructive"
+        });
+        return false;
+      }
+
       // Update job status to 'cancelled' in Supabase
       const { error } = await supabase
         .from('jobs')
         .update({
           status: 'cancelled'
         })
-        .eq('id', job.id);
+        .eq('id', job.id)
+        .eq('user_id', user.id);
       
       if (error) {
         throw error;

@@ -81,6 +81,7 @@ export const useDeleteBooking = (
       const { data: matchingJobs, error: jobsError } = await supabase
         .from('jobs')
         .select('id')
+        .eq('user_id', user.id)
         .ilike('id', 'BKG-%')
         .eq('customer', booking.customer)
         .eq('date', booking.date);
@@ -95,6 +96,7 @@ export const useDeleteBooking = (
         const { data: backupJobs, error: backupJobsError } = await supabase
           .from('jobs')
           .select('id')
+          .eq('user_id', user.id)
           .eq('customer', booking.customer)
           .eq('date', booking.date);
           
@@ -125,7 +127,8 @@ export const useDeleteBooking = (
       const { error: deleteJobError } = await supabase
         .from('jobs')
         .delete()
-        .eq('id', job.id);
+        .eq('id', job.id)
+        .eq('user_id', user.id);
       
       if (deleteJobError) {
         console.error('Error deleting job:', deleteJobError);

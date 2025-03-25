@@ -16,9 +16,18 @@ export const useJobsData = () => {
     setIsLoading(true);
     try {
       console.log("Fetching jobs from Supabase...");
+      
+      if (!user) {
+        console.log("No user logged in, returning empty jobs array");
+        setJobs([]);
+        setIsLoading(false);
+        return;
+      }
+      
       const { data, error } = await supabase
         .from('jobs')
         .select('*')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
       
       if (error) {
@@ -26,7 +35,7 @@ export const useJobsData = () => {
       }
       
       if (data) {
-        console.log(`Fetched ${data.length} jobs`);
+        console.log(`Fetched ${data.length} jobs for user ${user.id}`);
         // Transform to match JobType interface
         const transformedJobs = data.map(job => ({
           id: job.id,
@@ -72,7 +81,8 @@ export const useJobsData = () => {
         { 
           event: '*', 
           schema: 'public', 
-          table: 'jobs' 
+          table: 'jobs',
+          filter: `user_id=eq.${user.id}`
         }, 
         (payload) => {
           console.log("Jobs table change detected:", payload);
@@ -90,7 +100,8 @@ export const useJobsData = () => {
         { 
           event: '*', 
           schema: 'public', 
-          table: 'user_bookings' 
+          table: 'user_bookings',
+          filter: `user_id=eq.${user.id}`
         }, 
         (payload) => {
           console.log("User bookings table change detected:", payload);

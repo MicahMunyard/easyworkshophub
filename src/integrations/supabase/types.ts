@@ -243,6 +243,7 @@ export type Database = {
           time: string | null
           time_estimate: string
           updated_at: string
+          user_id: string | null
           vehicle: string
         }
         Insert: {
@@ -257,6 +258,7 @@ export type Database = {
           time?: string | null
           time_estimate: string
           updated_at?: string
+          user_id?: string | null
           vehicle: string
         }
         Update: {
@@ -271,6 +273,7 @@ export type Database = {
           time?: string | null
           time_estimate?: string
           updated_at?: string
+          user_id?: string | null
           vehicle?: string
         }
         Relationships: []
@@ -494,6 +497,71 @@ export type Database = {
           service_id?: string | null
           status?: string | null
           technician_id?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_customer_vehicles: {
+        Row: {
+          created_at: string | null
+          customer_id: string
+          id: string
+          vehicle_info: string
+        }
+        Insert: {
+          created_at?: string | null
+          customer_id: string
+          id?: string
+          vehicle_info: string
+        }
+        Update: {
+          created_at?: string | null
+          customer_id?: string
+          id?: string
+          vehicle_info?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_customer_vehicles_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "user_customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_customers: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          id: string
+          last_visit: string | null
+          name: string
+          phone: string | null
+          status: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          last_visit?: string | null
+          name: string
+          phone?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          last_visit?: string | null
+          name?: string
+          phone?: string | null
+          status?: string
           updated_at?: string | null
           user_id?: string
         }

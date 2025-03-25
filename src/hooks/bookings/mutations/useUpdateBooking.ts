@@ -78,10 +78,14 @@ export const useUpdateBooking = (
         throw updateError;
       }
       
+      // Update or create customer record
+      await updateCustomerRecord(updatedBooking);
+      
       // Update associated job
       const { data: matchingJobs, error: jobsError } = await supabase
         .from('jobs')
         .select('*')
+        .eq('user_id', user.id)
         .eq('customer', updatedBooking.customer)
         .eq('date', updatedBooking.date);
       
@@ -100,7 +104,8 @@ export const useUpdateBooking = (
             assigned_to: updatedBooking.technician_id || 'Unassigned',
             time_estimate: `${updatedBooking.duration} minutes`
           })
-          .eq('id', matchingJobs[0].id);
+          .eq('id', matchingJobs[0].id)
+          .eq('user_id', user.id);
       }
       
       toast({
@@ -119,6 +124,93 @@ export const useUpdateBooking = (
       });
       await fetchBookings(); // Refresh to ensure UI is in sync with database
       return false;
+    }
+  };
+
+  // Helper function to update customer record
+  const updateCustomerRecord = async (booking: BookingType) => {
+    try {
+      // Check if customer exists
+      const { data: existingCustomers, error: lookupError } = await supabase
+        .from('user_customers')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('phone', booking.phone);
+        
+      if (lookupError) {
+        console.error('Error looking up customer:', lookupError);
+        return;
+      }
+      
+      if (!existingCustomers || existingCustomers.length === 0) {
+        // Create new customer
+        const { data: newCustomer, error: createError } = await supabase
+          .from('user_customers')
+          .insert({
+            user_id: user.id,
+            name: booking.customer,
+            phone: booking.phone,
+            status: 'active',
+            last_visit: new Date().toISOString()
+          })
+          .select();
+          
+        if (createError) {
+          console.error('Error creating customer:', createError);
+          return;
+        }
+        
+        if (newCustomer && newCustomer.length > 0) {
+          // Add vehicle
+          await supabase
+            .from('user_customer_vehicles')
+            .insert({
+              customer_id: newCustomer[0].id,
+              vehicle_info: booking.car
+            });
+        }
+      } else {
+        // Update existing customer
+        const customerId = existingCustomers[0].id;
+        
+        // Update name if needed
+        if (existingCustomers[0].name !== booking.customer) {
+          await supabase
+            .from('user_customers')
+            .update({ 
+              name: booking.customer,
+              last_visit: new Date().toISOString()
+            })
+            .eq('id', customerId)
+            .eq('user_id', user.id);
+        } else {
+          // Just update the last visit date
+          await supabase
+            .from('user_customers')
+            .update({ last_visit: new Date().toISOString() })
+            .eq('id', customerId)
+            .eq('user_id', user.id);
+        }
+        
+        // Check if vehicle exists
+        const { data: existingVehicles } = await supabase
+          .from('user_customer_vehicles')
+          .select('*')
+          .eq('customer_id', customerId)
+          .eq('vehicle_info', booking.car);
+          
+        // Add vehicle if it doesn't exist
+        if (!existingVehicles || existingVehicles.length === 0) {
+          await supabase
+            .from('user_customer_vehicles')
+            .insert({
+              customer_id: customerId,
+              vehicle_info: booking.car
+            });
+        }
+      }
+    } catch (error) {
+      console.error('Error updating customer record:', error);
     }
   };
 
