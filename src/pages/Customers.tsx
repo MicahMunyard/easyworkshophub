@@ -42,7 +42,7 @@ import {
 
 const dummyCustomers: CustomerType[] = [
   {
-    id: 1,
+    id: "1",
     name: "John Smith",
     phone: "(555) 123-4567",
     email: "john.smith@example.com",
@@ -52,7 +52,7 @@ const dummyCustomers: CustomerType[] = [
     vehicleInfo: ["2018 Toyota Camry", "2020 Honda Civic"]
   },
   {
-    id: 2,
+    id: "2",
     name: "Sara Johnson",
     phone: "(555) 234-5678",
     email: "sarajohnson@example.com",
@@ -62,7 +62,7 @@ const dummyCustomers: CustomerType[] = [
     vehicleInfo: ["2020 Honda Civic"]
   },
   {
-    id: 3,
+    id: "3",
     name: "Mike Davis",
     phone: "(555) 345-6789",
     status: "inactive",
@@ -71,7 +71,7 @@ const dummyCustomers: CustomerType[] = [
     vehicleInfo: ["2019 Ford F-150"]
   },
   {
-    id: 4,
+    id: "4",
     name: "Emma Wilson",
     phone: "(555) 456-7890",
     email: "emma.wilson@example.com",
@@ -81,7 +81,7 @@ const dummyCustomers: CustomerType[] = [
     vehicleInfo: ["2021 Tesla Model 3"]
   },
   {
-    id: 5,
+    id: "5",
     name: "Robert Chen",
     phone: "(555) 567-8901",
     status: "active",
@@ -94,7 +94,7 @@ const dummyCustomers: CustomerType[] = [
 const dummyBookingHistory = [
   {
     id: 101,
-    customerId: 1,
+    customerId: "1",
     date: "2023-07-15",
     service: "Oil Change",
     vehicle: "2018 Toyota Camry",
@@ -104,7 +104,7 @@ const dummyBookingHistory = [
   },
   {
     id: 102,
-    customerId: 1,
+    customerId: "1",
     date: "2023-05-22",
     service: "Brake Inspection",
     vehicle: "2018 Toyota Camry",
@@ -114,7 +114,7 @@ const dummyBookingHistory = [
   },
   {
     id: 103,
-    customerId: 2,
+    customerId: "2",
     date: "2023-08-22",
     service: "Tire Rotation",
     vehicle: "2020 Honda Civic",
@@ -124,7 +124,7 @@ const dummyBookingHistory = [
   },
   {
     id: 104,
-    customerId: 4,
+    customerId: "4",
     date: "2023-09-05",
     service: "Full Service",
     vehicle: "2021 Tesla Model 3",
@@ -136,7 +136,7 @@ const dummyBookingHistory = [
 
 const convertBookingToCustomer = (booking: BookingType): CustomerType => {
   return {
-    id: booking.id + 1000,
+    id: String(booking.id + 1000),
     name: booking.customer,
     phone: booking.phone,
     status: "active" as const,
@@ -257,7 +257,7 @@ const Customers = () => {
     }
   };
 
-  const handleCustomerClick = (id: number) => {
+  const handleCustomerClick = (id: string) => {
     const customer = customers.find(c => c.id === id);
     if (!customer) return;
     

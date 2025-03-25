@@ -11,7 +11,7 @@ import { Car, Calendar, Phone, MoreHorizontal } from "lucide-react";
 
 interface CustomerListItemProps {
   customer: CustomerType;
-  onClick: (id: number) => void;
+  onClick: (id: string) => void;
 }
 
 const CustomerListItem: React.FC<CustomerListItemProps> = ({ customer, onClick }) => {
