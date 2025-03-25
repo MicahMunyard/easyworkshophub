@@ -1,4 +1,3 @@
-
 import { CustomerType, CustomerDetailType } from "@/types/customer";
 import { BookingType } from "@/types/booking";
 
@@ -11,15 +10,25 @@ export interface CustomerStats {
 
 export interface CustomerStateData {
   customers: CustomerType[];
+  setCustomers: React.Dispatch<React.SetStateAction<CustomerType[]>>;
   selectedCustomer: CustomerDetailType | null;
+  setSelectedCustomer: React.Dispatch<React.SetStateAction<CustomerDetailType | null>>;
   selectedCustomerForDetail: CustomerType | null;
+  setSelectedCustomerForDetail: React.Dispatch<React.SetStateAction<CustomerType | null>>;
   isCustomerDetailsOpen: boolean;
+  setIsCustomerDetailsOpen: React.Dispatch<React.SetStateAction<boolean>>;
   isNewCustomerModalOpen: boolean;
+  setIsNewCustomerModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
   isDeleteConfirmOpen: boolean;
+  setIsDeleteConfirmOpen: React.Dispatch<React.SetStateAction<boolean>>;
   searchTerm: string;
+  setSearchTerm: React.Dispatch<React.SetStateAction<string>>;
   isFilterOpen: boolean;
+  setIsFilterOpen: React.Dispatch<React.SetStateAction<boolean>>;
   activeFilter: "all" | "active" | "inactive";
+  setActiveFilter: React.Dispatch<React.SetStateAction<"all" | "active" | "inactive">>;
   isLoading: boolean;
+  setIsLoading: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 export interface CustomerBookingHistory {
@@ -35,11 +44,11 @@ export interface CustomerBookingHistory {
 
 export interface UseCustomersReturnType extends CustomerStateData, CustomerStats {
   filteredCustomers: CustomerType[];
-  setSearchTerm: (term: string) => void;
-  setIsFilterOpen: (isOpen: boolean) => void;
-  setActiveFilter: (filter: "all" | "active" | "inactive") => void;
-  setIsNewCustomerModalOpen: (isOpen: boolean) => void;
-  setIsDeleteConfirmOpen: (isOpen: boolean) => void;
+  setSearchTerm: React.Dispatch<React.SetStateAction<string>>;
+  setIsFilterOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  setActiveFilter: React.Dispatch<React.SetStateAction<"all" | "active" | "inactive">>;
+  setIsNewCustomerModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  setIsDeleteConfirmOpen: React.Dispatch<React.SetStateAction<boolean>>;
   fetchCustomers: () => Promise<void>;
   handleDeleteAllCustomers: () => Promise<void>;
   handleCustomerClick: (id: string) => void;

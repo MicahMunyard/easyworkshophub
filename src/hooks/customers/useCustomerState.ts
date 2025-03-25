@@ -17,16 +17,25 @@ export const useCustomerState = (): CustomerStateData => {
 
   return {
     customers,
+    setCustomers,
     selectedCustomer,
+    setSelectedCustomer,
     isCustomerDetailsOpen,
+    setIsCustomerDetailsOpen,
     isNewCustomerModalOpen,
+    setIsNewCustomerModalOpen,
     isDeleteConfirmOpen,
+    setIsDeleteConfirmOpen,
     searchTerm,
+    setSearchTerm,
     isFilterOpen,
+    setIsFilterOpen,
     activeFilter,
+    setActiveFilter,
     selectedCustomerForDetail,
+    setSelectedCustomerForDetail,
     isLoading,
-    // Setters are exposed in useCustomers
+    setIsLoading
   };
 };
 

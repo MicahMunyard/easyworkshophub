@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useCustomerState, getFilteredCustomers, calculateCustomerStats } from "./useCustomerState";
 import { useCustomerAPI } from "./useCustomerAPI";
 import { useCustomerActions } from "./useCustomerActions";
@@ -8,28 +8,26 @@ import { UseCustomersReturnType } from "./types";
 export const useCustomers = (): UseCustomersReturnType => {
   const {
     customers,
+    setCustomers,
     selectedCustomer,
+    setSelectedCustomer,
     isCustomerDetailsOpen,
+    setIsCustomerDetailsOpen,
     isNewCustomerModalOpen,
+    setIsNewCustomerModalOpen,
     isDeleteConfirmOpen,
+    setIsDeleteConfirmOpen,
     searchTerm,
+    setSearchTerm,
     isFilterOpen,
+    setIsFilterOpen,
     activeFilter,
+    setActiveFilter,
     selectedCustomerForDetail,
-    isLoading
+    setSelectedCustomerForDetail,
+    isLoading,
+    setIsLoading
   } = useCustomerState();
-
-  // Expose setters
-  const [setCustomers] = useState<React.Dispatch<React.SetStateAction<any>>>(()=>{});
-  const [setSelectedCustomer] = useState<React.Dispatch<React.SetStateAction<any>>>(()=>{});
-  const [setIsCustomerDetailsOpen] = useState<React.Dispatch<React.SetStateAction<boolean>>>(()=>{});
-  const [setIsNewCustomerModalOpen] = useState<React.Dispatch<React.SetStateAction<boolean>>>(()=>{});
-  const [setIsDeleteConfirmOpen] = useState<React.Dispatch<React.SetStateAction<boolean>>>(()=>{});
-  const [setSearchTerm] = useState<React.Dispatch<React.SetStateAction<string>>>(()=>{});
-  const [setIsFilterOpen] = useState<React.Dispatch<React.SetStateAction<boolean>>>(()=>{});
-  const [setActiveFilter] = useState<React.Dispatch<React.SetStateAction<any>>>(()=>{});
-  const [setSelectedCustomerForDetail] = useState<React.Dispatch<React.SetStateAction<any>>>(()=>{});
-  const [setIsLoading] = useState<React.Dispatch<React.SetStateAction<boolean>>>(()=>{});
 
   const { fetchCustomers: apiFetchCustomers } = useCustomerAPI();
 
