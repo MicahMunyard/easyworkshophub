@@ -10,8 +10,8 @@ interface VideoWidgetProps {
 }
 
 const VideoWidget: React.FC<VideoWidgetProps> = ({ 
-  videoId = "dQw4w9WgXcQ", 
-  title = "Tutorial Video" 
+  videoId = "BHGh0rVxTbo", 
+  title = "TOLICCS Video" 
 }) => {
   const [playing, setPlaying] = useState(false);
   
