@@ -224,7 +224,10 @@ const JobsList: React.FC<JobsListProps> = ({
       </TableHeader>
       <TableBody>
         {jobs.map((job) => (
-          <TableRow key={job.id} className={isBookingJob(job.id) ? "bg-blue-50 text-black" : "text-black"}>
+          <TableRow 
+            key={job.id} 
+            className={`text-black transition-all duration-200 ${isBookingJob(job.id) ? "bg-blue-50" : ""} hover:border-workshop-red hover:border-2`}
+          >
             <TableCell className="font-medium">
               {job.id}
               {isBookingJob(job.id) && (
