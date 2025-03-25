@@ -2,11 +2,11 @@
 import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { ServiceReminder } from "./types";
+import { ServiceReminderType } from "./types";
 import { useAuth } from "@/contexts/AuthContext";
 
-export const useServiceReminders = (customerId: number) => {
-  const [reminders, setReminders] = useState<ServiceReminder[]>([]);
+export const useServiceReminders = (customerId: string) => {
+  const [reminders, setReminders] = useState<ServiceReminderType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const { user } = useAuth();
@@ -28,20 +28,7 @@ export const useServiceReminders = (customerId: number) => {
 
       if (error) throw error;
       
-      // Type casting to ensure data matches ServiceReminder interface
-      const typedReminders: ServiceReminder[] = data?.map(reminder => ({
-        id: reminder.id,
-        vehicle_info: reminder.vehicle_info,
-        service_type: reminder.service_type,
-        due_date: reminder.due_date,
-        status: reminder.status as 'pending' | 'sent' | 'completed' | 'cancelled',
-        notification_method: reminder.notification_method || ['email'],
-        created_at: reminder.created_at,
-        last_sent_at: reminder.last_sent_at,
-        reminder_text: reminder.reminder_text
-      })) || [];
-      
-      setReminders(typedReminders);
+      setReminders(data || []);
     } catch (error: any) {
       console.error("Error fetching service reminders:", error.message);
       toast({
@@ -54,7 +41,9 @@ export const useServiceReminders = (customerId: number) => {
     }
   };
 
-  const addReminder = async (reminderData: Omit<ServiceReminder, 'id' | 'created_at' | 'last_sent_at'> & { customer_id: number }) => {
+  const addReminder = async (
+    reminderData: Omit<ServiceReminderType, "id" | "created_at" | "last_sent_at"> & { customer_id: string }
+  ) => {
     try {
       if (!user) {
         toast({
@@ -165,7 +154,7 @@ export const useServiceReminders = (customerId: number) => {
     if (customerId) {
       fetchReminders();
     }
-  }, [customerId, user]); // Added user dependency to refetch when auth state changes
+  }, [customerId, user]);
 
   return {
     reminders,

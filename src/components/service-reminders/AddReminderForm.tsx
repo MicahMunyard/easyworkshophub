@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -30,10 +29,12 @@ const AddReminderForm: React.FC<AddReminderFormProps> = ({
   onOpenChange, 
   customerVehicles, 
   onAddReminder,
-  customerId 
+  customerId,
+  onReminderAdded,
+  onCancel
 }) => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [selectedVehicle, setSelectedVehicle] = useState<string>(customerVehicles.length > 0 ? customerVehicles[0] : '');
+  const [selectedVehicle, setSelectedVehicle] = useState<string>(customerVehicles && customerVehicles.length > 0 ? customerVehicles[0] : '');
   const [serviceType, setServiceType] = useState<string>('');
   const [reminderText, setReminderText] = useState<string>('');
   const [notificationMethods, setNotificationMethods] = useState<string[]>(['email']);
@@ -49,12 +50,13 @@ const AddReminderForm: React.FC<AddReminderFormProps> = ({
   ];
 
   const resetForm = () => {
-    setSelectedVehicle(customerVehicles.length > 0 ? customerVehicles[0] : '');
+    setSelectedVehicle(customerVehicles && customerVehicles.length > 0 ? customerVehicles[0] : '');
     setServiceType('');
     setReminderText('');
     setSelectedDate(new Date());
     setNotificationMethods(['email']);
     onOpenChange(false);
+    onCancel();
   };
 
   const handleAddReminder = async () => {
@@ -62,17 +64,22 @@ const AddReminderForm: React.FC<AddReminderFormProps> = ({
       return;
     }
 
-    await onAddReminder({
-      customer_id: customerId,
-      vehicle_info: selectedVehicle.trim(),
-      service_type: serviceType.trim(),
-      due_date: format(selectedDate, 'yyyy-MM-dd'),
-      notification_method: notificationMethods,
-      reminder_text: reminderText.trim() || undefined,
-      status: 'pending'
-    });
-
-    resetForm();
+    if (onAddReminder) {
+      const success = await onAddReminder({
+        customer_id: customerId,
+        vehicle_info: selectedVehicle.trim(),
+        service_type: serviceType.trim(),
+        due_date: format(selectedDate, 'yyyy-MM-dd'),
+        notification_method: notificationMethods,
+        reminder_text: reminderText.trim() || undefined,
+        status: 'pending'
+      });
+  
+      if (success) {
+        onReminderAdded();
+        resetForm();
+      }
+    }
   };
 
   return (
@@ -86,7 +93,7 @@ const AddReminderForm: React.FC<AddReminderFormProps> = ({
             <Label htmlFor="vehicle-info" className="text-right">
               Vehicle
             </Label>
-            {customerVehicles.length > 0 ? (
+            {customerVehicles && customerVehicles.length > 0 ? (
               <Select 
                 value={selectedVehicle} 
                 onValueChange={setSelectedVehicle}

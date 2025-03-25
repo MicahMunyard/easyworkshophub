@@ -1,24 +1,25 @@
 
 export interface ServiceReminderType {
   id: string;
-  vehicle: string;
+  vehicle_info: string;
   service_type: string;
   due_date: string;
   status: "pending" | "sent" | "completed" | "cancelled";
   notes?: string;
-  customer_id: string; // Changed from number to string
-  vehicle_info: string;
+  customer_id: string;
   reminder_text?: string;
   notification_method?: string[];
+  created_at?: string;
+  last_sent_at?: string;
 }
 
 export interface ServiceRemindersProps {
-  customerId: string; // Changed from number to string
+  customerId: string;
   customerVehicles: string[] | undefined;
 }
 
 export interface AddReminderFormProps {
-  customerId: string; // Changed from number to string
+  customerId: string;
   customerVehicles: string[] | undefined;
   onReminderAdded: () => void;
   onCancel: () => void;
@@ -30,6 +31,13 @@ export interface AddReminderFormProps {
 export interface ReminderCardProps {
   reminder: ServiceReminderType;
   onStatusChange: (id: string, newStatus: "pending" | "sent" | "completed" | "cancelled") => void;
+  onDelete?: (reminderId: string) => Promise<void>;
+  onUpdateStatus?: (reminderId: string, status: "pending" | "sent" | "completed" | "cancelled") => Promise<void>;
+}
+
+export interface ReminderListProps {
+  reminders: ServiceReminderType[];
+  isLoading: boolean;
   onDelete?: (reminderId: string) => Promise<void>;
   onUpdateStatus?: (reminderId: string, status: "pending" | "sent" | "completed" | "cancelled") => Promise<void>;
 }

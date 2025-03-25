@@ -7,7 +7,12 @@ import { Bell, CalendarIcon, Car, Trash2, Mail, MessageSquare } from "lucide-rea
 import { format } from "date-fns";
 import { ReminderCardProps } from "./types";
 
-const ReminderCard: React.FC<ReminderCardProps> = ({ reminder, onDelete, onUpdateStatus }) => {
+const ReminderCard: React.FC<ReminderCardProps> = ({ 
+  reminder, 
+  onDelete, 
+  onUpdateStatus,
+  onStatusChange
+}) => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
@@ -20,6 +25,14 @@ const ReminderCard: React.FC<ReminderCardProps> = ({ reminder, onDelete, onUpdat
         return <Badge variant="outline" className="bg-red-100 text-red-800 hover:bg-red-100">Cancelled</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+  const handleStatusChange = (newStatus: "pending" | "sent" | "completed" | "cancelled") => {
+    if (onStatusChange) {
+      onStatusChange(reminder.id, newStatus);
+    } else if (onUpdateStatus) {
+      onUpdateStatus(reminder.id, newStatus);
     }
   };
 
@@ -43,15 +56,17 @@ const ReminderCard: React.FC<ReminderCardProps> = ({ reminder, onDelete, onUpdat
             
             <div className="flex items-center gap-2">
               {getStatusBadge(reminder.status)}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-muted-foreground hover:text-red-500"
-                onClick={() => onDelete(reminder.id)}
-              >
-                <Trash2 className="h-4 w-4" />
-                <span className="sr-only">Delete reminder</span>
-              </Button>
+              {onDelete && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-muted-foreground hover:text-red-500"
+                  onClick={() => onDelete(reminder.id)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span className="sr-only">Delete reminder</span>
+                </Button>
+              )}
             </div>
           </div>
           
@@ -63,13 +78,13 @@ const ReminderCard: React.FC<ReminderCardProps> = ({ reminder, onDelete, onUpdat
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <span>Notify via:</span>
             <div className="flex gap-1">
-              {reminder.notification_method.includes('email') && (
+              {reminder.notification_method && reminder.notification_method.includes('email') && (
                 <Badge variant="secondary" className="text-xs py-0 h-5">
                   <Mail className="h-3 w-3 mr-1" />
                   Email
                 </Badge>
               )}
-              {reminder.notification_method.includes('sms') && (
+              {reminder.notification_method && reminder.notification_method.includes('sms') && (
                 <Badge variant="secondary" className="text-xs py-0 h-5">
                   <MessageSquare className="h-3 w-3 mr-1" />
                   SMS
@@ -90,7 +105,7 @@ const ReminderCard: React.FC<ReminderCardProps> = ({ reminder, onDelete, onUpdat
                 size="sm" 
                 variant="outline"
                 className="h-7 text-xs"
-                onClick={() => onUpdateStatus(reminder.id, 'sent')}
+                onClick={() => handleStatusChange('sent')}
               >
                 Mark as Sent
               </Button>
@@ -98,7 +113,7 @@ const ReminderCard: React.FC<ReminderCardProps> = ({ reminder, onDelete, onUpdat
                 size="sm" 
                 variant="outline"
                 className="h-7 text-xs"
-                onClick={() => onUpdateStatus(reminder.id, 'completed')}
+                onClick={() => handleStatusChange('completed')}
               >
                 Mark Completed
               </Button>
@@ -106,7 +121,7 @@ const ReminderCard: React.FC<ReminderCardProps> = ({ reminder, onDelete, onUpdat
                 size="sm" 
                 variant="outline"
                 className="h-7 text-xs"
-                onClick={() => onUpdateStatus(reminder.id, 'cancelled')}
+                onClick={() => handleStatusChange('cancelled')}
               >
                 Cancel
               </Button>

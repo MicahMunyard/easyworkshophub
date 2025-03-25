@@ -1,14 +1,7 @@
 
 import React from "react";
 import ReminderCard from "./ReminderCard";
-import { ServiceReminder } from "./types";
-
-interface ReminderListProps {
-  reminders: ServiceReminder[];
-  isLoading: boolean;
-  onDelete: (reminderId: string) => Promise<void>;
-  onUpdateStatus: (reminderId: string, status: 'pending' | 'sent' | 'completed' | 'cancelled') => Promise<void>;
-}
+import { ReminderListProps } from "./types";
 
 const ReminderList: React.FC<ReminderListProps> = ({ 
   reminders, 
@@ -37,7 +30,8 @@ const ReminderList: React.FC<ReminderListProps> = ({
       {reminders.map((reminder) => (
         <ReminderCard 
           key={reminder.id} 
-          reminder={reminder} 
+          reminder={reminder}
+          onStatusChange={(id, status) => onUpdateStatus && onUpdateStatus(id, status)}
           onDelete={onDelete}
           onUpdateStatus={onUpdateStatus}
         />
