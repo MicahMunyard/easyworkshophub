@@ -29,10 +29,13 @@ export const useCommunicationLog = (customerId: string) => { // Changed from num
   const fetchLogs = async () => {
     setIsLoading(true);
     try {
+      // Convert string customerId to number for database query
+      const numericCustomerId = parseInt(customerId, 10);
+      
       const { data, error } = await supabase
         .from('communication_logs')
         .select('*')
-        .eq('customer_id', customerId)
+        .eq('customer_id', numericCustomerId)
         .order('timestamp', { ascending: false });
 
       if (error) throw error;

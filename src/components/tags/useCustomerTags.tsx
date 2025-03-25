@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { CustomerTag } from "./types";
 
-export const useCustomerTags = (customerId: string) => {
+export const useCustomerTags = (customerId: string, onTagsUpdated?: () => void) => {
   const [tags, setTags] = useState<CustomerTag[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [allTags, setAllTags] = useState<CustomerTag[]>([]);
@@ -57,6 +57,10 @@ export const useCustomerTags = (customerId: string) => {
       })) || [];
 
       setTags(customerTags);
+      
+      if (onTagsUpdated) {
+        onTagsUpdated();
+      }
     } catch (error: any) {
       console.error("Error fetching customer tags:", error.message);
       toast({
@@ -69,7 +73,7 @@ export const useCustomerTags = (customerId: string) => {
     }
   };
 
-  const addTag = async (tagId: string) => {
+  const addTagToCustomer = async (tagId: string) => {
     try {
       // Convert string customerId to number for database
       const numericCustomerId = parseInt(customerId, 10);
@@ -101,7 +105,7 @@ export const useCustomerTags = (customerId: string) => {
     }
   };
 
-  const removeTag = async (tagId: string) => {
+  const removeTagFromCustomer = async (tagId: string) => {
     try {
       // Convert string customerId to number for database query
       const numericCustomerId = parseInt(customerId, 10);
@@ -130,7 +134,7 @@ export const useCustomerTags = (customerId: string) => {
     }
   };
 
-  const createTag = async (newTag: Omit<CustomerTag, "id">) => {
+  const createNewTag = async (newTag: Omit<CustomerTag, "id">) => {
     try {
       const { data, error } = await supabase
         .from('customer_tags')
@@ -140,7 +144,7 @@ export const useCustomerTags = (customerId: string) => {
       if (error) throw error;
 
       if (data && data.length > 0) {
-        await addTag(data[0].id);
+        await addTagToCustomer(data[0].id);
         fetchTags();
       }
       
@@ -159,6 +163,11 @@ export const useCustomerTags = (customerId: string) => {
       setIsCreatingTag(false);
     }
   };
+  
+  const getAvailableTags = () => {
+    const tagIds = new Set(tags.map(tag => tag.id));
+    return allTags.filter(tag => !tagIds.has(tag.id));
+  };
 
   return {
     tags,
@@ -168,9 +177,10 @@ export const useCustomerTags = (customerId: string) => {
     setIsAddingTag,
     isCreatingTag,
     setIsCreatingTag,
-    addTag,
-    removeTag,
-    createTag,
+    addTagToCustomer,
+    removeTagFromCustomer,
+    createNewTag,
+    getAvailableTags,
     refreshTags: fetchTags
   };
 };
