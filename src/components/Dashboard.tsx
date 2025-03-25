@@ -20,6 +20,10 @@ import ImportantAlerts from "./dashboard/ImportantAlerts";
 import RecentActivities from "./dashboard/RecentActivities";
 import InventoryAlerts from "./dashboard/InventoryAlerts";
 
+// This can be updated when you want to change the video
+const DASHBOARD_VIDEO_ID = "dQw4w9WgXcQ"; // YouTube video ID
+const DASHBOARD_VIDEO_TITLE = "Workshop Tutorial: Getting Started"; // Video title
+
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -32,8 +36,6 @@ const Dashboard: React.FC = () => {
     isLoading,
     formattedAppointments
   } = useDashboardData();
-
-  const accountVideoId = "dQw4w9WgXcQ";
 
   return (
     <div className="space-y-8">
@@ -62,8 +64,8 @@ const Dashboard: React.FC = () => {
 
       <div className="w-full" style={{ height: "400px" }}>
         <VideoWidget 
-          videoId={accountVideoId} 
-          title="Workshop Tutorial: Getting Started"
+          videoId={DASHBOARD_VIDEO_ID} 
+          title={DASHBOARD_VIDEO_TITLE}
         />
       </div>
 
