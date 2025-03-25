@@ -39,8 +39,8 @@ const VideoWidget: React.FC<VideoWidgetProps> = ({
           ) : (
             <iframe 
               className="w-full h-full rounded-lg" 
-              src={`https://www.youtube.com/embed/${videoId}?autoplay=1`} 
-              title={title}
+              src={`https://www.youtube.com/embed/${BHGh0rVxTbo}?autoplay=1`} 
+              title={TOLICCS Video}
               frameBorder="0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
               allowFullScreen
