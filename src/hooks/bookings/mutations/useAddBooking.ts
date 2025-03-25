@@ -45,7 +45,8 @@ export const useAddBooking = (
           booking_date: newBooking.date,
           technician_id: newBooking.technician_id || null,
           service_id: newBooking.service_id || null,
-          bay_id: newBooking.bay_id || null
+          bay_id: newBooking.bay_id || null,
+          notes: newBooking.notes || null
         });
       
       if (bookingError) {
@@ -64,6 +65,8 @@ export const useAddBooking = (
         console.error('Error looking up customer:', customerLookupError);
         // Continue with booking creation even if customer lookup fails
       }
+      
+      let customerId = null;
       
       // If customer doesn't exist, create a new one
       if (!existingCustomers || existingCustomers.length === 0) {
@@ -84,11 +87,13 @@ export const useAddBooking = (
           console.error('Error creating customer record:', customerError);
           // Continue with booking creation even if customer creation fails
         } else if (newCustomer && newCustomer.length > 0) {
+          customerId = newCustomer[0].id;
+          
           // Add the vehicle to the customer
           const { error: vehicleError } = await supabase
             .from('user_customer_vehicles')
             .insert({
-              customer_id: newCustomer[0].id,
+              customer_id: customerId,
               vehicle_info: newBooking.car
             });
             
@@ -98,7 +103,7 @@ export const useAddBooking = (
         }
       } else {
         // Update existing customer's last visit
-        const customerId = existingCustomers[0].id;
+        customerId = existingCustomers[0].id;
         
         // Update the last visit date
         const { error: updateError } = await supabase
@@ -133,6 +138,24 @@ export const useAddBooking = (
           if (vehicleError) {
             console.error('Error adding vehicle to customer:', vehicleError);
           }
+        }
+      }
+      
+      // Add booking note to customer notes if provided
+      if (customerId && newBooking.notes && newBooking.notes.trim() !== '') {
+        const numericCustomerId = parseInt(customerId.toString(), 10);
+        const notePrefix = `Booking note (${newBooking.date}, ${newBooking.service}): `;
+        
+        const { error: noteError } = await supabase
+          .from('customer_notes')
+          .insert({
+            customer_id: numericCustomerId,
+            note: notePrefix + newBooking.notes,
+            created_by: user.email || 'System'
+          });
+
+        if (noteError) {
+          console.error('Error adding booking note to customer:', noteError);
         }
       }
       

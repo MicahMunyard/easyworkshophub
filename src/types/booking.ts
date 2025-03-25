@@ -9,6 +9,7 @@ export interface BookingType {
   car: string;
   status: "pending" | "confirmed" | "cancelled" | "completed";
   date: string; // Date in YYYY-MM-DD format
+  notes?: string;
   
   // New additions for Supabase integration
   technician_id?: string | null;

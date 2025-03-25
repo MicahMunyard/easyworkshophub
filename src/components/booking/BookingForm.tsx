@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { DialogFooter } from "@/components/ui/dialog";
 import { Trash2 } from "lucide-react";
 import { BookingType } from "@/types/booking";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import CustomerInfoFields from "./CustomerInfoFields";
 import ServiceSelector from "./ServiceSelector";
 import TechnicianSelector from "./TechnicianSelector";
@@ -37,7 +39,7 @@ interface BookingFormProps {
   selectedServiceId: string | null;
   selectedTechnicianId: string | null;
   selectedBayId: string | null;
-  handleChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   handleSelectChange: (name: string, value: string) => void;
   handleDateChange: (newDate: Date | undefined) => void;
   handleSubmit: (e: React.FormEvent) => void;
@@ -101,6 +103,18 @@ const BookingForm: React.FC<BookingFormProps> = ({
           status={booking.status}
           onSelectChange={handleSelectChange}
         />
+
+        <div className="grid gap-2">
+          <Label htmlFor="notes">Notes</Label>
+          <Textarea
+            id="notes"
+            name="notes"
+            value={booking.notes || ""}
+            onChange={handleChange}
+            placeholder="Add notes about this booking"
+            className="min-h-[100px]"
+          />
+        </div>
       </div>
       <DialogFooter className="flex justify-between">
         {isEditing && onDeleteClick && (

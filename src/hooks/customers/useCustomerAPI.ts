@@ -6,50 +6,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { CustomerType } from "@/types/customer";
 import { CustomerBookingHistory } from "./types";
 
-// Mock booking history data
-const dummyBookingHistory: CustomerBookingHistory[] = [
-  {
-    id: 101,
-    customerId: "1",
-    date: "2023-07-15",
-    service: "Oil Change",
-    vehicle: "2018 Toyota Camry",
-    cost: 49.99,
-    status: "completed" as const,
-    mechanic: "Alex Johnson"
-  },
-  {
-    id: 102,
-    customerId: "1",
-    date: "2023-05-22",
-    service: "Brake Inspection",
-    vehicle: "2018 Toyota Camry",
-    cost: 79.99,
-    status: "completed" as const,
-    mechanic: "Mike Smith"
-  },
-  {
-    id: 103,
-    customerId: "2",
-    date: "2023-08-22",
-    service: "Tire Rotation",
-    vehicle: "2020 Honda Civic",
-    cost: 39.99,
-    status: "completed" as const,
-    mechanic: "Alex Johnson"
-  },
-  {
-    id: 104,
-    customerId: "4",
-    date: "2023-09-05",
-    service: "Full Service",
-    vehicle: "2021 Tesla Model 3",
-    cost: 199.99,
-    status: "completed" as const,
-    mechanic: "Sarah Lee"
-  }
-];
-
 export const useCustomerAPI = () => {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -74,6 +30,8 @@ export const useCustomerAPI = () => {
             .select('vehicle_info')
             .eq('customer_id', customer.id);
           
+          const bookingCount = await getCustomerBookingCount(customer.id);
+          
           return {
             id: customer.id,
             name: customer.name,
@@ -81,7 +39,7 @@ export const useCustomerAPI = () => {
             email: customer.email,
             status: customer.status as "active" | "inactive",
             lastVisit: customer.last_visit,
-            totalBookings: 0,
+            totalBookings: bookingCount,
             vehicleInfo: vehicleData?.map(v => v.vehicle_info) || []
           } as CustomerType;
         })
@@ -96,6 +54,39 @@ export const useCustomerAPI = () => {
         description: "Could not load customer data"
       });
       return [];
+    }
+  };
+
+  const getCustomerBookingCount = async (customerId: string): Promise<number> => {
+    try {
+      // Get customer phone number first
+      const { data: customerData, error: customerError } = await supabase
+        .from('user_customers')
+        .select('phone')
+        .eq('id', customerId)
+        .single();
+      
+      if (customerError || !customerData) {
+        console.error('Error getting customer phone:', customerError);
+        return 0;
+      }
+      
+      // Count bookings with this phone number
+      const { count, error } = await supabase
+        .from('user_bookings')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user?.id)
+        .eq('customer_phone', customerData.phone);
+      
+      if (error) {
+        console.error('Error counting bookings:', error);
+        return 0;
+      }
+      
+      return count || 0;
+    } catch (error) {
+      console.error('Error getting booking count:', error);
+      return 0;
     }
   };
 
@@ -134,18 +125,74 @@ export const useCustomerAPI = () => {
     }
   };
 
-  const getBookingHistoryForCustomer = (customerId: string) => {
-    return dummyBookingHistory
-      .filter(booking => booking.customerId === customerId)
-      .map(booking => ({
-        id: booking.id,
-        date: booking.date,
-        service: booking.service,
-        vehicle: booking.vehicle,
-        cost: booking.cost,
-        status: booking.status as "pending" | "confirmed" | "completed" | "cancelled",
-        mechanic: booking.mechanic
+  const getBookingHistoryForCustomer = async (customerId: string) => {
+    try {
+      // Get customer phone first
+      const { data: customerData, error: customerError } = await supabase
+        .from('user_customers')
+        .select('phone, name')
+        .eq('id', customerId)
+        .single();
+      
+      if (customerError || !customerData) {
+        console.error('Error getting customer:', customerError);
+        return [];
+      }
+      
+      // Get all bookings for this customer
+      const { data: bookings, error: bookingsError } = await supabase
+        .from('user_bookings')
+        .select(`
+          id, 
+          customer_name, 
+          service, 
+          car, 
+          booking_date, 
+          status, 
+          cost,
+          technician_id
+        `)
+        .eq('user_id', user?.id)
+        .eq('customer_phone', customerData.phone)
+        .order('booking_date', { ascending: false });
+      
+      if (bookingsError) {
+        console.error('Error fetching booking history:', bookingsError);
+        return [];
+      }
+      
+      // Transform the bookings to the required format
+      const formattedBookings = await Promise.all((bookings || []).map(async (booking) => {
+        let technicianName = "Unassigned";
+        
+        if (booking.technician_id) {
+          const { data: techData } = await supabase
+            .from('user_technicians')
+            .select('name')
+            .eq('id', booking.technician_id)
+            .single();
+            
+          if (techData) {
+            technicianName = techData.name;
+          }
+        }
+        
+        return {
+          id: typeof booking.id === 'string' ? parseInt(booking.id.replace(/-/g, '').substring(0, 8), 16) : booking.id,
+          date: booking.booking_date,
+          service: booking.service,
+          vehicle: booking.car,
+          cost: booking.cost || 0,
+          status: booking.status as "pending" | "confirmed" | "completed" | "cancelled",
+          mechanic: technicianName
+        };
       }));
+      
+      return formattedBookings;
+    } catch (error) {
+      console.error('Error getting booking history:', error);
+      return [];
+    }
   };
 
   return {

@@ -17,11 +17,11 @@ export const useCustomerActions = (
   const { toast } = useToast();
   const { getBookingHistoryForCustomer, deleteAllCustomers } = useCustomerAPI();
 
-  const handleCustomerClick = (id: string) => {
+  const handleCustomerClick = async (id: string) => {
     const customer = customers.find(c => c.id === id);
     if (!customer) return;
     
-    const bookingHistory = getBookingHistoryForCustomer(id);
+    const bookingHistory = await getBookingHistoryForCustomer(id);
     
     const detailedCustomer: CustomerDetailType = {
       ...customer,
@@ -32,10 +32,10 @@ export const useCustomerActions = (
     setIsCustomerDetailsOpen(true);
   };
 
-  const handleCustomerSelect = (customer: CustomerType) => {
+  const handleCustomerSelect = async (customer: CustomerType) => {
     setSelectedCustomerForDetail(customer);
     
-    const bookingHistory = getBookingHistoryForCustomer(customer.id);
+    const bookingHistory = await getBookingHistoryForCustomer(customer.id);
     
     const detailedCustomer: CustomerDetailType = {
       ...customer,

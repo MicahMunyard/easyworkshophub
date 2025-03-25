@@ -68,7 +68,8 @@ export const useUpdateBooking = (
           booking_date: updatedBooking.date,
           technician_id: updatedBooking.technician_id || null,
           service_id: updatedBooking.service_id || null,
-          bay_id: updatedBooking.bay_id || null
+          bay_id: updatedBooking.bay_id || null,
+          notes: updatedBooking.notes || null
         })
         .eq('id', bookingIdStr)
         .eq('user_id', user.id); // Ensure we only update the user's own booking
@@ -106,6 +107,11 @@ export const useUpdateBooking = (
           })
           .eq('id', matchingJobs[0].id)
           .eq('user_id', user.id);
+      }
+
+      // Add booking note as customer note if there are notes
+      if (updatedBooking.notes && updatedBooking.notes.trim() !== '') {
+        await addBookingNoteToCustomer(updatedBooking);
       }
       
       toast({
@@ -211,6 +217,48 @@ export const useUpdateBooking = (
       }
     } catch (error) {
       console.error('Error updating customer record:', error);
+    }
+  };
+
+  // Helper function to add booking notes to customer notes
+  const addBookingNoteToCustomer = async (booking: BookingType) => {
+    try {
+      if (!booking.notes || !user) return;
+
+      // Get customer ID
+      const { data: customers, error: customerError } = await supabase
+        .from('user_customers')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('phone', booking.phone);
+
+      if (customerError) {
+        console.error('Error finding customer for note:', customerError);
+        return;
+      }
+
+      if (!customers || customers.length === 0) {
+        console.error('No customer found for booking note');
+        return;
+      }
+
+      const customerId = parseInt(customers[0].id, 10);
+      const notePrefix = `Booking note (${booking.date}, ${booking.service}): `;
+
+      // Add note to customer_notes
+      const { error: noteError } = await supabase
+        .from('customer_notes')
+        .insert({
+          customer_id: customerId,
+          note: notePrefix + booking.notes,
+          created_by: user.email || 'System'
+        });
+
+      if (noteError) {
+        console.error('Error adding booking note to customer:', noteError);
+      }
+    } catch (error) {
+      console.error('Error processing booking note:', error);
     }
   };
 

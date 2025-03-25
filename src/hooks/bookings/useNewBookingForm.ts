@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { BookingType } from "@/types/booking";
@@ -30,7 +31,8 @@ const defaultBooking: BookingType = {
   duration: 30,
   car: "",
   status: "pending",
-  date: format(new Date(), 'yyyy-MM-dd')
+  date: format(new Date(), 'yyyy-MM-dd'),
+  notes: ""
 };
 
 export const useNewBookingForm = (
@@ -108,7 +110,7 @@ export const useNewBookingForm = (
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setNewBooking((prev) => ({ ...prev, [name]: value }));
   };

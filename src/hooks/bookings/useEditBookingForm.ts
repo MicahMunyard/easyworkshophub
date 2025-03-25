@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { BookingType } from "@/types/booking";
@@ -106,7 +107,7 @@ export const useEditBookingForm = (
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setEditedBooking((prev) => prev ? { ...prev, [name]: value } : null);
   };
