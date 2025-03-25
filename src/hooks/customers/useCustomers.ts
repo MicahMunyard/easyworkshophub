@@ -90,6 +90,11 @@ export const useCustomers = (): UseCustomersReturnType => {
     handleCustomerSelect,
     closeCustomerDetails,
     handleAddCustomer,
-    addCustomerFromBooking
+    addCustomerFromBooking,
+    // Add the missing properties from the stats object
+    totalCustomers: stats.totalCustomers,
+    activeCustomers: stats.activeCustomers,
+    inactiveCustomers: stats.inactiveCustomers,
+    newCustomersThisMonth: stats.newCustomersThisMonth
   };
 };
