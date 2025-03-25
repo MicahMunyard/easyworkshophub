@@ -56,17 +56,40 @@ export const useDashboardData = (): DashboardData => {
         setAppointments(bookingsData || []);
         setTodayBookingsCount(bookingsData?.length || 0);
         
-        const revenue = bookingsData?.reduce((sum, booking) => sum + (booking.cost || 0), 0) || 0;
-        setTodayRevenue(revenue);
-        
-        const { data: jobsData, error: jobsError } = await supabase
+        // Get active jobs (in progress or working status)
+        const { data: activeJobsData, error: activeJobsError } = await supabase
           .from('jobs')
           .select('*')
-          .eq('status', 'inProgress');
+          .in('status', ['inProgress', 'working']);
           
-        if (jobsError) throw jobsError;
+        if (activeJobsError) throw activeJobsError;
         
-        setActiveJobsCount(jobsData?.length || 0);
+        setActiveJobsCount(activeJobsData?.length || 0);
+
+        // Get completed jobs for today to calculate revenue
+        const { data: completedJobsData, error: completedJobsError } = await supabase
+          .from('jobs')
+          .select('*')
+          .eq('status', 'completed')
+          .eq('date', today);
+          
+        if (completedJobsError) throw completedJobsError;
+        
+        // Calculate revenue from completed jobs
+        const completedJobsRevenue = completedJobsData?.reduce((sum, job) => {
+          // Try to parse cost from service field if it contains pricing information
+          let jobCost = 0;
+          const serviceParts = job.service?.split('$');
+          if (serviceParts && serviceParts.length > 1) {
+            const potentialCost = parseFloat(serviceParts[1].replace(/[^0-9.]/g, ''));
+            if (!isNaN(potentialCost)) {
+              jobCost = potentialCost;
+            }
+          }
+          return sum + jobCost;
+        }, 0) || 0;
+        
+        setTodayRevenue(completedJobsRevenue);
         
         const { data: inventoryData, error: inventoryError } = await supabase
           .from('user_inventory_items')

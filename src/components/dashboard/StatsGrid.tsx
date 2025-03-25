@@ -36,7 +36,7 @@ const StatsGrid: React.FC<StatsGridProps> = ({
         title="Revenue (Today)" 
         value={isLoading ? "..." : `$${todayRevenue.toFixed(2)}`} 
         icon={FileText} 
-        trend={todayRevenue > 0 ? `From ${todayBookingsCount} bookings` : "No revenue today"}
+        trend={todayRevenue > 0 ? `From completed jobs` : "No revenue today"}
       />
       <StatsCard 
         title="Low Stock Items" 
