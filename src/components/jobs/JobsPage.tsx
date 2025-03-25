@@ -12,9 +12,9 @@ import JobsTable from "./JobsTable";
 import JobsStats from "./JobsStats";
 import QuickActions from "./QuickActions";
 import NewJobModal from "./NewJobModal";
-import JobDetailsModal from "./JobDetailsModal";
+import JobDetailsModal from "../JobDetailsModal";
 import EditJobModal from "./EditJobModal";
-import ReassignJobModal from "./ReassignJobModal";
+import ReassignJobModal from "../ReassignJobModal";
 import CancelJobDialog from "./CancelJobDialog";
 
 const JobsPage = () => {
@@ -125,7 +125,9 @@ const JobsPage = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <JobsStats />
-        <QuickActions />
+        <div className="col-span-2">
+          <QuickActions onNewJobClick={() => setIsNewJobModalOpen(true)} />
+        </div>
       </div>
 
       <NewJobModal

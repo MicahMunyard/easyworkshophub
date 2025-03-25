@@ -217,14 +217,14 @@ const JobsList: React.FC<JobsListProps> = ({
           <TableHead>Status</TableHead>
           <TableHead>Assigned To</TableHead>
           <TableHead>Date</TableHead>
-          <TableHead>Time</TableHead> {/* Add Time column */}
+          <TableHead>Time</TableHead>
           <TableHead>Priority</TableHead>
           <TableHead className="text-right">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {jobs.map((job) => (
-          <TableRow key={job.id} className={isBookingJob(job.id) ? "bg-blue-50" : ""}>
+          <TableRow key={job.id} className={isBookingJob(job.id) ? "bg-blue-50 text-black" : "text-black"}>
             <TableCell className="font-medium">
               {job.id}
               {isBookingJob(job.id) && (
@@ -242,7 +242,7 @@ const JobsList: React.FC<JobsListProps> = ({
             </TableCell>
             <TableCell>{job.assignedTo}</TableCell>
             <TableCell>{formatDate(job.date)}</TableCell>
-            <TableCell>{job.time || 'Not specified'}</TableCell> {/* Display time */}
+            <TableCell>{job.time || 'Not specified'}</TableCell>
             <TableCell>
               <Badge className={getPriorityColor(job.priority)}>
                 {job.priority}
