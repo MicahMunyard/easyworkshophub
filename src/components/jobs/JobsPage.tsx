@@ -5,17 +5,17 @@ import {
 } from "@/components/ui/card";
 import { useJobs } from "@/hooks/useJobs";
 
-// Importing the components we'll create
+// Importing the components
 import JobsHeader from "./JobsHeader";
 import JobsFilter from "./JobsFilter";
 import JobsTable from "./JobsTable";
 import JobsStats from "./JobsStats";
 import QuickActions from "./QuickActions";
-import NewJobModal from "./NewJobModal";
-import JobDetailsModal from "../JobDetailsModal";
-import EditJobModal from "./EditJobModal";
-import ReassignJobModal from "../ReassignJobModal";
-import CancelJobDialog from "./CancelJobDialog";
+import NewJobModal from "./modals/NewJobModal";
+import JobDetailsModal from "./modals/JobDetailsModal";
+import EditJobModal from "./modals/EditJobModal";
+import ReassignJobModal from "./modals/ReassignJobModal";
+import CancelJobDialog from "./modals/CancelJobDialog";
 
 const JobsPage = () => {
   const {
