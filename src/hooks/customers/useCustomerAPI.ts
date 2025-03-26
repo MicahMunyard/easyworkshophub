@@ -1,3 +1,4 @@
+
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -171,11 +172,10 @@ export const useCustomerAPI = () => {
           }
         }
         
+        // Here's the fix - use booking.cost directly since there's no service_id property
         let bookingCost = booking.cost || 0;
         
-        if (booking.service_id && (!bookingCost || bookingCost === 0)) {
-          console.log("Would fetch service price using service_id if available");
-        }
+        // Removed the check for service_id since it doesn't exist
         
         return {
           id: typeof booking.id === 'string' ? parseInt(booking.id.replace(/-/g, '').substring(0, 8), 16) : booking.id,
