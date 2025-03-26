@@ -41,11 +41,7 @@ const App = () => (
             
             <Route 
               path="/" 
-              element={
-                <Layout>
-                  <Index />
-                </Layout>
-              } 
+              element={<Layout><Index /></Layout>} 
             />
             <Route 
               path="/workshop" 
