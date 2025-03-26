@@ -2,11 +2,13 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Home } from "lucide-react";
+import { Home, LogIn } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const NotFound = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
 
   useEffect(() => {
     console.error(
@@ -24,13 +26,34 @@ const NotFound = () => {
           The page you are looking for might have been removed, had its name changed, 
           or is temporarily unavailable.
         </p>
-        <Button 
-          onClick={() => navigate("/")} 
-          className="inline-flex items-center"
-        >
-          <Home className="mr-2 h-4 w-4" />
-          Return to Home
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          {user ? (
+            <Button 
+              onClick={() => navigate("/")} 
+              className="inline-flex items-center"
+            >
+              <Home className="mr-2 h-4 w-4" />
+              Return to Dashboard
+            </Button>
+          ) : (
+            <>
+              <Button 
+                onClick={() => navigate("/auth/signin")} 
+                className="inline-flex items-center"
+              >
+                <LogIn className="mr-2 h-4 w-4" />
+                Sign In
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={() => navigate("/auth/signup")} 
+                className="inline-flex items-center"
+              >
+                Create Account
+              </Button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

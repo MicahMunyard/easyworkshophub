@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -35,9 +36,12 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <Routes>
+            {/* Public routes */}
             <Route path="/auth/signin" element={<Auth />} />
             <Route path="/auth/signup" element={<Auth />} />
+            <Route path="/auth" element={<Navigate to="/auth/signin" replace />} />
             
+            {/* Protected routes */}
             <Route 
               path="/" 
               element={
@@ -101,7 +105,7 @@ const App = () => (
             <Route path="/profile" element={<ProtectedRoute><Layout><Profile /></Layout></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
             
-            <Route path="/auth" element={<Navigate to="/auth/signin" replace />} />
+            {/* Catch all routes */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

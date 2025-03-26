@@ -19,6 +19,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
         description: "Please sign in to access this page",
         variant: "destructive",
       });
+      console.log("User not authenticated, redirecting to sign in page");
     }
   }, [user, loading]);
 
@@ -31,6 +32,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   }
 
   if (!user) {
+    console.log("Redirecting to /auth/signin from protected route");
     // Redirect to sign in page, but save the location they were trying to access
     return <Navigate to="/auth/signin" state={{ from: location }} replace />;
   }
