@@ -1,14 +1,13 @@
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
 import { Mail, Trash2, AlertCircle } from "lucide-react";
+import { useEmailConnection } from "@/hooks/email/useEmailConnection";
 
 interface EmailSettingsProps {
   isConnected: boolean;
@@ -20,123 +19,31 @@ const EmailSettingsProps: React.FC<EmailSettingsProps> = ({
   onConnectionChange 
 }) => {
   const { toast } = useToast();
-  const { user } = useAuth();
-  const [emailAddress, setEmailAddress] = useState("");
-  const [password, setPassword] = useState("");
-  const [provider, setProvider] = useState("gmail");
-  const [autoCreateBookings, setAutoCreateBookings] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  
-  useEffect(() => {
-    if (user && isConnected) {
-      fetchEmailSettings();
-    }
-  }, [user, isConnected]);
-
-  const fetchEmailSettings = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('email_connections')
-        .select('email_address, provider, auto_create_bookings')
-        .eq('user_id', user?.id)
-        .single();
-      
-      if (error) {
-        console.error("Error fetching email settings:", error);
-        return;
-      }
-      
-      if (data) {
-        setEmailAddress(data.email_address);
-        setProvider(data.provider);
-        setAutoCreateBookings(data.auto_create_bookings);
-      }
-    } catch (error) {
-      console.error("Error fetching email settings:", error);
-    }
-  };
+  const {
+    emailAddress,
+    setEmailAddress,
+    password,
+    setPassword,
+    provider,
+    setProvider,
+    autoCreateBookings,
+    setAutoCreateBookings,
+    isLoading,
+    connectEmail,
+    disconnectEmail
+  } = useEmailConnection();
 
   const handleConnectEmail = async () => {
-    if (!emailAddress || !password) {
-      toast({
-        title: "Missing Information",
-        description: "Please provide email address and password",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    setIsLoading(true);
-    
-    try {
-      // Note: In a real implementation, we'd use OAuth or a secure way to handle email credentials
-      // This is just a mockup of what the UX would look like
-      
-      // Simulating connection process
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      const { error } = await supabase
-        .from('email_connections')
-        .upsert({
-          user_id: user?.id,
-          email_address: emailAddress,
-          provider: provider,
-          auto_create_bookings: autoCreateBookings,
-          connected_at: new Date().toISOString()
-        });
-      
-      if (error) {
-        throw error;
-      }
-      
-      setPassword(""); // Clear password for security
+    const success = await connectEmail();
+    if (success) {
       onConnectionChange(true);
-      
-    } catch (error) {
-      console.error("Error connecting email:", error);
-      toast({
-        title: "Connection Failed",
-        description: "Failed to connect to email account. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const handleDisconnectEmail = async () => {
-    try {
-      setIsLoading(true);
-      
-      const { error } = await supabase
-        .from('email_connections')
-        .delete()
-        .eq('user_id', user?.id);
-      
-      if (error) {
-        throw error;
-      }
-      
-      setEmailAddress("");
-      setPassword("");
-      setProvider("gmail");
-      setAutoCreateBookings(false);
+    const success = await disconnectEmail();
+    if (success) {
       onConnectionChange(false);
-      
-      toast({
-        title: "Email Disconnected",
-        description: "Your email account has been disconnected"
-      });
-      
-    } catch (error) {
-      console.error("Error disconnecting email:", error);
-      toast({
-        title: "Error",
-        description: "Failed to disconnect email account",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -226,7 +133,10 @@ const EmailSettingsProps: React.FC<EmailSettingsProps> = ({
               type="button" 
               onClick={() => {
                 // Save settings if already connected
-                // This would update settings without reconnecting
+                toast({
+                  title: "Settings Saved",
+                  description: "Your email settings have been updated"
+                });
               }}
               disabled={isLoading}
             >

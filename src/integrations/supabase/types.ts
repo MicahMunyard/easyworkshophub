@@ -230,6 +230,39 @@ export type Database = {
         }
         Relationships: []
       }
+      email_connections: {
+        Row: {
+          auto_create_bookings: boolean | null
+          connected_at: string | null
+          created_at: string | null
+          email_address: string
+          id: string
+          provider: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          auto_create_bookings?: boolean | null
+          connected_at?: string | null
+          created_at?: string | null
+          email_address: string
+          id?: string
+          provider: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          auto_create_bookings?: boolean | null
+          connected_at?: string | null
+          created_at?: string | null
+          email_address?: string
+          id?: string
+          provider?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       jobs: {
         Row: {
           assigned_to: string

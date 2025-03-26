@@ -3,43 +3,22 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
 import EmailInbox from "@/components/email-integration/EmailInbox";
 import EmailSettings from "@/components/email-integration/EmailSettings";
 import EmailAutomation from "@/components/email-integration/EmailAutomation";
+import { useEmailConnection } from "@/hooks/email/useEmailConnection";
 
 const EmailIntegration = () => {
-  const { toast } = useToast();
   const { user } = useAuth();
+  const { isConnected, checkConnection } = useEmailConnection();
   const [activeTab, setActiveTab] = useState("inbox");
-  const [isConnected, setIsConnected] = useState(false);
   
   useEffect(() => {
     if (user) {
-      checkEmailConnection();
+      checkConnection();
     }
   }, [user]);
-
-  const checkEmailConnection = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('email_connections')
-        .select('*')
-        .eq('user_id', user?.id)
-        .single();
-      
-      if (error) {
-        console.error("Error checking email connection:", error);
-        return;
-      }
-      
-      setIsConnected(!!data);
-    } catch (error) {
-      console.error("Error checking email connection:", error);
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -85,13 +64,9 @@ const EmailIntegration = () => {
           <EmailSettings 
             isConnected={isConnected} 
             onConnectionChange={(connected) => {
-              setIsConnected(connected);
-              if (connected) {
-                toast({
-                  title: "Email Connected",
-                  description: "Your email account has been successfully connected."
-                });
-              }
+              // This will be updated by the hook itself
+              // We just need to refresh the UI
+              checkConnection();
             }} 
           />
         </TabsContent>

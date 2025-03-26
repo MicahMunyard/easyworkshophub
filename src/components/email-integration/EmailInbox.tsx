@@ -1,14 +1,11 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
 import { Mail, Search, RefreshCw, Clock } from "lucide-react";
 import { useEmailIntegration } from "@/hooks/email/useEmailIntegration";
 import EmailMessage from "./EmailMessage";
@@ -16,7 +13,6 @@ import { EmailType } from "@/types/email";
 
 const EmailInbox = () => {
   const { toast } = useToast();
-  const { user } = useAuth();
   const { 
     emails, 
     isLoading, 
