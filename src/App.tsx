@@ -18,6 +18,7 @@ import Suppliers from "./pages/Suppliers";
 import Reports from "./pages/Reports";
 import Marketing from "./pages/Marketing";
 import EmailMarketing from "./pages/EmailMarketing";
+import EmailIntegration from "./pages/EmailIntegration";
 import Reviews from "./pages/Reviews";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
@@ -101,6 +102,7 @@ const App = () => (
             <Route path="/reports" element={<ProtectedRoute><Layout><Reports /></Layout></ProtectedRoute>} />
             <Route path="/marketing" element={<ProtectedRoute><Layout><Marketing /></Layout></ProtectedRoute>} />
             <Route path="/email-marketing" element={<ProtectedRoute><Layout><EmailMarketing /></Layout></ProtectedRoute>} />
+            <Route path="/email-integration" element={<ProtectedRoute><Layout><EmailIntegration /></Layout></ProtectedRoute>} />
             <Route path="/reviews" element={<ProtectedRoute><Layout><Reviews /></Layout></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><Layout><Profile /></Layout></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
