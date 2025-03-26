@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from "react";
-import Sidebar from "./Sidebar";
+import Sidebar from "./sidebar";
 import Navbar from "./navbar";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -8,7 +7,6 @@ interface LayoutProps {
   children: React.ReactNode;
 }
 
-// Define our main navigation sections
 const mainNavSections = [
   { name: "Dashboard", path: "/" },
   { name: "Workshop", path: "/workshop" },
@@ -19,7 +17,6 @@ const mainNavSections = [
   { name: "Reports", path: "/reports" }
 ];
 
-// Define sidebar items for each section
 const sidebarSections = {
   workshop: [
     { name: "Booking Diary", path: "/booking-diary", icon: "Calendar" },
@@ -50,7 +47,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Check if mobile on mount and when window resizes
   useEffect(() => {
     const checkIfMobile = () => {
       setIsMobile(window.innerWidth < 1024);
@@ -69,7 +65,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     };
   }, []);
 
-  // Set the active sidebar section based on the current path
   useEffect(() => {
     const path = location.pathname;
     
@@ -88,7 +83,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     }
   }, [location]);
 
-  // Close sidebar on mobile when route changes
   useEffect(() => {
     if (isMobile) {
       setSidebarOpen(false);
