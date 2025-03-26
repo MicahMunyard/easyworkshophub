@@ -32,7 +32,7 @@ const CustomerHistoryTab: React.FC<CustomerHistoryTabProps> = ({ customer }) => 
                       <span>{booking.vehicle}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Cost: ${booking.cost.toFixed(2)}</span>
+                      <span>Cost: ${typeof booking.cost === 'number' ? booking.cost.toFixed(2) : '0.00'}</span>
                       <Badge>{booking.status}</Badge>
                     </div>
                     {booking.mechanic && (

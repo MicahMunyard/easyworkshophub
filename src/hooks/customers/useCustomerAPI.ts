@@ -1,4 +1,3 @@
-
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -59,7 +58,6 @@ export const useCustomerAPI = () => {
 
   const getCustomerBookingCount = async (customerId: string): Promise<number> => {
     try {
-      // Get customer phone number first
       const { data: customerData, error: customerError } = await supabase
         .from('user_customers')
         .select('phone')
@@ -71,7 +69,6 @@ export const useCustomerAPI = () => {
         return 0;
       }
       
-      // Count bookings with this phone number
       const { count, error } = await supabase
         .from('user_bookings')
         .select('*', { count: 'exact', head: true })
@@ -127,7 +124,6 @@ export const useCustomerAPI = () => {
 
   const getBookingHistoryForCustomer = async (customerId: string) => {
     try {
-      // Get customer phone first
       const { data: customerData, error: customerError } = await supabase
         .from('user_customers')
         .select('phone, name')
@@ -139,7 +135,6 @@ export const useCustomerAPI = () => {
         return [];
       }
       
-      // Get all bookings for this customer
       const { data: bookings, error: bookingsError } = await supabase
         .from('user_bookings')
         .select(`
@@ -161,7 +156,6 @@ export const useCustomerAPI = () => {
         return [];
       }
       
-      // Transform the bookings to the required format
       const formattedBookings = await Promise.all((bookings || []).map(async (booking) => {
         let technicianName = "Unassigned";
         
@@ -177,12 +171,18 @@ export const useCustomerAPI = () => {
           }
         }
         
+        let bookingCost = booking.cost || 0;
+        
+        if (booking.service_id && (!bookingCost || bookingCost === 0)) {
+          console.log("Would fetch service price using service_id if available");
+        }
+        
         return {
           id: typeof booking.id === 'string' ? parseInt(booking.id.replace(/-/g, '').substring(0, 8), 16) : booking.id,
           date: booking.booking_date,
           service: booking.service,
           vehicle: booking.car,
-          cost: booking.cost || 0,
+          cost: bookingCost,
           status: booking.status as "pending" | "confirmed" | "completed" | "cancelled",
           mechanic: technicianName
         };

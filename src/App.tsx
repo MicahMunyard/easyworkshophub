@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -23,6 +24,7 @@ import Auth from "./pages/Auth";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
 import { AuthProvider } from "./contexts/AuthContext";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -48,47 +50,55 @@ const App = () => (
             <Route 
               path="/workshop" 
               element={
-                <Layout>
-                  <Workshop />
-                </Layout>
+                <ProtectedRoute>
+                  <Layout>
+                    <Workshop />
+                  </Layout>
+                </ProtectedRoute>
               } 
             />
             <Route 
               path="/booking-diary" 
               element={
-                <Layout>
-                  <BookingDiary />
-                </Layout>
+                <ProtectedRoute>
+                  <Layout>
+                    <BookingDiary />
+                  </Layout>
+                </ProtectedRoute>
               } 
             />
             <Route 
               path="/jobs" 
               element={
-                <Layout>
-                  <Jobs />
-                </Layout>
+                <ProtectedRoute>
+                  <Layout>
+                    <Jobs />
+                  </Layout>
+                </ProtectedRoute>
               } 
             />
             <Route 
               path="/workshop-setup" 
               element={
-                <Layout>
-                  <WorkshopSetup />
-                </Layout>
+                <ProtectedRoute>
+                  <Layout>
+                    <WorkshopSetup />
+                  </Layout>
+                </ProtectedRoute>
               } 
             />
             
-            <Route path="/inventory" element={<Layout><Inventory /></Layout>} />
-            <Route path="/customers" element={<Layout><Customers /></Layout>} />
-            <Route path="/invoices" element={<Layout><Invoices /></Layout>} />
-            <Route path="/pos" element={<Layout><PointOfSale /></Layout>} />
-            <Route path="/suppliers" element={<Layout><Suppliers /></Layout>} />
-            <Route path="/reports" element={<Layout><Reports /></Layout>} />
-            <Route path="/marketing" element={<Layout><Marketing /></Layout>} />
-            <Route path="/email-marketing" element={<Layout><EmailMarketing /></Layout>} />
-            <Route path="/reviews" element={<Layout><Reviews /></Layout>} />
-            <Route path="/profile" element={<Layout><Profile /></Layout>} />
-            <Route path="/settings" element={<Layout><Settings /></Layout>} />
+            <Route path="/inventory" element={<ProtectedRoute><Layout><Inventory /></Layout></ProtectedRoute>} />
+            <Route path="/customers" element={<ProtectedRoute><Layout><Customers /></Layout></ProtectedRoute>} />
+            <Route path="/invoices" element={<ProtectedRoute><Layout><Invoices /></Layout></ProtectedRoute>} />
+            <Route path="/pos" element={<ProtectedRoute><Layout><PointOfSale /></Layout></ProtectedRoute>} />
+            <Route path="/suppliers" element={<ProtectedRoute><Layout><Suppliers /></Layout></ProtectedRoute>} />
+            <Route path="/reports" element={<ProtectedRoute><Layout><Reports /></Layout></ProtectedRoute>} />
+            <Route path="/marketing" element={<ProtectedRoute><Layout><Marketing /></Layout></ProtectedRoute>} />
+            <Route path="/email-marketing" element={<ProtectedRoute><Layout><EmailMarketing /></Layout></ProtectedRoute>} />
+            <Route path="/reviews" element={<ProtectedRoute><Layout><Reviews /></Layout></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><Layout><Profile /></Layout></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
             
             <Route path="/auth" element={<Navigate to="/auth/signin" replace />} />
             <Route path="*" element={<NotFound />} />

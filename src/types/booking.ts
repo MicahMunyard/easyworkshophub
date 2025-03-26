@@ -10,6 +10,7 @@ export interface BookingType {
   status: "pending" | "confirmed" | "cancelled" | "completed";
   date: string; // Date in YYYY-MM-DD format
   notes?: string;
+  cost?: number; // Added cost field explicitly
   
   // New additions for Supabase integration
   technician_id?: string | null;

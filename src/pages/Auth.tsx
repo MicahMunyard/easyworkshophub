@@ -1,210 +1,231 @@
+import React from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useState } from "react";
+import { useToast } from "@/components/ui/use-toast";
+import { Eye, EyeOff, ArrowLeft } from "lucide-react";
+import { Link } from "react-router-dom";
 
-import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { z } from 'zod';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Label } from '@/components/ui/label';
-import { Loader2 } from 'lucide-react';
-
-const signInSchema = z.object({
-  email: z.string().email({ message: 'Please enter a valid email address' }),
-  password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
-});
-
-const signUpSchema = z.object({
-  email: z.string().email({ message: 'Please enter a valid email address' }),
-  password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
-  confirmPassword: z.string().min(6, { message: 'Password must be at least 6 characters' }),
-  fullName: z.string().min(2, { message: 'Full name is required' }).optional(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
-
-type SignInFormValues = z.infer<typeof signInSchema>;
-type SignUpFormValues = z.infer<typeof signUpSchema>;
-
-const Auth: React.FC = () => {
-  const navigate = useNavigate();
+const Auth = () => {
+  const { user, signIn, signUp } = useAuth();
   const location = useLocation();
-  const { signIn, signUp, loading } = useAuth();
-  const [activeTab, setActiveTab] = useState<string>(
-    location.pathname.includes('signup') ? 'signup' : 'signin'
-  );
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  
+  // If the user is logged in, redirect to the previous location or dashboard
+  React.useEffect(() => {
+    if (user) {
+      const from = location.state?.from?.pathname || "/";
+      navigate(from, { replace: true });
+    }
+  }, [user, navigate, location]);
 
-  const signInForm = useForm<SignInFormValues>({
-    resolver: zodResolver(signInSchema),
-    defaultValues: {
-      email: '',
-      password: '',
-    },
+  const isSignUp = location.pathname === "/auth/signup";
+  
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+    confirmPassword: "",
+    firstName: "",
+    lastName: "",
+    companyName: "",
   });
 
-  const signUpForm = useForm<SignUpFormValues>({
-    resolver: zodResolver(signUpSchema),
-    defaultValues: {
-      email: '',
-      password: '',
-      confirmPassword: '',
-      fullName: '',
-    },
-  });
-
-  const onSignInSubmit = async (values: SignInFormValues) => {
-    await signIn(values.email, values.password);
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const onSignUpSubmit = async (values: SignUpFormValues) => {
-    await signUp(values.email, values.password, {
-      full_name: values.fullName,
-    });
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      if (isSignUp) {
+        if (formData.password !== formData.confirmPassword) {
+          toast({
+            title: "Passwords don't match",
+            description: "Please make sure your passwords match.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        await signUp(formData.email, formData.password, {
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          company_name: formData.companyName,
+        });
+      } else {
+        await signIn(formData.email, formData.password);
+      }
+    } catch (error) {
+      console.error("Authentication error:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <div className="container flex items-center justify-center min-h-screen py-12">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">
-            Welcome to TOLICCS
-          </CardTitle>
-          <CardDescription className="text-center">
-            Your workshop management solution
-          </CardDescription>
-        </CardHeader>
+    <div className="container flex items-center justify-center min-h-screen py-10">
+      <div className="w-full max-w-md">
+        <Link to="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-primary mb-6">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to home
+        </Link>
         
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="signin">Sign In</TabsTrigger>
-            <TabsTrigger value="signup">Sign Up</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="signin">
-            <form onSubmit={signInForm.handleSubmit(onSignInSubmit)}>
-              <CardContent className="space-y-4 mt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signin-email">Email</Label>
-                  <Input
-                    id="signin-email"
-                    type="email"
-                    placeholder="your.email@example.com"
-                    {...signInForm.register('email')}
-                  />
-                  {signInForm.formState.errors.email && (
-                    <p className="text-sm text-red-500">{signInForm.formState.errors.email.message}</p>
-                  )}
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="signin-password">Password</Label>
-                    <Button variant="link" className="p-0 h-auto text-xs" type="button">
+        <Card>
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-2xl font-bold">
+              {isSignUp ? "Create an account" : "Sign in to your account"}
+            </CardTitle>
+            <CardDescription>
+              {isSignUp 
+                ? "Enter your details below to create your account" 
+                : "Enter your credentials to access your account"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input 
+                  id="email" 
+                  name="email"
+                  type="email" 
+                  placeholder="name@example.com" 
+                  value={formData.email}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Password</Label>
+                  {!isSignUp && (
+                    <Link to="/auth/reset-password" className="text-xs text-muted-foreground hover:text-primary">
                       Forgot password?
-                    </Button>
+                    </Link>
+                  )}
+                </div>
+                <div className="relative">
+                  <Input 
+                    id="password" 
+                    name="password"
+                    type={showPassword ? "text" : "password"} 
+                    placeholder="••••••••" 
+                    value={formData.password}
+                    onChange={handleChange}
+                    required
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+              
+              {isSignUp && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">Confirm Password</Label>
+                    <Input 
+                      id="confirmPassword" 
+                      name="confirmPassword"
+                      type="password" 
+                      placeholder="••••••••" 
+                      value={formData.confirmPassword}
+                      onChange={handleChange}
+                      required
+                    />
                   </div>
-                  <Input
-                    id="signin-password"
-                    type="password"
-                    placeholder="••••••••"
-                    {...signInForm.register('password')}
-                  />
-                  {signInForm.formState.errors.password && (
-                    <p className="text-sm text-red-500">{signInForm.formState.errors.password.message}</p>
-                  )}
-                </div>
-              </CardContent>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="firstName">First Name</Label>
+                      <Input 
+                        id="firstName" 
+                        name="firstName"
+                        placeholder="John" 
+                        value={formData.firstName}
+                        onChange={handleChange}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="lastName">Last Name</Label>
+                      <Input 
+                        id="lastName" 
+                        name="lastName"
+                        placeholder="Doe" 
+                        value={formData.lastName}
+                        onChange={handleChange}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="companyName">Company Name (Optional)</Label>
+                    <Input 
+                      id="companyName" 
+                      name="companyName"
+                      placeholder="Your Workshop" 
+                      value={formData.companyName}
+                      onChange={handleChange}
+                    />
+                  </div>
+                </>
+              )}
               
-              <CardFooter>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Signing in...
-                    </>
-                  ) : (
-                    'Sign In'
-                  )}
-                </Button>
-              </CardFooter>
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? (
+                  <span className="flex items-center justify-center">
+                    <span className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2"></span>
+                    {isSignUp ? "Creating Account..." : "Signing In..."}
+                  </span>
+                ) : (
+                  isSignUp ? "Create Account" : "Sign In"
+                )}
+              </Button>
             </form>
-          </TabsContent>
-          
-          <TabsContent value="signup">
-            <form onSubmit={signUpForm.handleSubmit(onSignUpSubmit)}>
-              <CardContent className="space-y-4 mt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="fullName">Full Name</Label>
-                  <Input
-                    id="fullName"
-                    placeholder="John Doe"
-                    {...signUpForm.register('fullName')}
-                  />
-                  {signUpForm.formState.errors.fullName && (
-                    <p className="text-sm text-red-500">{signUpForm.formState.errors.fullName.message}</p>
-                  )}
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
-                  <Input
-                    id="signup-email"
-                    type="email"
-                    placeholder="your.email@example.com"
-                    {...signUpForm.register('email')}
-                  />
-                  {signUpForm.formState.errors.email && (
-                    <p className="text-sm text-red-500">{signUpForm.formState.errors.email.message}</p>
-                  )}
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
-                  <Input
-                    id="signup-password"
-                    type="password"
-                    placeholder="••••••••"
-                    {...signUpForm.register('password')}
-                  />
-                  {signUpForm.formState.errors.password && (
-                    <p className="text-sm text-red-500">{signUpForm.formState.errors.password.message}</p>
-                  )}
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirm Password</Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    placeholder="••••••••"
-                    {...signUpForm.register('confirmPassword')}
-                  />
-                  {signUpForm.formState.errors.confirmPassword && (
-                    <p className="text-sm text-red-500">{signUpForm.formState.errors.confirmPassword.message}</p>
-                  )}
-                </div>
-              </CardContent>
-              
-              <CardFooter>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creating account...
-                    </>
-                  ) : (
-                    'Create Account'
-                  )}
-                </Button>
-              </CardFooter>
-            </form>
-          </TabsContent>
-        </Tabs>
-      </Card>
+          </CardContent>
+          <CardFooter className="flex flex-col">
+            <div className="text-sm text-center text-muted-foreground mt-2">
+              {isSignUp ? (
+                <>
+                  Already have an account?{" "}
+                  <Link to="/auth/signin" className="text-primary hover:underline">
+                    Sign in
+                  </Link>
+                </>
+              ) : (
+                <>
+                  Don't have an account?{" "}
+                  <Link to="/auth/signup" className="text-primary hover:underline">
+                    Create one
+                  </Link>
+                </>
+              )}
+            </div>
+          </CardFooter>
+        </Card>
+      </div>
     </div>
   );
 };
