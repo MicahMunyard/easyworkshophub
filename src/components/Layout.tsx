@@ -12,6 +12,7 @@ interface LayoutProps {
 const mainNavSections = [
   { name: "Dashboard", path: "/" },
   { name: "Workshop", path: "/workshop" },
+  { name: "Email", path: "/email-integration" },
   { name: "Inventory", path: "/inventory" },
   { name: "Customers", path: "/customers" },
   { name: "Marketing", path: "/marketing" },
@@ -24,6 +25,9 @@ const sidebarSections = {
     { name: "Booking Diary", path: "/booking-diary", icon: "Calendar" },
     { name: "Jobs", path: "/jobs", icon: "Briefcase" },
     { name: "Workshop Setup", path: "/workshop-setup", icon: "Settings" }
+  ],
+  email: [
+    { name: "Email Integration", path: "/email-integration", icon: "Mail" }
   ],
   inventory: [
     { name: "Inventory", path: "/inventory", icon: "Package" },
@@ -71,6 +75,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     
     if (path === '/workshop' || path.includes('/booking-diary') || path.includes('/jobs') || path.includes('/workshop-setup')) {
       setActiveSidebarSection('workshop');
+    } else if (path.includes('/email-integration')) {
+      setActiveSidebarSection('email');
     } else if (path.includes('/inventory') || path.includes('/suppliers')) {
       setActiveSidebarSection('inventory');
     } else if (path.includes('/customers')) {
