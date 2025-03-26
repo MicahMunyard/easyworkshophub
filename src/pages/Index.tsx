@@ -1,4 +1,3 @@
-
 import React from "react";
 import Dashboard from "@/components/Dashboard";
 import { useAuth } from "@/contexts/AuthContext";
@@ -18,6 +17,8 @@ const Index = () => {
     );
   }
 
+  // This should not actually happen now that we have the ProtectedRoute
+  // But keeping it as a backup
   if (!user) {
     return (
       <div className="flex flex-col items-center justify-center h-[80vh] space-y-6 max-w-md mx-auto text-center px-4">
