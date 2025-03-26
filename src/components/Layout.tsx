@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import Sidebar from "./Sidebar";
-import Navbar from "./Navbar";
+import Navbar from "./navbar";
 import { useLocation, useNavigate } from "react-router-dom";
 
 interface LayoutProps {
