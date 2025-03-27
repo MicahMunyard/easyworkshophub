@@ -1,10 +1,10 @@
-
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { EmailType } from "@/types/email";
 import { useEmailConnection } from "./useEmailConnection";
 import { supabase } from "@/integrations/supabase/client";
+import { getEdgeFunctionUrl } from "./utils/supabaseUtils";
 
 export const useEmailIntegration = () => {
   const { toast } = useToast();
@@ -35,7 +35,7 @@ export const useEmailIntegration = () => {
         throw new Error("No active session found");
       }
       
-      const response = await fetch(`${supabase.supabaseUrl}/functions/v1/email-integration/fetch`, {
+      const response = await fetch(getEdgeFunctionUrl('email-integration/fetch'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -100,7 +100,7 @@ export const useEmailIntegration = () => {
         throw new Error("No active session found");
       }
       
-      const response = await fetch(`${supabase.supabaseUrl}/functions/v1/email-integration/create-booking`, {
+      const response = await fetch(getEdgeFunctionUrl('email-integration/create-booking'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
