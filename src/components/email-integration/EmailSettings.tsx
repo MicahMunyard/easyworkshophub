@@ -29,7 +29,8 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({
     setAutoCreateBookings,
     isLoading,
     connectEmail,
-    disconnectEmail
+    disconnectEmail,
+    updateSettings
   } = useEmailConnection();
 
   const handleConnectEmail = async () => {
@@ -46,11 +47,14 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({
     }
   };
 
-  const handleSaveSettings = () => {
-    toast({
-      title: "Settings Saved",
-      description: "Your email settings have been updated"
-    });
+  const handleSaveSettings = async () => {
+    const success = await updateSettings();
+    if (success) {
+      toast({
+        title: "Settings Saved",
+        description: "Your email settings have been updated"
+      });
+    }
   };
 
   return (

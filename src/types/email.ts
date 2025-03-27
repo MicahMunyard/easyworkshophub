@@ -17,3 +17,10 @@ export interface EmailType {
     vehicle: string | null;
   };
 }
+
+export interface EmailConnectionConfig {
+  provider: string;
+  host: string;
+  port: number;
+  secure: boolean;
+}

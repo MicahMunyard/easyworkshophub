@@ -3,7 +3,6 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { checkEmailConnection } from "./services/emailService";
 
 export const useEmailConnection = () => {
   const { toast } = useToast();
@@ -25,9 +24,26 @@ export const useEmailConnection = () => {
   }, [user, isConnected]);
 
   const checkConnection = async () => {
-    const connected = await checkEmailConnection(user?.id);
-    setIsConnected(connected);
-    return connected;
+    try {
+      const { data, error } = await supabase
+        .from('email_connections')
+        .select('*')
+        .eq('user_id', user?.id)
+        .single();
+      
+      if (error) {
+        console.error("Error checking email connection:", error);
+        setIsConnected(false);
+        return false;
+      }
+      
+      setIsConnected(!!data);
+      return !!data;
+    } catch (error) {
+      console.error("Error checking email connection:", error);
+      setIsConnected(false);
+      return false;
+    }
   };
 
   const fetchEmailSettings = async () => {
@@ -66,35 +82,46 @@ export const useEmailConnection = () => {
     setIsLoading(true);
     
     try {
-      // Note: In a real implementation, we'd use OAuth or a secure way to handle email credentials
-      // This is just a mockup of what the UX would look like
+      // Get the user's session token for authorization
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        throw new Error("No active session found");
+      }
       
-      // Simulating connection process
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const response = await fetch(`${supabase.supabaseUrl}/functions/v1/email-integration/connect`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionData.session.access_token}`,
+        },
+        body: JSON.stringify({
+          provider,
+          email: emailAddress,
+          password, // In production, use proper encryption and secure handling
+        }),
+      });
       
-      const { error } = await supabase
-        .from('email_connections')
-        .upsert({
-          user_id: user?.id,
-          email_address: emailAddress,
-          provider: provider,
-          auto_create_bookings: autoCreateBookings,
-          connected_at: new Date().toISOString()
-        });
+      const result = await response.json();
       
-      if (error) {
-        throw error;
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to connect email account");
       }
       
       setPassword(""); // Clear password for security
       setIsConnected(true);
+      
+      toast({
+        title: "Success",
+        description: "Email account connected successfully",
+      });
+      
       return true;
       
     } catch (error) {
       console.error("Error connecting email:", error);
       toast({
         title: "Connection Failed",
-        description: "Failed to connect to email account. Please try again.",
+        description: error.message || "Failed to connect to email account. Please try again.",
         variant: "destructive"
       });
       return false;
@@ -107,13 +134,24 @@ export const useEmailConnection = () => {
     try {
       setIsLoading(true);
       
-      const { error } = await supabase
-        .from('email_connections')
-        .delete()
-        .eq('user_id', user?.id);
+      // Get the user's session token for authorization
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        throw new Error("No active session found");
+      }
       
-      if (error) {
-        throw error;
+      const response = await fetch(`${supabase.supabaseUrl}/functions/v1/email-integration/disconnect`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionData.session.access_token}`,
+        },
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to disconnect email account");
       }
       
       setEmailAddress("");
@@ -133,7 +171,46 @@ export const useEmailConnection = () => {
       console.error("Error disconnecting email:", error);
       toast({
         title: "Error",
-        description: "Failed to disconnect email account",
+        description: error.message || "Failed to disconnect email account",
+        variant: "destructive"
+      });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updateSettings = async () => {
+    if (!isConnected) {
+      return false;
+    }
+    
+    try {
+      setIsLoading(true);
+      
+      const { error } = await supabase
+        .from('email_connections')
+        .update({
+          auto_create_bookings: autoCreateBookings,
+        })
+        .eq('user_id', user?.id);
+      
+      if (error) {
+        throw error;
+      }
+      
+      toast({
+        title: "Settings Updated",
+        description: "Your email settings have been updated"
+      });
+      
+      return true;
+      
+    } catch (error) {
+      console.error("Error updating email settings:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update email settings",
         variant: "destructive"
       });
       return false;
@@ -155,6 +232,7 @@ export const useEmailConnection = () => {
     isLoading,
     connectEmail,
     disconnectEmail,
+    updateSettings,
     checkConnection
   };
 };
