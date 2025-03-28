@@ -230,6 +230,63 @@ export type Database = {
         }
         Relationships: []
       }
+      default_inventory_items: {
+        Row: {
+          category: string
+          code: string
+          created_at: string
+          description: string
+          id: string
+          imageurl: string | null
+          instock: number
+          lastorder: string | null
+          location: string | null
+          minstock: number
+          name: string
+          price: number
+          status: string
+          supplier: string
+          supplierid: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          code: string
+          created_at?: string
+          description: string
+          id?: string
+          imageurl?: string | null
+          instock?: number
+          lastorder?: string | null
+          location?: string | null
+          minstock?: number
+          name: string
+          price?: number
+          status?: string
+          supplier: string
+          supplierid: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          code?: string
+          created_at?: string
+          description?: string
+          id?: string
+          imageurl?: string | null
+          instock?: number
+          lastorder?: string | null
+          location?: string | null
+          minstock?: number
+          name?: string
+          price?: number
+          status?: string
+          supplier?: string
+          supplierid?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       email_connections: {
         Row: {
           access_token: string | null
@@ -681,6 +738,137 @@ export type Database = {
           supplier?: string | null
           updated_at?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      user_inventory_order_items: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          itemid: string
+          name: string
+          order_id: string
+          price: number
+          quantity: number
+          total: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          itemid: string
+          name: string
+          order_id: string
+          price?: number
+          quantity?: number
+          total?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          itemid?: string
+          name?: string
+          order_id?: string
+          price?: number
+          quantity?: number
+          total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_inventory_order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "user_inventory_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_inventory_orders: {
+        Row: {
+          created_at: string
+          id: string
+          notes: string | null
+          orderdate: string
+          status: string
+          supplierid: string
+          suppliername: string
+          total: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          orderdate?: string
+          status?: string
+          supplierid: string
+          suppliername: string
+          total?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          orderdate?: string
+          status?: string
+          supplierid?: string
+          suppliername?: string
+          total?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_inventory_suppliers: {
+        Row: {
+          address: string | null
+          category: string
+          contactperson: string
+          created_at: string
+          email: string
+          id: string
+          isdefault: boolean | null
+          name: string
+          notes: string | null
+          phone: string
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          address?: string | null
+          category: string
+          contactperson: string
+          created_at?: string
+          email: string
+          id?: string
+          isdefault?: boolean | null
+          name: string
+          notes?: string | null
+          phone: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          address?: string | null
+          category?: string
+          contactperson?: string
+          created_at?: string
+          email?: string
+          id?: string
+          isdefault?: boolean | null
+          name?: string
+          notes?: string | null
+          phone?: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }

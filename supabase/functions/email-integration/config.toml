@@ -1,2 +1,5 @@
 
 project_id = "qyjjbpyqxwrluhymvshn"
+
+[edge_functions.email-integration]
+verify_jwt = false 

@@ -3,21 +3,6 @@ import { useState, useEffect } from 'react';
 import { Order, OrderItem } from '@/types/inventory';
 import { v4 as uuidv4 } from 'uuid';
 import { useToast } from '@/components/ui/use-toast';
-import { 
-  loadOrders, 
-  loadCurrentOrder, 
-  saveOrders, 
-  saveCurrentOrder 
-} from '@/utils/inventory/orderStorage';
-import { 
-  addOrUpdateOrderItem, 
-  removeOrderItem, 
-  updateItemQuantity as updateOrderItemQuantity 
-} from '@/utils/inventory/orderItemUtils';
-import {
-  updateOrderStatus as updateOrderStatusUtil,
-  prepareOrderForSubmission
-} from '@/utils/inventory/orderStatusUtils';
 
 export const useOrders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -26,15 +11,18 @@ export const useOrders = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    const initializeOrders = () => {
-      setOrders(loadOrders());
-      setCurrentOrder(loadCurrentOrder());
+    const loadOrders = () => {
+      const savedOrders = localStorage.getItem('inventoryOrders');
+      if (savedOrders) {
+        setOrders(JSON.parse(savedOrders));
+      }
       setIsLoading(false);
     };
 
-    initializeOrders();
+    loadOrders();
   }, []);
 
+  // Create a new order
   const createOrder = (supplierId: string, supplierName: string) => {
     const newOrder: Order = {
       id: uuidv4(),
@@ -43,102 +31,148 @@ export const useOrders = () => {
       orderDate: new Date().toISOString(),
       status: 'draft',
       items: [],
-      total: 0
+      total: 0,
+      notes: ''
     };
     
     setCurrentOrder(newOrder);
-    saveCurrentOrder(newOrder);
-    
-    toast({
-      title: "Order Created",
-      description: `New order for ${supplierName} has been created.`
-    });
-    
     return newOrder;
   };
 
+  // Add an item to the current order
   const addItemToOrder = (item: OrderItem) => {
     if (!currentOrder) return;
     
-    const updatedOrder = addOrUpdateOrderItem(currentOrder, item);
+    // Check if the item already exists in the order
+    const existingItemIndex = currentOrder.items.findIndex(i => i.itemId === item.itemId);
+    
+    let updatedItems;
+    
+    if (existingItemIndex >= 0) {
+      // Update existing item quantity
+      updatedItems = [...currentOrder.items];
+      const existingItem = updatedItems[existingItemIndex];
+      updatedItems[existingItemIndex] = {
+        ...existingItem,
+        quantity: existingItem.quantity + 1,
+        total: (existingItem.quantity + 1) * existingItem.price
+      };
+    } else {
+      // Add new item
+      updatedItems = [...currentOrder.items, item];
+    }
+    
+    // Calculate new total
+    const newTotal = updatedItems.reduce((total, item) => total + item.total, 0);
+    
+    const updatedOrder = {
+      ...currentOrder,
+      items: updatedItems,
+      total: newTotal
+    };
     
     setCurrentOrder(updatedOrder);
-    saveCurrentOrder(updatedOrder);
     
     toast({
       title: "Item Added",
-      description: `${item.name} has been added to the order.`
+      description: `${item.name} has been added to your order.`,
     });
+    
+    return updatedOrder;
   };
 
+  // Remove an item from the current order
   const removeItemFromOrder = (itemId: string) => {
     if (!currentOrder) return;
     
-    const updatedOrder = removeOrderItem(currentOrder, itemId);
+    const updatedItems = currentOrder.items.filter(item => item.itemId !== itemId);
+    const newTotal = updatedItems.reduce((total, item) => total + item.total, 0);
+    
+    const updatedOrder = {
+      ...currentOrder,
+      items: updatedItems,
+      total: newTotal
+    };
     
     setCurrentOrder(updatedOrder);
-    saveCurrentOrder(updatedOrder);
     
     toast({
       title: "Item Removed",
-      description: "Item has been removed from the order."
+      description: "Item has been removed from your order.",
     });
+    
+    return updatedOrder;
   };
 
+  // Update item quantity in the current order
   const updateItemQuantity = (itemId: string, quantity: number) => {
     if (!currentOrder) return;
     
-    const updatedOrder = updateOrderItemQuantity(currentOrder, itemId, quantity);
+    const updatedItems = currentOrder.items.map(item => {
+      if (item.itemId === itemId) {
+        return {
+          ...item,
+          quantity,
+          total: quantity * item.price
+        };
+      }
+      return item;
+    });
+    
+    const newTotal = updatedItems.reduce((total, item) => total + item.total, 0);
+    
+    const updatedOrder = {
+      ...currentOrder,
+      items: updatedItems,
+      total: newTotal
+    };
     
     setCurrentOrder(updatedOrder);
-    saveCurrentOrder(updatedOrder);
+    return updatedOrder;
   };
 
+  // Submit the current order
   const submitOrder = (notes?: string) => {
-    if (!currentOrder) return;
+    if (!currentOrder) return null;
     
-    const submittedOrder = prepareOrderForSubmission(currentOrder, notes);
+    const submittedOrder: Order = {
+      ...currentOrder,
+      status: 'submitted',
+      notes: notes || '',
+      orderDate: new Date().toISOString()
+    };
     
-    // Add to orders list
     const updatedOrders = [...orders, submittedOrder];
     setOrders(updatedOrders);
-    saveOrders(updatedOrders);
-    
-    // Clear current order
     setCurrentOrder(null);
-    saveCurrentOrder(null);
     
-    toast({
-      title: "Order Submitted",
-      description: `Order #${submittedOrder.id.slice(0, 8)} has been submitted successfully.`
-    });
+    // Save to localStorage
+    localStorage.setItem('inventoryOrders', JSON.stringify(updatedOrders));
     
     return submittedOrder;
   };
 
-  const cancelOrder = () => {
-    if (!currentOrder) return;
-    
-    setCurrentOrder(null);
-    saveCurrentOrder(null);
-    
-    toast({
-      title: "Order Cancelled",
-      description: "The current order has been cancelled.",
-      variant: "destructive"
+  // Update order status
+  const updateOrderStatus = (orderId: string, newStatus: Order['status']) => {
+    const updatedOrders = orders.map(order => {
+      if (order.id === orderId) {
+        return {
+          ...order,
+          status: newStatus
+        };
+      }
+      return order;
     });
-  };
-
-  const updateOrderStatus = (orderId: string, status: Order['status']) => {
-    const updatedOrders = updateOrderStatusUtil(orders, orderId, status);
     
     setOrders(updatedOrders);
-    saveOrders(updatedOrders);
+    localStorage.setItem('inventoryOrders', JSON.stringify(updatedOrders));
     
     toast({
       title: "Order Updated",
-      description: `Order status has been updated to ${status}.`
+      description: `Order status changed to ${newStatus}.`,
     });
+    
+    return updatedOrders.find(order => order.id === orderId) || null;
   };
 
   return {
@@ -150,7 +184,6 @@ export const useOrders = () => {
     removeItemFromOrder,
     updateItemQuantity,
     submitOrder,
-    cancelOrder,
     updateOrderStatus
   };
 };

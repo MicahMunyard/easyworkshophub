@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
@@ -24,6 +24,15 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ onAddToOrder }) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | undefined>(undefined);
 
+  // Calculate the maximum price for the price range slider
+  const maxPrice = Math.max(...inventoryItems.map(item => item.price), 100);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, maxPrice]);
+
+  // Update price range when inventory items change or on initial load
+  useEffect(() => {
+    setPriceRange([0, maxPrice]);
+  }, [maxPrice]);
+
   // Extract unique categories
   const categories = ['all', ...new Set(inventoryItems.map(item => item.category))];
   
@@ -38,8 +47,9 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ onAddToOrder }) => {
     
     const matchesCategory = categoryFilter === 'all' || item.category === categoryFilter;
     const matchesSupplier = supplierFilter === 'all' || item.supplierId === supplierFilter;
+    const matchesPriceRange = item.price >= priceRange[0] && item.price <= priceRange[1];
     
-    return matchesSearch && matchesCategory && matchesSupplier;
+    return matchesSearch && matchesCategory && matchesSupplier && matchesPriceRange;
   });
 
   const handleOpenDialog = (item?: InventoryItem) => {
@@ -93,6 +103,9 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ onAddToOrder }) => {
           <div className="flex flex-col space-y-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <CardTitle>Products</CardTitle>
+              <div className="flex items-center text-sm text-muted-foreground">
+                {filteredItems.length} item{filteredItems.length !== 1 ? 's' : ''} found
+              </div>
             </div>
             
             <ProductFilters 
@@ -102,6 +115,9 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ onAddToOrder }) => {
               setCategoryFilter={setCategoryFilter}
               supplierFilter={supplierFilter}
               setSupplierFilter={setSupplierFilter}
+              priceRange={priceRange}
+              setPriceRange={setPriceRange}
+              maxPrice={maxPrice}
               categories={categories}
               uniqueSuppliers={uniqueSuppliers}
               getSupplierName={getSupplierName}
