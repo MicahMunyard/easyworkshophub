@@ -4,7 +4,7 @@ import { Supplier } from '@/types/inventory';
 import { v4 as uuidv4 } from 'uuid';
 import { useToast } from '@/components/ui/use-toast';
 
-// Mock data for default suppliers
+// Mock data for default suppliers that will be available to all users
 const defaultSuppliers: Supplier[] = [
   {
     id: uuidv4(),
@@ -14,7 +14,8 @@ const defaultSuppliers: Supplier[] = [
     email: 'john@westernindustrial.com',
     phone: '555-123-4567',
     status: 'active',
-    notes: 'Primary supplier for cleaning products'
+    notes: 'Primary supplier for cleaning products',
+    isDefault: true
   },
   {
     id: uuidv4(),
@@ -24,7 +25,8 @@ const defaultSuppliers: Supplier[] = [
     email: 'sarah@halowipers.com',
     phone: '555-987-6543',
     status: 'active',
-    notes: 'Specializes in high-quality wiping solutions'
+    notes: 'Specializes in high-quality wiping solutions',
+    isDefault: true
   }
 ];
 
@@ -35,29 +37,61 @@ export const useSuppliers = () => {
 
   useEffect(() => {
     const loadSuppliers = () => {
-      const savedSuppliers = localStorage.getItem('suppliers');
-      if (savedSuppliers) {
-        setSuppliers(JSON.parse(savedSuppliers));
-      } else {
-        // Load default suppliers if none exist
-        setSuppliers(defaultSuppliers);
-        localStorage.setItem('suppliers', JSON.stringify(defaultSuppliers));
+      // Get current user ID (in a real app, this would come from auth)
+      // For now, we'll use a dummy user ID stored in localStorage
+      const currentUserId = localStorage.getItem('currentUserId') || 'demo-user';
+      
+      // Get user-specific suppliers from localStorage
+      const userSuppliersKey = `suppliers_${currentUserId}`;
+      const savedUserSuppliers = localStorage.getItem(userSuppliersKey);
+      
+      let userSuppliers: Supplier[] = [];
+      if (savedUserSuppliers) {
+        userSuppliers = JSON.parse(savedUserSuppliers);
       }
+      
+      // Get default suppliers (should always be included)
+      // We get them from localStorage if they exist, otherwise use the hardcoded ones
+      const savedDefaultSuppliers = localStorage.getItem('defaultSuppliers');
+      let systemDefaultSuppliers = defaultSuppliers;
+      
+      if (savedDefaultSuppliers) {
+        systemDefaultSuppliers = JSON.parse(savedDefaultSuppliers);
+      } else {
+        // First time - save the default suppliers
+        localStorage.setItem('defaultSuppliers', JSON.stringify(defaultSuppliers));
+      }
+      
+      // Combine default and user-specific suppliers
+      // Make sure we're not adding duplicates by checking IDs
+      const defaultIds = new Set(systemDefaultSuppliers.map(s => s.id));
+      const filteredUserSuppliers = userSuppliers.filter(s => !defaultIds.has(s.id));
+      
+      const allSuppliers = [...systemDefaultSuppliers, ...filteredUserSuppliers];
+      setSuppliers(allSuppliers);
       setIsLoading(false);
     };
 
     loadSuppliers();
   }, []);
 
-  const addSupplier = (supplier: Omit<Supplier, 'id'>) => {
+  const addSupplier = (supplier: Omit<Supplier, 'id' | 'isDefault'>) => {
+    // Get current user ID
+    const currentUserId = localStorage.getItem('currentUserId') || 'demo-user';
+    
     const newSupplier = {
       ...supplier,
-      id: uuidv4()
+      id: uuidv4(),
+      isDefault: false // User-created suppliers are never default
     };
     
     const updatedSuppliers = [...suppliers, newSupplier];
     setSuppliers(updatedSuppliers);
-    localStorage.setItem('suppliers', JSON.stringify(updatedSuppliers));
+    
+    // Only save user-specific suppliers to their storage key
+    const userSuppliers = updatedSuppliers.filter(s => !s.isDefault);
+    const userSuppliersKey = `suppliers_${currentUserId}`;
+    localStorage.setItem(userSuppliersKey, JSON.stringify(userSuppliers));
     
     toast({
       title: "Supplier Added",
@@ -68,12 +102,33 @@ export const useSuppliers = () => {
   };
 
   const updateSupplier = (id: string, updatedData: Partial<Supplier>) => {
-    const updatedSuppliers = suppliers.map(supplier => 
-      supplier.id === id ? { ...supplier, ...updatedData } : supplier
-    );
+    // Get current user ID
+    const currentUserId = localStorage.getItem('currentUserId') || 'demo-user';
+    
+    const updatedSuppliers = suppliers.map(supplier => {
+      if (supplier.id === id) {
+        // Don't allow changing isDefault status
+        const { isDefault, ...allowedUpdates } = updatedData;
+        return { ...supplier, ...allowedUpdates };
+      }
+      return supplier;
+    });
     
     setSuppliers(updatedSuppliers);
-    localStorage.setItem('suppliers', JSON.stringify(updatedSuppliers));
+    
+    // Update the appropriate storage
+    const supplierToUpdate = suppliers.find(s => s.id === id);
+    
+    if (supplierToUpdate?.isDefault) {
+      // Update default suppliers
+      const defaultSups = updatedSuppliers.filter(s => s.isDefault);
+      localStorage.setItem('defaultSuppliers', JSON.stringify(defaultSups));
+    } else {
+      // Update user suppliers
+      const userSuppliers = updatedSuppliers.filter(s => !s.isDefault);
+      const userSuppliersKey = `suppliers_${currentUserId}`;
+      localStorage.setItem(userSuppliersKey, JSON.stringify(userSuppliers));
+    }
     
     toast({
       title: "Supplier Updated",
@@ -82,12 +137,29 @@ export const useSuppliers = () => {
   };
 
   const deleteSupplier = (id: string) => {
+    // Get current user ID
+    const currentUserId = localStorage.getItem('currentUserId') || 'demo-user';
+    
     const supplierToDelete = suppliers.find(s => s.id === id);
     if (!supplierToDelete) return;
     
+    // Don't allow deleting default suppliers
+    if (supplierToDelete.isDefault) {
+      toast({
+        title: "Cannot Delete Default Supplier",
+        description: "Default suppliers cannot be deleted.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     const updatedSuppliers = suppliers.filter(supplier => supplier.id !== id);
     setSuppliers(updatedSuppliers);
-    localStorage.setItem('suppliers', JSON.stringify(updatedSuppliers));
+    
+    // Update user suppliers storage
+    const userSuppliers = updatedSuppliers.filter(s => !s.isDefault);
+    const userSuppliersKey = `suppliers_${currentUserId}`;
+    localStorage.setItem(userSuppliersKey, JSON.stringify(userSuppliers));
     
     toast({
       title: "Supplier Deleted",

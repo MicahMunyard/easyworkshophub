@@ -9,6 +9,7 @@ export interface Supplier {
   address?: string;
   status: 'active' | 'inactive';
   notes?: string;
+  isDefault?: boolean; // Indicates if this is a default supplier available to all users
 }
 
 export interface InventoryItem {

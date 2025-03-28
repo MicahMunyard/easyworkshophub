@@ -13,7 +13,8 @@ import {
   ShoppingCart, 
   Package, 
   Barcode,
-  ImageIcon
+  ImageIcon,
+  Copy
 } from 'lucide-react';
 import { InventoryItem, Supplier } from '@/types/inventory';
 import ProductForm from './ProductForm';
@@ -36,7 +37,7 @@ type ProductCatalogProps = {
 };
 
 const ProductCatalog: React.FC<ProductCatalogProps> = ({ onAddToOrder }) => {
-  const { inventoryItems, addInventoryItem, updateInventoryItem, deleteInventoryItem } = useInventoryItems();
+  const { inventoryItems, addInventoryItem, updateInventoryItem, deleteInventoryItem, duplicateInventoryItem } = useInventoryItems();
   const { suppliers } = useSuppliers();
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
@@ -85,6 +86,10 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ onAddToOrder }) => {
     if (window.confirm(`Are you sure you want to delete product: ${name}?`)) {
       deleteInventoryItem(id);
     }
+  };
+
+  const handleDuplicateItem = (item: InventoryItem) => {
+    duplicateInventoryItem(item);
   };
 
   const getSupplierName = (supplierId: string) => {
@@ -247,6 +252,14 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ onAddToOrder }) => {
                                 <ShoppingCart className="h-4 w-4" />
                               </Button>
                             )}
+                            <Button 
+                              variant="outline" 
+                              size="icon"
+                              onClick={() => handleDuplicateItem(item)}
+                              title="Duplicate product"
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="icon">
