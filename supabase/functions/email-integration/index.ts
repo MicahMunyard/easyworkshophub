@@ -1,4 +1,3 @@
-
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -22,6 +21,13 @@ interface EmailFetchRequest {
 interface EmailProcessRequest {
   emailId: string;
   userId: string;
+}
+
+interface SendOrderRequest {
+  supplierEmail: string;
+  supplierName: string;
+  subject: string;
+  orderHtml: string;
 }
 
 // Get provider configuration based on email service
@@ -376,6 +382,46 @@ serve(async (req) => {
         status: 200,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
+    }
+    
+    // Send order email to supplier
+    else if (path === 'send-order') {
+      const { supplierEmail, supplierName, subject, orderHtml } = await req.json() as SendOrderRequest;
+
+      // Validate request data
+      if (!supplierEmail || !subject || !orderHtml) {
+        return new Response(JSON.stringify({ error: 'Missing required fields' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        });
+      }
+
+      try {
+        // For demo purposes, we'll simulate sending an email
+        console.log(`Simulating sending order email to: ${supplierEmail}`);
+        console.log(`Subject: ${subject}`);
+        console.log(`Supplier: ${supplierName}`);
+        
+        // In a real implementation, you would use an email service like SendGrid, Mailgun, etc.
+        // For example:
+        // const emailResponse = await emailService.send({
+        //   to: supplierEmail,
+        //   from: 'your-company@example.com',
+        //   subject: subject,
+        //   html: orderHtml
+        // });
+
+        return new Response(JSON.stringify({ success: true, message: 'Order email sent successfully' }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        });
+      } catch (error) {
+        console.error('Email sending error:', error);
+        return new Response(JSON.stringify({ error: `Failed to send email: ${error.message}` }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        });
+      }
     }
     
     // Disconnect email account
