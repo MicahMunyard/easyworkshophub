@@ -3,6 +3,21 @@ import { useState, useEffect } from 'react';
 import { Order, OrderItem } from '@/types/inventory';
 import { v4 as uuidv4 } from 'uuid';
 import { useToast } from '@/components/ui/use-toast';
+import { 
+  loadOrders, 
+  loadCurrentOrder, 
+  saveOrders, 
+  saveCurrentOrder 
+} from '@/utils/inventory/orderStorage';
+import { 
+  addOrUpdateOrderItem, 
+  removeOrderItem, 
+  updateItemQuantity as updateOrderItemQuantity 
+} from '@/utils/inventory/orderItemUtils';
+import {
+  updateOrderStatus as updateOrderStatusUtil,
+  prepareOrderForSubmission
+} from '@/utils/inventory/orderStatusUtils';
 
 export const useOrders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -11,21 +26,13 @@ export const useOrders = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    const loadOrders = () => {
-      const savedOrders = localStorage.getItem('orders');
-      if (savedOrders) {
-        setOrders(JSON.parse(savedOrders));
-      }
-      
-      const savedCurrentOrder = localStorage.getItem('currentOrder');
-      if (savedCurrentOrder) {
-        setCurrentOrder(JSON.parse(savedCurrentOrder));
-      }
-      
+    const initializeOrders = () => {
+      setOrders(loadOrders());
+      setCurrentOrder(loadCurrentOrder());
       setIsLoading(false);
     };
 
-    loadOrders();
+    initializeOrders();
   }, []);
 
   const createOrder = (supplierId: string, supplierName: string) => {
@@ -40,7 +47,7 @@ export const useOrders = () => {
     };
     
     setCurrentOrder(newOrder);
-    localStorage.setItem('currentOrder', JSON.stringify(newOrder));
+    saveCurrentOrder(newOrder);
     
     toast({
       title: "Order Created",
@@ -53,32 +60,10 @@ export const useOrders = () => {
   const addItemToOrder = (item: OrderItem) => {
     if (!currentOrder) return;
     
-    // Check if item already exists in order
-    const existingItemIndex = currentOrder.items.findIndex(i => i.itemId === item.itemId);
-    
-    let updatedItems: OrderItem[];
-    if (existingItemIndex >= 0) {
-      // Update existing item
-      updatedItems = currentOrder.items.map((i, index) => 
-        index === existingItemIndex 
-          ? { ...i, quantity: i.quantity + item.quantity, total: (i.quantity + item.quantity) * i.price } 
-          : i
-      );
-    } else {
-      // Add new item
-      updatedItems = [...currentOrder.items, item];
-    }
-    
-    const updatedTotal = updatedItems.reduce((sum, item) => sum + item.total, 0);
-    
-    const updatedOrder = {
-      ...currentOrder,
-      items: updatedItems,
-      total: updatedTotal
-    };
+    const updatedOrder = addOrUpdateOrderItem(currentOrder, item);
     
     setCurrentOrder(updatedOrder);
-    localStorage.setItem('currentOrder', JSON.stringify(updatedOrder));
+    saveCurrentOrder(updatedOrder);
     
     toast({
       title: "Item Added",
@@ -89,17 +74,10 @@ export const useOrders = () => {
   const removeItemFromOrder = (itemId: string) => {
     if (!currentOrder) return;
     
-    const updatedItems = currentOrder.items.filter(item => item.itemId !== itemId);
-    const updatedTotal = updatedItems.reduce((sum, item) => sum + item.total, 0);
-    
-    const updatedOrder = {
-      ...currentOrder,
-      items: updatedItems,
-      total: updatedTotal
-    };
+    const updatedOrder = removeOrderItem(currentOrder, itemId);
     
     setCurrentOrder(updatedOrder);
-    localStorage.setItem('currentOrder', JSON.stringify(updatedOrder));
+    saveCurrentOrder(updatedOrder);
     
     toast({
       title: "Item Removed",
@@ -110,46 +88,25 @@ export const useOrders = () => {
   const updateItemQuantity = (itemId: string, quantity: number) => {
     if (!currentOrder) return;
     
-    const updatedItems = currentOrder.items.map(item => {
-      if (item.itemId === itemId) {
-        return {
-          ...item,
-          quantity,
-          total: quantity * item.price
-        };
-      }
-      return item;
-    });
-    
-    const updatedTotal = updatedItems.reduce((sum, item) => sum + item.total, 0);
-    
-    const updatedOrder = {
-      ...currentOrder,
-      items: updatedItems,
-      total: updatedTotal
-    };
+    const updatedOrder = updateOrderItemQuantity(currentOrder, itemId, quantity);
     
     setCurrentOrder(updatedOrder);
-    localStorage.setItem('currentOrder', JSON.stringify(updatedOrder));
+    saveCurrentOrder(updatedOrder);
   };
 
   const submitOrder = (notes?: string) => {
     if (!currentOrder) return;
     
-    const submittedOrder = {
-      ...currentOrder,
-      status: 'submitted' as const,
-      notes: notes || currentOrder.notes
-    };
+    const submittedOrder = prepareOrderForSubmission(currentOrder, notes);
     
     // Add to orders list
     const updatedOrders = [...orders, submittedOrder];
     setOrders(updatedOrders);
-    localStorage.setItem('orders', JSON.stringify(updatedOrders));
+    saveOrders(updatedOrders);
     
     // Clear current order
     setCurrentOrder(null);
-    localStorage.removeItem('currentOrder');
+    saveCurrentOrder(null);
     
     toast({
       title: "Order Submitted",
@@ -163,7 +120,7 @@ export const useOrders = () => {
     if (!currentOrder) return;
     
     setCurrentOrder(null);
-    localStorage.removeItem('currentOrder');
+    saveCurrentOrder(null);
     
     toast({
       title: "Order Cancelled",
@@ -173,12 +130,10 @@ export const useOrders = () => {
   };
 
   const updateOrderStatus = (orderId: string, status: Order['status']) => {
-    const updatedOrders = orders.map(order => 
-      order.id === orderId ? { ...order, status } : order
-    );
+    const updatedOrders = updateOrderStatusUtil(orders, orderId, status);
     
     setOrders(updatedOrders);
-    localStorage.setItem('orders', JSON.stringify(updatedOrders));
+    saveOrders(updatedOrders);
     
     toast({
       title: "Order Updated",
