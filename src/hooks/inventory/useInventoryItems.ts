@@ -87,13 +87,13 @@ export const useInventoryItems = () => {
     const updatedItems = inventoryItems.map(item => {
       if (item.id === id) {
         const newStockLevel = Math.max(0, item.inStock + change);
-        const status = newStockLevel <= 0 ? 'critical' : 
-                      newStockLevel < item.minStock ? 'low' : 'normal';
+        const newStatus = newStockLevel <= 0 ? 'critical' as const : 
+                          newStockLevel < item.minStock ? 'low' as const : 'normal' as const;
         
         return {
           ...item,
           inStock: newStockLevel,
-          status,
+          status: newStatus,
           lastOrder: change > 0 ? new Date().toISOString().split('T')[0] : item.lastOrder
         };
       }

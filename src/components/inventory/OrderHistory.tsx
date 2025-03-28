@@ -30,9 +30,9 @@ const OrderHistory: React.FC = () => {
       case 'submitted':
         return <Badge variant="secondary">Submitted</Badge>;
       case 'processing':
-        return <Badge variant="primary">Processing</Badge>;
+        return <Badge>Processing</Badge>;
       case 'completed':
-        return <Badge variant="success">Completed</Badge>;
+        return <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">Completed</Badge>;
       case 'cancelled':
         return <Badge variant="destructive">Cancelled</Badge>;
       default:
