@@ -46,7 +46,7 @@ export const useInventoryItems = () => {
   const updateInventoryItem = (id: string, updatedData: Partial<InventoryItem>) => {
     const updatedItems = inventoryItems.map(item => {
       if (item.id === id) {
-        const updatedItem = { ...item, ...updatedData };
+        const updatedItem: InventoryItem = { ...item, ...updatedData };
         
         // Recalculate status if stock levels changed
         if ('inStock' in updatedData || 'minStock' in updatedData) {
@@ -87,8 +87,8 @@ export const useInventoryItems = () => {
     const updatedItems = inventoryItems.map(item => {
       if (item.id === id) {
         const newStockLevel = Math.max(0, item.inStock + change);
-        const newStatus = newStockLevel <= 0 ? 'critical' as const : 
-                          newStockLevel < item.minStock ? 'low' as const : 'normal' as const;
+        const newStatus: InventoryItem['status'] = newStockLevel <= 0 ? 'critical' : 
+                          newStockLevel < item.minStock ? 'low' : 'normal';
         
         return {
           ...item,
@@ -102,6 +102,11 @@ export const useInventoryItems = () => {
     
     setInventoryItems(updatedItems);
     localStorage.setItem('inventoryItems', JSON.stringify(updatedItems));
+    
+    toast({
+      title: "Stock Updated",
+      description: "Inventory stock level has been adjusted.",
+    });
   };
 
   return {
@@ -113,3 +118,4 @@ export const useInventoryItems = () => {
     updateStockLevel
   };
 };
+
