@@ -3,27 +3,23 @@ import { useState, useEffect } from 'react';
 import { InventoryItem } from '@/types/inventory';
 import { v4 as uuidv4 } from 'uuid';
 import { useToast } from '@/components/ui/use-toast';
+import { loadInventoryItems, saveInventoryItems } from '@/utils/inventory/storage';
+import { calculateItemStatus, recalculateItemStatus } from '@/utils/inventory/statusUtils';
 
 export const useInventoryItems = () => {
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
+  // Load inventory items from localStorage on initialization
   useEffect(() => {
-    const loadInventoryItems = () => {
-      const savedItems = localStorage.getItem('inventoryItems');
-      if (savedItems) {
-        setInventoryItems(JSON.parse(savedItems));
-      }
-      setIsLoading(false);
-    };
-
-    loadInventoryItems();
+    const items = loadInventoryItems();
+    setInventoryItems(items);
+    setIsLoading(false);
   }, []);
 
   const addInventoryItem = (item: Omit<InventoryItem, 'id' | 'status'>) => {
-    const status = item.inStock <= 0 ? 'critical' : 
-                  item.inStock < item.minStock ? 'low' : 'normal';
+    const status = calculateItemStatus(item.inStock, item.minStock);
     
     const newItem: InventoryItem = {
       ...item,
@@ -33,7 +29,7 @@ export const useInventoryItems = () => {
     
     const updatedItems = [...inventoryItems, newItem];
     setInventoryItems(updatedItems);
-    localStorage.setItem('inventoryItems', JSON.stringify(updatedItems));
+    saveInventoryItems(updatedItems);
     
     toast({
       title: "Item Added",
@@ -50,8 +46,7 @@ export const useInventoryItems = () => {
         
         // Recalculate status if stock levels changed
         if ('inStock' in updatedData || 'minStock' in updatedData) {
-          updatedItem.status = updatedItem.inStock <= 0 ? 'critical' : 
-                              updatedItem.inStock < updatedItem.minStock ? 'low' : 'normal';
+          updatedItem.status = recalculateItemStatus(updatedItem);
         }
         
         return updatedItem;
@@ -60,7 +55,7 @@ export const useInventoryItems = () => {
     });
     
     setInventoryItems(updatedItems);
-    localStorage.setItem('inventoryItems', JSON.stringify(updatedItems));
+    saveInventoryItems(updatedItems);
     
     toast({
       title: "Item Updated",
@@ -74,7 +69,7 @@ export const useInventoryItems = () => {
     
     const updatedItems = inventoryItems.filter(item => item.id !== id);
     setInventoryItems(updatedItems);
-    localStorage.setItem('inventoryItems', JSON.stringify(updatedItems));
+    saveInventoryItems(updatedItems);
     
     toast({
       title: "Item Deleted",
@@ -87,8 +82,7 @@ export const useInventoryItems = () => {
     const updatedItems = inventoryItems.map(item => {
       if (item.id === id) {
         const newStockLevel = Math.max(0, item.inStock + change);
-        const newStatus: InventoryItem['status'] = newStockLevel <= 0 ? 'critical' : 
-                          newStockLevel < item.minStock ? 'low' : 'normal';
+        const newStatus: InventoryItem['status'] = calculateItemStatus(newStockLevel, item.minStock);
         
         return {
           ...item,
@@ -101,7 +95,7 @@ export const useInventoryItems = () => {
     });
     
     setInventoryItems(updatedItems);
-    localStorage.setItem('inventoryItems', JSON.stringify(updatedItems));
+    saveInventoryItems(updatedItems);
     
     toast({
       title: "Stock Updated",
@@ -118,4 +112,3 @@ export const useInventoryItems = () => {
     updateStockLevel
   };
 };
-
