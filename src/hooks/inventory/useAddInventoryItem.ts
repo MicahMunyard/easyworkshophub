@@ -17,7 +17,8 @@ export const useAddInventoryItem = () => {
     category: string,
     description: string,
     initialStock: number = 10,
-    minStock: number = 5
+    minStock: number = 5,
+    imageUrl?: string
   ): boolean => {
     // Find the supplier
     const supplier = suppliers.find(s => 
@@ -47,7 +48,8 @@ export const useAddInventoryItem = () => {
       inStock: initialStock,
       minStock,
       price,
-      location: 'Main Warehouse'
+      location: 'Main Warehouse',
+      imageUrl
     };
 
     // Add item to inventory

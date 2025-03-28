@@ -14,7 +14,8 @@ const AddBrakeCleanerProduct: React.FC = () => {
       'Cleaning Supplies',
       'Brake cleaner is a powerful chemical solution used for cleaning and maintaining braking systems in automobiles and other machinery. It is specially formulated to dissolve and remove brake dust, dirt, brake fluids, oil and other contaminants that can accumulate on brake components and affect their performance.',
       15, // Initial stock
-      5   // Minimum stock
+      5,   // Minimum stock
+      '/lovable-uploads/32fa5874-f6a1-477f-91ff-ed24b804ff53.png' // Product image URL
     );
   }, []);
 
