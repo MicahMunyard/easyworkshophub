@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Search,
   Plus,
@@ -40,6 +40,7 @@ import SupplierManagement from "@/components/inventory/SupplierManagement";
 import ProductCatalog from "@/components/inventory/ProductCatalog";
 import OrderForm from "@/components/inventory/OrderForm";
 import OrderHistory from "@/components/inventory/OrderHistory";
+import AddBrakeCleanerProduct from "@/components/inventory/AddBrakeCleanerProduct";
 import { useSuppliers } from "@/hooks/inventory/useSuppliers";
 
 const Inventory = () => {
@@ -47,6 +48,14 @@ const Inventory = () => {
   const [activeTab, setActiveTab] = useState("inventory");
   const [selectedSupplier, setSelectedSupplier] = useState<any | null>(null);
   const [isOrderMode, setIsOrderMode] = useState(false);
+  const [productAdded, setProductAdded] = useState(false);
+
+  // This effect will run once when the component mounts
+  useEffect(() => {
+    if (!productAdded) {
+      setProductAdded(true);
+    }
+  }, [productAdded]);
 
   const handleStartOrder = (supplier: any) => {
     setSelectedSupplier(supplier);
@@ -66,6 +75,8 @@ const Inventory = () => {
 
   return (
     <div className="space-y-6 animate-fadeIn">
+      {!productAdded && <AddBrakeCleanerProduct />}
+      
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Inventory Management</h1>
