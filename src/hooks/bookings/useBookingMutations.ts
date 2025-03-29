@@ -1,7 +1,7 @@
 
 import { BookingType } from "@/types/booking";
 import { useAddBooking } from "./mutations/useAddBooking";
-import { useUpdateBooking } from "./mutations/useUpdateBooking";
+import { useUpdateBooking } from "./mutations/update-booking";
 import { useDeleteBooking } from "./mutations/useDeleteBooking";
 
 export const useBookingMutations = (
