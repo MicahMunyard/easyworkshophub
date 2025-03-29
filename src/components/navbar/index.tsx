@@ -35,14 +35,10 @@ const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <header className="sticky top-0 z-30 w-full bg-black">
-      <div className="container h-16 border-b border-white/10 flex items-center justify-between">
-        {/* Logo Center */}
-        <div className="absolute left-1/2 transform -translate-x-1/2">
+      <div className="container h-16 border-b border-white/10 flex items-center">
+        {/* Logo and Navigation - Left Aligned */}
+        <div className="flex items-center gap-6">
           <NavLogo />
-        </div>
-
-        {/* Navigation Tabs - Left Aligned */}
-        <div className="flex items-center">
           <div className="hidden md:block">
             <NavTabs 
               currentTab={currentTab} 

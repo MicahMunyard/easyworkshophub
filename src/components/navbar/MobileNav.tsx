@@ -25,13 +25,13 @@ const MobileNav: React.FC<MobileNavProps> = ({
   return (
     <nav className="fixed inset-0 bg-black p-6 flex flex-col gap-8 z-50 translate-x-0 transition-transform duration-300">
       <div className="flex items-center justify-between">
-        <Link to="/" className="flex items-center justify-center w-full">
+        <Link to="/" className="flex items-center">
           <img
-            src="/lovable-uploads/f43be453-735e-4166-99a5-8800aff53fdd.png"
+            src="/lovable-uploads/d86411b9-8db3-4586-9b40-33e6c1f1bccf.png"
             alt="BASE Logo"
-            className="h-8 w-auto"
-            width={100}
-            height={32}
+            className="h-10 w-auto"
+            width={120}
+            height={40}
           />
         </Link>
         <MobileCloseButton toggleMenu={toggleMenu} />
