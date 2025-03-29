@@ -31,6 +31,7 @@ export const useCustomerAPI = () => {
             .eq('customer_id', customer.id);
           
           const bookingCount = await getCustomerBookingCount(customer.id);
+          const totalSpending = await getCustomerTotalSpending(customer.phone);
           
           return {
             id: customer.id,
@@ -40,7 +41,8 @@ export const useCustomerAPI = () => {
             status: customer.status as "active" | "inactive",
             lastVisit: customer.last_visit,
             totalBookings: bookingCount,
-            vehicleInfo: vehicleData?.map(v => v.vehicle_info) || []
+            vehicleInfo: vehicleData?.map(v => v.vehicle_info) || [],
+            totalSpending: totalSpending
           } as CustomerType;
         })
       );
@@ -88,6 +90,29 @@ export const useCustomerAPI = () => {
     }
   };
 
+  const getCustomerTotalSpending = async (phone: string): Promise<number> => {
+    try {
+      if (!phone) return 0;
+      
+      const { data: bookings, error } = await supabase
+        .from('user_bookings')
+        .select('cost')
+        .eq('user_id', user?.id)
+        .eq('customer_phone', phone)
+        .not('cost', 'is', null);
+      
+      if (error) {
+        console.error('Error counting total spending:', error);
+        return 0;
+      }
+      
+      return bookings.reduce((sum, booking) => sum + (booking.cost || 0), 0);
+    } catch (error) {
+      console.error('Error getting total spending:', error);
+      return 0;
+    }
+  };
+
   const deleteAllCustomers = async (): Promise<boolean> => {
     try {
       if (!user) return false;
@@ -125,6 +150,11 @@ export const useCustomerAPI = () => {
 
   const getBookingHistoryForCustomer = async (customerId: string) => {
     try {
+      if (!customerId || isNaN(parseInt(customerId, 10))) {
+        console.log("Invalid customer ID for booking history:", customerId);
+        return [];
+      }
+      
       const { data: customerData, error: customerError } = await supabase
         .from('user_customers')
         .select('phone, name')
@@ -172,10 +202,7 @@ export const useCustomerAPI = () => {
           }
         }
         
-        // Here's the fix - use booking.cost directly since there's no service_id property
         let bookingCost = booking.cost || 0;
-        
-        // Removed the check for service_id since it doesn't exist
         
         return {
           id: typeof booking.id === 'string' ? parseInt(booking.id.replace(/-/g, '').substring(0, 8), 16) : booking.id,
@@ -195,9 +222,63 @@ export const useCustomerAPI = () => {
     }
   };
 
+  // Function to find existing customer by email or phone
+  const findCustomerByEmailOrPhone = async (email: string, phone: string): Promise<CustomerType | null> => {
+    try {
+      if (!user) return null;
+      if (!email && !phone) return null;
+      
+      let query = supabase
+        .from('user_customers')
+        .select('*')
+        .eq('user_id', user.id);
+      
+      if (email) {
+        query = query.eq('email', email);
+      } else if (phone) {
+        query = query.eq('phone', phone);
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) {
+        console.error('Error finding customer:', error);
+        return null;
+      }
+      
+      if (data && data.length > 0) {
+        // Return the first matching customer
+        const matchingCustomer = data[0];
+        
+        // Get vehicle info for the customer
+        const { data: vehicleData } = await supabase
+          .from('user_customer_vehicles')
+          .select('vehicle_info')
+          .eq('customer_id', matchingCustomer.id);
+        
+        return {
+          id: matchingCustomer.id,
+          name: matchingCustomer.name,
+          phone: matchingCustomer.phone || "",
+          email: matchingCustomer.email,
+          status: matchingCustomer.status as "active" | "inactive",
+          lastVisit: matchingCustomer.last_visit,
+          totalBookings: await getCustomerBookingCount(matchingCustomer.id),
+          vehicleInfo: vehicleData?.map(v => v.vehicle_info) || []
+        };
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error finding customer by email/phone:', error);
+      return null;
+    }
+  };
+
   return {
     fetchCustomers,
     deleteAllCustomers,
-    getBookingHistoryForCustomer
+    getBookingHistoryForCustomer,
+    findCustomerByEmailOrPhone  // Export the new function
   };
 };

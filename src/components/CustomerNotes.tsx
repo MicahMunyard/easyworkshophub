@@ -29,12 +29,20 @@ const CustomerNotes: React.FC<CustomerNotesProps> = ({ customerId }) => {
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchNotes();
+    if (customerId) {
+      fetchNotes();
+    }
   }, [customerId]);
 
   const fetchNotes = async () => {
     try {
-      // Use parseInt to convert the string ID to a number for the database
+      // Make sure we have a valid numeric ID before querying
+      // This prevents the "invalid input syntax for type integer: 'NaN'" error
+      if (!customerId || isNaN(parseInt(customerId, 10))) {
+        console.log("Invalid customer ID for notes fetch:", customerId);
+        return;
+      }
+      
       const numericCustomerId = parseInt(customerId, 10);
       
       const { data, error } = await supabase
@@ -66,7 +74,16 @@ const CustomerNotes: React.FC<CustomerNotesProps> = ({ customerId }) => {
     }
 
     try {
-      // Use parseInt to convert the string ID to a number for the database
+      // Validate customer ID before inserting
+      if (!customerId || isNaN(parseInt(customerId, 10))) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Invalid customer ID",
+        });
+        return;
+      }
+      
       const numericCustomerId = parseInt(customerId, 10);
       
       const { error } = await supabase

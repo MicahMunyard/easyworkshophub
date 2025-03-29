@@ -1,17 +1,19 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { DialogFooter } from "@/components/ui/dialog";
-import { Trash2 } from "lucide-react";
+import { Trash2, AlertCircle } from "lucide-react";
 import { BookingType } from "@/types/booking";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 import CustomerInfoFields from "./CustomerInfoFields";
 import ServiceSelector from "./ServiceSelector";
 import TechnicianSelector from "./TechnicianSelector";
 import ServiceBaySelector from "./ServiceBaySelector";
 import DateSelector from "./DateSelector";
 import TimeStatusSelector from "./TimeStatusSelector";
+import { useCustomerAPI } from "@/hooks/customers/useCustomerAPI";
 
 interface ServiceOption {
   id: string;
@@ -65,6 +67,34 @@ const BookingForm: React.FC<BookingFormProps> = ({
   isEditing,
   onDeleteClick
 }) => {
+  const { toast } = useToast();
+  const { findCustomerByEmailOrPhone } = useCustomerAPI();
+  const [isReturningCustomer, setIsReturningCustomer] = useState(false);
+  const [isCheckingCustomer, setIsCheckingCustomer] = useState(false);
+  
+  // Check if customer exists when phone number changes
+  useEffect(() => {
+    const checkExistingCustomer = async () => {
+      if (booking.phone && booking.phone.length > 5) {
+        setIsCheckingCustomer(true);
+        const existingCustomer = await findCustomerByEmailOrPhone("", booking.phone);
+        setIsReturningCustomer(!!existingCustomer);
+        setIsCheckingCustomer(false);
+        
+        if (existingCustomer && !isEditing) {
+          toast({
+            title: "Returning Customer",
+            description: `${existingCustomer.name} has booked with you ${existingCustomer.totalBookings} time(s) before.`,
+          });
+        }
+      } else {
+        setIsReturningCustomer(false);
+      }
+    };
+    
+    checkExistingCustomer();
+  }, [booking.phone, findCustomerByEmailOrPhone, isEditing]);
+
   return (
     <form onSubmit={handleSubmit}>
       <div className="grid gap-4 py-4">
@@ -73,6 +103,8 @@ const BookingForm: React.FC<BookingFormProps> = ({
           phone={booking.phone}
           car={booking.car}
           handleChange={handleChange}
+          isReturningCustomer={isReturningCustomer}
+          isCheckingCustomer={isCheckingCustomer}
         />
         
         <ServiceSelector

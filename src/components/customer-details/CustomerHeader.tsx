@@ -2,7 +2,7 @@
 import React from "react";
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Phone, Mail, Calendar, Car, Clock } from "lucide-react";
+import { Phone, Mail, Calendar, Car, Clock, DollarSign } from "lucide-react";
 import { CustomerDetailType } from "@/types/customer";
 import { CustomerTags } from "@/components/tags";
 
@@ -11,6 +11,12 @@ interface CustomerHeaderProps {
 }
 
 const CustomerHeader: React.FC<CustomerHeaderProps> = ({ customer }) => {
+  // Calculate total spending from booking history
+  const totalSpending = customer.bookingHistory.reduce(
+    (sum, booking) => sum + (typeof booking.cost === 'number' ? booking.cost : 0), 
+    0
+  );
+
   return (
     <Card>
       <CardHeader>
@@ -47,6 +53,11 @@ const CustomerHeader: React.FC<CustomerHeaderProps> = ({ customer }) => {
                 <span>Last visit: {customer.lastVisit}</span>
               </div>
             )}
+            
+            <div className="flex items-center gap-2 text-sm">
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+              <span>Total spending: ${totalSpending.toFixed(2)}</span>
+            </div>
           </div>
           
           <div className="space-y-2">

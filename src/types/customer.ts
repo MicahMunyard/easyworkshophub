@@ -8,6 +8,7 @@ export interface CustomerType {
   lastVisit?: string;
   totalBookings: number;
   vehicleInfo?: string[];
+  totalSpending?: number; // New field to track total spending
 }
 
 export interface CustomerDetailType extends CustomerType {
