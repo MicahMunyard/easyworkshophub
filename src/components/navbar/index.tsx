@@ -48,54 +48,54 @@ const Navbar: React.FC<NavbarProps> = ({
   const currentTab = getCurrentTab();
 
   return (
-    <header className="sticky top-0 z-30 w-full">
-      {/* Top Bar */}
-      <div className="h-16 border-b bg-background">
-        <div className="container h-full flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <NavLogo />
+    <header className="sticky top-0 z-30 w-full bg-black">
+      <div className="container h-16 border-b border-white/10 flex items-center justify-between">
+        {/* Logo Center */}
+        <div className="absolute left-1/2 transform -translate-x-1/2">
+          <NavLogo />
+        </div>
 
-            {/* Main Navigation Tabs - Visible on medium screens and larger */}
-            <div className="hidden md:block">
-              <NavTabs 
-                currentTab={currentTab} 
-                onTabChange={handleTabChange} 
-                sections={mainNavSections} 
-              />
-            </div>
+        {/* Navigation Tabs - Left Aligned */}
+        <div className="flex items-center">
+          <div className="hidden md:block">
+            <NavTabs 
+              currentTab={currentTab} 
+              onTabChange={handleTabChange} 
+              sections={mainNavSections} 
+            />
           </div>
+        </div>
 
-          {/* Mobile Navigation */}
-          <MobileNav 
-            isOpen={isOpen} 
-            toggleMenu={toggleMenu} 
-            currentTab={currentTab}
-            onTabChange={handleTabChange}
-            sections={mainNavSections}
-          />
+        {/* Mobile Navigation */}
+        <MobileNav 
+          isOpen={isOpen} 
+          toggleMenu={toggleMenu} 
+          currentTab={currentTab}
+          onTabChange={handleTabChange}
+          sections={mainNavSections}
+        />
 
-          {/* Desktop Navigation Actions */}
-          <div 
-            className={cn(
-              "hidden lg:flex lg:items-center lg:gap-4"
-            )}
+        {/* Desktop Navigation Actions - Right Aligned */}
+        <div 
+          className={cn(
+            "hidden lg:flex lg:items-center lg:gap-4 ml-auto"
+          )}
+        >
+          <NavProfile />
+          <ModeToggle />
+        </div>
+
+        {/* Mobile Toggle and Mode Switch */}
+        <div className="flex items-center gap-2 lg:hidden ml-auto">
+          <ModeToggle />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleMenu}
+            className="lg:hidden text-white hover:bg-white/10"
           >
-            <NavProfile />
-            <ModeToggle />
-          </div>
-
-          {/* Mobile Toggle and Mode Switch */}
-          <div className="flex items-center gap-2 lg:hidden">
-            <ModeToggle />
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleMenu}
-              className="lg:hidden"
-            >
-              <Menu className="h-6 w-6" />
-            </Button>
-          </div>
+            <Menu className="h-6 w-6" />
+          </Button>
         </div>
       </div>
     </header>
