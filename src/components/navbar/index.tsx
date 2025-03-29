@@ -7,29 +7,33 @@ import NavTabs from "./NavTabs";
 import NavActions from "./NavActions";
 import MobileNav from "./MobileNav";
 import MobileMenuButton from "./MobileMenuButton";
-import { getCurrentTabFromPath } from "./utils/pathUtils";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 interface NavbarProps {
-  mainNavSections: { name: string; path: string }[];
+  secondaryNavSections: { name: string; path: string }[];
   currentPath: string;
   onNavigate: (path: string) => void;
 }
 
 const Navbar: React.FC<NavbarProps> = ({ 
-  mainNavSections, 
+  secondaryNavSections, 
   currentPath, 
   onNavigate 
 }) => {
   const { isOpen, toggleMenu } = useMobileMenu();
   
   // Get current tab based on path
-  const currentTab = getCurrentTabFromPath(currentPath);
+  const getCurrentTab = (path: string, sections: { name: string; path: string }[]): string => {
+    const section = sections.find(section => section.path === path);
+    return section ? section.name.toLowerCase() : "";
+  };
+
+  const currentTab = getCurrentTab(currentPath, secondaryNavSections);
 
   // Handle tab change
   const handleTabChange = (value: string) => {
-    const section = mainNavSections.find(section => section.name.toLowerCase() === value);
+    const section = secondaryNavSections.find(section => section.name.toLowerCase() === value);
     if (section) {
       onNavigate(section.path);
     }
@@ -38,20 +42,22 @@ const Navbar: React.FC<NavbarProps> = ({
   return (
     <>
       {/* Top Navigation Bar */}
-      <header className="fixed top-0 left-0 right-0 z-40 bg-black h-16 border-b border-white/10">
+      <header className="fixed top-0 left-0 right-0 z-30 bg-black h-16 border-b border-white/10 pl-16">
         <div className="h-full px-4 flex items-center justify-between">
           <div className="flex items-center gap-6">
             {/* Logo */}
             <NavLogo />
 
-            {/* Navigation Tabs */}
+            {/* Navigation Tabs - Secondary Navigation */}
             <div className="hidden lg:block">
-              <NavTabs 
-                currentTab={currentTab} 
-                onTabChange={handleTabChange} 
-                sections={mainNavSections} 
-                isTopNav={true}
-              />
+              {secondaryNavSections.length > 0 && (
+                <NavTabs 
+                  currentTab={currentTab} 
+                  onTabChange={handleTabChange} 
+                  sections={secondaryNavSections} 
+                  isTopNav={true}
+                />
+              )}
             </div>
           </div>
 
@@ -78,109 +84,15 @@ const Navbar: React.FC<NavbarProps> = ({
         </div>
       </header>
 
-      {/* Left Sidebar */}
-      <aside className="fixed top-16 left-0 z-30 h-[calc(100vh-4rem)] bg-black w-64 border-r border-white/10 hidden lg:block">
-        <div className="h-full w-full flex flex-col py-4">
-          {/* Sidebar Navigation based on current tab */}
-          <div className="flex-1 px-2">
-            {currentTab === 'workshop' && (
-              <SidebarSection 
-                title="Workshop" 
-                items={[
-                  { name: "Booking Diary", path: "/booking-diary" },
-                  { name: "Jobs", path: "/jobs" },
-                  { name: "Workshop Setup", path: "/workshop-setup" }
-                ]}
-                currentPath={currentPath}
-                onNavigate={onNavigate}
-              />
-            )}
-            {currentTab === 'inventory' && (
-              <SidebarSection 
-                title="Inventory" 
-                items={[
-                  { name: "Inventory", path: "/inventory" },
-                  { name: "Suppliers", path: "/suppliers" }
-                ]}
-                currentPath={currentPath}
-                onNavigate={onNavigate}
-              />
-            )}
-            {currentTab === 'email' && (
-              <SidebarSection 
-                title="Email" 
-                items={[
-                  { name: "Email Integration", path: "/email-integration" }
-                ]}
-                currentPath={currentPath}
-                onNavigate={onNavigate}
-              />
-            )}
-            {currentTab === 'customers' && (
-              <SidebarSection 
-                title="Customers" 
-                items={[
-                  { name: "Customers", path: "/customers" }
-                ]}
-                currentPath={currentPath}
-                onNavigate={onNavigate}
-              />
-            )}
-            {currentTab === 'marketing' && (
-              <SidebarSection 
-                title="Marketing" 
-                items={[
-                  { name: "Marketing", path: "/marketing" },
-                  { name: "Email Marketing", path: "/email-marketing" },
-                  { name: "Reviews", path: "/reviews" }
-                ]}
-                currentPath={currentPath}
-                onNavigate={onNavigate}
-              />
-            )}
-          </div>
-        </div>
-      </aside>
-
       {/* Mobile Navigation */}
       <MobileNav 
         isOpen={isOpen} 
         toggleMenu={toggleMenu} 
         currentTab={currentTab}
         onTabChange={handleTabChange}
-        sections={mainNavSections}
+        sections={secondaryNavSections}
       />
     </>
-  );
-};
-
-// Sidebar Section Component
-const SidebarSection: React.FC<{
-  title: string;
-  items: { name: string; path: string }[];
-  currentPath: string;
-  onNavigate: (path: string) => void;
-}> = ({ title, items, currentPath, onNavigate }) => {
-  return (
-    <div className="space-y-2">
-      <h3 className="text-white/60 font-medium px-4 py-2 text-sm">{title}</h3>
-      <div className="space-y-1">
-        {items.map((item) => (
-          <button
-            key={item.name}
-            onClick={() => onNavigate(item.path)}
-            className={`w-full text-left px-4 py-2 text-white hover:bg-white/10 rounded-md transition-colors ${
-              currentPath === item.path ? "bg-white/5 relative" : ""
-            }`}
-          >
-            <span>{item.name}</span>
-            {currentPath === item.path && (
-              <span className="absolute w-1 left-0 top-0 h-full bg-workshop-red rounded-r" aria-hidden="true" />
-            )}
-          </button>
-        ))}
-      </div>
-    </div>
   );
 };
 

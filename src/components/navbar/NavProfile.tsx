@@ -28,10 +28,10 @@ const NavProfile: React.FC = () => {
   if (!user) {
     return (
       <div className="flex gap-2">
-        <Button size="sm" onClick={() => navigate("/auth/signin")} variant="outline">
+        <Button size="sm" onClick={() => navigate("/auth/signin")} variant="outline" className="text-white">
           Log in
         </Button>
-        <Button size="sm" onClick={() => navigate("/auth/signup")}>
+        <Button size="sm" onClick={() => navigate("/auth/signup")} className="text-white">
           Sign up
         </Button>
       </div>
@@ -43,10 +43,10 @@ const NavProfile: React.FC = () => {
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="relative h-9 w-9 rounded-full"
+          className="relative h-9 w-9 rounded-full text-white"
         >
-          <Avatar className="h-9 w-9">
-            <AvatarFallback className="bg-primary/10">
+          <Avatar className="h-9 w-9 border border-white/20">
+            <AvatarFallback className="bg-primary/10 text-white">
               {initials}
             </AvatarFallback>
           </Avatar>

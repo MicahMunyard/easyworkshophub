@@ -13,13 +13,13 @@ const NavActions: React.FC<NavActionsProps> = ({ isMobile = false, isSidebar = f
   return (
     <div 
       className={cn(
-        "flex items-center gap-4",
+        "flex items-center gap-4 text-white",
         isMobile && "flex-col",
         isSidebar && "flex-col w-full"
       )}
     >
       <NavProfile />
-      <ModeToggle />
+      <ModeToggle className="text-white" />
     </div>
   );
 };

@@ -2,25 +2,79 @@
 import React, { useState, useEffect } from "react";
 import Navbar from "./navbar";
 import { useLocation, useNavigate } from "react-router-dom";
+import {
+  LayoutDashboard,
+  Hammer,
+  Mail,
+  Package,
+  Users,
+  Megaphone,
+  FileBarChart
+} from "lucide-react";
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
 const mainNavSections = [
-  { name: "Dashboard", path: "/" },
-  { name: "Workshop", path: "/workshop" },
-  { name: "Email", path: "/email-integration" },
-  { name: "Inventory", path: "/inventory" },
-  { name: "Customers", path: "/customers" },
-  { name: "Marketing", path: "/marketing" },
-  { name: "Reports", path: "/reports" }
+  { name: "Dashboard", path: "/", icon: <LayoutDashboard className="h-5 w-5" /> },
+  { name: "Workshop", path: "/workshop", icon: <Hammer className="h-5 w-5" /> },
+  { name: "Email", path: "/email-integration", icon: <Mail className="h-5 w-5" /> },
+  { name: "Inventory", path: "/inventory", icon: <Package className="h-5 w-5" /> },
+  { name: "Customers", path: "/customers", icon: <Users className="h-5 w-5" /> },
+  { name: "Marketing", path: "/marketing", icon: <Megaphone className="h-5 w-5" /> },
+  { name: "Reports", path: "/reports", icon: <FileBarChart className="h-5 w-5" /> }
 ];
+
+// Define secondary navigation sections based on main sections
+const secondaryNavSections = {
+  workshop: [
+    { name: "Booking Diary", path: "/booking-diary" },
+    { name: "Jobs", path: "/jobs" },
+    { name: "Workshop Setup", path: "/workshop-setup" }
+  ],
+  email: [
+    { name: "Email Integration", path: "/email-integration" }
+  ],
+  inventory: [
+    { name: "Inventory", path: "/inventory" },
+    { name: "Suppliers", path: "/suppliers" }
+  ],
+  customers: [
+    { name: "Customers", path: "/customers" }
+  ],
+  marketing: [
+    { name: "Marketing", path: "/marketing" },
+    { name: "Email Marketing", path: "/email-marketing" },
+    { name: "Reviews", path: "/reviews" }
+  ],
+  reports: [
+    { name: "Reports", path: "/reports" }
+  ]
+};
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [isMobile, setIsMobile] = useState(false);
+  const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Get current main section based on path
+  const getCurrentMainSection = (path: string): string => {
+    if (path === '/') return 'dashboard';
+    if (path.includes('/workshop') || path.includes('/booking-diary') || path.includes('/jobs') || path.includes('/workshop-setup')) return 'workshop';
+    if (path.includes('/email')) return 'email';
+    if (path.includes('/inventory') || path.includes('/suppliers')) return 'inventory';
+    if (path.includes('/customers')) return 'customers';
+    if (path.includes('/marketing') || path.includes('/email-marketing') || path.includes('/reviews')) return 'marketing';
+    if (path.includes('/reports')) return 'reports';
+    return 'dashboard';
+  };
+
+  const currentMainSection = getCurrentMainSection(location.pathname);
+
+  // Get secondary nav based on current main section
+  const currentSecondaryNav = secondaryNavSections[currentMainSection as keyof typeof secondaryNavSections] || [];
 
   useEffect(() => {
     const checkIfMobile = () => {
@@ -36,17 +90,60 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col bg-background text-foreground">
-      <Navbar 
-        mainNavSections={mainNavSections} 
-        currentPath={location.pathname}
-        onNavigate={(path) => navigate(path)}
-      />
-      <div className="flex flex-1 overflow-hidden pt-16">
-        <main
-          className="flex-1 overflow-auto transition-all duration-300 ease-in-out lg:ml-64"
-        >
-          <div className="container py-6 px-4 md:px-6 mx-auto min-h-[calc(100vh-4rem)] animate-fadeIn">
+    <div className="min-h-screen flex bg-background text-foreground">
+      {/* Collapsible Sidebar */}
+      <div 
+        className={`fixed top-0 left-0 h-full bg-black z-40 transition-all duration-300 ease-in-out ${
+          sidebarExpanded ? "w-64" : "w-16"
+        }`}
+        onMouseEnter={() => setSidebarExpanded(true)}
+        onMouseLeave={() => setSidebarExpanded(false)}
+      >
+        <div className="flex flex-col h-full pt-16">
+          {/* Main navigation icons */}
+          <div className="flex-1 py-4">
+            {mainNavSections.map((section) => {
+              const isActive = section.name.toLowerCase() === currentMainSection;
+              return (
+                <button
+                  key={section.name}
+                  onClick={() => navigate(section.path)}
+                  className={`flex items-center w-full py-3 px-4 text-white transition-colors hover:bg-white/10 relative ${
+                    isActive ? "bg-white/5" : ""
+                  }`}
+                >
+                  <span className="flex items-center justify-center">
+                    {section.icon}
+                  </span>
+                  <span 
+                    className={`ml-4 transition-opacity ${
+                      sidebarExpanded ? "opacity-100" : "opacity-0"
+                    } whitespace-nowrap`}
+                  >
+                    {section.name}
+                  </span>
+                  {isActive && (
+                    <span 
+                      className="absolute w-1 left-0 top-0 h-full bg-workshop-red rounded-r" 
+                      aria-hidden="true" 
+                    />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Main content area */}
+      <div className={`flex-1 transition-all duration-300 ${sidebarExpanded ? "ml-64" : "ml-16"}`}>
+        <Navbar 
+          secondaryNavSections={currentSecondaryNav}
+          currentPath={location.pathname}
+          onNavigate={(path) => navigate(path)}
+        />
+        <main className="pt-16 px-4 md:px-6 animate-fadeIn">
+          <div className="container mx-auto py-6 min-h-[calc(100vh-4rem)]">
             {children}
           </div>
         </main>
