@@ -74,7 +74,7 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="w-full h-[400px]">
+      <div className="w-full h-[300px]">
         <VideoCarousel videos={DASHBOARD_VIDEOS} />
       </div>
 
