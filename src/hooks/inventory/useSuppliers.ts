@@ -51,16 +51,18 @@ export const useSuppliers = () => {
       }
       
       // Get default suppliers (should always be included)
-      // We get them from localStorage if they exist, otherwise use the hardcoded ones
       const savedDefaultSuppliers = localStorage.getItem('defaultSuppliers');
-      let systemDefaultSuppliers = defaultSuppliers;
-      
-      if (savedDefaultSuppliers) {
-        systemDefaultSuppliers = JSON.parse(savedDefaultSuppliers);
-      } else {
-        // First time - save the default suppliers
+      // Make sure defaultSuppliers is always initialized
+      if (!savedDefaultSuppliers) {
         localStorage.setItem('defaultSuppliers', JSON.stringify(defaultSuppliers));
       }
+      
+      const systemDefaultSuppliers = savedDefaultSuppliers 
+        ? JSON.parse(savedDefaultSuppliers) 
+        : defaultSuppliers;
+      
+      // Log to debug
+      console.log('Default suppliers:', systemDefaultSuppliers);
       
       // Combine default and user-specific suppliers
       // Make sure we're not adding duplicates by checking IDs

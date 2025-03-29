@@ -20,15 +20,34 @@ export const useAddInventoryItem = () => {
     minStock: number = 5,
     imageUrl?: string
   ): boolean => {
-    // Find the supplier
-    const supplier = suppliers.find(s => 
-      s.name.toLowerCase() === supplierName.toLowerCase()
+    // Find the supplier - first try exact match
+    let supplier = suppliers.find(s => 
+      s.name === supplierName
     );
+    
+    // If no exact match, try case-insensitive matching
+    if (!supplier) {
+      supplier = suppliers.find(s => 
+        s.name.toLowerCase() === supplierName.toLowerCase()
+      );
+    }
+    
+    // If still no match, try to find a supplier that contains the given name
+    if (!supplier) {
+      supplier = suppliers.find(s => 
+        s.name.toLowerCase().includes(supplierName.toLowerCase()) ||
+        supplierName.toLowerCase().includes(s.name.toLowerCase())
+      );
+    }
+
+    // Log available suppliers for debugging
+    console.log('Available suppliers:', suppliers.map(s => s.name));
+    console.log('Looking for supplier:', supplierName);
 
     if (!supplier) {
       toast({
         title: "Supplier Not Found",
-        description: `Could not find supplier: ${supplierName}`,
+        description: `Could not find supplier: ${supplierName}. Please check the spelling or add this supplier first.`,
         variant: "destructive"
       });
       return false;

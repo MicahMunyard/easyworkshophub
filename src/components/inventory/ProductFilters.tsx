@@ -58,7 +58,7 @@ const ProductFilters: React.FC<ProductFiltersProps> = ({
                 key={category} 
                 variant={categoryFilter === category ? "default" : "outline"}
                 className="cursor-pointer"
-                onClick={() => setCategoryFilter(category)}
+                onClick={() => setCategoryFilter(category === categoryFilter ? 'all' : category)}
               >
                 {category === 'all' ? 'All Categories' : category}
               </Badge>
@@ -72,7 +72,7 @@ const ProductFilters: React.FC<ProductFiltersProps> = ({
                 key={supplierId} 
                 variant={supplierFilter === supplierId ? "default" : "outline"}
                 className="cursor-pointer"
-                onClick={() => setSupplierFilter(supplierId)}
+                onClick={() => setSupplierFilter(supplierId === supplierFilter ? 'all' : supplierId)}
               >
                 {supplierId === 'all' 
                   ? 'All Suppliers' 
