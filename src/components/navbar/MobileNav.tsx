@@ -1,11 +1,9 @@
 
 import React from "react";
-import { X } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import NavTabs from "./NavTabs";
-import NavProfile from "./NavProfile";
-import { ModeToggle } from "@/components/ui/mode-toggle";
+import NavActions from "./NavActions";
+import MobileCloseButton from "./MobileCloseButton";
 
 interface MobileNavProps {
   isOpen: boolean;
@@ -36,14 +34,7 @@ const MobileNav: React.FC<MobileNavProps> = ({
             height={32}
           />
         </Link>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={toggleMenu}
-          className="text-white hover:bg-white/10 absolute right-4 top-4"
-        >
-          <X className="h-6 w-6" />
-        </Button>
+        <MobileCloseButton toggleMenu={toggleMenu} />
       </div>
 
       <div className="mt-4">
@@ -55,9 +46,8 @@ const MobileNav: React.FC<MobileNavProps> = ({
         />
       </div>
 
-      <div className="mt-auto flex flex-col items-center gap-4">
-        <NavProfile />
-        <ModeToggle />
+      <div className="mt-auto">
+        <NavActions isMobile={true} />
       </div>
     </nav>
   );

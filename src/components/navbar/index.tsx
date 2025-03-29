@@ -1,15 +1,13 @@
 
 import React from "react";
-import { useNavigate } from "react-router-dom";
-import { Menu } from "lucide-react";
-import { useMobileMenu } from "@/hooks/use-mobile-menu";
-import { Button } from "@/components/ui/button";
 import { ModeToggle } from "@/components/ui/mode-toggle";
-import { cn } from "@/lib/utils";
+import { useMobileMenu } from "@/hooks/use-mobile-menu";
 import NavLogo from "./NavLogo";
 import NavTabs from "./NavTabs";
-import NavProfile from "./NavProfile";
+import NavActions from "./NavActions";
 import MobileNav from "./MobileNav";
+import MobileMenuButton from "./MobileMenuButton";
+import { getCurrentTabFromPath } from "./utils/pathUtils";
 
 interface NavbarProps {
   mainNavSections: { name: string; path: string }[];
@@ -23,19 +21,9 @@ const Navbar: React.FC<NavbarProps> = ({
   onNavigate 
 }) => {
   const { isOpen, toggleMenu } = useMobileMenu();
-  const navigate = useNavigate();
-
-  // Determine the current active tab based on path
-  const getCurrentTab = () => {
-    if (currentPath === '/') return 'dashboard';
-    if (currentPath === '/workshop' || currentPath.includes('/booking-diary') || currentPath.includes('/jobs') || currentPath.includes('/workshop-setup')) return 'workshop';
-    if (currentPath.includes('/email-integration')) return 'email';
-    if (currentPath.includes('/inventory') || currentPath.includes('/suppliers')) return 'inventory';
-    if (currentPath.includes('/customers')) return 'customers';
-    if (currentPath.includes('/marketing') || currentPath.includes('/email-marketing') || currentPath.includes('/reviews')) return 'marketing';
-    if (currentPath.includes('/reports')) return 'reports';
-    return 'dashboard';
-  };
+  
+  // Get current tab based on path
+  const currentTab = getCurrentTabFromPath(currentPath);
 
   // Handle tab change
   const handleTabChange = (value: string) => {
@@ -44,8 +32,6 @@ const Navbar: React.FC<NavbarProps> = ({
       onNavigate(section.path);
     }
   };
-
-  const currentTab = getCurrentTab();
 
   return (
     <header className="sticky top-0 z-30 w-full bg-black">
@@ -76,26 +62,12 @@ const Navbar: React.FC<NavbarProps> = ({
         />
 
         {/* Desktop Navigation Actions - Right Aligned */}
-        <div 
-          className={cn(
-            "hidden lg:flex lg:items-center lg:gap-4 ml-auto"
-          )}
-        >
-          <NavProfile />
-          <ModeToggle />
-        </div>
+        <NavActions />
 
         {/* Mobile Toggle and Mode Switch */}
         <div className="flex items-center gap-2 lg:hidden ml-auto">
           <ModeToggle />
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleMenu}
-            className="lg:hidden text-white hover:bg-white/10"
-          >
-            <Menu className="h-6 w-6" />
-          </Button>
+          <MobileMenuButton toggleMenu={toggleMenu} />
         </div>
       </div>
     </header>
