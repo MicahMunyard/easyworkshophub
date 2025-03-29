@@ -1,4 +1,3 @@
-
 import React from "react";
 import { 
   Gauge, 
@@ -74,7 +73,7 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="w-full h-[300px]">
+      <div className="w-full h-[200px]">
         <VideoCarousel videos={DASHBOARD_VIDEOS} />
       </div>
 
