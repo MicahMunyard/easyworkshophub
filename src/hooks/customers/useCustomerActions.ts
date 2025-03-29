@@ -3,7 +3,6 @@ import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { CustomerType, CustomerDetailType } from "@/types/customer";
 import { BookingType } from "@/types/booking";
-import { useCustomerAPI } from "./useCustomerAPI";
 
 export const useCustomerActions = (
   customers: CustomerType[],
@@ -12,10 +11,11 @@ export const useCustomerActions = (
   setIsCustomerDetailsOpen: React.Dispatch<React.SetStateAction<boolean>>,
   setSelectedCustomerForDetail: React.Dispatch<React.SetStateAction<CustomerType | null>>,
   setIsNewCustomerModalOpen: React.Dispatch<React.SetStateAction<boolean>>,
-  setIsDeleteConfirmOpen: React.Dispatch<React.SetStateAction<boolean>>
+  setIsDeleteConfirmOpen: React.Dispatch<React.SetStateAction<boolean>>,
+  getBookingHistoryForCustomer: (id: string) => Promise<any[]>,
+  deleteAllCustomers: () => Promise<boolean>
 ) => {
   const { toast } = useToast();
-  const { getBookingHistoryForCustomer, deleteAllCustomers } = useCustomerAPI();
 
   const handleCustomerClick = async (id: string) => {
     const customer = customers.find(c => c.id === id);

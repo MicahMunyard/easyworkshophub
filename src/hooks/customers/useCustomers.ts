@@ -29,7 +29,11 @@ export const useCustomers = (): UseCustomersReturnType => {
     setIsLoading
   } = useCustomerState();
 
-  const { fetchCustomers: apiFetchCustomers, getBookingHistoryForCustomer } = useCustomerAPI();
+  const { 
+    fetchCustomers: apiFetchCustomers, 
+    getBookingHistoryForCustomer,
+    deleteAllCustomers 
+  } = useCustomerAPI();
 
   const {
     handleCustomerClick,
@@ -45,7 +49,9 @@ export const useCustomers = (): UseCustomersReturnType => {
     setIsCustomerDetailsOpen,
     setSelectedCustomerForDetail,
     setIsNewCustomerModalOpen,
-    setIsDeleteConfirmOpen
+    setIsDeleteConfirmOpen,
+    getBookingHistoryForCustomer,
+    deleteAllCustomers
   );
 
   const fetchCustomers = async () => {
