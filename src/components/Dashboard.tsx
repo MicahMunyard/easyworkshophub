@@ -50,7 +50,7 @@ const Dashboard: React.FC = () => {
   } = useDashboardData();
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight flex items-center">
@@ -74,7 +74,7 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="w-full h-[120px]">
+      <div className="w-full h-[170px] md:h-[180px]">
         <VideoCarousel videos={DASHBOARD_VIDEOS} />
       </div>
 
