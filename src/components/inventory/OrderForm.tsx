@@ -91,7 +91,7 @@ const OrderForm: React.FC<OrderFormProps> = ({ supplier, onBack, onComplete }) =
       // Format the order for email
       const orderHtml = formatOrderHtml(submittedOrder.items, submittedOrder.total, notes);
       
-      // Send the email using the edge function
+      // Send the email using the edge function with the updated endpoint structure
       const emailResponse = await sendOrderEmail(supplier, orderHtml);
       
       if (emailResponse.error) {
@@ -167,13 +167,14 @@ const OrderForm: React.FC<OrderFormProps> = ({ supplier, onBack, onComplete }) =
     try {
       const token = localStorage.getItem('supabase.auth.token');
       
-      const response = await fetch(`${functionUrl}/send-order`, {
+      const response = await fetch(functionUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': token ? `Bearer ${JSON.parse(token).access_token}` : '',
         },
         body: JSON.stringify({
+          action: 'send-order',
           supplierEmail: supplier.email,
           supplierName: supplier.name,
           subject: `Purchase Order - ${new Date().toLocaleDateString()}`,

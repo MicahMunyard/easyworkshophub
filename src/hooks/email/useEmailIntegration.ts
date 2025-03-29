@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -35,7 +36,8 @@ export const useEmailIntegration = () => {
         throw new Error("No active session found");
       }
       
-      const response = await fetch(getEdgeFunctionUrl('email-integration/fetch'), {
+      // Updated endpoint path - removed /fetch
+      const response = await fetch(getEdgeFunctionUrl('email-integration'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -100,13 +102,15 @@ export const useEmailIntegration = () => {
         throw new Error("No active session found");
       }
       
-      const response = await fetch(getEdgeFunctionUrl('email-integration/create-booking'), {
+      // Updated endpoint path - removed /create-booking
+      const response = await fetch(getEdgeFunctionUrl('email-integration'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${sessionData.session.access_token}`,
         },
         body: JSON.stringify({
+          action: 'create-booking',
           emailId: email.id,
         }),
       });
