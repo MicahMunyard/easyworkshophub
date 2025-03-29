@@ -51,12 +51,23 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-4 md:space-y-6">
+      {/* Main title at the top */}
+      <h1 className="text-3xl font-bold tracking-tight text-center">
+        What's New At WorkshopBase?
+      </h1>
+      
+      {/* Video carousel with increased height */}
+      <div className="w-full h-[200px] md:h-[240px]">
+        <VideoCarousel videos={DASHBOARD_VIDEOS} />
+      </div>
+      
+      {/* Dashboard header moved below the video */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center">
-            <Gauge className="mr-2 h-7 w-7 text-workshop-red" /> 
+          <h2 className="text-2xl font-bold tracking-tight flex items-center">
+            <Gauge className="mr-2 h-6 w-6 text-workshop-red" /> 
             Dashboard
-          </h1>
+          </h2>
           <p className="text-muted-foreground">
             Workshop overview and performance metrics.
           </p>
@@ -72,10 +83,6 @@ const Dashboard: React.FC = () => {
             <TrendingUp className="h-4 w-4 mr-2" /> View Reports
           </Button>
         </div>
-      </div>
-
-      <div className="w-full h-[170px] md:h-[180px]">
-        <VideoCarousel videos={DASHBOARD_VIDEOS} />
       </div>
 
       <StatsGrid 
