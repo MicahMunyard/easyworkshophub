@@ -3,6 +3,7 @@ import { CustomerType } from "@/types/customer";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { getCustomerBookingCount } from "./utils/customerUtils";
 
 export const useFetchCustomers = () => {
   const { toast } = useToast();
@@ -28,7 +29,7 @@ export const useFetchCustomers = () => {
             .select('vehicle_info')
             .eq('customer_id', customer.id);
           
-          const bookingCount = await getCustomerBookingCount(customer.id);
+          const bookingCount = await getCustomerBookingCount(customer.id, user.id);
           const totalSpending = await getCustomerTotalSpending(customer.phone);
           
           return {
@@ -54,37 +55,6 @@ export const useFetchCustomers = () => {
         description: "Could not load customer data"
       });
       return [];
-    }
-  };
-
-  const getCustomerBookingCount = async (customerId: string): Promise<number> => {
-    try {
-      const { data: customerData, error: customerError } = await supabase
-        .from('user_customers')
-        .select('phone')
-        .eq('id', customerId)
-        .single();
-      
-      if (customerError || !customerData) {
-        console.error('Error getting customer phone:', customerError);
-        return 0;
-      }
-      
-      const { count, error } = await supabase
-        .from('user_bookings')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user?.id)
-        .eq('customer_phone', customerData.phone);
-      
-      if (error) {
-        console.error('Error counting bookings:', error);
-        return 0;
-      }
-      
-      return count || 0;
-    } catch (error) {
-      console.error('Error getting booking count:', error);
-      return 0;
     }
   };
 
