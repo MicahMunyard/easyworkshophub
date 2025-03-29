@@ -92,14 +92,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <div className="min-h-screen flex bg-background text-foreground">
       {/* Collapsible Sidebar */}
-      <div 
-        className={`fixed top-0 left-0 h-full bg-black z-40 transition-all duration-300 ease-in-out ${
+      <aside 
+        className={`fixed top-0 left-0 h-full bg-black z-40 transition-all duration-300 ease-in-out pt-16 ${
           sidebarExpanded ? "w-64" : "w-16"
         }`}
         onMouseEnter={() => setSidebarExpanded(true)}
         onMouseLeave={() => setSidebarExpanded(false)}
       >
-        <div className="flex flex-col h-full pt-16">
+        <div className="flex flex-col h-full">
           {/* Main navigation icons */}
           <div className="flex-1 py-4">
             {mainNavSections.map((section) => {
@@ -133,7 +133,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             })}
           </div>
         </div>
-      </div>
+      </aside>
 
       {/* Main content area */}
       <div className={`flex-1 transition-all duration-300 ${sidebarExpanded ? "ml-64" : "ml-16"}`}>

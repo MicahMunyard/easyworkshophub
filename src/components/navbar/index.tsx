@@ -42,7 +42,7 @@ const Navbar: React.FC<NavbarProps> = ({
   return (
     <>
       {/* Top Navigation Bar */}
-      <header className="fixed top-0 left-0 right-0 z-30 bg-black h-16 border-b border-white/10 pl-16">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-black h-16 border-b border-white/10 ml-16">
         <div className="h-full px-4 flex items-center justify-between">
           <div className="flex items-center gap-6">
             {/* Logo */}

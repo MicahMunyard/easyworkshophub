@@ -98,9 +98,10 @@
     transition: background-color 0.3s ease, color 0.3s ease;
   }
 
+  /* Remove padding that might be causing layout issues */
   @media (min-width: 1024px) {
     body {
-      padding-left: 16rem;
+      padding-left: 0;
       padding-top: 4rem;
     }
   }

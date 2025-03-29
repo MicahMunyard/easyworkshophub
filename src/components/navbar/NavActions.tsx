@@ -13,7 +13,7 @@ const NavActions: React.FC<NavActionsProps> = ({ isMobile = false, isSidebar = f
   return (
     <div 
       className={cn(
-        "flex items-center gap-4 text-white",
+        "flex items-center gap-4",
         isMobile && "flex-col",
         isSidebar && "flex-col w-full"
       )}
