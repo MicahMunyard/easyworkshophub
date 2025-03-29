@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { DialogFooter } from "@/components/ui/dialog";
-import { Trash2, AlertCircle } from "lucide-react";
+import { Trash2, ChevronRight, ChevronLeft } from "lucide-react";
 import { BookingType } from "@/types/booking";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -50,6 +50,8 @@ interface BookingFormProps {
   onDeleteClick?: () => void;
 }
 
+type FormStep = "customer" | "workshop" | "scheduling";
+
 const BookingForm: React.FC<BookingFormProps> = ({
   booking,
   date,
@@ -71,17 +73,57 @@ const BookingForm: React.FC<BookingFormProps> = ({
   const { findCustomerByEmailOrPhone } = useCustomerAPI();
   const [isReturningCustomer, setIsReturningCustomer] = useState(false);
   const [isCheckingCustomer, setIsCheckingCustomer] = useState(false);
+  const [returnNotified, setReturnNotified] = useState(false);
+  const [currentStep, setCurrentStep] = useState<FormStep>("customer");
   
-  // Check if customer exists when phone number changes
+  // Navigate to next step
+  const goToNextStep = () => {
+    if (currentStep === "customer") {
+      if (!booking.customer || !booking.phone || !booking.car) {
+        toast({
+          title: "Missing information",
+          description: "Please fill in all required customer information.",
+          variant: "destructive"
+        });
+        return;
+      }
+      setCurrentStep("workshop");
+    } else if (currentStep === "workshop") {
+      if (!booking.service) {
+        toast({
+          title: "Missing information",
+          description: "Please select a service.",
+          variant: "destructive"
+        });
+        return;
+      }
+      setCurrentStep("scheduling");
+    }
+  };
+
+  // Navigate to previous step
+  const goToPreviousStep = () => {
+    if (currentStep === "scheduling") {
+      setCurrentStep("workshop");
+    } else if (currentStep === "workshop") {
+      setCurrentStep("customer");
+    }
+  };
+  
+  // Check if customer exists when customer info changes
   useEffect(() => {
     const checkExistingCustomer = async () => {
-      if (booking.phone && booking.phone.length > 5) {
+      // Only check if we have sufficient customer info
+      if ((booking.phone && booking.phone.length > 5) || (booking.email && booking.email.length > 5)) {
         setIsCheckingCustomer(true);
-        const existingCustomer = await findCustomerByEmailOrPhone("", booking.phone);
+        const existingCustomer = await findCustomerByEmailOrPhone(booking.email || "", booking.phone);
+        const wasReturningCustomer = isReturningCustomer;
         setIsReturningCustomer(!!existingCustomer);
         setIsCheckingCustomer(false);
         
-        if (existingCustomer && !isEditing) {
+        // Only show toast if customer just identified and not previously notified
+        if (existingCustomer && !wasReturningCustomer && !returnNotified && !isEditing) {
+          setReturnNotified(true);
           toast({
             title: "Returning Customer",
             description: `${existingCustomer.name} has booked with you ${existingCustomer.totalBookings} time(s) before.`,
@@ -93,63 +135,96 @@ const BookingForm: React.FC<BookingFormProps> = ({
     };
     
     checkExistingCustomer();
-  }, [booking.phone, findCustomerByEmailOrPhone, isEditing]);
+  }, [booking.phone, booking.email, findCustomerByEmailOrPhone, isEditing, isReturningCustomer, returnNotified]);
 
   return (
-    <form onSubmit={handleSubmit}>
-      <div className="grid gap-4 py-4">
-        <CustomerInfoFields
-          customer={booking.customer}
-          phone={booking.phone}
-          car={booking.car}
-          handleChange={handleChange}
-          isReturningCustomer={isReturningCustomer}
-          isCheckingCustomer={isCheckingCustomer}
-        />
-        
-        <ServiceSelector
-          selectedServiceId={selectedServiceId}
-          services={services}
-          onServiceChange={(value) => handleSelectChange("serviceId", value)}
-        />
-        
-        <TechnicianSelector
-          selectedTechnicianId={selectedTechnicianId}
-          technicians={technicians}
-          onTechnicianChange={(value) => handleSelectChange("technicianId", value)}
-        />
-        
-        <ServiceBaySelector
-          selectedBayId={selectedBayId}
-          bays={bays}
-          onBayChange={(value) => handleSelectChange("bayId", value)}
-        />
-        
-        <DateSelector
-          date={date}
-          onDateChange={handleDateChange}
-        />
-        
-        <TimeStatusSelector
-          time={booking.time}
-          status={booking.status}
-          onSelectChange={handleSelectChange}
-        />
-
-        <div className="grid gap-2">
-          <Label htmlFor="notes">Notes</Label>
-          <Textarea
-            id="notes"
-            name="notes"
-            value={booking.notes || ""}
-            onChange={handleChange}
-            placeholder="Add notes about this booking"
-            className="min-h-[100px]"
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {currentStep === "customer" && (
+        <div className="space-y-4">
+          <CustomerInfoFields
+            customer={booking.customer}
+            phone={booking.phone}
+            email={booking.email}
+            car={booking.car}
+            handleChange={handleChange}
+            isReturningCustomer={isReturningCustomer}
+            isCheckingCustomer={isCheckingCustomer}
           />
+          
+          <div className="flex justify-end">
+            <Button type="button" onClick={goToNextStep} className="gap-1">
+              Next <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
+      
+      {currentStep === "workshop" && (
+        <div className="space-y-4">
+          <ServiceSelector
+            selectedServiceId={selectedServiceId}
+            services={services}
+            onServiceChange={(value) => handleSelectChange("serviceId", value)}
+          />
+          
+          <TechnicianSelector
+            selectedTechnicianId={selectedTechnicianId}
+            technicians={technicians}
+            onTechnicianChange={(value) => handleSelectChange("technicianId", value)}
+          />
+          
+          <ServiceBaySelector
+            selectedBayId={selectedBayId}
+            bays={bays}
+            onBayChange={(value) => handleSelectChange("bayId", value)}
+          />
+          
+          <div className="flex justify-between">
+            <Button type="button" variant="outline" onClick={goToPreviousStep} className="gap-1">
+              <ChevronLeft className="h-4 w-4" /> Back
+            </Button>
+            <Button type="button" onClick={goToNextStep} className="gap-1">
+              Next <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+      
+      {currentStep === "scheduling" && (
+        <div className="space-y-4">
+          <DateSelector
+            date={date}
+            onDateChange={handleDateChange}
+          />
+          
+          <TimeStatusSelector
+            time={booking.time}
+            status={booking.status}
+            onSelectChange={handleSelectChange}
+          />
+
+          <div className="grid gap-2">
+            <Label htmlFor="notes">Notes</Label>
+            <Textarea
+              id="notes"
+              name="notes"
+              value={booking.notes || ""}
+              onChange={handleChange}
+              placeholder="Add notes about this booking"
+              className="min-h-[100px]"
+            />
+          </div>
+          
+          <div className="flex justify-between">
+            <Button type="button" variant="outline" onClick={goToPreviousStep} className="gap-1">
+              <ChevronLeft className="h-4 w-4" /> Back
+            </Button>
+          </div>
+        </div>
+      )}
+      
       <DialogFooter className="flex justify-between">
-        {isEditing && onDeleteClick && (
+        {isEditing && onDeleteClick && currentStep === "scheduling" && (
           <div>
             <Button 
               type="button" 
@@ -165,9 +240,11 @@ const BookingForm: React.FC<BookingFormProps> = ({
           <Button variant="outline" type="button" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit">
-            {isEditing ? "Save Changes" : "Save Booking"}
-          </Button>
+          {currentStep === "scheduling" && (
+            <Button type="submit">
+              {isEditing ? "Save Changes" : "Save Booking"}
+            </Button>
+          )}
         </div>
       </DialogFooter>
     </form>

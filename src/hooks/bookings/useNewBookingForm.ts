@@ -26,6 +26,7 @@ const defaultBooking: BookingType = {
   id: 0,
   customer: "",
   phone: "",
+  email: "",
   service: "",
   time: "9:00 AM",
   duration: 30,

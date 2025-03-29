@@ -576,6 +576,7 @@ export type Database = {
           car: string
           cost: number | null
           created_at: string | null
+          customer_email: string | null
           customer_name: string
           customer_phone: string
           duration: number
@@ -595,6 +596,7 @@ export type Database = {
           car: string
           cost?: number | null
           created_at?: string | null
+          customer_email?: string | null
           customer_name: string
           customer_phone: string
           duration: number
@@ -614,6 +616,7 @@ export type Database = {
           car?: string
           cost?: number | null
           created_at?: string | null
+          customer_email?: string | null
           customer_name?: string
           customer_phone?: string
           duration?: number

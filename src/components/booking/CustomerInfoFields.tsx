@@ -2,12 +2,13 @@
 import React from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { User, Phone, Car, RotateCw, Loader2 } from "lucide-react";
+import { User, Phone, Car, Mail, RotateCw, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface CustomerInfoFieldsProps {
   customer: string;
   phone: string;
+  email: string;
   car: string;
   handleChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   isReturningCustomer?: boolean;
@@ -17,6 +18,7 @@ interface CustomerInfoFieldsProps {
 const CustomerInfoFields: React.FC<CustomerInfoFieldsProps> = ({
   customer,
   phone,
+  email,
   car,
   handleChange,
   isReturningCustomer = false,
@@ -57,6 +59,20 @@ const CustomerInfoFields: React.FC<CustomerInfoFieldsProps> = ({
           value={phone}
           onChange={handleChange}
           required
+        />
+      </div>
+      
+      <div className="grid gap-2">
+        <Label htmlFor="email" className="flex items-center gap-2">
+          <Mail className="h-4 w-4" /> Email Address
+        </Label>
+        <Input
+          id="email"
+          name="email"
+          type="email"
+          value={email || ""}
+          onChange={handleChange}
+          placeholder="customer@example.com"
         />
       </div>
       

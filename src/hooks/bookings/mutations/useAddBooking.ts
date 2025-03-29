@@ -1,4 +1,3 @@
-
 import { v4 as uuidv4 } from 'uuid';
 import { BookingType } from "@/types/booking";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,6 +36,7 @@ export const useAddBooking = (
           user_id: user.id,
           customer_name: newBooking.customer,
           customer_phone: newBooking.phone,
+          customer_email: newBooking.email,
           service: newBooking.service,
           booking_time: newBooking.time,
           duration: newBooking.duration,
@@ -54,12 +54,12 @@ export const useAddBooking = (
         throw bookingError;
       }
       
-      // Check if a customer with this phone already exists
+      // Check if a customer with this phone or email already exists
       const { data: existingCustomers, error: customerLookupError } = await supabase
         .from('user_customers')
         .select('*')
         .eq('user_id', user.id)
-        .eq('phone', newBooking.phone);
+        .or(`phone.eq.${newBooking.phone},email.eq.${newBooking.email || ''}`);
         
       if (customerLookupError) {
         console.error('Error looking up customer:', customerLookupError);
@@ -78,6 +78,7 @@ export const useAddBooking = (
             user_id: user.id,
             name: newBooking.customer,
             phone: newBooking.phone,
+            email: newBooking.email,
             status: 'active',
             last_visit: new Date().toISOString()
           })
@@ -105,10 +106,15 @@ export const useAddBooking = (
         // Update existing customer's last visit
         customerId = existingCustomers[0].id;
         
-        // Update the last visit date
+        // Update the last visit date and email if provided
+        const updateData: any = { last_visit: new Date().toISOString() };
+        if (newBooking.email && !existingCustomers[0].email) {
+          updateData.email = newBooking.email;
+        }
+        
         const { error: updateError } = await supabase
           .from('user_customers')
-          .update({ last_visit: new Date().toISOString() })
+          .update(updateData)
           .eq('id', customerId);
           
         if (updateError) {
@@ -138,24 +144,6 @@ export const useAddBooking = (
           if (vehicleError) {
             console.error('Error adding vehicle to customer:', vehicleError);
           }
-        }
-      }
-      
-      // Add booking note to customer notes if provided
-      if (customerId && newBooking.notes && newBooking.notes.trim() !== '') {
-        const numericCustomerId = parseInt(customerId.toString(), 10);
-        const notePrefix = `Booking note (${newBooking.date}, ${newBooking.service}): `;
-        
-        const { error: noteError } = await supabase
-          .from('customer_notes')
-          .insert({
-            customer_id: numericCustomerId,
-            note: notePrefix + newBooking.notes,
-            created_by: user.email || 'System'
-          });
-
-        if (noteError) {
-          console.error('Error adding booking note to customer:', noteError);
         }
       }
       

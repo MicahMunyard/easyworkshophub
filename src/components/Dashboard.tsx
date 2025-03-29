@@ -13,16 +13,28 @@ import { useAuth } from "@/contexts/AuthContext";
 
 // Import dashboard components
 import StatsGrid from "./dashboard/StatsGrid";
-import VideoWidget from "./dashboard/VideoWidget";
+import VideoCarousel from "./dashboard/VideoCarousel";
 import AppointmentsList from "./dashboard/AppointmentsList";
 import WorkshopStats from "./dashboard/WorkshopStats";
 import ImportantAlerts from "./dashboard/ImportantAlerts";
 import RecentActivities from "./dashboard/RecentActivities";
 import InventoryAlerts from "./dashboard/InventoryAlerts";
 
-// This can be updated when you want to change the video
-const DASHBOARD_VIDEO_ID = "BHGh0rVxTbo"; // YouTube video ID
-const DASHBOARD_VIDEO_TITLE = "Workshop Tutorial: Getting Started"; // Video title
+// Sample video data
+const DASHBOARD_VIDEOS = [
+  {
+    id: "BHGh0rVxTbo",
+    title: "Workshop Tutorial: Getting Started",
+  },
+  {
+    id: "NpEaa2P7qZI",
+    title: "How to Manage Workshop Inventory",
+  },
+  {
+    id: "M9AoEJA9L0w",
+    title: "Customer Management & Service Excellence",
+  }
+];
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -62,11 +74,8 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="w-full" style={{ height: "400px" }}>
-        <VideoWidget 
-          videoId={DASHBOARD_VIDEO_ID} 
-          title={DASHBOARD_VIDEO_TITLE}
-        />
+      <div className="w-full h-[400px]">
+        <VideoCarousel videos={DASHBOARD_VIDEOS} />
       </div>
 
       <StatsGrid 
