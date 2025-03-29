@@ -6,13 +6,16 @@ import { ModeToggle } from "@/components/ui/mode-toggle";
 
 interface NavActionsProps {
   isMobile?: boolean;
+  isSidebar?: boolean;
 }
 
-const NavActions: React.FC<NavActionsProps> = ({ isMobile = false }) => {
+const NavActions: React.FC<NavActionsProps> = ({ isMobile = false, isSidebar = false }) => {
   return (
     <div 
       className={cn(
-        isMobile ? "flex flex-col items-center gap-4" : "hidden lg:flex lg:items-center lg:gap-4 ml-auto"
+        "flex items-center gap-4",
+        isMobile && "flex-col",
+        isSidebar && "flex-col w-full"
       )}
     >
       <NavProfile />

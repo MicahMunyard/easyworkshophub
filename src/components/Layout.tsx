@@ -97,15 +97,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         onNavigate={(path) => navigate(path)}
       />
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar 
-          open={sidebarOpen} 
-          setOpen={setSidebarOpen} 
-          activeSidebarSection={activeSidebarSection}
-          sidebarSections={sidebarSections}
-        />
         <main
-          className={`flex-1 overflow-auto transition-all duration-300 ease-in-out
-            ${sidebarOpen ? "lg:ml-64" : "ml-0"}`}
+          className="flex-1 overflow-auto transition-all duration-300 ease-in-out ml-64"
         >
           <div className="container py-6 px-4 md:px-6 mx-auto min-h-[calc(100vh-4rem)] animate-fadeIn">
             {children}

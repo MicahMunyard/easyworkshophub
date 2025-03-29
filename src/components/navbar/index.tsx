@@ -34,37 +34,41 @@ const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-30 w-full bg-black">
-      <div className="container h-16 border-b border-white/10 flex items-center">
-        {/* Logo and Navigation - Left Aligned */}
-        <div className="flex items-center gap-6">
+    <header className="fixed top-0 left-0 z-30 h-full bg-black">
+      <div className="h-full w-64 border-r border-white/10 flex flex-col">
+        {/* Logo */}
+        <div className="px-4 py-4">
           <NavLogo />
-          <div className="hidden md:block">
-            <NavTabs 
-              currentTab={currentTab} 
-              onTabChange={handleTabChange} 
-              sections={mainNavSections} 
-            />
-          </div>
         </div>
 
-        {/* Mobile Navigation */}
-        <MobileNav 
-          isOpen={isOpen} 
-          toggleMenu={toggleMenu} 
-          currentTab={currentTab}
-          onTabChange={handleTabChange}
-          sections={mainNavSections}
-        />
-
-        {/* Desktop Navigation Actions - Right Aligned */}
-        <NavActions />
-
-        {/* Mobile Toggle and Mode Switch */}
-        <div className="flex items-center gap-2 lg:hidden ml-auto">
-          <ModeToggle />
-          <MobileMenuButton toggleMenu={toggleMenu} />
+        {/* Navigation */}
+        <div className="mt-8 flex-1">
+          <NavTabs 
+            currentTab={currentTab} 
+            onTabChange={handleTabChange} 
+            sections={mainNavSections} 
+            isSidebar={true}
+          />
         </div>
+
+        {/* Actions at bottom */}
+        <div className="mt-auto p-4">
+          <NavActions isSidebar={true} />
+        </div>
+      </div>
+
+      {/* Mobile Navigation */}
+      <MobileNav 
+        isOpen={isOpen} 
+        toggleMenu={toggleMenu} 
+        currentTab={currentTab}
+        onTabChange={handleTabChange}
+        sections={mainNavSections}
+      />
+
+      {/* Mobile Menu Toggle */}
+      <div className="fixed top-4 right-4 lg:hidden">
+        <MobileMenuButton toggleMenu={toggleMenu} />
       </div>
     </header>
   );

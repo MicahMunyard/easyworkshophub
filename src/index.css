@@ -95,6 +95,13 @@
     @apply bg-background text-foreground font-sans;
     background: linear-gradient(109.6deg, rgba(223,234,247,1) 11.2%, rgba(244,248,252,1) 91.1%);
     transition: background-color 0.3s ease, color 0.3s ease;
+    padding-left: 16rem;
+  }
+
+  @media (max-width: 1024px) {
+    body {
+      padding-left: 0;
+    }
   }
 
   /* Custom scrollbar */
@@ -122,11 +129,11 @@
   }
   
   .nav-item {
-    @apply flex items-center gap-2 px-3 py-2 rounded-md text-sidebar-foreground transition-all duration-200 hover:text-white hover:bg-sidebar-accent border-l-2 border-transparent hover:border-workshop-red;
+    @apply flex items-center gap-2 px-3 py-2 rounded-md text-white transition-all duration-200 hover:text-white hover:bg-white/10 border-l-2 border-transparent hover:border-workshop-red;
   }
   
   .nav-item.active {
-    @apply bg-sidebar-accent text-white border-l-2 border-workshop-red;
+    @apply bg-white/5 text-white border-l-2 border-workshop-red;
   }
 
   .performance-card {
