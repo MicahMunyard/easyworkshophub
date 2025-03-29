@@ -53,34 +53,36 @@ const VideoCarousel: React.FC<VideoCarouselProps> = ({
   
   return (
     <Card className="h-full">
-      <CardHeader className="p-4 pb-2 border-b border-border/50">
+      <CardHeader className="p-2 pb-1 border-b border-border/50">
         <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center">
-            <Video className="mr-2 h-5 w-5 text-workshop-red" />
+          <CardTitle className="flex items-center text-sm">
+            <Video className="mr-1 h-4 w-4 text-workshop-red" />
             {title}
           </CardTitle>
-          <div className="flex space-x-2">
+          <div className="flex space-x-1">
             <Button 
               variant="outline" 
               size="sm" 
+              className="h-6 w-6 p-0"
               onClick={handlePrev}
               disabled={videos.length <= 1 || playing}
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-3 w-3" />
             </Button>
             <Button 
               variant="outline" 
               size="sm" 
+              className="h-6 w-6 p-0"
               onClick={handleNext}
               disabled={videos.length <= 1 || playing}
             >
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-3 w-3" />
             </Button>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="p-4 flex flex-col items-center justify-center">
-        <div className="relative w-full bg-black/90 rounded-lg aspect-video flex items-center justify-center overflow-hidden">
+      <CardContent className="p-2 flex flex-col items-center justify-center overflow-hidden">
+        <div className="relative w-full bg-black/90 rounded-lg aspect-video h-[90px] flex items-center justify-center overflow-hidden">
           {!playing ? (
             <div className="relative w-full h-full cursor-pointer group" onClick={() => setPlaying(true)}>
               <img 
@@ -92,12 +94,12 @@ const VideoCarousel: React.FC<VideoCarouselProps> = ({
                 <Button 
                   variant="outline" 
                   size="icon" 
-                  className="h-16 w-16 rounded-full bg-white/20 hover:bg-white/30"
+                  className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30"
                 >
-                  <div className="w-0 h-0 border-t-[10px] border-t-transparent border-l-[16px] border-l-white border-b-[10px] border-b-transparent ml-1"></div>
+                  <div className="w-0 h-0 border-t-[5px] border-t-transparent border-l-[8px] border-l-white border-b-[5px] border-b-transparent ml-0.5"></div>
                 </Button>
               </div>
-              <div className="absolute bottom-4 left-4 right-4 text-white font-medium bg-black/70 p-2 rounded">
+              <div className="absolute bottom-1 left-1 right-1 text-white text-xs font-medium bg-black/70 p-1 rounded truncate">
                 {currentVideo?.title}
               </div>
             </div>
@@ -109,19 +111,18 @@ const VideoCarousel: React.FC<VideoCarouselProps> = ({
               frameBorder="0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
               allowFullScreen
-              onLoad={() => console.log("Video loaded")}
             ></iframe>
           )}
         </div>
 
         {videos.length > 1 && !playing && (
-          <div className="flex justify-center mt-4 gap-2">
+          <div className="flex justify-center mt-1 gap-1">
             {videos.map((_, index) => (
               <Button
                 key={index}
                 variant={index === activeIndex ? "default" : "outline"}
                 size="sm"
-                className={`w-8 h-8 p-0 ${index === activeIndex ? "bg-workshop-red" : ""}`}
+                className={`w-5 h-5 p-0 text-xs ${index === activeIndex ? "bg-workshop-red" : ""}`}
                 onClick={() => setActiveIndex(index)}
               >
                 {index + 1}
