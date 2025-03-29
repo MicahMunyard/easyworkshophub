@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import CustomerNotes from "@/components/CustomerNotes";
+import CustomerNotes from "@/components/customer-notes";
 
 interface CustomerNotesTabProps {
   customerId: string;
