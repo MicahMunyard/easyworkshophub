@@ -1,9 +1,9 @@
-
 import React from "react";
 import { 
   Gauge, 
   TrendingUp, 
   Clock,
+  Video as VideoIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -51,10 +51,13 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      {/* Main title at the top */}
-      <h1 className="text-3xl font-bold tracking-tight text-center">
-        What's New At WorkshopBase?
-      </h1>
+      {/* Main title moved to the left with an icon */}
+      <div className="flex items-center gap-2">
+        <VideoIcon className="mr-1 h-6 w-6 text-workshop-red" />
+        <h1 className="text-3xl font-bold tracking-tight">
+          What's New At WorkshopBase?
+        </h1>
+      </div>
       
       {/* Video carousel with increased height */}
       <div className="w-full h-[200px] md:h-[240px]">
