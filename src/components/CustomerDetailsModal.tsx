@@ -10,7 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { CustomerDetailType } from "@/types/customer";
-import CustomerDetails from "./CustomerDetails";
+import CustomerDetails from "./customer-details";
 import { supabase } from "@/integrations/supabase/client";
 
 interface CustomerDetailsModalProps {
