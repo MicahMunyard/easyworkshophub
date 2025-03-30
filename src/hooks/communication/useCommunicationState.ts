@@ -35,6 +35,9 @@ export const useCommunicationState = () => {
           conv.id === selectedConversation.id ? { ...conv, unread: false } : conv
         )
       );
+      
+      // Automatically show the contact drawer when a conversation is selected
+      setShowContactDrawer(true);
     }
   }, [selectedConversation]);
 
