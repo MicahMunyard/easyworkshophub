@@ -71,7 +71,7 @@ const DayView: React.FC<DayViewProps> = ({
                       top: "4px",
                       height: `calc(${booking.duration / 30} * 4rem - 8px)`,
                       ...positionStyles,
-                      zIndex: index + 1 // Add z-index to ensure proper stacking
+                      zIndex: index + 1 // Ensure higher indices are on top
                     }}
                     onClick={() => handleBookingClick(booking)}
                   >

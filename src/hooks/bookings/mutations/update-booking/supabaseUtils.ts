@@ -39,6 +39,10 @@ export const findOriginalBookingId = async (booking: BookingType, userId: string
  */
 export const updateBookingInSupabase = async (booking: BookingType, userId: string, bookingCost?: number) => {
   try {
+    // Make sure we have a valid cost value (0 if not provided)
+    const finalCost = bookingCost !== undefined ? bookingCost : (booking.cost || 0);
+    console.log(`Updating booking with cost: ${finalCost}`);
+    
     const { error: updateError } = await supabase
       .from('user_bookings')
       .update({
@@ -54,7 +58,7 @@ export const updateBookingInSupabase = async (booking: BookingType, userId: stri
         service_id: booking.service_id || null,
         bay_id: booking.bay_id || null,
         notes: booking.notes || null,
-        cost: bookingCost || booking.cost
+        cost: finalCost
       })
       .eq('id', booking.id.toString())
       .eq('user_id', userId); // Ensure we only update the user's own booking
