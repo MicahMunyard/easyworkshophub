@@ -23,6 +23,24 @@ const DayView: React.FC<DayViewProps> = ({
     }
   };
 
+  // Group bookings by time slot for side-by-side display
+  const getPositionStyles = (bookings, index) => {
+    const totalBookings = bookings.length;
+    if (totalBookings === 1) {
+      return { left: "1px", right: "1px", width: "calc(100% - 2px)" };
+    }
+    
+    // Calculate width and position for side-by-side display
+    const width = `calc(${100 / totalBookings}% - 4px)`;
+    const leftPosition = `calc(${(index * 100) / totalBookings}% + 2px)`;
+    
+    return {
+      width,
+      left: leftPosition,
+      right: "auto"
+    };
+  };
+
   return (
     <div className="grid grid-cols-[80px_1fr] divide-x divide-border">
       <div className="divide-y">
@@ -33,34 +51,44 @@ const DayView: React.FC<DayViewProps> = ({
         ))}
       </div>
       <div className="relative divide-y">
-        {timeSlots.map((time) => (
-          <div key={time} className="h-16 p-1 relative hover:bg-muted/50 transition-colors">
-            {filteredBookings
-              .filter((booking) => booking.time === time)
-              .map((booking) => (
-                <div
-                  key={booking.id}
-                  className={cn(
-                    "absolute left-1 right-1 p-2 rounded-md overflow-hidden text-sm cursor-pointer",
-                    "animate-slideRight transition-all hover:ring-1 hover:ring-ring",
-                    getStatusClasses(booking.status)
-                  )}
-                  style={{
-                    top: "4px",
-                    height: `calc(${booking.duration / 30} * 4rem - 8px)`,
-                  }}
-                  onClick={() => handleBookingClick(booking)}
-                >
-                  <div className="font-medium truncate">{booking.customer}</div>
-                  <div className="text-xs flex gap-1 items-center text-muted-foreground truncate">
-                    <span>{booking.service}</span>
-                    <span className="inline-block h-1 w-1 rounded-full bg-muted-foreground"></span>
-                    <span>{booking.car}</span>
+        {timeSlots.map((time) => {
+          const timeBookings = filteredBookings.filter((booking) => booking.time === time);
+          
+          return (
+            <div key={time} className="h-16 p-1 relative hover:bg-muted/50 transition-colors">
+              {timeBookings.map((booking, index) => {
+                const positionStyles = getPositionStyles(timeBookings, index);
+                
+                return (
+                  <div
+                    key={booking.id}
+                    className={cn(
+                      "absolute p-2 rounded-md overflow-hidden text-sm cursor-pointer",
+                      "animate-slideRight transition-all hover:ring-1 hover:ring-ring",
+                      getStatusClasses(booking.status)
+                    )}
+                    style={{
+                      top: "4px",
+                      height: `calc(${booking.duration / 30} * 4rem - 8px)`,
+                      ...positionStyles
+                    }}
+                    onClick={() => handleBookingClick(booking)}
+                  >
+                    <div className="font-medium truncate">{booking.customer}</div>
+                    <div className="text-xs flex gap-1 items-center text-muted-foreground truncate">
+                      <span>{booking.service}</span>
+                      <span className="inline-block h-1 w-1 rounded-full bg-muted-foreground"></span>
+                      <span>{booking.car}</span>
+                    </div>
+                    {timeBookings.length > 1 && (
+                      <div className="absolute top-1 right-1 h-2 w-2 bg-amber-500 rounded-full"></div>
+                    )}
                   </div>
-                </div>
-              ))}
-          </div>
-        ))}
+                );
+              })}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

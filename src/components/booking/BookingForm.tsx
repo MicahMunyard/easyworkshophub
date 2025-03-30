@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { DialogFooter } from "@/components/ui/dialog";
 import { Trash2, ChevronRight, ChevronLeft } from "lucide-react";
@@ -75,6 +75,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
   const [isCheckingCustomer, setIsCheckingCustomer] = useState(false);
   const [returnNotified, setReturnNotified] = useState(false);
   const [currentStep, setCurrentStep] = useState<FormStep>("customer");
+  const lastCheckedInfo = useRef({ phone: '', email: '' });
   
   // Navigate to next step
   const goToNextStep = () => {
@@ -112,9 +113,20 @@ const BookingForm: React.FC<BookingFormProps> = ({
   
   // Check if customer exists when customer info changes
   useEffect(() => {
-    const checkExistingCustomer = async () => {
-      // Only check if we have sufficient customer info
-      if ((booking.phone && booking.phone.length > 5) || (booking.email && booking.email.length > 5)) {
+    // Don't trigger customer check if the form is being edited
+    if (isEditing) return;
+    
+    // Only check if we have sufficient customer info AND it's different from last check
+    if ((booking.phone && booking.phone.length > 5 && booking.phone !== lastCheckedInfo.current.phone) || 
+        (booking.email && booking.email.length > 5 && booking.email !== lastCheckedInfo.current.email)) {
+      
+      // Update last checked info
+      lastCheckedInfo.current = {
+        phone: booking.phone || '',
+        email: booking.email || ''
+      };
+      
+      const checkExistingCustomer = async () => {
         setIsCheckingCustomer(true);
         const existingCustomer = await findCustomerByEmailOrPhone(booking.email || "", booking.phone);
         const wasReturningCustomer = isReturningCustomer;
@@ -122,19 +134,17 @@ const BookingForm: React.FC<BookingFormProps> = ({
         setIsCheckingCustomer(false);
         
         // Only show toast if customer just identified and not previously notified
-        if (existingCustomer && !wasReturningCustomer && !returnNotified && !isEditing) {
+        if (existingCustomer && !wasReturningCustomer && !returnNotified) {
           setReturnNotified(true);
           toast({
             title: "Returning Customer",
             description: `${existingCustomer.name} has booked with you ${existingCustomer.totalBookings} time(s) before.`,
           });
         }
-      } else {
-        setIsReturningCustomer(false);
-      }
-    };
-    
-    checkExistingCustomer();
+      };
+      
+      checkExistingCustomer();
+    }
   }, [booking.phone, booking.email, findCustomerByEmailOrPhone, isEditing, isReturningCustomer, returnNotified]);
 
   return (

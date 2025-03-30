@@ -1,10 +1,11 @@
 
 import { BookingType } from "@/types/booking";
+import { supabase } from "@/integrations/supabase/client";
+import { updateCustomerOnBookingChange } from "./customerUtils";
+import { syncJobWithBooking } from "./jobUtils";
+import { updateBookingInSupabase } from "./supabaseUtils";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { findOriginalBookingId, updateBookingInSupabase } from "./supabaseUtils";
-import { updateCustomerRecord, addBookingNoteToCustomer } from "./customerUtils";
-import { updateAssociatedJob } from "./jobUtils";
 
 export const useUpdateBooking = (
   bookings: BookingType[],
@@ -24,38 +25,51 @@ export const useUpdateBooking = (
         });
         return false;
       }
-
+      
       console.log("Updating booking:", updatedBooking);
-      
-      // Update UI first for better UX
-      const updatedBookings = bookings.map(booking => 
-        booking.id === updatedBooking.id ? updatedBooking : booking
-      );
-      setBookings(updatedBookings);
-      
-      // Find the original booking ID in Supabase format
-      const bookingIdStr = await findOriginalBookingId(updatedBooking, user.id);
-      
-      // Update in Supabase
-      await updateBookingInSupabase(updatedBooking, bookingIdStr, user.id);
-      
-      // Update or create customer record
-      await updateCustomerRecord(updatedBooking, user.id);
-      
-      // Update associated job
-      await updateAssociatedJob(updatedBooking, user.id);
 
-      // Add booking note as customer note if there are notes
-      if (updatedBooking.notes && updatedBooking.notes.trim() !== '') {
-        await addBookingNoteToCustomer(updatedBooking, user.id);
+      // Extract service price if it's included in the booking
+      let bookingCost = updatedBooking.cost;
+      
+      // If status is completed and cost isn't set, try to get service price
+      if (updatedBooking.status === 'completed' && !bookingCost && updatedBooking.service_id) {
+        console.log("Booking marked as completed, fetching service price");
+        const { data: serviceData } = await supabase
+          .from('user_services')
+          .select('price')
+          .eq('id', updatedBooking.service_id)
+          .single();
+          
+        if (serviceData && serviceData.price) {
+          bookingCost = parseFloat(String(serviceData.price));
+          console.log(`Using service price for completed booking: ${bookingCost}`);
+        }
       }
+      
+      // Update Supabase with the booking
+      await updateBookingInSupabase(updatedBooking, user.id, bookingCost);
+
+      // Update customer data (last visit date, etc)
+      await updateCustomerOnBookingChange(updatedBooking, user.id, bookingCost);
+      
+      // Sync the related job
+      await syncJobWithBooking(updatedBooking, user.id);
+      
+      // Update local state
+      setBookings(prevBookings => 
+        prevBookings.map(booking => 
+          booking.id === updatedBooking.id ? updatedBooking : booking
+        )
+      );
       
       toast({
         title: "Booking Updated",
         description: `${updatedBooking.customer}'s booking has been updated.`,
       });
       
-      await fetchBookings(); // Refresh bookings to ensure consistency
+      // Refresh bookings to ensure consistency
+      await fetchBookings();
+      
       return true;
     } catch (error) {
       console.error('Error updating booking:', error);
@@ -64,12 +78,9 @@ export const useUpdateBooking = (
         description: "Failed to update booking. Please try again.",
         variant: "destructive"
       });
-      await fetchBookings(); // Refresh to ensure UI is in sync with database
       return false;
     }
   };
 
   return { updateBooking };
 };
-
-export default useUpdateBooking;

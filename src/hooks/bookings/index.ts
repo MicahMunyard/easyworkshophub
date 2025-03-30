@@ -6,6 +6,7 @@ import { useBookingMutations } from "./useBookingMutations";
 import { UseBookingsReturn, BookingView } from "./types";
 import { useNewBookingForm } from "./useNewBookingForm";
 import { useEditBookingForm } from "./useEditBookingForm";
+import { useBookingDiaryState } from "./useBookingDiaryState";
 
 export const useBookings = (initialDate = new Date(), initialView: BookingView = "day"): UseBookingsReturn => {
   const { date, setDate, view, setView, navigateDate } = useBookingNavigation(initialDate, initialView);
@@ -27,4 +28,4 @@ export const useBookings = (initialDate = new Date(), initialView: BookingView =
   };
 };
 
-export { useNewBookingForm, useEditBookingForm };
+export { useNewBookingForm, useEditBookingForm, useBookingDiaryState };

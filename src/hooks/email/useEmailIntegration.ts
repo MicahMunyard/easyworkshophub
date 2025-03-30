@@ -43,6 +43,7 @@ export const useEmailIntegration = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${sessionData.session.access_token}`,
         },
+        body: JSON.stringify({}), // Add empty body to prevent JSON parsing errors
       });
       
       if (!response.ok) {
