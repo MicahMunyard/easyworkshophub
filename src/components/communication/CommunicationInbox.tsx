@@ -3,7 +3,7 @@ import React from "react";
 import { Card } from "@/components/ui/card";
 import ConversationList from "./ConversationList";
 import MessageThread from "./MessageThread";
-import ContactDrawer from "./ContactDrawer";
+import ContactPanel from "./ContactPanel";
 import { Conversation } from "@/types/communication";
 import EmptyInbox from "./EmptyInbox";
 
@@ -32,8 +32,6 @@ const CommunicationInbox: React.FC<CommunicationInboxProps> = ({
   setNewMessage,
   sendMessage,
   isSendingMessage,
-  showContactDrawer,
-  setShowContactDrawer,
   addContactToCustomers
 }) => {
   if (isLoading) {
@@ -45,9 +43,9 @@ const CommunicationInbox: React.FC<CommunicationInboxProps> = ({
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 h-[calc(100vh-250px)]">
-      {/* Conversations List (1/4 width on desktop) */}
-      <Card className="lg:col-span-1 overflow-hidden">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-[calc(100vh-250px)]">
+      {/* Conversations List (3/12 width on desktop) */}
+      <Card className="lg:col-span-3 overflow-hidden">
         <ConversationList 
           conversations={conversations}
           selectedConversation={selectedConversation}
@@ -55,8 +53,8 @@ const CommunicationInbox: React.FC<CommunicationInboxProps> = ({
         />
       </Card>
       
-      {/* Message Thread (3/4 width on desktop) */}
-      <Card className="lg:col-span-3 flex flex-col overflow-hidden">
+      {/* Message Thread (6/12 width on desktop) */}
+      <Card className="lg:col-span-6 flex flex-col overflow-hidden">
         {selectedConversation ? (
           <MessageThread 
             conversation={selectedConversation}
@@ -65,7 +63,7 @@ const CommunicationInbox: React.FC<CommunicationInboxProps> = ({
             setNewMessage={setNewMessage}
             sendMessage={sendMessage}
             isSendingMessage={isSendingMessage}
-            onContactInfoClick={() => setShowContactDrawer(true)}
+            onContactInfoClick={() => {}} // No longer needed since we have the side panel
           />
         ) : (
           <div className="flex flex-col items-center justify-center h-full p-4">
@@ -74,15 +72,17 @@ const CommunicationInbox: React.FC<CommunicationInboxProps> = ({
         )}
       </Card>
       
-      {/* Contact Drawer */}
-      {selectedConversation && (
-        <ContactDrawer 
-          isOpen={showContactDrawer}
-          onClose={() => setShowContactDrawer(false)}
+      {/* Contact Panel (3/12 width on desktop) */}
+      <div className="lg:col-span-3">
+        <ContactPanel 
           conversation={selectedConversation}
-          addToCustomers={() => addContactToCustomers(selectedConversation)}
+          addToCustomers={() => {
+            if (selectedConversation) {
+              addContactToCustomers(selectedConversation);
+            }
+          }}
         />
-      )}
+      </div>
     </div>
   );
 };

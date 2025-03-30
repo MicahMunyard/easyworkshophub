@@ -16,7 +16,6 @@ export const useCommunicationState = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [newMessage, setNewMessage] = useState("");
   const [isSendingMessage, setIsSendingMessage] = useState(false);
-  const [showContactDrawer, setShowContactDrawer] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -35,9 +34,6 @@ export const useCommunicationState = () => {
           conv.id === selectedConversation.id ? { ...conv, unread: false } : conv
         )
       );
-      
-      // Automatically show the contact drawer when a conversation is selected
-      setShowContactDrawer(true);
     }
   }, [selectedConversation]);
 
@@ -94,8 +90,6 @@ export const useCommunicationState = () => {
     sendMessage,
     isSendingMessage,
     fetchConversations: getConversations,
-    showContactDrawer,
-    setShowContactDrawer,
     addContactToCustomers
   };
 };

@@ -52,18 +52,18 @@ export const updateCustomerOnBookingChange = async (
         console.log(`Service completed with cost ${bookingCost}`);
         
         try {
-          // Define transaction params 
-          const transactionParams = {
+          // Define the parameters for the RPC call
+          const params: Record<string, any> = {
             p_customer_id: customer.id,
             p_amount: bookingCost,
             p_service_description: `${booking.service} - ${booking.car}`,
             p_booking_id: booking.id.toString()
           };
           
-          // Use type assertion to bypass the TypeScript type checking
+          // Use type assertion on the entire params object
           const { error: updateSpendingError } = await supabase.rpc(
             'update_customer_last_visit_and_transaction',
-            transactionParams as any
+            params as any
           );
           
           if (updateSpendingError) {

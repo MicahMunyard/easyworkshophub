@@ -5,8 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, User, Info } from "lucide-react";
-import { formatRelative } from "date-fns";
+import { Send } from "lucide-react";
 import MessageBubble from "./MessageBubble";
 
 interface MessageThreadProps {
@@ -25,8 +24,7 @@ const MessageThread: React.FC<MessageThreadProps> = ({
   newMessage,
   setNewMessage,
   sendMessage,
-  isSendingMessage,
-  onContactInfoClick
+  isSendingMessage
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
@@ -54,7 +52,7 @@ const MessageThread: React.FC<MessageThreadProps> = ({
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="p-3 border-b flex items-center justify-between">
+      <div className="p-3 border-b flex items-center">
         <div className="flex items-center gap-3">
           <Avatar>
             <AvatarImage src={conversation.profile_picture_url} alt={conversation.contact_name} />
@@ -65,9 +63,6 @@ const MessageThread: React.FC<MessageThreadProps> = ({
             <p className="text-xs text-muted-foreground">{conversation.contact_handle}</p>
           </div>
         </div>
-        <Button variant="ghost" size="icon" onClick={onContactInfoClick}>
-          <Info className="h-5 w-5" />
-        </Button>
       </div>
       
       {/* Messages */}
