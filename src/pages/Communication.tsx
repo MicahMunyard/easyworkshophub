@@ -11,6 +11,9 @@ const Communication = () => {
   const [activeTab, setActiveTab] = useState("inbox");
   const communicationState = useCommunicationState();
   
+  // Add the missing state for the contact drawer
+  const [showContactDrawer, setShowContactDrawer] = useState(false);
+  
   return (
     <div className="space-y-6">
       <div>
@@ -31,7 +34,11 @@ const Communication = () => {
         </TabsList>
         
         <TabsContent value="inbox" className="space-y-4">
-          <CommunicationInbox {...communicationState} />
+          <CommunicationInbox 
+            {...communicationState} 
+            showContactDrawer={showContactDrawer}
+            setShowContactDrawer={setShowContactDrawer}
+          />
         </TabsContent>
         
         <TabsContent value="connections">

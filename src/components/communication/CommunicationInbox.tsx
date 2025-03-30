@@ -32,6 +32,8 @@ const CommunicationInbox: React.FC<CommunicationInboxProps> = ({
   setNewMessage,
   sendMessage,
   isSendingMessage,
+  showContactDrawer,
+  setShowContactDrawer,
   addContactToCustomers
 }) => {
   if (isLoading) {
@@ -63,7 +65,7 @@ const CommunicationInbox: React.FC<CommunicationInboxProps> = ({
             setNewMessage={setNewMessage}
             sendMessage={sendMessage}
             isSendingMessage={isSendingMessage}
-            onContactInfoClick={() => {}} // No longer needed since we have the side panel
+            onContactInfoClick={() => setShowContactDrawer(true)}
           />
         ) : (
           <div className="flex flex-col items-center justify-center h-full p-4">
