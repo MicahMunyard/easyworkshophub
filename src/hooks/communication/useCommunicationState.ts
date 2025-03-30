@@ -43,7 +43,13 @@ export const useCommunicationState = () => {
         throw error;
       }
       
-      setConversations(data || []);
+      // Cast the data to ensure it matches our Conversation type
+      const typedData = data?.map(conv => ({
+        ...conv,
+        platform: (conv.platform as 'facebook' | 'instagram' | 'tiktok' | 'other')
+      })) as Conversation[];
+      
+      setConversations(typedData || []);
     } catch (error) {
       console.error('Error fetching conversations:', error);
       toast({
@@ -70,7 +76,13 @@ export const useCommunicationState = () => {
         throw error;
       }
       
-      setMessages(data || []);
+      // Cast the data to ensure it matches our Message type
+      const typedData = data?.map(msg => ({
+        ...msg,
+        sender_type: (msg.sender_type as 'user' | 'contact')
+      })) as Message[];
+      
+      setMessages(typedData || []);
     } catch (error) {
       console.error('Error fetching messages:', error);
       toast({
