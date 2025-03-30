@@ -58,7 +58,8 @@ export const updateBookingInSupabase = async (booking: BookingType, userId: stri
         service_id: booking.service_id || null,
         bay_id: booking.bay_id || null,
         notes: booking.notes || null,
-        cost: finalCost
+        cost: finalCost,
+        customer_email: booking.email || null
       })
       .eq('id', booking.id.toString())
       .eq('user_id', userId); // Ensure we only update the user's own booking

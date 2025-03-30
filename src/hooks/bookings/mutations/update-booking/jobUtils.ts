@@ -3,52 +3,76 @@ import { BookingType } from "@/types/booking";
 import { supabase } from "@/integrations/supabase/client";
 
 /**
- * Updates the job associated with a booking
+ * Syncs the job data with the booking data when a booking is updated
  */
-export const updateAssociatedJob = async (booking: BookingType, userId: string) => {
+export const syncJobWithBooking = async (booking: BookingType, userId: string) => {
   try {
-    const { data: matchingJobs, error: jobsError } = await supabase
-      .from('jobs')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('customer', booking.customer)
-      .eq('date', booking.date);
-    
-    if (jobsError) {
-      console.error('Error finding matching jobs:', jobsError);
+    // Skip if the booking doesn't have a status that would need a job sync
+    if (!['confirmed', 'completed'].includes(booking.status)) {
+      console.log(`Booking status ${booking.status} doesn't require job sync.`);
       return;
     }
     
-    if (matchingJobs && matchingJobs.length > 0) {
-      console.log("Updating associated job:", matchingJobs[0].id);
+    console.log("Syncing job with booking:", booking.id);
+    
+    // Check if a job already exists for this booking
+    const { data: existingJobs, error: searchError } = await supabase
+      .from('user_jobs')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('title', `${booking.service} - ${booking.customer}`)
+      .eq('vehicle', booking.car);
       
-      // Map booking status to job status
-      const jobStatus = 
-        booking.status === 'confirmed' ? 'pending' : 
-        booking.status === 'completed' ? 'completed' : 
-        booking.status === 'cancelled' ? 'cancelled' : 'pending';
+    if (searchError) {
+      console.error('Error searching for existing job:', searchError);
+      return;
+    }
+    
+    // Map booking status to job status
+    const jobStatus = booking.status === 'completed' 
+      ? 'completed' 
+      : 'in_progress';
+    
+    const jobData = {
+      title: `${booking.service} - ${booking.customer}`,
+      description: `${booking.service} booking on ${booking.date} at ${booking.time}`,
+      customer_name: booking.customer,
+      vehicle: booking.car,
+      status: jobStatus,
+      bay_id: booking.bay_id || null,
+      technician_id: booking.technician_id || null,
+      start_date: new Date(`${booking.date}T${booking.time}`).toISOString(),
+      cost: booking.cost || null,
+      user_id: userId
+    };
+    
+    if (existingJobs && existingJobs.length > 0) {
+      // Update existing job
+      const jobId = existingJobs[0].id;
       
-      await supabase
-        .from('jobs')
-        .update({
-          vehicle: booking.car,
-          service: booking.service,
-          status: jobStatus,
-          assigned_to: booking.technician_id || 'Unassigned',
-          time_estimate: `${booking.duration} minutes`
-        })
-        .eq('id', matchingJobs[0].id)
-        .eq('user_id', userId);
+      const { error: updateError } = await supabase
+        .from('user_jobs')
+        .update(jobData)
+        .eq('id', jobId);
+        
+      if (updateError) {
+        console.error('Error updating job:', updateError);
+      } else {
+        console.log("Job updated successfully");
+      }
+    } else {
+      // Create new job
+      const { error: createError } = await supabase
+        .from('user_jobs')
+        .insert(jobData);
+        
+      if (createError) {
+        console.error('Error creating job:', createError);
+      } else {
+        console.log("Job created successfully");
+      }
     }
   } catch (error) {
-    console.error('Error updating associated job:', error);
+    console.error('Error in syncJobWithBooking:', error);
   }
-};
-
-/**
- * Syncs a job with booking information
- * This is an alias for updateAssociatedJob to maintain backward compatibility
- */
-export const syncJobWithBooking = async (booking: BookingType, userId: string) => {
-  return await updateAssociatedJob(booking, userId);
 };
