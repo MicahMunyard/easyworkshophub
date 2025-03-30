@@ -53,16 +53,19 @@ export const updateCustomerOnBookingChange = async (
         
         try {
           // Call the RPC function to update customer data
-          // The issue is here: The booking.id is a number, but we need to pass a string
-          // Fix: Use type assertion to tell TypeScript this is a valid parameter type
+          // TypeScript is struggling with the parameter types for this RPC call
+          // We need to explicitly define the parameter types to match what the RPC function expects
+          const params = {
+            p_customer_id: customer.id,
+            p_amount: bookingCost,
+            p_service_description: `${booking.service} - ${booking.car}`,
+            p_booking_id: String(booking.id)
+          };
+          
+          // Use a type assertion to tell TypeScript to treat the RPC parameters as expected by the function
           const { error: updateSpendingError } = await supabase.rpc(
             'update_customer_last_visit_and_transaction',
-            {
-              p_customer_id: customer.id,
-              p_amount: bookingCost,
-              p_service_description: `${booking.service} - ${booking.car}`,
-              p_booking_id: String(booking.id) as string // Fix: Using type assertion to resolve the 'never' type issue
-            }
+            params as any
           );
           
           if (updateSpendingError) {
