@@ -18,8 +18,16 @@ BEGIN
   SET last_visit = CURRENT_DATE
   WHERE id = p_customer_id;
   
-  -- Additional logic can be added here to record transactions,
-  -- update spending totals, etc. if you have those tables.
+  -- Here you would typically insert a transaction record into a transactions table
+  -- and update the customer's total spending
+  -- Example:
+  -- INSERT INTO user_customer_transactions (customer_id, amount, description, booking_id)
+  -- VALUES (p_customer_id, p_amount, p_service_description, p_booking_id);
+  
+  -- You could also update a total spending field if you added one to the user_customers table
+  -- UPDATE user_customers 
+  -- SET total_spending = total_spending + p_amount
+  -- WHERE id = p_customer_id;
 END;
 $$ LANGUAGE plpgsql;
 */

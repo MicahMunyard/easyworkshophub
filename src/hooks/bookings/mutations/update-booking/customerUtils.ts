@@ -51,11 +51,8 @@ export const updateCustomerOnBookingChange = async (
         const bookingCost = cost || booking.cost || 0;
         console.log(`Service completed with cost ${bookingCost}`);
         
-        // Instead of using custom tables, we'll log the transaction data 
-        // and update the customer data
-        
         try {
-          // Use a simpler direct update to track customer spending
+          // Call the RPC function to update customer data
           const { error: updateSpendingError } = await supabase.rpc(
             'update_customer_last_visit_and_transaction',
             {
