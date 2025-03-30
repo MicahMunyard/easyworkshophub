@@ -1,10 +1,21 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { v4 as uuidv4 } from "uuid";
 
 export const sendMessage = async (conversationId: string, content: string): Promise<boolean> => {
   try {
-    // Add message to database
+    // For sample conversations, simulate sending a message
+    if (conversationId.startsWith('sample-')) {
+      console.log(`Simulating sending message to sample conversation ${conversationId}: ${content}`);
+      
+      // Simulate a delay to make it feel realistic
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      return true;
+    }
+    
+    // For real conversations, add to database
     const { error } = await supabase
       .from('social_messages')
       .insert({

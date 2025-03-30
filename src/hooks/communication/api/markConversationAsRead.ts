@@ -4,6 +4,12 @@ import { Conversation } from "@/types/communication";
 
 export const markConversationAsRead = async (conversationId: string): Promise<void> => {
   try {
+    // Skip for sample conversations
+    if (conversationId.startsWith('sample-')) {
+      console.log(`Simulating marking sample conversation ${conversationId} as read`);
+      return;
+    }
+    
     await supabase
       .from('social_conversations')
       .update({ unread: false })

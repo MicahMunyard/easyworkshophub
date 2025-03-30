@@ -2,12 +2,29 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Conversation } from "@/types/communication";
 import { toast } from "@/hooks/use-toast";
+import { v4 as uuidv4 } from "uuid";
 
 export const addContactToCustomers = async (
   userId: string,
   conversation: Conversation
 ): Promise<boolean> => {
   try {
+    // For sample conversations, simulate adding to customers
+    if (conversation.id.startsWith('sample-')) {
+      console.log(`Simulating adding ${conversation.contact_name} to customers`);
+      
+      // Simulate a delay to make it feel realistic
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      toast({
+        title: "Customer Added",
+        description: `${conversation.contact_name} has been added to your customers.`
+      });
+      
+      return true;
+    }
+    
+    // Real implementation for actual database conversations
     // Check if customer already exists with this name and/or handle
     const { data: existingCustomers, error: lookupError } = await supabase
       .from('user_customers')
