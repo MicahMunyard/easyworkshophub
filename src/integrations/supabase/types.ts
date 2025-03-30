@@ -541,6 +541,89 @@ export type Database = {
         }
         Relationships: []
       }
+      social_conversations: {
+        Row: {
+          contact_handle: string | null
+          contact_name: string
+          created_at: string | null
+          external_id: string | null
+          id: string
+          last_message_at: string | null
+          platform: string
+          profile_picture_url: string | null
+          unread: boolean | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          contact_handle?: string | null
+          contact_name: string
+          created_at?: string | null
+          external_id?: string | null
+          id?: string
+          last_message_at?: string | null
+          platform: string
+          profile_picture_url?: string | null
+          unread?: boolean | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          contact_handle?: string | null
+          contact_name?: string
+          created_at?: string | null
+          external_id?: string | null
+          id?: string
+          last_message_at?: string | null
+          platform?: string
+          profile_picture_url?: string | null
+          unread?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      social_messages: {
+        Row: {
+          attachment_url: string | null
+          content: string
+          conversation_id: string
+          created_at: string | null
+          id: string
+          read_at: string | null
+          sender_type: string
+          sent_at: string | null
+        }
+        Insert: {
+          attachment_url?: string | null
+          content: string
+          conversation_id: string
+          created_at?: string | null
+          id?: string
+          read_at?: string | null
+          sender_type: string
+          sent_at?: string | null
+        }
+        Update: {
+          attachment_url?: string | null
+          content?: string
+          conversation_id?: string
+          created_at?: string | null
+          id?: string
+          read_at?: string | null
+          sender_type?: string
+          sent_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "social_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       technicians: {
         Row: {
           created_at: string | null

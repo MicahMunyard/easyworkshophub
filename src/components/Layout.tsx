@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   Hammer,
   Mail,
+  MessageCircle,
   Package,
   Users,
   Megaphone,
@@ -20,6 +21,7 @@ const mainNavSections = [
   { name: "Dashboard", path: "/", icon: <LayoutDashboard className="h-5 w-5" /> },
   { name: "Workshop", path: "/workshop", icon: <Hammer className="h-5 w-5" /> },
   { name: "Email", path: "/email-integration", icon: <Mail className="h-5 w-5" /> },
+  { name: "Communication", path: "/communication", icon: <MessageCircle className="h-5 w-5" /> },
   { name: "Inventory", path: "/inventory", icon: <Package className="h-5 w-5" /> },
   { name: "Customers", path: "/customers", icon: <Users className="h-5 w-5" /> },
   { name: "Marketing", path: "/marketing", icon: <Megaphone className="h-5 w-5" /> },
@@ -35,6 +37,9 @@ const secondaryNavSections = {
   ],
   email: [
     { name: "Email Integration", path: "/email-integration" }
+  ],
+  communication: [
+    { name: "Communication", path: "/communication" }
   ],
   inventory: [
     { name: "Inventory", path: "/inventory" },
@@ -64,6 +69,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     if (path === '/') return 'dashboard';
     if (path.includes('/workshop') || path.includes('/booking-diary') || path.includes('/jobs') || path.includes('/workshop-setup')) return 'workshop';
     if (path.includes('/email')) return 'email';
+    if (path.includes('/communication')) return 'communication';
     if (path.includes('/inventory') || path.includes('/suppliers')) return 'inventory';
     if (path.includes('/customers')) return 'customers';
     if (path.includes('/marketing') || path.includes('/email-marketing') || path.includes('/reviews')) return 'marketing';
