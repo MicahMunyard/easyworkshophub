@@ -2,12 +2,12 @@
 import React from "react";
 import { Conversation } from "@/types/communication";
 import { 
-  Sheet, 
-  SheetContent, 
-  SheetDescription, 
-  SheetHeader, 
-  SheetTitle 
-} from "@/components/ui/sheet";
+  Drawer,
+  DrawerContent, 
+  DrawerHeader, 
+  DrawerTitle, 
+  DrawerDescription
+} from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Calendar, Facebook, Instagram, MessageCircle, Phone, Plus, User } from "lucide-react";
@@ -65,16 +65,16 @@ const ContactDrawer: React.FC<ContactDrawerProps> = ({
   };
 
   return (
-    <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="w-full sm:max-w-md overflow-y-auto">
-        <SheetHeader className="text-left">
-          <SheetTitle>Contact Information</SheetTitle>
-          <SheetDescription>
+    <Drawer open={isOpen} onOpenChange={onClose} shouldScaleBackground={false}>
+      <DrawerContent className="bg-background border-t rounded-t-[10px] max-h-[80%] overflow-y-auto">
+        <DrawerHeader className="text-left">
+          <DrawerTitle>Contact Information</DrawerTitle>
+          <DrawerDescription>
             View and manage this contact
-          </SheetDescription>
-        </SheetHeader>
+          </DrawerDescription>
+        </DrawerHeader>
         
-        <div className="mt-6 space-y-6">
+        <div className="px-4 pb-6 space-y-6">
           {/* Contact Header */}
           <div className="flex flex-col items-center text-center p-4">
             <Avatar className="h-24 w-24 mb-4">
@@ -144,8 +144,8 @@ const ContactDrawer: React.FC<ContactDrawerProps> = ({
             </dl>
           </div>
         </div>
-      </SheetContent>
-    </Sheet>
+      </DrawerContent>
+    </Drawer>
   );
 };
 
