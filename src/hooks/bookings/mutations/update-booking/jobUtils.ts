@@ -44,3 +44,11 @@ export const updateAssociatedJob = async (booking: BookingType, userId: string) 
     console.error('Error updating associated job:', error);
   }
 };
+
+/**
+ * Syncs a job with booking information
+ * This is an alias for updateAssociatedJob to maintain backward compatibility
+ */
+export const syncJobWithBooking = async (booking: BookingType, userId: string) => {
+  return await updateAssociatedJob(booking, userId);
+};

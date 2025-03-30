@@ -52,58 +52,8 @@ export const updateCustomerOnBookingChange = async (
         
         console.log(`Adding cost ${bookingCost} to customer spending history`);
         
-        // Get current total spending if available
-        const { data: spendingData } = await supabase
-          .from('user_customer_spending')
-          .select('total')
-          .eq('customer_id', customer.id)
-          .single();
-        
-        if (spendingData) {
-          // Update existing spending record
-          const newTotal = (parseFloat(String(spendingData.total)) || 0) + bookingCost;
-          
-          const { error: spendingUpdateError } = await supabase
-            .from('user_customer_spending')
-            .update({ 
-              total: newTotal,
-              last_updated: new Date().toISOString()
-            })
-            .eq('customer_id', customer.id);
-            
-          if (spendingUpdateError) {
-            console.error('Error updating customer spending:', spendingUpdateError);
-          }
-        } else {
-          // Create a new spending record
-          const { error: spendingInsertError } = await supabase
-            .from('user_customer_spending')
-            .insert({
-              customer_id: customer.id,
-              total: bookingCost,
-              last_updated: new Date().toISOString()
-            });
-            
-          if (spendingInsertError) {
-            console.error('Error creating customer spending record:', spendingInsertError);
-          }
-        }
-        
-        // Add transaction history entry
-        const { error: transactionError } = await supabase
-          .from('user_customer_transactions')
-          .insert({
-            customer_id: customer.id,
-            amount: bookingCost,
-            description: `${booking.service} - ${booking.car}`,
-            transaction_date: new Date().toISOString(),
-            booking_id: booking.id,
-            transaction_type: 'service'
-          });
-          
-        if (transactionError) {
-          console.error('Error recording transaction:', transactionError);
-        }
+        // Create a transaction record for the service
+        await recordCustomerTransaction(customer.id, bookingCost, booking);
       }
       
       // Check if the customer already has this vehicle
@@ -129,5 +79,79 @@ export const updateCustomerOnBookingChange = async (
     }
   } catch (error) {
     console.error('Error in updateCustomerOnBookingChange:', error);
+  }
+};
+
+/**
+ * Records a transaction for a customer
+ */
+const recordCustomerTransaction = async (
+  customerId: string,
+  amount: number,
+  booking: BookingType
+) => {
+  try {
+    // Insert transaction record
+    const { error: transactionError } = await supabase
+      .from('user_customer_transactions')
+      .insert({
+        customer_id: customerId,
+        amount: amount,
+        description: `${booking.service} - ${booking.car}`,
+        transaction_date: new Date().toISOString(),
+        booking_id: booking.id.toString(),
+        transaction_type: 'service'
+      });
+      
+    if (transactionError) {
+      console.error('Error recording transaction:', transactionError);
+      return;
+    }
+    
+    // Update the customer's total spending
+    // First try to get existing spending record
+    const { data: spendingData, error: spendingQueryError } = await supabase
+      .from('user_customer_spending')
+      .select('*')
+      .eq('customer_id', customerId)
+      .maybeSingle();
+    
+    if (spendingQueryError) {
+      console.error('Error querying customer spending:', spendingQueryError);
+      return;
+    }
+    
+    if (spendingData) {
+      // Update existing record
+      const currentTotal = parseFloat(String(spendingData.total || 0));
+      const newTotal = currentTotal + amount;
+      
+      const { error: updateError } = await supabase
+        .from('user_customer_spending')
+        .update({
+          total: newTotal,
+          last_updated: new Date().toISOString()
+        })
+        .eq('customer_id', customerId);
+      
+      if (updateError) {
+        console.error('Error updating customer spending:', updateError);
+      }
+    } else {
+      // Insert new record
+      const { error: insertError } = await supabase
+        .from('user_customer_spending')
+        .insert({
+          customer_id: customerId,
+          total: amount,
+          last_updated: new Date().toISOString()
+        });
+      
+      if (insertError) {
+        console.error('Error creating customer spending record:', insertError);
+      }
+    }
+  } catch (error) {
+    console.error('Error in recordCustomerTransaction:', error);
   }
 };

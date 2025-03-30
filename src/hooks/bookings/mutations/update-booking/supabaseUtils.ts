@@ -37,7 +37,7 @@ export const findOriginalBookingId = async (booking: BookingType, userId: string
 /**
  * Updates the booking in Supabase
  */
-export const updateBookingInSupabase = async (booking: BookingType, bookingId: string, userId: string) => {
+export const updateBookingInSupabase = async (booking: BookingType, userId: string, bookingCost?: number) => {
   try {
     const { error: updateError } = await supabase
       .from('user_bookings')
@@ -53,9 +53,10 @@ export const updateBookingInSupabase = async (booking: BookingType, bookingId: s
         technician_id: booking.technician_id || null,
         service_id: booking.service_id || null,
         bay_id: booking.bay_id || null,
-        notes: booking.notes || null
+        notes: booking.notes || null,
+        cost: bookingCost || booking.cost
       })
-      .eq('id', bookingId)
+      .eq('id', booking.id.toString())
       .eq('user_id', userId); // Ensure we only update the user's own booking
     
     if (updateError) {

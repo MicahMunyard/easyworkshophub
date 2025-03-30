@@ -24,7 +24,7 @@ const DayView: React.FC<DayViewProps> = ({
   };
 
   // Group bookings by time slot for side-by-side display
-  const getPositionStyles = (bookings, index) => {
+  const getPositionStyles = (bookings: any[], index: number) => {
     const totalBookings = bookings.length;
     if (totalBookings === 1) {
       return { left: "1px", right: "1px", width: "calc(100% - 2px)" };
@@ -70,7 +70,8 @@ const DayView: React.FC<DayViewProps> = ({
                     style={{
                       top: "4px",
                       height: `calc(${booking.duration / 30} * 4rem - 8px)`,
-                      ...positionStyles
+                      ...positionStyles,
+                      zIndex: index + 1 // Add z-index to ensure proper stacking
                     }}
                     onClick={() => handleBookingClick(booking)}
                   >
