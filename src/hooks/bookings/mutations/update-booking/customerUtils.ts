@@ -52,25 +52,19 @@ export const updateCustomerOnBookingChange = async (
         console.log(`Service completed with cost ${bookingCost}`);
         
         try {
-          // Fix the typing issue by using a more specific type or any
-          interface RpcParams {
-            p_customer_id: string;
-            p_amount: number;
-            p_service_description: string;
-            p_booking_id: string;
-          }
-          
-          const params: RpcParams = {
+          // Fixing the typing issue by creating a typed object and using
+          // a type assertion for the RPC function parameters
+          const params = {
             p_customer_id: customer.id,
             p_amount: bookingCost,
             p_service_description: `${booking.service} - ${booking.car}`,
             p_booking_id: booking.id.toString()
           };
           
-          // Call RPC function with the properly typed params
+          // Call RPC function with the properly typed params using type assertion
           const { error: updateSpendingError } = await supabase.rpc(
             'update_customer_last_visit_and_transaction',
-            params
+            params as any
           );
           
           if (updateSpendingError) {
