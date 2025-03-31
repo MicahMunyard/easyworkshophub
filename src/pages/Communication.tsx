@@ -10,10 +10,22 @@ import { useIsMobile } from "@/hooks/use-mobile";
 const Communication = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("inbox");
-  const communicationState = useCommunicationState();
+  const {
+    conversations,
+    selectedConversation,
+    setSelectedConversation,
+    messages,
+    isLoading,
+    newMessage,
+    setNewMessage,
+    sendMessage,
+    isSendingMessage,
+    addContactToCustomers,
+    addMessage
+  } = useCommunicationState();
   const isMobile = useIsMobile();
   
-  // Add the missing state for the contact drawer
+  // State for the contact drawer
   const [showContactDrawer, setShowContactDrawer] = useState(false);
   
   return (
@@ -37,9 +49,19 @@ const Communication = () => {
         
         <TabsContent value="inbox" className="space-y-4">
           <CommunicationInbox 
-            {...communicationState} 
+            conversations={conversations}
+            selectedConversation={selectedConversation}
+            setSelectedConversation={setSelectedConversation}
+            messages={messages}
+            isLoading={isLoading}
+            newMessage={newMessage}
+            setNewMessage={setNewMessage}
+            sendMessage={sendMessage}
+            isSendingMessage={isSendingMessage}
             showContactDrawer={showContactDrawer}
             setShowContactDrawer={setShowContactDrawer}
+            addContactToCustomers={addContactToCustomers}
+            addMessage={addMessage}
           />
         </TabsContent>
         

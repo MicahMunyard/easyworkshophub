@@ -1,11 +1,28 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Facebook, Instagram, RefreshCcw, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/contexts/AuthContext";
+import { connectSocialPlatform } from "@/hooks/communication/api/connectSocialPlatform";
 
 const SocialConnections: React.FC = () => {
+  const { user } = useAuth();
+  const [isConnecting, setIsConnecting] = useState<string | null>(null);
+
+  const handleConnectPlatform = async (platform: 'facebook' | 'instagram' | 'tiktok') => {
+    if (!user) return;
+    
+    setIsConnecting(platform);
+    
+    try {
+      await connectSocialPlatform(user.id, platform);
+    } finally {
+      setIsConnecting(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -27,7 +44,13 @@ const SocialConnections: React.FC = () => {
                   </p>
                 </div>
               </div>
-              <Button variant="outline">Connect</Button>
+              <Button 
+                variant="outline" 
+                disabled={isConnecting === 'facebook'}
+                onClick={() => handleConnectPlatform('facebook')}
+              >
+                {isConnecting === 'facebook' ? 'Connecting...' : 'Connect'}
+              </Button>
             </div>
             
             <div className="flex items-center justify-between p-4 border rounded-lg">
@@ -40,7 +63,13 @@ const SocialConnections: React.FC = () => {
                   </p>
                 </div>
               </div>
-              <Button variant="outline">Connect</Button>
+              <Button 
+                variant="outline"
+                disabled={isConnecting === 'instagram'}
+                onClick={() => handleConnectPlatform('instagram')}
+              >
+                {isConnecting === 'instagram' ? 'Connecting...' : 'Connect'}
+              </Button>
             </div>
             
             <div className="flex items-center justify-between p-4 border rounded-lg">
@@ -55,7 +84,13 @@ const SocialConnections: React.FC = () => {
                   </p>
                 </div>
               </div>
-              <Button variant="outline">Connect</Button>
+              <Button 
+                variant="outline"
+                disabled={isConnecting === 'tiktok'}
+                onClick={() => handleConnectPlatform('tiktok')}
+              >
+                {isConnecting === 'tiktok' ? 'Connecting...' : 'Connect'}
+              </Button>
             </div>
           </div>
         </CardContent>

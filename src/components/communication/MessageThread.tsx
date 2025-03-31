@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Send, UserRound, ArrowLeft } from "lucide-react";
 import MessageBubble from "./MessageBubble";
 import { Textarea } from "@/components/ui/textarea";
+import { useRealtimeMessages } from "@/hooks/communication/useRealtimeMessages";
+import { Message } from "@/types/communication";
 
 interface MessageThreadProps {
   conversation: any;
@@ -15,6 +17,7 @@ interface MessageThreadProps {
   onContactInfoClick: () => void;
   onBackClick?: () => void;
   isMobile?: boolean;
+  addMessage: (message: Message) => void;
 }
 
 const MessageThread: React.FC<MessageThreadProps> = ({
@@ -26,9 +29,13 @@ const MessageThread: React.FC<MessageThreadProps> = ({
   isSendingMessage,
   onContactInfoClick,
   onBackClick,
-  isMobile = false
+  isMobile = false,
+  addMessage
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Set up real-time listening for new messages
+  useRealtimeMessages(conversation?.id, addMessage);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -60,10 +67,10 @@ const MessageThread: React.FC<MessageThreadProps> = ({
           <UserRound className="h-6 w-6 mr-2 text-muted-foreground" />
           <div>
             <h3 className="font-medium text-sm">
-              {conversation.name || 'Unknown Contact'}
+              {conversation?.name || conversation?.contact_name || 'Unknown Contact'}
             </h3>
             <p className="text-xs text-muted-foreground">
-              {conversation.platform} • {conversation.lastMessageTime ? new Date(conversation.lastMessageTime).toLocaleDateString() : 'No messages'}
+              {conversation?.platform} • {conversation?.last_message_at ? new Date(conversation.last_message_at).toLocaleDateString() : 'No messages'}
             </p>
           </div>
         </div>
@@ -84,7 +91,7 @@ const MessageThread: React.FC<MessageThreadProps> = ({
             <MessageBubble 
               key={index} 
               message={message} 
-              isOutgoing={message.isOutgoing}
+              isOutgoing={message.isOutgoing || message.sender_type === 'user'}
             />
           ))
         ) : (

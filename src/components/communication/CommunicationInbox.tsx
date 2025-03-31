@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import ConversationList from "./ConversationList";
 import MessageThread from "./MessageThread";
 import ContactPanel from "./ContactPanel";
-import { Conversation } from "@/types/communication";
+import { Conversation, Message } from "@/types/communication";
 import EmptyInbox from "./EmptyInbox";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -13,7 +13,7 @@ interface CommunicationInboxProps {
   conversations: Conversation[];
   selectedConversation: Conversation | null;
   setSelectedConversation: (conversation: Conversation | null) => void;
-  messages: any[];
+  messages: Message[];
   isLoading: boolean;
   newMessage: string;
   setNewMessage: (message: string) => void;
@@ -22,6 +22,7 @@ interface CommunicationInboxProps {
   showContactDrawer: boolean;
   setShowContactDrawer: (show: boolean) => void;
   addContactToCustomers: (conversation: Conversation) => void;
+  addMessage: (message: Message) => void;
 }
 
 const CommunicationInbox: React.FC<CommunicationInboxProps> = ({
@@ -36,7 +37,8 @@ const CommunicationInbox: React.FC<CommunicationInboxProps> = ({
   isSendingMessage,
   showContactDrawer,
   setShowContactDrawer,
-  addContactToCustomers
+  addContactToCustomers,
+  addMessage
 }) => {
   const isMobile = useIsMobile();
 
@@ -75,6 +77,7 @@ const CommunicationInbox: React.FC<CommunicationInboxProps> = ({
                 onContactInfoClick={() => setShowContactDrawer(true)}
                 onBackClick={() => setSelectedConversation(null)}
                 isMobile={true}
+                addMessage={addMessage}
               />
             </Card>
             
@@ -121,6 +124,7 @@ const CommunicationInbox: React.FC<CommunicationInboxProps> = ({
             isSendingMessage={isSendingMessage}
             onContactInfoClick={() => setShowContactDrawer(true)}
             isMobile={false}
+            addMessage={addMessage}
           />
         ) : (
           <div className="flex flex-col items-center justify-center h-full p-4">

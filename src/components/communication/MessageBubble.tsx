@@ -1,6 +1,7 @@
 
 import React from "react";
 import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
 
 export interface MessageBubbleProps {
   message: any;
@@ -12,10 +13,15 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   isOutgoing 
 }) => {
   return (
-    <div className={cn(
-      "flex",
-      isOutgoing ? "justify-end" : "justify-start"
-    )}>
+    <motion.div 
+      className={cn(
+        "flex",
+        isOutgoing ? "justify-end" : "justify-start"
+      )}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2 }}
+    >
       <div className={cn(
         "max-w-[75%] rounded-lg px-4 py-2",
         isOutgoing 
@@ -23,6 +29,18 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
           : "bg-muted"
       )}>
         <p className="break-words">{message.content}</p>
+        
+        {message.attachment_url && (
+          <a 
+            href={message.attachment_url} 
+            target="_blank" 
+            rel="noreferrer" 
+            className="text-xs underline mt-1 block"
+          >
+            View attachment
+          </a>
+        )}
+        
         <p className="text-xs opacity-70 mt-1 text-right">
           {new Date(message.sent_at || message.created_at).toLocaleTimeString([], { 
             hour: '2-digit', 
@@ -30,7 +48,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
           })}
         </p>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
