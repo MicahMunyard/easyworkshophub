@@ -68,10 +68,10 @@ export const updateCustomerOnBookingChange = async (
             p_booking_id: booking.id.toString()
           };
           
-          // Call RPC function - using 'any' to bypass TypeScript's strict typing here
+          // Call RPC function - using appropriate type casting to avoid TypeScript error
           const { error: updateSpendingError } = await supabase.rpc(
             'update_customer_last_visit_and_transaction',
-            rpcParams as any 
+            rpcParams
           );
           
           if (updateSpendingError) {

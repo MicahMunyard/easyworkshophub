@@ -22,6 +22,7 @@ export interface Message {
   sent_at: string;
   read_at?: string;
   created_at: string;
+  isOutgoing?: boolean; // Added this property to fix the type error
 }
 
 export interface SocialConnection {
