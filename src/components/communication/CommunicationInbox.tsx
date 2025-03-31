@@ -6,6 +6,8 @@ import MessageThread from "./MessageThread";
 import ContactPanel from "./ContactPanel";
 import { Conversation } from "@/types/communication";
 import EmptyInbox from "./EmptyInbox";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 
 interface CommunicationInboxProps {
   conversations: Conversation[];
@@ -36,6 +38,8 @@ const CommunicationInbox: React.FC<CommunicationInboxProps> = ({
   setShowContactDrawer,
   addContactToCustomers
 }) => {
+  const isMobile = useIsMobile();
+
   if (isLoading) {
     return <div className="flex justify-center p-10">Loading conversations...</div>;
   }
@@ -44,6 +48,56 @@ const CommunicationInbox: React.FC<CommunicationInboxProps> = ({
     return <EmptyInbox />;
   }
 
+  // Mobile layout
+  if (isMobile) {
+    return (
+      <div className="flex flex-col gap-4">
+        {/* Show conversation list when no conversation is selected */}
+        {!selectedConversation ? (
+          <Card className="overflow-hidden">
+            <ConversationList 
+              conversations={conversations}
+              selectedConversation={selectedConversation}
+              onSelect={setSelectedConversation}
+            />
+          </Card>
+        ) : (
+          // Show message thread when conversation is selected
+          <div className="flex flex-col gap-4">
+            <Card className="flex flex-col overflow-hidden">
+              <MessageThread 
+                conversation={selectedConversation}
+                messages={messages}
+                newMessage={newMessage}
+                setNewMessage={setNewMessage}
+                sendMessage={sendMessage}
+                isSendingMessage={isSendingMessage}
+                onContactInfoClick={() => setShowContactDrawer(true)}
+                onBackClick={() => setSelectedConversation(null)}
+                isMobile={true}
+              />
+            </Card>
+            
+            {/* Contact drawer for mobile */}
+            <Sheet open={showContactDrawer} onOpenChange={setShowContactDrawer}>
+              <SheetContent side="right" className="w-full max-w-md sm:max-w-lg">
+                <ContactPanel 
+                  conversation={selectedConversation}
+                  addToCustomers={() => {
+                    if (selectedConversation) {
+                      addContactToCustomers(selectedConversation);
+                    }
+                  }}
+                />
+              </SheetContent>
+            </Sheet>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Desktop layout
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-[calc(100vh-250px)]">
       {/* Conversations List (3/12 width on desktop) */}
@@ -66,6 +120,7 @@ const CommunicationInbox: React.FC<CommunicationInboxProps> = ({
             sendMessage={sendMessage}
             isSendingMessage={isSendingMessage}
             onContactInfoClick={() => setShowContactDrawer(true)}
+            isMobile={false}
           />
         ) : (
           <div className="flex flex-col items-center justify-center h-full p-4">

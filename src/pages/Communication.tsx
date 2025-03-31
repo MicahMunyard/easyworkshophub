@@ -5,11 +5,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import CommunicationInbox from "@/components/communication/CommunicationInbox";
 import SocialConnections from "@/components/communication/SocialConnections";
 import { useCommunicationState } from "@/hooks/communication/useCommunicationState";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const Communication = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("inbox");
   const communicationState = useCommunicationState();
+  const isMobile = useIsMobile();
   
   // Add the missing state for the contact drawer
   const [showContactDrawer, setShowContactDrawer] = useState(false);

@@ -12,6 +12,7 @@ import {
   Megaphone,
   FileBarChart
 } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -59,7 +60,7 @@ const secondaryNavSections = {
 };
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
-  const [isMobile, setIsMobile] = useState(false);
+  const isMobile = useIsMobile();
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -82,18 +83,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   // Get secondary nav based on current main section
   const currentSecondaryNav = secondaryNavSections[currentMainSection as keyof typeof secondaryNavSections] || [];
 
+  // Auto-collapse sidebar on mobile
   useEffect(() => {
-    const checkIfMobile = () => {
-      setIsMobile(window.innerWidth < 1024);
-    };
-
-    checkIfMobile();
-    window.addEventListener("resize", checkIfMobile);
-    
-    return () => {
-      window.removeEventListener("resize", checkIfMobile);
-    };
-  }, []);
+    if (isMobile) {
+      setSidebarExpanded(false);
+    }
+  }, [isMobile, location.pathname]);
 
   return (
     <div className="min-h-screen flex bg-background text-foreground">
@@ -102,12 +97,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         className={`fixed top-0 left-0 h-full bg-black z-40 transition-all duration-300 ease-in-out pt-16 ${
           sidebarExpanded ? "w-64" : "w-16"
         }`}
-        onMouseEnter={() => setSidebarExpanded(true)}
-        onMouseLeave={() => setSidebarExpanded(false)}
+        onMouseEnter={() => !isMobile && setSidebarExpanded(true)}
+        onMouseLeave={() => !isMobile && setSidebarExpanded(false)}
       >
         <div className="flex flex-col h-full">
           {/* Main navigation icons */}
-          <div className="flex-1 py-4">
+          <div className="flex-1 py-4 overflow-y-auto scrollbar-none">
             {mainNavSections.map((section) => {
               const isActive = section.name.toLowerCase() === currentMainSection;
               return (
@@ -122,9 +117,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     {section.icon}
                   </span>
                   <span 
-                    className={`ml-4 transition-opacity ${
+                    className={`ml-4 transition-opacity whitespace-nowrap ${
                       sidebarExpanded ? "opacity-100" : "opacity-0"
-                    } whitespace-nowrap`}
+                    }`}
                   >
                     {section.name}
                   </span>
@@ -142,14 +137,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       </aside>
 
       {/* Main content area */}
-      <div className={`flex-1 transition-all duration-300 ${sidebarExpanded ? "ml-64" : "ml-16"}`}>
+      <div className={`flex-1 transition-all duration-300 ${sidebarExpanded && !isMobile ? "ml-64" : "ml-16"}`}>
         <Navbar 
           secondaryNavSections={currentSecondaryNav}
           currentPath={location.pathname}
           onNavigate={(path) => navigate(path)}
         />
-        <main className="pt-16 px-4 md:px-6 animate-fadeIn">
-          <div className="container mx-auto py-6 min-h-[calc(100vh-4rem)]">
+        <main className="pt-16 px-2 sm:px-4 md:px-6 animate-fadeIn">
+          <div className="container mx-auto py-6 min-h-[calc(100vh-4rem)] max-w-full">
             {children}
           </div>
         </main>
