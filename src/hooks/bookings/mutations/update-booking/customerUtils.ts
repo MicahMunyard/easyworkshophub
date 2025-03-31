@@ -2,6 +2,14 @@
 import { supabase } from "@/integrations/supabase/client";
 import { BookingType } from "@/types/booking";
 
+// Define an interface for the RPC parameters
+interface CustomerTransactionParams {
+  p_customer_id: string;
+  p_amount: number;
+  p_service_description: string;
+  p_booking_id: string;
+}
+
 export const updateCustomerOnBookingChange = async (
   booking: BookingType,
   userId: string,
@@ -53,17 +61,17 @@ export const updateCustomerOnBookingChange = async (
         
         try {
           // Define parameters for the RPC call
-          const rpcParams = {
+          const rpcParams: CustomerTransactionParams = {
             p_customer_id: customer.id,
             p_amount: bookingCost,
             p_service_description: `${booking.service} - ${booking.car}`,
             p_booking_id: booking.id.toString()
           };
           
-          // Call RPC function with a type assertion to bypass TypeScript's type checking
+          // Call RPC function - using 'any' to bypass TypeScript's strict typing here
           const { error: updateSpendingError } = await supabase.rpc(
             'update_customer_last_visit_and_transaction',
-            rpcParams as unknown as Record<string, never>
+            rpcParams as any 
           );
           
           if (updateSpendingError) {
