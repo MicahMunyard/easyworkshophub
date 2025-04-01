@@ -1,17 +1,17 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card } from "@/components/ui/card";
 import { JobPhoto, PartRequest } from "@/types/technician";
-import JobPhotosSection from "@/components/technician/photos/JobPhotosSection";
-import PartsRequestSection from "@/components/technician/parts/PartsRequestSection";
-import JobNotesTab from "./tabs/JobNotesTab";
-import JobMessagesTab from "./tabs/JobMessagesTab";
+import { JobNotesSection } from "./JobNotesSection";
+import { PartsRequestSection } from "../parts/PartsRequestSection";
+import { JobPhotosSection } from "../photos/JobPhotosSection";
 
 interface JobTabsProps {
   jobId: string;
   photos: JobPhoto[];
   partsRequested: PartRequest[];
-  notes: { id: string; content: string; created_at: string; author: string }[];
+  notes: string[];
   onUploadPhoto: (jobId: string, file: File) => void;
   onRequestParts: (jobId: string, parts: { name: string, quantity: number }[]) => void;
 }
@@ -24,45 +24,42 @@ const JobTabs: React.FC<JobTabsProps> = ({
   onUploadPhoto,
   onRequestParts
 }) => {
+  const [activeTab, setActiveTab] = useState("photos");
+
   return (
-    <Tabs defaultValue="photos" className="w-full">
-      <TabsList className="grid grid-cols-4">
-        <TabsTrigger value="photos" className="text-xs sm:text-sm">
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <TabsList className="grid grid-cols-3 mb-4">
+        <TabsTrigger value="photos" className="text-base">
           Photos
         </TabsTrigger>
-        <TabsTrigger value="parts" className="text-xs sm:text-sm">
+        <TabsTrigger value="parts" className="text-base">
           Parts
         </TabsTrigger>
-        <TabsTrigger value="notes" className="text-xs sm:text-sm">
+        <TabsTrigger value="notes" className="text-base">
           Notes
-        </TabsTrigger>
-        <TabsTrigger value="messages" className="text-xs sm:text-sm">
-          Messages
         </TabsTrigger>
       </TabsList>
       
-      <TabsContent value="photos" className="mt-4">
+      <TabsContent value="photos">
         <JobPhotosSection 
           jobId={jobId} 
-          photos={photos}
-          onUploadPhoto={onUploadPhoto}
+          photos={photos} 
+          onUploadPhoto={onUploadPhoto} 
         />
       </TabsContent>
       
-      <TabsContent value="parts" className="mt-4">
-        <PartsRequestSection
-          jobId={jobId}
-          parts={partsRequested}
-          onRequestParts={onRequestParts}
+      <TabsContent value="parts">
+        <PartsRequestSection 
+          jobId={jobId} 
+          parts={partsRequested} 
+          onRequestParts={onRequestParts} 
         />
       </TabsContent>
       
-      <TabsContent value="notes" className="mt-4">
-        <JobNotesTab jobId={jobId} notes={notes} />
-      </TabsContent>
-      
-      <TabsContent value="messages" className="mt-4">
-        <JobMessagesTab />
+      <TabsContent value="notes">
+        <Card>
+          <JobNotesSection notes={notes} />
+        </Card>
       </TabsContent>
     </Tabs>
   );

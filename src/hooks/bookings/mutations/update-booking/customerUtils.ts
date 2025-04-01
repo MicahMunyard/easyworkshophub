@@ -1,154 +1,116 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { BookingType } from "@/types/booking";
 
-// Define an interface for the RPC parameters
-interface CustomerTransactionParams {
-  p_customer_id: string;
-  p_amount: number;
-  p_service_description: string;
+// Define interfaces for RPC parameters
+interface AddBookingHistoryParams {
+  p_customer_id: number;
   p_booking_id: string;
+  p_service: string;
+  p_date: string;
+  p_mechanic: string;
+  p_vehicle: string;
+  p_status: string;
+  p_cost: number;
 }
 
-// Define interface for customer details sync
-interface CustomerSyncParams {
-  p_booking_id: string;
-  p_name: string;
-  p_email: string;
-  p_phone: string;
+interface UpdateCustomerDetailsParams {
+  p_customer_id: number;
+  p_last_visit: string;
+  p_total_spent: number;
 }
 
 export const updateCustomerOnBookingChange = async (
-  booking: BookingType,
+  updatedBooking: any,
   userId: string,
-  cost?: number
+  bookingCost?: number
 ) => {
-  try {
-    console.log("Updating customer data for booking:", booking.id);
-    
-    // Look up the customer by phone number
-    const { data: customers, error: lookupError } = await supabase
-      .from('user_customers')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('phone', booking.phone);
-      
-    if (lookupError) {
-      console.error('Error looking up customer:', lookupError);
-      return;
-    }
-    
-    // If we found a customer, update their data
-    if (customers && customers.length > 0) {
-      const customer = customers[0];
-      
-      // Prepare update data
-      const updateData: any = {
-        last_visit: new Date().toISOString()
-      };
-      
-      // Add email if it's provided and not already set
-      if (booking.email && (!customer.email || customer.email.trim() === '')) {
-        updateData.email = booking.email;
-      }
-      
-      // Update the customer record
-      const { error: updateError } = await supabase
-        .from('user_customers')
-        .update(updateData)
-        .eq('id', customer.id);
-        
-      if (updateError) {
-        console.error('Error updating customer:', updateError);
-      }
-      
-      // If the booking was completed and has a cost, we want to track this
-      if (booking.status === 'completed' && (cost || booking.cost)) {
-        const bookingCost = cost || booking.cost || 0;
-        console.log(`Service completed with cost ${bookingCost}`);
-        
-        try {
-          // Define parameters for the RPC call
-          const rpcParams: CustomerTransactionParams = {
-            p_customer_id: customer.id,
-            p_amount: bookingCost,
-            p_service_description: `${booking.service} - ${booking.car}`,
-            p_booking_id: booking.id.toString()
-          };
-          
-          // Call RPC function with properly typed parameters
-          const { error: updateSpendingError } = await supabase.rpc(
-            'update_customer_last_visit_and_transaction',
-            rpcParams
-          );
-          
-          if (updateSpendingError) {
-            console.error('Error updating customer spending:', updateSpendingError);
-            
-            // If RPC fails, fall back to simple update
-            const { error: fallbackError } = await supabase
-              .from('user_customers')
-              .update({
-                last_visit: new Date().toISOString()
-              })
-              .eq('id', customer.id);
-              
-            if (fallbackError) {
-              console.error('Error in fallback customer update:', fallbackError);
-            }
-          }
-        } catch (error) {
-          console.error('Error tracking customer transaction:', error);
-        }
-      }
-      
-      // Check if the customer already has this vehicle
-      const { data: existingVehicles } = await supabase
-        .from('user_customer_vehicles')
-        .select('*')
-        .eq('customer_id', customer.id)
-        .eq('vehicle_info', booking.car);
-        
-      // Add the vehicle if it doesn't exist
-      if (!existingVehicles || existingVehicles.length === 0) {
-        const { error: vehicleError } = await supabase
-          .from('user_customer_vehicles')
-          .insert({
-            customer_id: customer.id,
-            vehicle_info: booking.car
-          });
-          
-        if (vehicleError) {
-          console.error('Error adding vehicle to customer:', vehicleError);
-        }
-      }
-    }
-  } catch (error) {
-    console.error('Error in updateCustomerOnBookingChange:', error);
+  if (!updatedBooking.customer_id) {
+    console.log("No customer ID in the booking, skipping customer update");
+    return;
   }
-};
 
-const syncCustomerDetails = async (bookingId: string, userData: {
-  id: string;
-  phone: string;
-  name: string;
-  email: string;
-}) => {
   try {
-    const syncParams: CustomerSyncParams = {
-      p_booking_id: bookingId,
-      p_name: userData.name,
-      p_email: userData.email,
-      p_phone: userData.phone
-    };
+    console.log("Updating customer data for booking:", updatedBooking.id);
     
-    const { error } = await supabase
-      .rpc('sync_customer_details', syncParams);
+    // If status is completed, add to booking history and update customer details
+    if (updatedBooking.status === 'completed') {
+      console.log("Booking is completed, updating customer history");
       
-    if (error) throw error;
+      // Check if the booking already exists in customer history
+      const { data: existingHistory } = await supabase
+        .from('customer_booking_history')
+        .select('id')
+        .eq('booking_id', updatedBooking.id)
+        .eq('customer_id', updatedBooking.customer_id)
+        .maybeSingle();
+      
+      if (existingHistory) {
+        console.log("Booking already exists in history, skipping");
+      } else {
+        // Add to customer booking history
+        const customerId = parseInt(updatedBooking.customer_id, 10);
+        const cost = bookingCost || 0;
+        
+        // Format the params as the RPC function expects
+        const params: AddBookingHistoryParams = {
+          p_customer_id: customerId,
+          p_booking_id: updatedBooking.id,
+          p_service: updatedBooking.service || 'Unknown Service',
+          p_date: updatedBooking.date || new Date().toISOString().split('T')[0],
+          p_mechanic: updatedBooking.assigned_to || 'Unassigned',
+          p_vehicle: updatedBooking.vehicle || 'Unknown Vehicle',
+          p_status: updatedBooking.status,
+          p_cost: cost
+        };
+        
+        console.log("Adding booking to customer history with params:", params);
+        
+        const { data, error } = await supabase
+          .rpc('add_booking_to_customer_history', params);
+        
+        if (error) {
+          console.error("Error adding booking to customer history:", error);
+          throw error;
+        }
+        
+        console.log("Successfully added booking to customer history:", data);
+        
+        // Update customer details (last visit, total spent)
+        // Get the customer's current total_spent
+        const { data: customerData } = await supabase
+          .from('customers')
+          .select('total_spent')
+          .eq('id', customerId)
+          .single();
+        
+        let totalSpent = cost;
+        if (customerData && customerData.total_spent) {
+          totalSpent += parseFloat(String(customerData.total_spent));
+        }
+        
+        const updateParams: UpdateCustomerDetailsParams = {
+          p_customer_id: customerId,
+          p_last_visit: new Date().toISOString().split('T')[0],
+          p_total_spent: totalSpent
+        };
+        
+        console.log("Updating customer details with params:", updateParams);
+        
+        const { data: updateResult, error: updateError } = await supabase
+          .rpc('update_customer_details', updateParams);
+        
+        if (updateError) {
+          console.error("Error updating customer details:", updateError);
+          throw updateError;
+        }
+        
+        console.log("Successfully updated customer details:", updateResult);
+      }
+    }
+    
     return true;
-  } catch (err) {
-    console.error('Error syncing customer details:', err);
-    return false;
+  } catch (error) {
+    console.error("Error in updateCustomerOnBookingChange:", error);
+    throw error;
   }
 };

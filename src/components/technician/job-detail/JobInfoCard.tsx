@@ -1,10 +1,10 @@
 
-import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { User, Car, Calendar, Clock, CheckCircle2, Timer } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import React from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { TechnicianJob, JobStatus } from "@/types/technician";
-import StatusBadge from "./StatusBadge";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Car, Calendar, Clock, User, Timer, CheckCircle } from "lucide-react";
 
 interface JobInfoCardProps {
   job: TechnicianJob;
@@ -12,99 +12,52 @@ interface JobInfoCardProps {
 }
 
 const JobInfoCard: React.FC<JobInfoCardProps> = ({ job, onUpdateStatus }) => {
-  const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false);
+  const canComplete = job.status === 'inProgress' || job.status === 'working';
   
-  const getNextStepButton = () => {
-    switch (job.status) {
-      case 'pending':
-        return (
-          <Button 
-            className="gap-2"
-            onClick={() => onUpdateStatus(job.id, 'accepted')}
-          >
-            <CheckCircle2 className="h-4 w-4" />
-            Accept Job
-          </Button>
-        );
-      case 'accepted':
-        return (
-          <Button 
-            className="gap-2"
-            onClick={() => onUpdateStatus(job.id, 'inProgress')}
-          >
-            <Timer className="h-4 w-4" />
-            Start Work
-          </Button>
-        );
-      case 'inProgress':
-      case 'working':
-        return (
-          <Button 
-            className="gap-2"
-            onClick={() => setIsCompleteDialogOpen(true)}
-          >
-            <CheckCircle2 className="h-4 w-4" />
-            Complete Job
-          </Button>
-        );
-      default:
-        return null;
-    }
-  };
-
   return (
     <Card>
-      <CardHeader className="pb-3">
+      <CardContent className="p-4 space-y-4">
         <div className="flex justify-between items-start">
           <div>
-            <CardTitle className="text-xl">{job.title}</CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">Job #{job.id}</p>
+            <h2 className="text-xl font-bold">{job.title}</h2>
+            <p className="text-muted-foreground">{job.description}</p>
           </div>
-          <StatusBadge status={job.status} />
+          <Badge variant="outline" className="text-sm">
+            {job.status === 'inProgress' || job.status === 'working' ? 'In Progress' : job.status}
+          </Badge>
         </div>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1">
-            <div className="text-sm text-muted-foreground flex items-center gap-1">
-              <User className="h-3.5 w-3.5" /> Customer
-            </div>
-            <div className="font-medium">{job.customer}</div>
+        
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <div className="flex items-center gap-2">
+            <Car className="h-4 w-4 text-muted-foreground" />
+            <span>{job.vehicle}</span>
           </div>
           
-          <div className="space-y-1">
-            <div className="text-sm text-muted-foreground flex items-center gap-1">
-              <Car className="h-3.5 w-3.5" /> Vehicle
-            </div>
-            <div className="font-medium">{job.vehicle}</div>
+          <div className="flex items-center gap-2">
+            <User className="h-4 w-4 text-muted-foreground" />
+            <span>{job.customer}</span>
           </div>
           
-          <div className="space-y-1">
-            <div className="text-sm text-muted-foreground flex items-center gap-1">
-              <Calendar className="h-3.5 w-3.5" /> Scheduled
-            </div>
-            <div className="font-medium">{job.scheduledFor || 'Not scheduled'}</div>
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <span>{job.scheduledFor ? new Date(job.scheduledFor).toLocaleDateString() : 'Not scheduled'}</span>
           </div>
           
-          <div className="space-y-1">
-            <div className="text-sm text-muted-foreground flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5" /> Estimated Time
-            </div>
-            <div className="font-medium">{job.estimatedTime || 'Not specified'}</div>
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-muted-foreground" />
+            <span>{job.estimatedTime || 'Not specified'}</span>
           </div>
         </div>
         
-        {job.description && (
-          <div className="mt-4">
-            <div className="text-sm text-muted-foreground mb-1">Description</div>
-            <p>{job.description}</p>
-          </div>
-        )}
-        
-        {job.status !== 'completed' && job.status !== 'cancelled' && job.status !== 'declined' && (
-          <div className="mt-6 flex justify-end">
-            {getNextStepButton()}
-          </div>
+        {canComplete && (
+          <Button 
+            className="w-full" 
+            variant="default"
+            onClick={() => onUpdateStatus(job.id, 'completed')}
+          >
+            <CheckCircle className="h-4 w-4 mr-2" />
+            Mark as Complete
+          </Button>
         )}
       </CardContent>
     </Card>
