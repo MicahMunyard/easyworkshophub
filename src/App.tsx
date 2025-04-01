@@ -25,6 +25,7 @@ import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
+import TechnicianPortal from "./pages/TechnicianPortal";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -91,6 +92,14 @@ const App = () => (
                   <Layout>
                     <WorkshopSetup />
                   </Layout>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/technician-portal" 
+              element={
+                <ProtectedRoute>
+                  <TechnicianPortal />
                 </ProtectedRoute>
               } 
             />

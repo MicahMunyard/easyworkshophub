@@ -1,53 +1,37 @@
+
 import React from "react";
-import Dashboard from "@/components/Dashboard";
+import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
-import { LogIn, UserPlus } from "lucide-react";
+import Dashboard from "@/components/Dashboard";
+import { Wrench } from "lucide-react";
 
 const Index = () => {
-  const { user, loading } = useAuth();
-  const navigate = useNavigate();
+  const { user } = useAuth();
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-[80vh]">
-        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
-      </div>
-    );
-  }
-
-  // This should not actually happen now that we have the ProtectedRoute
-  // But keeping it as a backup
-  if (!user) {
-    return (
-      <div className="flex flex-col items-center justify-center h-[80vh] space-y-6 max-w-md mx-auto text-center px-4">
-        <h1 className="text-3xl font-bold tracking-tight">Welcome to Toliccs Workshop Manager</h1>
-        <p className="text-muted-foreground">
-          Sign in or create an account to manage your workshop operations, track jobs, schedule appointments, and more.
-        </p>
-        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-          <Button 
-            size="lg" 
-            onClick={() => navigate('/auth/signin')}
-            className="w-full sm:w-auto"
-          >
-            <LogIn className="mr-2 h-4 w-4" /> Sign In
-          </Button>
-          <Button 
-            variant="outline" 
-            size="lg" 
-            onClick={() => navigate('/auth/signup')}
-            className="w-full sm:w-auto"
-          >
-            <UserPlus className="mr-2 h-4 w-4" /> Create Account
-          </Button>
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+          <p className="text-muted-foreground">
+            Welcome to your Workshop Hub dashboard.
+          </p>
         </div>
+        <Link to="/technician-portal">
+          <Button variant="default" className="gap-1">
+            <Wrench className="h-4 w-4" />
+            Technician Portal
+          </Button>
+        </Link>
       </div>
-    );
-  }
-
-  return <Dashboard />;
+      
+      <div className="grid grid-cols-1">
+        <Dashboard />
+      </div>
+    </div>
+  );
 };
 
 export default Index;
