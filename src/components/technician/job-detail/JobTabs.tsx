@@ -2,7 +2,6 @@
 import React, { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
-import { JobPhoto, PartRequest, JobNote } from "@/types/technician";
 import JobNotesSection from "./tabs/JobNotesSection";
 import PartsRequestSection from "../parts/PartsRequestSection";
 import JobPhotosSection from "../photos/JobPhotosSection";
@@ -15,6 +14,8 @@ interface JobTabsProps {
   onUploadPhoto: (jobId: string, file: File) => void;
   onRequestParts: (jobId: string, parts: { name: string, quantity: number }[]) => void;
 }
+
+import { JobPhoto, PartRequest, JobNote } from "@/types/technician";
 
 const JobTabs: React.FC<JobTabsProps> = ({
   jobId,

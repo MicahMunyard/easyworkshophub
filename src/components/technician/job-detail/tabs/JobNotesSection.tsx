@@ -7,7 +7,7 @@ interface JobNotesSectionProps {
   notes: JobNote[];
 }
 
-export const JobNotesSection: React.FC<JobNotesSectionProps> = ({ notes }) => {
+const JobNotesSection: React.FC<JobNotesSectionProps> = ({ notes }) => {
   return (
     <>
       <CardHeader className="pb-3">
