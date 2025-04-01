@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { BookingType } from "@/types/booking";
 
@@ -117,5 +116,28 @@ export const updateCustomerOnBookingChange = async (
     }
   } catch (error) {
     console.error('Error in updateCustomerOnBookingChange:', error);
+  }
+};
+
+const syncCustomerDetails = async (bookingId: string, userData: {
+  id: string;
+  phone: string;
+  name: string;
+  email: string;
+}) => {
+  try {
+    const { error } = await supabase
+      .rpc('sync_customer_details', {
+        p_booking_id: bookingId,
+        p_name: userData.name,
+        p_email: userData.email,
+        p_phone: userData.phone
+      });
+      
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    console.error('Error syncing customer details:', err);
+    return false;
   }
 };
