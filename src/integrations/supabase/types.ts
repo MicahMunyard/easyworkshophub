@@ -1076,6 +1076,7 @@ export type Database = {
           id: string
           name: string
           specialty: string | null
+          tech_code: string | null
           updated_at: string | null
           user_id: string
         }
@@ -1085,6 +1086,7 @@ export type Database = {
           id?: string
           name: string
           specialty?: string | null
+          tech_code?: string | null
           updated_at?: string | null
           user_id: string
         }
@@ -1094,6 +1096,7 @@ export type Database = {
           id?: string
           name?: string
           specialty?: string | null
+          tech_code?: string | null
           updated_at?: string | null
           user_id?: string
         }
