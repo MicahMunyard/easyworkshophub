@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { TechnicianJob, JobStatus, TimeLog } from "@/types/technician";
+import { TechnicianJob, JobStatus, TimeLog, PartRequest } from "@/types/technician";
 import { useToast } from "@/hooks/use-toast";
 import { v4 as uuidv4 } from "uuid";
 
@@ -116,7 +116,7 @@ export const useTechnicianJobs = (technicianId: string | null) => {
         variant: "destructive"
       });
     }
-  }, [toast, offlineOperations]);
+  }, [toast]);
 
   // Start/stop job timer
   const toggleJobTimer = useCallback(async (jobId: string) => {
@@ -269,17 +269,19 @@ export const useTechnicianJobs = (technicianId: string | null) => {
       // For now, we'll just update our local state
       setJobs(prev => prev.map(job => {
         if (job.id === jobId) {
+          const newParts: PartRequest[] = parts.map(part => ({
+            id: uuidv4(),
+            name: part.name,
+            quantity: part.quantity,
+            status: 'pending' as const, // Explicitly type as a literal
+            requested_at: new Date().toISOString()
+          }));
+          
           return {
             ...job,
             partsRequested: [
               ...job.partsRequested,
-              ...parts.map(part => ({
-                id: uuidv4(),
-                name: part.name,
-                quantity: part.quantity,
-                status: 'pending',
-                requested_at: new Date().toISOString()
-              }))
+              ...newParts
             ]
           };
         }
@@ -351,7 +353,7 @@ export const useTechnicianJobs = (technicianId: string | null) => {
     };
     
     syncOfflineData();
-  }, [isOffline, offlineOperations.length, fetchJobs, toast]);
+  }, [navigator.onLine, offlineOperations.length, fetchJobs, toast]);
 
   // Initial data fetch
   useEffect(() => {
