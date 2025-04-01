@@ -65,7 +65,7 @@ export const updateCustomerOnBookingChange = async (
             p_customer_id: customer.id,
             p_amount: bookingCost,
             p_service_description: `${booking.service} - ${booking.car}`,
-            p_booking_id: booking.id.toString()
+            p_booking_id: booking.id
           };
           
           // Call RPC function with properly typed parameters

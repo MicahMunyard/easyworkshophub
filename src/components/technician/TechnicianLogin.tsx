@@ -7,6 +7,13 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
+type TechnicianProfileData = {
+  id: string;
+  name: string;
+  specialty: string | null;
+  experience: string | null;
+};
+
 const TechnicianLogin = () => {
   const [techCode, setTechCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -41,12 +48,14 @@ const TechnicianLogin = () => {
       }
       
       // Store technician info in local storage
-      localStorage.setItem('technicianProfile', JSON.stringify({
+      const technicianProfile: TechnicianProfileData = {
         id: data.id,
         name: data.name,
         specialty: data.specialty,
         experience: data.experience
-      }));
+      };
+      
+      localStorage.setItem('technicianProfile', JSON.stringify(technicianProfile));
       
       // Refresh the page to show the technician dashboard
       window.location.reload();
