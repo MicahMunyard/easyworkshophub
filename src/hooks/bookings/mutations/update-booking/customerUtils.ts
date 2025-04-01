@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { BookingType } from "@/types/booking";
 
@@ -64,7 +65,7 @@ export const updateCustomerOnBookingChange = async (
             p_customer_id: customer.id,
             p_amount: bookingCost,
             p_service_description: `${booking.service} - ${booking.car}`,
-            p_booking_id: booking.id
+            p_booking_id: booking.id.toString()
           };
           
           // Call RPC function with properly typed parameters

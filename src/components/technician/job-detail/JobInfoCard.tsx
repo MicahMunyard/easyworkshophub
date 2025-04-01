@@ -1,7 +1,7 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { User, Car, Calendar, Clock } from "lucide-react";
+import { User, Car, Calendar, Clock, CheckCircle2, Timer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TechnicianJob, JobStatus } from "@/types/technician";
 import StatusBadge from "./StatusBadge";
@@ -12,6 +12,8 @@ interface JobInfoCardProps {
 }
 
 const JobInfoCard: React.FC<JobInfoCardProps> = ({ job, onUpdateStatus }) => {
+  const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false);
+  
   const getNextStepButton = () => {
     switch (job.status) {
       case 'pending':
@@ -108,9 +110,5 @@ const JobInfoCard: React.FC<JobInfoCardProps> = ({ job, onUpdateStatus }) => {
     </Card>
   );
 };
-
-// Fix the missing import
-import { CheckCircle2 } from "lucide-react";
-import { useState } from "react";
 
 export default JobInfoCard;
