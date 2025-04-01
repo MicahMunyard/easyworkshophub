@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { TechnicianJob, JobStatus } from "@/types/technician";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Car, Calendar, Clock, User, Timer, CheckCircle } from "lucide-react";
+import { Car, Calendar, Clock, User, CheckCircle } from "lucide-react";
 
 interface JobInfoCardProps {
   job: TechnicianJob;

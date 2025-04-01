@@ -2,16 +2,16 @@
 import React, { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
-import { JobPhoto, PartRequest } from "@/types/technician";
-import { JobNotesSection } from "./JobNotesSection";
-import { PartsRequestSection } from "../parts/PartsRequestSection";
-import { JobPhotosSection } from "../photos/JobPhotosSection";
+import { JobPhoto, PartRequest, JobNote } from "@/types/technician";
+import JobNotesSection from "./tabs/JobNotesSection";
+import PartsRequestSection from "../parts/PartsRequestSection";
+import JobPhotosSection from "../photos/JobPhotosSection";
 
 interface JobTabsProps {
   jobId: string;
   photos: JobPhoto[];
   partsRequested: PartRequest[];
-  notes: string[];
+  notes: JobNote[];
   onUploadPhoto: (jobId: string, file: File) => void;
   onRequestParts: (jobId: string, parts: { name: string, quantity: number }[]) => void;
 }
