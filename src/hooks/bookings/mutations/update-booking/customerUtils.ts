@@ -10,6 +10,14 @@ interface CustomerTransactionParams {
   p_booking_id: string;
 }
 
+// Define interface for customer details sync
+interface CustomerSyncParams {
+  p_booking_id: string;
+  p_name: string;
+  p_email: string;
+  p_phone: string;
+}
+
 export const updateCustomerOnBookingChange = async (
   booking: BookingType,
   userId: string,
@@ -127,13 +135,15 @@ const syncCustomerDetails = async (bookingId: string, userData: {
   email: string;
 }) => {
   try {
+    const syncParams: CustomerSyncParams = {
+      p_booking_id: bookingId,
+      p_name: userData.name,
+      p_email: userData.email,
+      p_phone: userData.phone
+    };
+    
     const { error } = await supabase
-      .rpc('sync_customer_details', {
-        p_booking_id: bookingId,
-        p_name: userData.name,
-        p_email: userData.email,
-        p_phone: userData.phone
-      });
+      .rpc('sync_customer_details', syncParams);
       
     if (error) throw error;
     return true;

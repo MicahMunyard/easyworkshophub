@@ -2,8 +2,8 @@
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { JobPhoto, PartRequest } from "@/types/technician";
-import JobPhotosSection from "@/components/technician/JobPhotosSection";
-import PartsRequestSection from "@/components/technician/PartsRequestSection";
+import JobPhotosSection from "@/components/technician/photos/JobPhotosSection";
+import PartsRequestSection from "@/components/technician/parts/PartsRequestSection";
 import JobNotesTab from "./tabs/JobNotesTab";
 import JobMessagesTab from "./tabs/JobMessagesTab";
 
