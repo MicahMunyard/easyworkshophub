@@ -1151,7 +1151,35 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      add_technician_login: {
+        Args: {
+          tech_id: string
+          tech_email: string
+          tech_password: string
+        }
+        Returns: undefined
+      }
+      update_technician_email: {
+        Args: {
+          tech_id: string
+          new_email: string
+        }
+        Returns: undefined
+      }
+      update_technician_last_login: {
+        Args: {
+          tech_id: string
+        }
+        Returns: undefined
+      }
+      verify_technician_login: {
+        Args: {
+          tech_email: string
+          tech_password: string
+          workshop_user_id: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never

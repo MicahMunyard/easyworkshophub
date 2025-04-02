@@ -16,6 +16,7 @@ type TechnicianProfileData = {
   experience: string | null;
 };
 
+// Explicitly define the structure matching the PostgreSQL function
 type LoginCheckResult = {
   is_valid: boolean;
   technician_id: string | null;
@@ -96,14 +97,15 @@ const TechnicianLogin = () => {
     setIsLoading(true);
     
     try {
-      // Custom SQL query through RPC to verify login credentials
-      const { data: loginCheck, error: loginError } = await supabase.rpc<LoginCheckResult>('verify_technician_login', {
+      // Explicitly type the RPC call with LoginCheckResult
+      const { data, error } = await supabase.rpc<LoginCheckResult, LoginCheckResult>('verify_technician_login', {
         tech_email: email,
         tech_password: btoa(password),
         workshop_user_id: user?.id || ''
       });
       
-      if (loginError || !loginCheck || !loginCheck.is_valid) {
+      // Use type guard to check the result
+      if (error || !data || !data.is_valid) {
         throw new Error("Invalid email or password");
       }
       
@@ -111,7 +113,7 @@ const TechnicianLogin = () => {
       const { data: techData, error: techError } = await supabase
         .from('user_technicians')
         .select('*')
-        .eq('id', loginCheck.technician_id)
+        .eq('id', data.technician_id)
         .eq('user_id', user?.id || '')
         .single();
       
@@ -121,7 +123,7 @@ const TechnicianLogin = () => {
       
       // Track login time via RPC
       await supabase.rpc('update_technician_last_login', {
-        tech_id: loginCheck.technician_id
+        tech_id: data.technician_id
       });
       
       // Store technician info in local storage
