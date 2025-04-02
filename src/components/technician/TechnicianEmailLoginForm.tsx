@@ -7,6 +7,7 @@ import { Mail, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { TechnicianProfileData } from "./types";
 import { useAuth } from "@/contexts/AuthContext";
+import { Json } from "@/integrations/supabase/types";
 
 interface TechnicianEmailLoginFormProps {
   onLoginSuccess: () => void;
@@ -44,7 +45,11 @@ const TechnicianEmailLoginForm = ({ onLoginSuccess }: TechnicianEmailLoginFormPr
       }
 
       // Verify technician credentials using RPC function
-      const { data, error } = await supabase.rpc<LoginCheckResult>(
+      const { data, error } = await supabase.rpc<LoginCheckResult, {
+        tech_email: string;
+        tech_password: string;
+        workshop_user_id: string;
+      }>(
         'verify_technician_login',
         { 
           tech_email: email, 

@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { TechnicianJob, JobStatus } from "@/types/technician";
+import { TechnicianJob, JobStatus, JobNote } from "@/types/technician";
 import { useToast } from "@/hooks/use-toast";
 
 export const useFetchJobs = (
@@ -77,25 +77,37 @@ export const useFetchJobs = (
       if (bookingsData && bookingsData.length > 0) {
         console.log(`Found ${bookingsData.length} bookings in user_bookings table`);
         
-        const jobsFromBookings: TechnicianJob[] = bookingsData.map(booking => ({
-          id: booking.id,
-          title: booking.service,
-          description: `Customer: ${booking.customer_name}, Vehicle: ${booking.car}`,
-          customer: booking.customer_name,
-          vehicle: booking.car,
-          status: (booking.status === 'confirmed' ? 'pending' : 
-                  booking.status === 'completed' ? 'completed' : 
-                  booking.status === 'cancelled' ? 'cancelled' : 'pending') as JobStatus,
-          assignedAt: booking.created_at,
-          scheduledFor: booking.booking_date,
-          estimatedTime: `${booking.duration} minutes`,
-          priority: 'Medium', // Default priority
-          timeLogged: 0,
-          partsRequested: [],
-          photos: [],
-          notes: booking.notes ? [{ content: booking.notes, createdAt: booking.created_at }] : [],
-          isActive: false
-        }));
+        const jobsFromBookings: TechnicianJob[] = bookingsData.map(booking => {
+          // Create a default JobNote structure for the booking notes
+          const notesArray: JobNote[] = booking.notes 
+            ? [{
+                id: `note-${booking.id}`,
+                content: booking.notes,
+                created_at: booking.created_at,
+                author: 'System'
+              }] 
+            : [];
+            
+          return {
+            id: booking.id,
+            title: booking.service,
+            description: `Customer: ${booking.customer_name}, Vehicle: ${booking.car}`,
+            customer: booking.customer_name,
+            vehicle: booking.car,
+            status: (booking.status === 'confirmed' ? 'pending' : 
+                    booking.status === 'completed' ? 'completed' : 
+                    booking.status === 'cancelled' ? 'cancelled' : 'pending') as JobStatus,
+            assignedAt: booking.created_at,
+            scheduledFor: booking.booking_date,
+            estimatedTime: `${booking.duration} minutes`,
+            priority: 'Medium', // Default priority
+            timeLogged: 0,
+            partsRequested: [],
+            photos: [],
+            notes: notesArray,
+            isActive: false
+          };
+        });
         
         allJobs = [...allJobs, ...jobsFromBookings];
       }
