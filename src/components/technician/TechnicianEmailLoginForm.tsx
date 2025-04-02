@@ -60,19 +60,24 @@ const TechnicianEmailLoginForm = ({ onLoginSuccess }: TechnicianEmailLoginFormPr
         }
       );
       
-      // Cast the data to the expected type
-      const result = data as VerifyLoginResult;
+      // Handle the data with type checking
+      if (error || !data) {
+        throw new Error("Authentication failed");
+      }
       
-      if (error || !result || !result.is_valid) {
+      // Check if the data has the expected properties
+      const resultData = data as any;
+      if (typeof resultData.is_valid !== 'boolean' || (resultData.is_valid && !resultData.technician_id)) {
+        throw new Error("Invalid response format from server");
+      }
+      
+      // Now we know the data has the expected shape
+      if (!resultData.is_valid) {
         throw new Error("Invalid email or password");
       }
       
       // Successfully authenticated
-      const technicianId = result.technician_id;
-      
-      if (!technicianId) {
-        throw new Error("Technician ID not found");
-      }
+      const technicianId = resultData.technician_id;
       
       // Fetch technician details
       const { data: techDetails, error: techError } = await supabase
