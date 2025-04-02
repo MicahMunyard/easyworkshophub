@@ -2,76 +2,59 @@
 import { BookingType } from "@/types/booking";
 import { supabase } from "@/integrations/supabase/client";
 
-/**
- * Finds the original booking in Supabase by matching criteria
- */
-export const findOriginalBookingId = async (booking: BookingType, userId: string): Promise<string> => {
-  try {
-    const { data: matchingBookings, error: fetchError } = await supabase
-      .from('user_bookings')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('customer_name', booking.customer)
-      .eq('booking_date', booking.date);
-    
-    if (fetchError) {
-      console.error('Error finding original booking:', fetchError);
-      throw fetchError;
-    }
-    
-    if (matchingBookings && matchingBookings.length > 0) {
-      const bookingId = matchingBookings[0].id;
-      console.log("Found matching booking ID:", bookingId);
-      return bookingId;
-    } else {
-      // Fallback if we can't find the booking
-      console.warn("Could not find matching booking, using converted ID");
-      return booking.id.toString();
-    }
-  } catch (error) {
-    console.error('Error in findOriginalBookingId:', error);
-    return booking.id.toString();
+export const updateBookingInSupabase = async (
+  updatedBooking: BookingType, 
+  userId: string,
+  bookingCost: number | null | undefined
+) => {
+  console.log("Updating booking in Supabase:", updatedBooking, "Cost:", bookingCost);
+  
+  // Get the original booking first to compare fields
+  const { data: originalBooking, error: fetchError } = await supabase
+    .from('user_bookings')
+    .select('*')
+    .eq('id', updatedBooking.id.toString())
+    .eq('user_id', userId)
+    .single();
+  
+  if (fetchError) {
+    console.error("Error fetching original booking:", fetchError);
+    throw fetchError;
   }
-};
-
-/**
- * Updates the booking in Supabase
- */
-export const updateBookingInSupabase = async (booking: BookingType, userId: string, bookingCost?: number) => {
-  try {
-    // Make sure we have a valid cost value (0 if not provided)
-    const finalCost = bookingCost !== undefined ? bookingCost : (booking.cost || 0);
-    console.log(`Updating booking with cost: ${finalCost}`);
-    
-    const { error: updateError } = await supabase
-      .from('user_bookings')
-      .update({
-        customer_name: booking.customer,
-        customer_phone: booking.phone,
-        service: booking.service,
-        booking_time: booking.time,
-        duration: booking.duration,
-        car: booking.car,
-        status: booking.status,
-        booking_date: booking.date,
-        technician_id: booking.technician_id || null,
-        service_id: booking.service_id || null,
-        bay_id: booking.bay_id || null,
-        notes: booking.notes || null,
-        cost: finalCost,
-        customer_email: booking.email || null
-      })
-      .eq('id', booking.id.toString())
-      .eq('user_id', userId); // Ensure we only update the user's own booking
-    
-    if (updateError) {
-      console.error('Supabase update error:', updateError);
-      throw updateError;
-    }
-    
-    return true;
-  } catch (error) {
-    console.error('Error in updateBookingInSupabase:', error);
-    throw error;
+  
+  // Prepare update data
+  const updateData: any = {
+    customer_name: updatedBooking.customer,
+    customer_phone: updatedBooking.phone,
+    customer_email: updatedBooking.email,
+    service: updatedBooking.service,
+    booking_time: updatedBooking.time,
+    duration: updatedBooking.duration,
+    car: updatedBooking.car,
+    status: updatedBooking.status,
+    booking_date: updatedBooking.date,
+    notes: updatedBooking.notes,
+    technician_id: updatedBooking.technician_id || null,
+    service_id: updatedBooking.service_id || null,
+    bay_id: updatedBooking.bay_id || null
+  };
+  
+  // Only include cost if it's defined and different from the original
+  if (bookingCost !== undefined && bookingCost !== null) {
+    updateData.cost = bookingCost;
+  }
+  
+  console.log("Final update data:", updateData);
+  
+  // Update user_bookings table
+  const { error: updateError } = await supabase
+    .from('user_bookings')
+    .update(updateData)
+    .eq('id', updatedBooking.id.toString())
+    .eq('user_id', userId);
+  
+  if (updateError) {
+    console.error("Error updating booking:", updateError);
+    throw updateError;
   }
 };

@@ -3,19 +3,18 @@ import React, { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Lock, Mail } from "lucide-react";
+import { Mail, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { TechnicianProfileData } from "./types";
 import { useAuth } from "@/contexts/AuthContext";
 
-// Explicitly define the structure matching the PostgreSQL function
-type LoginCheckResult = {
-  is_valid: boolean;
-  technician_id: string | null;
-};
-
 interface TechnicianEmailLoginFormProps {
   onLoginSuccess: () => void;
+}
+
+interface LoginCheckResult {
+  is_valid: boolean;
+  technician_id: string | null;
 }
 
 const TechnicianEmailLoginForm = ({ onLoginSuccess }: TechnicianEmailLoginFormProps) => {
@@ -31,7 +30,7 @@ const TechnicianEmailLoginForm = ({ onLoginSuccess }: TechnicianEmailLoginFormPr
     if (!email.trim() || !password.trim()) {
       toast({
         title: "Error",
-        description: "Please enter your email and password",
+        description: "Please enter both email and password",
         variant: "destructive",
       });
       return;
@@ -40,54 +39,67 @@ const TechnicianEmailLoginForm = ({ onLoginSuccess }: TechnicianEmailLoginFormPr
     setIsLoading(true);
     
     try {
-      // Call the RPC function with proper type annotations
-      const { data, error } = await supabase.rpc('verify_technician_login', {
-        tech_email: email,
-        tech_password: btoa(password),
-        workshop_user_id: user?.id || ''
-      });
+      if (!user) {
+        throw new Error("You must be logged in to access technician features");
+      }
+
+      // Verify technician credentials using RPC function
+      const { data, error } = await supabase.rpc<LoginCheckResult>(
+        'verify_technician_login',
+        { 
+          tech_email: email, 
+          tech_password: password, 
+          workshop_user_id: user.id 
+        }
+      );
       
-      // Cast the data to the expected type since the RPC returns json
-      const result = data as LoginCheckResult;
-      
-      // Check if login is valid
-      if (error || !result || !result.is_valid || !result.technician_id) {
+      if (error || !data || !data.is_valid) {
         throw new Error("Invalid email or password");
       }
       
-      // Get technician details
-      const { data: techData, error: techError } = await supabase
-        .from('user_technicians')
-        .select('*')
-        .eq('id', result.technician_id)
-        .eq('user_id', user?.id || '')
-        .single();
+      // Successfully authenticated
+      const technicianId = data.technician_id;
       
-      if (techError || !techData) {
-        throw new Error("Technician not found");
+      if (!technicianId) {
+        throw new Error("Technician ID not found");
       }
       
-      // Track login time via RPC
-      await supabase.rpc('update_technician_last_login', {
-        tech_id: result.technician_id
-      });
+      // Fetch technician details
+      const { data: techDetails, error: techError } = await supabase
+        .from('user_technicians')
+        .select('id, name, specialty, experience')
+        .eq('id', technicianId)
+        .single();
+      
+      if (techError || !techDetails) {
+        throw new Error("Could not retrieve technician details");
+      }
+      
+      // Update last login timestamp
+      await supabase.rpc('update_technician_last_login', { tech_id: technicianId });
       
       // Store technician info in local storage
       const technicianProfile: TechnicianProfileData = {
-        id: techData.id,
-        name: techData.name,
-        specialty: techData.specialty,
-        experience: techData.experience
+        id: techDetails.id,
+        name: techDetails.name,
+        specialty: techDetails.specialty,
+        experience: techDetails.experience
       };
       
       localStorage.setItem('technicianProfile', JSON.stringify(technicianProfile));
       
+      toast({
+        title: "Welcome back",
+        description: `Logged in successfully as ${techDetails.name}`,
+      });
+      
       onLoginSuccess();
       
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Authentication failed";
       toast({
-        title: "Authentication Failed",
-        description: "Invalid email or password. Please try again.",
+        title: "Login Failed",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -97,7 +109,7 @@ const TechnicianEmailLoginForm = ({ onLoginSuccess }: TechnicianEmailLoginFormPr
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 pt-4">
-      <div className="space-y-3">
+      <div className="space-y-2">
         <div className="relative">
           <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
           <Input
@@ -109,6 +121,9 @@ const TechnicianEmailLoginForm = ({ onLoginSuccess }: TechnicianEmailLoginFormPr
             className="pl-9"
           />
         </div>
+      </div>
+      
+      <div className="space-y-2">
         <div className="relative">
           <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
           <Input
@@ -121,8 +136,9 @@ const TechnicianEmailLoginForm = ({ onLoginSuccess }: TechnicianEmailLoginFormPr
           />
         </div>
       </div>
+      
       <Button type="submit" className="w-full" disabled={isLoading}>
-        {isLoading ? "Authenticating..." : "Login with Email"}
+        {isLoading ? "Authenticating..." : "Login"}
       </Button>
     </form>
   );

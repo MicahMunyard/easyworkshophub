@@ -17,36 +17,94 @@ export const useFetchJobs = (
     
     setIsLoading(true);
     try {
-      // Fetch jobs from the database
-      const { data, error } = await supabase
+      console.log(`Fetching jobs for technician ${technicianId} and user ${userId}`);
+      
+      // First try to get jobs from the jobs table
+      const { data: jobsData, error: jobsError } = await supabase
         .from('jobs')
         .select('*')
-        .eq('assigned_to', technicianId)
         .eq('user_id', userId)
+        .eq('assigned_to', technicianId)
         .order('date', { ascending: false });
       
-      if (error) throw error;
+      if (jobsError) {
+        console.error("Error fetching from jobs table:", jobsError);
+        // Don't throw here, try the second approach
+      }
       
-      // Transform jobs to match our TechnicianJob interface
-      const technicianJobs: TechnicianJob[] = data.map(job => ({
-        id: job.id,
-        title: job.service,
-        description: `Customer: ${job.customer}, Vehicle: ${job.vehicle}`,
-        customer: job.customer,
-        vehicle: job.vehicle,
-        status: job.status as JobStatus,
-        assignedAt: job.created_at,
-        scheduledFor: job.date,
-        estimatedTime: job.time_estimate,
-        priority: job.priority,
-        timeLogged: 0, // We'll need to calculate this from a separate time logs table
-        partsRequested: [], // We'll need to fetch this from a separate parts requests table
-        photos: [], // We'll need to fetch this from storage
-        notes: [],
-        isActive: false
-      }));
+      let allJobs: TechnicianJob[] = [];
       
-      setJobs(technicianJobs);
+      // If we got jobs from the first query, transform them
+      if (jobsData && jobsData.length > 0) {
+        console.log(`Found ${jobsData.length} jobs in jobs table`);
+        
+        // Transform jobs to match our TechnicianJob interface
+        const jobsFromJobsTable: TechnicianJob[] = jobsData.map(job => ({
+          id: job.id,
+          title: job.service,
+          description: `Customer: ${job.customer}, Vehicle: ${job.vehicle}`,
+          customer: job.customer,
+          vehicle: job.vehicle,
+          status: job.status as JobStatus,
+          assignedAt: job.created_at,
+          scheduledFor: job.date,
+          estimatedTime: job.time_estimate,
+          priority: job.priority,
+          timeLogged: 0, // We'll need to calculate this from a separate time logs table
+          partsRequested: [], // We'll need to fetch this from a separate parts requests table
+          photos: [], // We'll need to fetch this from storage
+          notes: [],
+          isActive: false
+        }));
+        
+        allJobs = [...jobsFromJobsTable];
+      }
+      
+      // Now also check the user_bookings table for bookings assigned to this technician
+      const { data: bookingsData, error: bookingsError } = await supabase
+        .from('user_bookings')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('technician_id', technicianId)
+        .order('booking_date', { ascending: false });
+      
+      if (bookingsError) {
+        console.error("Error fetching from user_bookings table:", bookingsError);
+        // Continue with what we have
+      }
+      
+      // If we got bookings, transform them to jobs and add to our collection
+      if (bookingsData && bookingsData.length > 0) {
+        console.log(`Found ${bookingsData.length} bookings in user_bookings table`);
+        
+        const jobsFromBookings: TechnicianJob[] = bookingsData.map(booking => ({
+          id: booking.id,
+          title: booking.service,
+          description: `Customer: ${booking.customer_name}, Vehicle: ${booking.car}`,
+          customer: booking.customer_name,
+          vehicle: booking.car,
+          status: (booking.status === 'confirmed' ? 'pending' : 
+                  booking.status === 'completed' ? 'completed' : 
+                  booking.status === 'cancelled' ? 'cancelled' : 'pending') as JobStatus,
+          assignedAt: booking.created_at,
+          scheduledFor: booking.booking_date,
+          estimatedTime: `${booking.duration} minutes`,
+          priority: 'Medium', // Default priority
+          timeLogged: 0,
+          partsRequested: [],
+          photos: [],
+          notes: booking.notes ? [{ content: booking.notes, createdAt: booking.created_at }] : [],
+          isActive: false
+        }));
+        
+        allJobs = [...allJobs, ...jobsFromBookings];
+      }
+      
+      if (allJobs.length === 0) {
+        console.log("No jobs or bookings found for this technician");
+      }
+      
+      setJobs(allJobs);
     } catch (error) {
       console.error('Error fetching technician jobs:', error);
       toast({

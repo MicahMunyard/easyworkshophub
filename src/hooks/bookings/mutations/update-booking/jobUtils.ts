@@ -2,77 +2,73 @@
 import { BookingType } from "@/types/booking";
 import { supabase } from "@/integrations/supabase/client";
 
-/**
- * Syncs the job data with the booking data when a booking is updated
- */
-export const syncJobWithBooking = async (booking: BookingType, userId: string) => {
+export const syncJobWithBooking = async (updatedBooking: BookingType, userId: string) => {
   try {
-    // Skip if the booking doesn't have a status that would need a job sync
-    if (!['confirmed', 'completed'].includes(booking.status)) {
-      console.log(`Booking status ${booking.status} doesn't require job sync.`);
-      return;
-    }
+    console.log("Syncing job with booking:", updatedBooking);
     
-    console.log("Syncing job with booking:", booking.id);
-    
-    // Check if a job already exists for this booking
+    // Look for an associated job from this booking
     const { data: existingJobs, error: searchError } = await supabase
-      .from('user_jobs')
+      .from('jobs')
       .select('*')
       .eq('user_id', userId)
-      .eq('title', `${booking.service} - ${booking.customer}`)
-      .eq('vehicle', booking.car);
-      
+      .like('id', `BKG-%`);
+    
     if (searchError) {
-      console.error('Error searching for existing job:', searchError);
-      return;
+      console.error("Error searching for related job:", searchError);
+      return; // Continue the booking update process
     }
     
-    // Map booking status to job status
-    const jobStatus = booking.status === 'completed' 
-      ? 'completed' 
-      : 'in_progress';
-    
-    const jobData = {
-      title: `${booking.service} - ${booking.customer}`,
-      description: `${booking.service} booking on ${booking.date} at ${booking.time}`,
-      customer_name: booking.customer,
-      vehicle: booking.car,
-      status: jobStatus,
-      bay_id: booking.bay_id || null,
-      technician_id: booking.technician_id || null,
-      start_date: new Date(`${booking.date}T${booking.time}`).toISOString(),
-      cost: booking.cost || null,
-      user_id: userId
-    };
-    
-    if (existingJobs && existingJobs.length > 0) {
-      // Update existing job
-      const jobId = existingJobs[0].id;
-      
-      const { error: updateError } = await supabase
-        .from('user_jobs')
-        .update(jobData)
-        .eq('id', jobId);
+    // Get technician name if available
+    let technicianName = 'Unassigned';
+    if (updatedBooking.technician_id) {
+      const { data: techData } = await supabase
+        .from('user_technicians')
+        .select('name')
+        .eq('id', updatedBooking.technician_id)
+        .single();
         
+      if (techData) {
+        technicianName = techData.name;
+      }
+    }
+    
+    // Check if any of the jobs are related to this specific booking
+    // This is difficult without a direct reference, so we'll use a heuristic
+    const relatedJob = existingJobs?.find(job => 
+      job.customer === updatedBooking.customer && 
+      job.vehicle === updatedBooking.car && 
+      job.date === updatedBooking.date
+    );
+    
+    if (relatedJob) {
+      console.log("Found related job to update:", relatedJob.id);
+      
+      // Update the existing job
+      const { error: updateError } = await supabase
+        .from('jobs')
+        .update({
+          customer: updatedBooking.customer,
+          vehicle: updatedBooking.car,
+          service: updatedBooking.service,
+          status: updatedBooking.status === 'confirmed' ? 'pending' : updatedBooking.status,
+          assigned_to: technicianName,
+          date: updatedBooking.date,
+          time: updatedBooking.time
+        })
+        .eq('id', relatedJob.id)
+        .eq('user_id', userId);
+      
       if (updateError) {
-        console.error('Error updating job:', updateError);
+        console.error("Error updating job:", updateError);
+        // Continue with the booking update
       } else {
-        console.log("Job updated successfully");
+        console.log("Successfully updated related job");
       }
     } else {
-      // Create new job
-      const { error: createError } = await supabase
-        .from('user_jobs')
-        .insert(jobData);
-        
-      if (createError) {
-        console.error('Error creating job:', createError);
-      } else {
-        console.log("Job created successfully");
-      }
+      console.log("No related job found, this might be a new booking");
     }
   } catch (error) {
-    console.error('Error in syncJobWithBooking:', error);
+    console.error("Error syncing job with booking:", error);
+    // Continue with the booking update process
   }
 };
