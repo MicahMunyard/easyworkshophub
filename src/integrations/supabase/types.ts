@@ -624,6 +624,44 @@ export type Database = {
           },
         ]
       }
+      technician_logins: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          last_login: string | null
+          password_hash: string
+          technician_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          last_login?: string | null
+          password_hash: string
+          technician_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          last_login?: string | null
+          password_hash?: string
+          technician_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "technician_logins_technician_id_fkey"
+            columns: ["technician_id"]
+            isOneToOne: false
+            referencedRelation: "user_technicians"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       technicians: {
         Row: {
           created_at: string | null
@@ -1071,7 +1109,9 @@ export type Database = {
       }
       user_technicians: {
         Row: {
+          active: boolean | null
           created_at: string | null
+          email: string | null
           experience: string | null
           id: string
           name: string
@@ -1081,7 +1121,9 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          active?: boolean | null
           created_at?: string | null
+          email?: string | null
           experience?: string | null
           id?: string
           name: string
@@ -1091,7 +1133,9 @@ export type Database = {
           user_id: string
         }
         Update: {
+          active?: boolean | null
           created_at?: string | null
+          email?: string | null
           experience?: string | null
           id?: string
           name?: string

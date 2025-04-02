@@ -2,10 +2,12 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Home, Bell } from "lucide-react";
+import { Home, Bell, LogOut } from "lucide-react";
+import { useTechnicianPortal } from "@/hooks/technician/useTechnicianPortal";
 
 const TechPortalHeader = () => {
   const navigate = useNavigate();
+  const { isTechnicianAuthenticated, logout } = useTechnicianPortal();
   
   return (
     <header className="bg-black text-white py-3 px-4 sticky top-0 z-50">
@@ -31,6 +33,18 @@ const TechPortalHeader = () => {
             <Bell className="h-5 w-5" />
             <span className="absolute top-1 right-1 bg-red-500 rounded-full w-2 h-2"></span>
           </Button>
+          
+          {isTechnicianAuthenticated && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-white hover:bg-white/10"
+              onClick={logout}
+              title="Logout"
+            >
+              <LogOut className="h-5 w-5" />
+            </Button>
+          )}
         </div>
       </div>
     </header>

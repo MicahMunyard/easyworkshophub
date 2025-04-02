@@ -3,7 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Settings, Users, Wrench, Ruler, Clock, Warehouse } from "lucide-react";
+import { Settings, Users, Wrench, Ruler, Clock, Warehouse, Lock, Mail } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +17,8 @@ interface Technician {
   name: string;
   specialty: string | null;
   experience: string | null;
+  email: string | null;
+  tech_code: string | null;
 }
 
 interface Service {
@@ -49,7 +51,6 @@ const WorkshopSetup: React.FC = () => {
   const [isAddingBay, setIsAddingBay] = useState(false);
   const [isEditingBay, setIsEditingBay] = useState<ServiceBay | null>(null);
 
-  // Fetch Technicians
   const fetchTechnicians = async () => {
     try {
       if (!user) return;
@@ -72,7 +73,6 @@ const WorkshopSetup: React.FC = () => {
     }
   };
   
-  // Fetch Services
   const fetchServices = async () => {
     try {
       if (!user) return;
@@ -95,7 +95,6 @@ const WorkshopSetup: React.FC = () => {
     }
   };
   
-  // Fetch Service Bays
   const fetchServiceBays = async () => {
     try {
       if (!user) return;
@@ -126,7 +125,6 @@ const WorkshopSetup: React.FC = () => {
     }
   }, [user]);
 
-  // Technician handlers
   const handleAddTechnician = async (values: any) => {
     try {
       if (!user) {
@@ -138,15 +136,39 @@ const WorkshopSetup: React.FC = () => {
         return;
       }
       
-      const { data, error } = await supabase
+      const { data: techData, error: techError } = await supabase
         .from('user_technicians')
         .insert([{
-          ...values,
+          name: values.name,
+          specialty: values.specialty,
+          experience: values.experience,
+          tech_code: values.tech_code,
+          email: values.createLogin ? values.email : null,
           user_id: user.id
         }])
         .select();
       
-      if (error) throw error;
+      if (techError) throw techError;
+      
+      if (values.createLogin && values.email && values.password) {
+        const passwordHash = btoa(values.password);
+        const { error: loginError } = await supabase
+          .from('technician_logins')
+          .insert([{
+            technician_id: techData[0].id,
+            email: values.email,
+            password_hash: passwordHash
+          }]);
+        
+        if (loginError) {
+          console.error('Error adding technician login:', loginError);
+          toast({
+            title: "Warning",
+            description: "Technician added but login credentials couldn't be created",
+            variant: "destructive",
+          });
+        }
+      }
       
       toast({
         title: "Success",
@@ -155,7 +177,7 @@ const WorkshopSetup: React.FC = () => {
       
       setIsAddingTechnician(false);
       fetchTechnicians();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding technician:', error);
       toast({
         title: "Error",
@@ -171,11 +193,33 @@ const WorkshopSetup: React.FC = () => {
     try {
       const { error } = await supabase
         .from('user_technicians')
-        .update(values)
+        .update({
+          name: values.name,
+          specialty: values.specialty,
+          experience: values.experience,
+          tech_code: values.tech_code,
+          email: values.email
+        })
         .eq('id', isEditingTechnician.id)
         .eq('user_id', user.id);
       
       if (error) throw error;
+      
+      if (values.email && values.email !== isEditingTechnician.email) {
+        const { error: loginError } = await supabase
+          .from('technician_logins')
+          .update({ email: values.email })
+          .eq('technician_id', isEditingTechnician.id);
+        
+        if (loginError) {
+          console.error('Error updating technician login:', loginError);
+          toast({
+            title: "Warning",
+            description: "Technician updated but login email couldn't be updated",
+            variant: "destructive",
+          });
+        }
+      }
       
       toast({
         title: "Success",
@@ -184,7 +228,7 @@ const WorkshopSetup: React.FC = () => {
       
       setIsEditingTechnician(null);
       fetchTechnicians();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating technician:', error);
       toast({
         title: "Error",
@@ -222,7 +266,6 @@ const WorkshopSetup: React.FC = () => {
     }
   };
 
-  // Service handlers
   const handleAddService = async (values: any) => {
     try {
       if (!user) {
@@ -318,7 +361,6 @@ const WorkshopSetup: React.FC = () => {
     }
   };
 
-  // Service Bay handlers
   const handleAddBay = async (values: any) => {
     try {
       if (!user) {
@@ -566,6 +608,24 @@ const WorkshopSetup: React.FC = () => {
                             <Clock className="h-3.5 w-3.5 mr-1" />
                             {tech.experience || "Experience not specified"}
                           </span>
+                          {tech.tech_code && (
+                            <>
+                              <span className="mx-2">•</span>
+                              <span className="inline-flex items-center">
+                                <Lock className="h-3.5 w-3.5 mr-1" />
+                                Access Code: {tech.tech_code}
+                              </span>
+                            </>
+                          )}
+                          {tech.email && (
+                            <>
+                              <span className="mx-2">•</span>
+                              <span className="inline-flex items-center">
+                                <Mail className="h-3.5 w-3.5 mr-1" />
+                                {tech.email}
+                              </span>
+                            </>
+                          )}
                         </div>
                       </div>
                       <div className="flex gap-2">
@@ -592,7 +652,6 @@ const WorkshopSetup: React.FC = () => {
             </CardContent>
           </Card>
           
-          {/* Technician Form Dialogs */}
           <Dialog open={isAddingTechnician} onOpenChange={setIsAddingTechnician}>
             <DialogContent>
               <DialogHeader>
@@ -684,7 +743,6 @@ const WorkshopSetup: React.FC = () => {
             </CardContent>
           </Card>
           
-          {/* Service Form Dialogs */}
           <Dialog open={isAddingService} onOpenChange={setIsAddingService}>
             <DialogContent>
               <DialogHeader>
@@ -780,7 +838,6 @@ const WorkshopSetup: React.FC = () => {
             </CardContent>
           </Card>
           
-          {/* Service Bay Form Dialogs */}
           <Dialog open={isAddingBay} onOpenChange={setIsAddingBay}>
             <DialogContent>
               <DialogHeader>
