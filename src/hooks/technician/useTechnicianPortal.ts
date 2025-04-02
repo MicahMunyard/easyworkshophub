@@ -2,11 +2,13 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { TechnicianProfile } from "@/types/technician";
+import { useToast } from "@/hooks/use-toast";
 
 export const useTechnicianPortal = () => {
   const [isOffline, setIsOffline] = useState(false);
   const [isTechnicianAuthenticated, setIsTechnicianAuthenticated] = useState(false);
   const [technicianProfile, setTechnicianProfile] = useState<TechnicianProfile | null>(null);
+  const { toast } = useToast();
   
   useEffect(() => {
     // Check technician authentication

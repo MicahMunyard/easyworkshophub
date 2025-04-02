@@ -91,20 +91,14 @@ const TechnicianLogin = () => {
     setIsLoading(true);
     
     try {
-      // Look up the technician login info
-      const { data: loginData, error: loginError } = await supabase
-        .from('technician_logins')
-        .select('technician_id, password_hash')
-        .eq('email', email)
-        .single();
+      // Custom SQL query through RPC to verify login credentials
+      const { data: loginCheck, error: loginError } = await supabase.rpc('verify_technician_login', {
+        tech_email: email,
+        tech_password: btoa(password),
+        workshop_user_id: user?.id || ''
+      });
       
-      if (loginError || !loginData) {
-        throw new Error("Invalid email or password");
-      }
-      
-      // Verify password (in a real app, use proper password verification)
-      const providedPasswordHash = btoa(password);
-      if (providedPasswordHash !== loginData.password_hash) {
+      if (loginError || !loginCheck || !loginCheck.is_valid) {
         throw new Error("Invalid email or password");
       }
       
@@ -112,7 +106,7 @@ const TechnicianLogin = () => {
       const { data: techData, error: techError } = await supabase
         .from('user_technicians')
         .select('*')
-        .eq('id', loginData.technician_id)
+        .eq('id', loginCheck.technician_id)
         .eq('user_id', user?.id || '')
         .single();
       
@@ -120,11 +114,10 @@ const TechnicianLogin = () => {
         throw new Error("Technician not found");
       }
       
-      // Update last login time
-      await supabase
-        .from('technician_logins')
-        .update({ last_login: new Date().toISOString() })
-        .eq('technician_id', loginData.technician_id);
+      // Track login time via RPC
+      await supabase.rpc('update_technician_last_login', {
+        tech_id: loginCheck.technician_id
+      });
       
       // Store technician info in local storage
       const technicianProfile: TechnicianProfileData = {

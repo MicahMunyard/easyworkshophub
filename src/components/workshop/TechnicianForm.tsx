@@ -26,6 +26,8 @@ const formSchema = z.object({
   tech_code: z.string().optional(),
 });
 
+export type TechnicianFormValues = z.infer<typeof formSchema>;
+
 interface TechnicianFormProps {
   technician?: {
     id?: string;
@@ -35,7 +37,7 @@ interface TechnicianFormProps {
     email?: string;
     tech_code?: string;
   };
-  onSubmit: (values: z.infer<typeof formSchema>) => void;
+  onSubmit: (values: TechnicianFormValues) => void;
   onCancel: () => void;
 }
 
@@ -43,7 +45,7 @@ const TechnicianForm: React.FC<TechnicianFormProps> = ({ technician, onSubmit, o
   const [showPassword, setShowPassword] = useState(false);
   const isNewTechnician = !technician?.id;
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<TechnicianFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: technician?.name || "",

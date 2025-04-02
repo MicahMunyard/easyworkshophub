@@ -62,7 +62,7 @@ const WorkshopSetup: React.FC = () => {
         .order('name');
       
       if (error) throw error;
-      setTechnicians(data || []);
+      setTechnicians(data as Technician[] || []);
     } catch (error) {
       console.error('Error fetching technicians:', error);
       toast({
@@ -152,13 +152,12 @@ const WorkshopSetup: React.FC = () => {
       
       if (values.createLogin && values.email && values.password) {
         const passwordHash = btoa(values.password);
-        const { error: loginError } = await supabase
-          .from('technician_logins')
-          .insert([{
-            technician_id: techData[0].id,
-            email: values.email,
-            password_hash: passwordHash
-          }]);
+        
+        const { error: loginError } = await supabase.rpc('add_technician_login', {
+          tech_id: techData[0].id,
+          tech_email: values.email,
+          tech_password: passwordHash
+        });
         
         if (loginError) {
           console.error('Error adding technician login:', loginError);
@@ -206,10 +205,10 @@ const WorkshopSetup: React.FC = () => {
       if (error) throw error;
       
       if (values.email && values.email !== isEditingTechnician.email) {
-        const { error: loginError } = await supabase
-          .from('technician_logins')
-          .update({ email: values.email })
-          .eq('technician_id', isEditingTechnician.id);
+        const { error: loginError } = await supabase.rpc('update_technician_email', {
+          tech_id: isEditingTechnician.id,
+          new_email: values.email
+        });
         
         if (loginError) {
           console.error('Error updating technician login:', loginError);
