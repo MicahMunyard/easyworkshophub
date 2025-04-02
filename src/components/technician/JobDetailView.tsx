@@ -65,9 +65,9 @@ const JobDetailView: React.FC<JobDetailViewProps> = ({
         
         <JobTabs 
           jobId={job.id}
-          photos={job.photos}
-          partsRequested={job.partsRequested}
-          notes={job.notes}
+          photos={job.photos || []}
+          partsRequested={job.partsRequested || []}
+          notes={job.notes || []}
           onUploadPhoto={onUploadPhoto}
           onRequestParts={onRequestParts}
         />

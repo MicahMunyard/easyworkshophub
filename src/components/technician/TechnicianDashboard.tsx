@@ -52,8 +52,16 @@ const TechnicianDashboard: React.FC<TechnicianDashboardProps> = ({
   const activeJobs = jobs.filter(job => job.status === 'inProgress' || job.status === 'working');
   const completedJobs = jobs.filter(job => job.status === 'completed');
   
+  // Find the selected job from the jobs array
   const selectedJob = jobs.find(job => job.id === selectedJobId);
+  console.log("TechnicianDashboard - Selected job ID:", selectedJobId);
   console.log("TechnicianDashboard - Selected job:", selectedJob);
+
+  // Handler for selecting a job
+  const handleSelectJob = (jobId: string) => {
+    console.log("Selecting job with ID:", jobId);
+    setSelectedJobId(jobId);
+  };
   
   return (
     <div className="space-y-6">
@@ -107,7 +115,7 @@ const TechnicianDashboard: React.FC<TechnicianDashboardProps> = ({
             <JobList 
               jobs={pendingJobs} 
               isLoading={isLoading}
-              onSelectJob={setSelectedJobId}
+              onSelectJob={handleSelectJob}
               onUpdateStatus={updateJobStatus}
             />
           </TabsContent>
@@ -116,7 +124,7 @@ const TechnicianDashboard: React.FC<TechnicianDashboardProps> = ({
             <JobList 
               jobs={activeJobs} 
               isLoading={isLoading}
-              onSelectJob={setSelectedJobId}
+              onSelectJob={handleSelectJob}
               onUpdateStatus={updateJobStatus}
               activeJobId={activeJobId}
               isTimerRunning={isTimerRunning}
@@ -128,7 +136,7 @@ const TechnicianDashboard: React.FC<TechnicianDashboardProps> = ({
             <JobList 
               jobs={completedJobs} 
               isLoading={isLoading}
-              onSelectJob={setSelectedJobId}
+              onSelectJob={handleSelectJob}
             />
           </TabsContent>
         </Tabs>
