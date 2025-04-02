@@ -13,7 +13,13 @@ interface TechnicianEmailLoginFormProps {
   onLoginSuccess: () => void;
 }
 
-interface LoginCheckResult {
+interface VerifyTechnicianLoginParams {
+  tech_email: string;
+  tech_password: string;
+  workshop_user_id: string;
+}
+
+interface VerifyLoginResult {
   is_valid: boolean;
   technician_id: string | null;
 }
@@ -45,11 +51,7 @@ const TechnicianEmailLoginForm = ({ onLoginSuccess }: TechnicianEmailLoginFormPr
       }
 
       // Verify technician credentials using RPC function
-      const { data, error } = await supabase.rpc<LoginCheckResult, {
-        tech_email: string;
-        tech_password: string;
-        workshop_user_id: string;
-      }>(
+      const { data, error } = await supabase.rpc(
         'verify_technician_login',
         { 
           tech_email: email, 
@@ -58,12 +60,15 @@ const TechnicianEmailLoginForm = ({ onLoginSuccess }: TechnicianEmailLoginFormPr
         }
       );
       
-      if (error || !data || !data.is_valid) {
+      // Cast the data to the expected type
+      const result = data as VerifyLoginResult;
+      
+      if (error || !result || !result.is_valid) {
         throw new Error("Invalid email or password");
       }
       
       // Successfully authenticated
-      const technicianId = data.technician_id;
+      const technicianId = result.technician_id;
       
       if (!technicianId) {
         throw new Error("Technician ID not found");
