@@ -30,6 +30,9 @@ const JobDetailView: React.FC<JobDetailViewProps> = ({
   const [completeNotes, setCompleteNotes] = useState("");
   const { toast } = useToast();
   
+  // Add debugging to see job data
+  console.log("JobDetailView - Current job data:", job);
+  
   const handleComplete = () => {
     onUpdateStatus(job.id, 'completed');
     setIsCompleteDialogOpen(false);

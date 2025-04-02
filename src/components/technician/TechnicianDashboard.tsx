@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TechnicianProfile } from "@/types/technician";
 import { useTechnicianJobs } from "@/hooks/technician/useTechnicianJobs";
@@ -32,17 +32,28 @@ const TechnicianDashboard: React.FC<TechnicianDashboardProps> = ({
     offlinePendingCount
   } = useTechnicianJobs(technicianProfile?.id || null);
   
+  // Debug log for jobs
+  console.log("TechnicianDashboard - Available jobs:", jobs);
+  
   const handleRefresh = async () => {
     setRefreshing(true);
     await refreshJobs();
     setTimeout(() => setRefreshing(false), 500); // Ensure animation plays for at least 500ms
   };
   
+  // Force refresh on initial load
+  useEffect(() => {
+    if (technicianProfile?.id) {
+      refreshJobs();
+    }
+  }, [technicianProfile?.id, refreshJobs]);
+  
   const pendingJobs = jobs.filter(job => job.status === 'pending' || job.status === 'accepted');
   const activeJobs = jobs.filter(job => job.status === 'inProgress' || job.status === 'working');
   const completedJobs = jobs.filter(job => job.status === 'completed');
   
   const selectedJob = jobs.find(job => job.id === selectedJobId);
+  console.log("TechnicianDashboard - Selected job:", selectedJob);
   
   return (
     <div className="space-y-6">

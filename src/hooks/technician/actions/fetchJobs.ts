@@ -114,6 +114,8 @@ export const useFetchJobs = (
       
       if (allJobs.length === 0) {
         console.log("No jobs or bookings found for this technician");
+      } else {
+        console.log("All jobs after transformation:", allJobs);
       }
       
       setJobs(allJobs);

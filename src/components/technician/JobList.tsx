@@ -63,6 +63,8 @@ const JobList: React.FC<JobListProps> = ({
     );
   }
   
+  console.log("JobList - Rendering jobs:", jobs);
+  
   const getStatusBadge = (status: JobStatus) => {
     switch (status) {
       case 'pending':
@@ -94,6 +96,11 @@ const JobList: React.FC<JobListProps> = ({
     }
   };
   
+  const handleJobSelect = (jobId: string) => {
+    console.log("Selecting job with ID:", jobId);
+    onSelectJob(jobId);
+  };
+  
   return (
     <div className="space-y-4">
       {jobs.map(job => (
@@ -101,7 +108,7 @@ const JobList: React.FC<JobListProps> = ({
           <CardContent className="p-0">
             <div 
               className="p-4 cursor-pointer" 
-              onClick={() => onSelectJob(job.id)}
+              onClick={() => handleJobSelect(job.id)}
             >
               <div className="flex items-start justify-between">
                 <div className="space-y-1">
@@ -137,7 +144,10 @@ const JobList: React.FC<JobListProps> = ({
                 <Button 
                   variant="ghost" 
                   className="rounded-none py-3 h-auto text-green-600"
-                  onClick={() => onUpdateStatus(job.id, 'accepted')}
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevent job selection when clicking the button
+                    onUpdateStatus(job.id, 'accepted');
+                  }}
                 >
                   <CheckCircle2 className="h-4 w-4 mr-2" />
                   Accept
@@ -145,7 +155,10 @@ const JobList: React.FC<JobListProps> = ({
                 <Button 
                   variant="ghost" 
                   className="rounded-none py-3 h-auto text-red-600"
-                  onClick={() => onUpdateStatus(job.id, 'declined')}
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevent job selection when clicking the button
+                    onUpdateStatus(job.id, 'declined');
+                  }}
                 >
                   <XCircle className="h-4 w-4 mr-2" />
                   Decline
@@ -158,7 +171,10 @@ const JobList: React.FC<JobListProps> = ({
                 <Button 
                   variant="ghost" 
                   className="rounded-none py-3 h-auto text-blue-600"
-                  onClick={() => onUpdateStatus(job.id, 'inProgress')}
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevent job selection when clicking the button
+                    onUpdateStatus(job.id, 'inProgress');
+                  }}
                 >
                   <Timer className="h-4 w-4 mr-2" />
                   Start Work
@@ -175,7 +191,10 @@ const JobList: React.FC<JobListProps> = ({
                       ? "bg-blue-100 text-blue-800 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-200" 
                       : "text-blue-600"
                   }`}
-                  onClick={() => onToggleTimer(job.id)}
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevent job selection when clicking the button
+                    onToggleTimer(job.id);
+                  }}
                 >
                   <Timer className={`h-4 w-4 mr-2 ${activeJobId === job.id && isTimerRunning ? "animate-pulse" : ""}`} />
                   {activeJobId === job.id && isTimerRunning ? "Stop Timer" : "Start Timer"}
