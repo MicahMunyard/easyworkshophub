@@ -16,6 +16,11 @@ type TechnicianProfileData = {
   experience: string | null;
 };
 
+type LoginCheckResult = {
+  is_valid: boolean;
+  technician_id: string | null;
+};
+
 const TechnicianLogin = () => {
   const [techCode, setTechCode] = useState("");
   const [email, setEmail] = useState("");
@@ -92,7 +97,7 @@ const TechnicianLogin = () => {
     
     try {
       // Custom SQL query through RPC to verify login credentials
-      const { data: loginCheck, error: loginError } = await supabase.rpc('verify_technician_login', {
+      const { data: loginCheck, error: loginError } = await supabase.rpc<LoginCheckResult>('verify_technician_login', {
         tech_email: email,
         tech_password: btoa(password),
         workshop_user_id: user?.id || ''
