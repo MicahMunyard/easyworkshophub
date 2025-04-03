@@ -154,7 +154,7 @@ export const useFetchJobs = (
         toast({
           title: "Using cached job data",
           description: "We're having trouble connecting to the server. Showing previously loaded jobs.",
-          variant: "warning"
+          variant: "default" // Changed from "warning" to "default" which is an allowed variant
         });
       } else {
         toast({
