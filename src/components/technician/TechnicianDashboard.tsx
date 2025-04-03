@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TechnicianProfile } from "@/types/technician";
 import { useTechnicianJobs } from "@/hooks/technician/useTechnicianJobs";
-import JobList from "@/components/technician/JobList";
+import JobList from "@/components/technician/job-list/JobList";
 import TechnicianStats from "@/components/technician/TechnicianStats";
 import JobDetailView from "@/components/technician/JobDetailView";
 import { RefreshCw } from "lucide-react";
