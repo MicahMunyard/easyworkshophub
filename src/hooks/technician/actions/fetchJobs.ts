@@ -35,9 +35,13 @@ export const useFetchJobs = (
     }
   };
 
+  // Track if we're already fetching to prevent duplicate calls
+  let fetchInProgress = false;
+
   const fetchJobs = async (): Promise<void> => {
-    if (!technicianId || !userId) return;
+    if (!technicianId || !userId || fetchInProgress) return;
     
+    fetchInProgress = true;
     setIsLoading(true);
     
     try {
@@ -142,7 +146,13 @@ export const useFetchJobs = (
         cacheJobs(allJobs);
       }
       
-      setJobs(allJobs);
+      // Only update state if we have data or no jobs were found
+      setJobs(prevJobs => {
+        // Only update if the data has actually changed
+        const hasChanged = JSON.stringify(prevJobs) !== JSON.stringify(allJobs);
+        return hasChanged ? allJobs : prevJobs;
+      });
+      
     } catch (error) {
       console.error('Error fetching technician jobs:', error);
       
@@ -150,11 +160,16 @@ export const useFetchJobs = (
       const cachedJobs = loadCachedJobs();
       if (cachedJobs.length > 0) {
         console.log("Loading jobs from cache due to fetch error");
-        setJobs(cachedJobs);
+        setJobs(prevJobs => {
+          // Only update if the cached data is different from current
+          const hasChanged = JSON.stringify(prevJobs) !== JSON.stringify(cachedJobs);
+          return hasChanged ? cachedJobs : prevJobs;
+        });
+        
         toast({
           title: "Using cached job data",
           description: "We're having trouble connecting to the server. Showing previously loaded jobs.",
-          variant: "default" // Changed from "warning" to "default" which is an allowed variant
+          variant: "default" 
         });
       } else {
         toast({
@@ -165,6 +180,7 @@ export const useFetchJobs = (
       }
     } finally {
       setIsLoading(false);
+      fetchInProgress = false;
     }
   };
 

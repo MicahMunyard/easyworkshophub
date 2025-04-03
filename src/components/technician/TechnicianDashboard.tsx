@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TechnicianProfile } from "@/types/technician";
 import { useTechnicianJobs } from "@/hooks/technician/useTechnicianJobs";
@@ -32,54 +32,78 @@ const TechnicianDashboard: React.FC<TechnicianDashboardProps> = ({
     offlinePendingCount
   } = useTechnicianJobs(technicianProfile?.id || null);
   
-  // Debug log for jobs
-  console.log("TechnicianDashboard - Available jobs:", jobs);
+  // Debug log for jobs - only log when jobs actually change
+  useEffect(() => {
+    console.log("TechnicianDashboard - Jobs updated:", jobs);
+  }, [jobs]);
   
   const handleRefresh = async () => {
+    if (refreshing) return; // Prevent multiple refreshes
+    
     setRefreshing(true);
     await refreshJobs();
     setTimeout(() => setRefreshing(false), 500); // Ensure animation plays for at least 500ms
   };
   
-  // Force refresh on initial load
+  // Force refresh on initial load - but only once
   useEffect(() => {
+    let mounted = true;
+    
     if (technicianProfile?.id) {
-      refreshJobs();
+      refreshJobs().then(() => {
+        if (mounted) {
+          console.log("Initial job refresh completed");
+        }
+      });
     }
+    
+    return () => {
+      mounted = false;
+    };
   }, [technicianProfile?.id, refreshJobs]);
   
   // Memoize the filtered jobs to prevent recomputation on every render
-  const pendingJobs = useCallback(() => 
+  const pendingJobs = useMemo(() => 
     jobs.filter(job => job.status === 'pending' || job.status === 'accepted'),
     [jobs]
-  )();
+  );
   
-  const activeJobs = useCallback(() => 
+  const activeJobs = useMemo(() => 
     jobs.filter(job => job.status === 'inProgress' || job.status === 'working'),
     [jobs]
-  )();
+  );
   
-  const completedJobs = useCallback(() => 
+  const completedJobs = useMemo(() => 
     jobs.filter(job => job.status === 'completed'),
     [jobs]
-  )();
+  );
   
-  // Find the selected job from the jobs array with better error handling
-  const selectedJob = useCallback(() => {
+  // Find the selected job from the jobs array
+  const selectedJob = useMemo(() => {
     const job = jobs.find(job => job.id === selectedJobId);
-    console.log("TechnicianDashboard - Selected job ID:", selectedJobId);
-    console.log("TechnicianDashboard - Selected job:", job);
+    if (selectedJobId && !job) {
+      console.log("Warning: Selected job not found in jobs array:", selectedJobId);
+    }
     return job;
-  }, [jobs, selectedJobId])();
+  }, [jobs, selectedJobId]);
 
   // Handler for selecting a job
-  const handleSelectJob = (jobId: string) => {
+  const handleSelectJob = useCallback((jobId: string) => {
     console.log("Selecting job with ID:", jobId);
-    // Only update if it's different to prevent unnecessary rerenders
-    if (jobId !== selectedJobId) {
-      setSelectedJobId(jobId);
+    setSelectedJobId(jobId);
+  }, []);
+  
+  // If jobs are empty and not loading, periodically try to refresh
+  useEffect(() => {
+    if (!isLoading && jobs.length === 0) {
+      const intervalId = setInterval(() => {
+        console.log("Auto-refreshing due to empty jobs list");
+        refreshJobs();
+      }, 10000); // Try every 10 seconds
+      
+      return () => clearInterval(intervalId);
     }
-  };
+  }, [isLoading, jobs.length, refreshJobs]);
   
   return (
     <div className="space-y-6">
@@ -92,6 +116,7 @@ const TechnicianDashboard: React.FC<TechnicianDashboardProps> = ({
           size="sm"
           onClick={handleRefresh}
           className="gap-1"
+          disabled={refreshing}
         >
           <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
           {offlinePendingCount > 0 ? `Sync (${offlinePendingCount})` : 'Refresh'}
@@ -131,6 +156,7 @@ const TechnicianDashboard: React.FC<TechnicianDashboardProps> = ({
           
           <TabsContent value="pending">
             <JobList 
+              key="pending-jobs-list"
               jobs={pendingJobs} 
               isLoading={isLoading}
               onSelectJob={handleSelectJob}
@@ -140,6 +166,7 @@ const TechnicianDashboard: React.FC<TechnicianDashboardProps> = ({
           
           <TabsContent value="active">
             <JobList 
+              key="active-jobs-list"
               jobs={activeJobs} 
               isLoading={isLoading}
               onSelectJob={handleSelectJob}
@@ -152,6 +179,7 @@ const TechnicianDashboard: React.FC<TechnicianDashboardProps> = ({
           
           <TabsContent value="completed">
             <JobList 
+              key="completed-jobs-list"
               jobs={completedJobs} 
               isLoading={isLoading}
               onSelectJob={handleSelectJob}

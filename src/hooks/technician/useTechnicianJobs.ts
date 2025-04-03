@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { TechnicianJob } from "@/types/technician";
 import { OfflineOperation } from "./types/offlineTypes";
@@ -17,6 +17,11 @@ export const useTechnicianJobs = (technicianId: string | null) => {
   const [offlineOperations, setOfflineOperations] = useState<OfflineOperation[]>([]);
   const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
   const { user } = useAuth();
+  
+  // Use a ref to track if initial fetch has been done
+  const initialFetchDone = useRef(false);
+  // Use a ref to track if a fetch is in progress
+  const fetchInProgress = useRef(false);
 
   // Initialize the fetch jobs action
   const fetchJobs = useFetchJobs(technicianId, user?.id || null, setIsLoading, setJobs);
@@ -34,24 +39,35 @@ export const useTechnicianJobs = (technicianId: string | null) => {
   const uploadJobPhoto = useUploadJobPhoto(setJobs, setOfflineOperations);
   const requestJobParts = useRequestJobParts(setJobs, setOfflineOperations);
 
+  // Memoized refresh function to prevent unnecessary recreations
+  const refreshJobs = useCallback(async () => {
+    // Prevent multiple simultaneous fetches
+    if (fetchInProgress.current) return;
+    
+    fetchInProgress.current = true;
+    await fetchJobs();
+    fetchInProgress.current = false;
+    initialFetchDone.current = true;
+  }, [fetchJobs]);
+
   // Sync offline operations when coming back online
   useEffect(() => {
     const syncOfflineData = async () => {
-      await syncOfflineOperations(offlineOperations, fetchJobs);
       if (navigator.onLine && offlineOperations.length > 0) {
+        await syncOfflineOperations(offlineOperations, refreshJobs);
         setOfflineOperations([]);
       }
     };
     
     syncOfflineData();
-  }, [navigator.onLine, offlineOperations.length, fetchJobs]);
+  }, [navigator.onLine, offlineOperations.length, refreshJobs]);
 
-  // Initial data fetch
+  // Initial data fetch - only run once
   useEffect(() => {
-    if (technicianId) {
-      fetchJobs();
+    if (technicianId && !initialFetchDone.current) {
+      refreshJobs();
     }
-  }, [technicianId, fetchJobs]);
+  }, [technicianId, refreshJobs]);
 
   return {
     jobs,
@@ -62,7 +78,7 @@ export const useTechnicianJobs = (technicianId: string | null) => {
     toggleJobTimer,
     uploadJobPhoto,
     requestJobParts,
-    refreshJobs: fetchJobs,
+    refreshJobs,
     offlinePendingCount: offlineOperations.length
   };
 };
