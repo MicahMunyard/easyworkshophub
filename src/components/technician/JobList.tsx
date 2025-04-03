@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { TechnicianJob, JobStatus } from "@/types/technician";
@@ -34,7 +34,8 @@ const JobList: React.FC<JobListProps> = ({
   isTimerRunning,
   onToggleTimer
 }) => {
-  if (isLoading) {
+  // Memoize loading state UI
+  const LoadingState = useCallback(() => {
     return (
       <div className="space-y-4">
         {[1, 2, 3].map(i => (
@@ -53,14 +54,27 @@ const JobList: React.FC<JobListProps> = ({
         ))}
       </div>
     );
-  }
-  
-  if (jobs.length === 0) {
+  }, []);
+
+  // Memoize empty state UI
+  const EmptyState = useCallback(() => {
     return (
       <div className="text-center py-12">
+        <AlertTriangle className="h-12 w-12 mx-auto text-amber-500 mb-4" />
         <p className="text-muted-foreground">No jobs found in this category</p>
+        <p className="text-xs text-muted-foreground mt-2">
+          Check your connection or try refreshing the page
+        </p>
       </div>
     );
+  }, []);
+  
+  if (isLoading) {
+    return <LoadingState />;
+  }
+  
+  if (!jobs || jobs.length === 0) {
+    return <EmptyState />;
   }
   
   console.log("JobList - Rendering jobs:", jobs);
@@ -96,7 +110,9 @@ const JobList: React.FC<JobListProps> = ({
     }
   };
   
-  const handleJobSelect = (jobId: string) => {
+  const handleJobSelect = (jobId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     console.log("Selecting job with ID:", jobId);
     onSelectJob(jobId);
   };
@@ -104,11 +120,14 @@ const JobList: React.FC<JobListProps> = ({
   return (
     <div className="space-y-4">
       {jobs.map(job => (
-        <Card key={job.id} className={`overflow-hidden hover:shadow-md transition-all ${job.isActive ? 'border-primary border-2' : ''}`}>
+        <Card 
+          key={job.id} 
+          className={`overflow-hidden hover:shadow-md transition-all ${job.isActive ? 'border-primary border-2' : ''}`}
+        >
           <CardContent className="p-0">
             <div 
               className="p-4 cursor-pointer" 
-              onClick={() => handleJobSelect(job.id)}
+              onClick={(e) => handleJobSelect(job.id, e)}
             >
               <div className="flex items-start justify-between">
                 <div className="space-y-1">
@@ -117,7 +136,7 @@ const JobList: React.FC<JobListProps> = ({
                   
                   <div className="flex items-center gap-2 mt-2">
                     {getStatusBadge(job.status)}
-                    {getPriorityBadge(job.priority)}
+                    {getPriorityBadge(job.priority || 'Medium')}
                   </div>
                 </div>
                 <ChevronRight className="h-5 w-5 text-muted-foreground" />

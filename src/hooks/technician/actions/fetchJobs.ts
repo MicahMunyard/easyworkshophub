@@ -11,11 +11,35 @@ export const useFetchJobs = (
   setJobs: React.Dispatch<React.SetStateAction<TechnicianJob[]>>
 ) => {
   const { toast } = useToast();
+  const JOBS_STORAGE_KEY = `tech_jobs_${technicianId}_${userId}`;
+
+  // Load jobs from localStorage if available
+  const loadCachedJobs = (): TechnicianJob[] => {
+    try {
+      const cachedData = localStorage.getItem(JOBS_STORAGE_KEY);
+      if (cachedData) {
+        return JSON.parse(cachedData);
+      }
+    } catch (e) {
+      console.error('Error loading cached jobs:', e);
+    }
+    return [];
+  };
+
+  // Save jobs to localStorage
+  const cacheJobs = (jobs: TechnicianJob[]) => {
+    try {
+      localStorage.setItem(JOBS_STORAGE_KEY, JSON.stringify(jobs));
+    } catch (e) {
+      console.error('Error caching jobs:', e);
+    }
+  };
 
   const fetchJobs = async (): Promise<void> => {
     if (!technicianId || !userId) return;
     
     setIsLoading(true);
+    
     try {
       console.log(`Fetching jobs for technician ${technicianId} and user ${userId}`);
       
@@ -29,7 +53,6 @@ export const useFetchJobs = (
       
       if (jobsError) {
         console.error("Error fetching from jobs table:", jobsError);
-        // Don't throw here, try the second approach
       }
       
       let allJobs: TechnicianJob[] = [];
@@ -70,7 +93,6 @@ export const useFetchJobs = (
       
       if (bookingsError) {
         console.error("Error fetching from user_bookings table:", bookingsError);
-        // Continue with what we have
       }
       
       // If we got bookings, transform them to jobs and add to our collection
@@ -116,16 +138,31 @@ export const useFetchJobs = (
         console.log("No jobs or bookings found for this technician");
       } else {
         console.log("All jobs after transformation:", allJobs);
+        // Cache the jobs we found
+        cacheJobs(allJobs);
       }
       
       setJobs(allJobs);
     } catch (error) {
       console.error('Error fetching technician jobs:', error);
-      toast({
-        title: "Failed to load jobs",
-        description: "Please check your connection and try again.",
-        variant: "destructive"
-      });
+      
+      // If there's an error, try to load from cache
+      const cachedJobs = loadCachedJobs();
+      if (cachedJobs.length > 0) {
+        console.log("Loading jobs from cache due to fetch error");
+        setJobs(cachedJobs);
+        toast({
+          title: "Using cached job data",
+          description: "We're having trouble connecting to the server. Showing previously loaded jobs.",
+          variant: "warning"
+        });
+      } else {
+        toast({
+          title: "Failed to load jobs",
+          description: "Please check your connection and try again.",
+          variant: "destructive"
+        });
+      }
     } finally {
       setIsLoading(false);
     }

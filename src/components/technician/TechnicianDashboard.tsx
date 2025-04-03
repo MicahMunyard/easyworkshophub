@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TechnicianProfile } from "@/types/technician";
 import { useTechnicianJobs } from "@/hooks/technician/useTechnicianJobs";
@@ -48,19 +48,37 @@ const TechnicianDashboard: React.FC<TechnicianDashboardProps> = ({
     }
   }, [technicianProfile?.id, refreshJobs]);
   
-  const pendingJobs = jobs.filter(job => job.status === 'pending' || job.status === 'accepted');
-  const activeJobs = jobs.filter(job => job.status === 'inProgress' || job.status === 'working');
-  const completedJobs = jobs.filter(job => job.status === 'completed');
+  // Memoize the filtered jobs to prevent recomputation on every render
+  const pendingJobs = useCallback(() => 
+    jobs.filter(job => job.status === 'pending' || job.status === 'accepted'),
+    [jobs]
+  )();
   
-  // Find the selected job from the jobs array
-  const selectedJob = jobs.find(job => job.id === selectedJobId);
-  console.log("TechnicianDashboard - Selected job ID:", selectedJobId);
-  console.log("TechnicianDashboard - Selected job:", selectedJob);
+  const activeJobs = useCallback(() => 
+    jobs.filter(job => job.status === 'inProgress' || job.status === 'working'),
+    [jobs]
+  )();
+  
+  const completedJobs = useCallback(() => 
+    jobs.filter(job => job.status === 'completed'),
+    [jobs]
+  )();
+  
+  // Find the selected job from the jobs array with better error handling
+  const selectedJob = useCallback(() => {
+    const job = jobs.find(job => job.id === selectedJobId);
+    console.log("TechnicianDashboard - Selected job ID:", selectedJobId);
+    console.log("TechnicianDashboard - Selected job:", job);
+    return job;
+  }, [jobs, selectedJobId])();
 
   // Handler for selecting a job
   const handleSelectJob = (jobId: string) => {
     console.log("Selecting job with ID:", jobId);
-    setSelectedJobId(jobId);
+    // Only update if it's different to prevent unnecessary rerenders
+    if (jobId !== selectedJobId) {
+      setSelectedJobId(jobId);
+    }
   };
   
   return (

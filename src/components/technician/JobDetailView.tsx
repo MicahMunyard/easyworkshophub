@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { TechnicianJob, JobStatus } from "@/types/technician";
 import { useToast } from "@/hooks/use-toast";
 import JobHeader from "./job-detail/JobHeader";
@@ -30,8 +30,13 @@ const JobDetailView: React.FC<JobDetailViewProps> = ({
   const [completeNotes, setCompleteNotes] = useState("");
   const { toast } = useToast();
   
-  // Add debugging to see job data
-  console.log("JobDetailView - Current job data:", job);
+  // Add detailed debugging to track job data
+  useEffect(() => {
+    console.log("JobDetailView - Current job data:", job);
+    console.log("JobDetailView - Photos:", job.photos || []);
+    console.log("JobDetailView - Parts:", job.partsRequested || []);
+    console.log("JobDetailView - Notes:", job.notes || []);
+  }, [job]);
   
   const handleComplete = () => {
     onUpdateStatus(job.id, 'completed');
@@ -41,6 +46,28 @@ const JobDetailView: React.FC<JobDetailViewProps> = ({
       description: "The job has been marked as complete.",
     });
   };
+
+  // If job data is invalid or incomplete, show a fallback message
+  if (!job || !job.id) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center">
+          <button 
+            className="text-sm flex items-center gap-1" 
+            onClick={onBack}
+          >
+            ← Back to jobs
+          </button>
+        </div>
+        <div className="p-8 text-center">
+          <h3 className="text-lg font-medium">Job data is unavailable</h3>
+          <p className="mt-2 text-muted-foreground">
+            There was a problem loading this job. Please go back and try again.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
