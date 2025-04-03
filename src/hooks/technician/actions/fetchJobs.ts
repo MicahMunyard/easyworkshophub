@@ -1,8 +1,10 @@
 
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { TechnicianJob, JobStatus, JobNote } from "@/types/technician";
+import { TechnicianJob } from "@/types/technician";
 import { useToast } from "@/hooks/use-toast";
+import { loadCachedJobs, cacheJobs } from "../utils/jobCacheUtils";
+import { transformJobsData, transformBookingsData } from "../utils/jobTransformUtils";
 
 export const useFetchJobs = (
   technicianId: string | null,
@@ -12,31 +14,6 @@ export const useFetchJobs = (
 ) => {
   const { toast } = useToast();
   const JOBS_STORAGE_KEY = `tech_jobs_${technicianId}_${userId}`;
-
-  // Load jobs from localStorage if available
-  const loadCachedJobs = (): TechnicianJob[] => {
-    try {
-      const cachedData = localStorage.getItem(JOBS_STORAGE_KEY);
-      if (cachedData) {
-        const parsedData = JSON.parse(cachedData);
-        console.log("Loaded cached jobs:", parsedData);
-        return parsedData;
-      }
-    } catch (e) {
-      console.error('Error loading cached jobs:', e);
-    }
-    return [];
-  };
-
-  // Save jobs to localStorage
-  const cacheJobs = (jobs: TechnicianJob[]) => {
-    try {
-      localStorage.setItem(JOBS_STORAGE_KEY, JSON.stringify(jobs));
-      console.log("Cached jobs to localStorage:", jobs);
-    } catch (e) {
-      console.error('Error caching jobs:', e);
-    }
-  };
 
   // Track if we're already fetching to prevent duplicate calls
   let fetchInProgress = false;
@@ -53,7 +30,7 @@ export const useFetchJobs = (
     try {
       console.log(`Fetching jobs for technician ${technicianId} and user ${userId}`);
       
-      // First try to get jobs from the jobs table
+      // Fetch jobs from the jobs table
       const { data: jobsData, error: jobsError } = await supabase
         .from('jobs')
         .select('*')
@@ -65,35 +42,7 @@ export const useFetchJobs = (
         console.error("Error fetching from jobs table:", jobsError);
       }
       
-      let allJobs: TechnicianJob[] = [];
-      
-      // If we got jobs from the first query, transform them
-      if (jobsData && jobsData.length > 0) {
-        console.log(`Found ${jobsData.length} jobs in jobs table`);
-        
-        // Transform jobs to match our TechnicianJob interface
-        const jobsFromJobsTable: TechnicianJob[] = jobsData.map(job => ({
-          id: job.id,
-          title: job.service,
-          description: `Customer: ${job.customer}, Vehicle: ${job.vehicle}`,
-          customer: job.customer,
-          vehicle: job.vehicle,
-          status: job.status as JobStatus,
-          assignedAt: job.created_at,
-          scheduledFor: job.date,
-          estimatedTime: job.time_estimate,
-          priority: job.priority,
-          timeLogged: 0, // We'll need to calculate this from a separate time logs table
-          partsRequested: [], // We'll need to fetch this from a separate parts requests table
-          photos: [], // We'll need to fetch this from storage
-          notes: [],
-          isActive: false
-        }));
-        
-        allJobs = [...jobsFromJobsTable];
-      }
-      
-      // Now also check the user_bookings table for bookings assigned to this technician
+      // Fetch bookings from the user_bookings table
       const { data: bookingsData, error: bookingsError } = await supabase
         .from('user_bookings')
         .select('*')
@@ -105,51 +54,18 @@ export const useFetchJobs = (
         console.error("Error fetching from user_bookings table:", bookingsError);
       }
       
-      // If we got bookings, transform them to jobs and add to our collection
-      if (bookingsData && bookingsData.length > 0) {
-        console.log(`Found ${bookingsData.length} bookings in user_bookings table`);
-        
-        const jobsFromBookings: TechnicianJob[] = bookingsData.map(booking => {
-          // Create a default JobNote structure for the booking notes
-          const notesArray: JobNote[] = booking.notes 
-            ? [{
-                id: `note-${booking.id}`,
-                content: booking.notes,
-                created_at: booking.created_at,
-                author: 'System'
-              }] 
-            : [];
-            
-          return {
-            id: booking.id,
-            title: booking.service,
-            description: `Customer: ${booking.customer_name}, Vehicle: ${booking.car}`,
-            customer: booking.customer_name,
-            vehicle: booking.car,
-            status: (booking.status === 'confirmed' ? 'pending' : 
-                    booking.status === 'completed' ? 'completed' : 
-                    booking.status === 'cancelled' ? 'cancelled' : 'pending') as JobStatus,
-            assignedAt: booking.created_at,
-            scheduledFor: booking.booking_date,
-            estimatedTime: `${booking.duration} minutes`,
-            priority: 'Medium', // Default priority
-            timeLogged: 0,
-            partsRequested: [],
-            photos: [],
-            notes: notesArray,
-            isActive: false
-          };
-        });
-        
-        allJobs = [...allJobs, ...jobsFromBookings];
-      }
+      // Transform and combine job data
+      const allJobs = [
+        ...(jobsData ? transformJobsData(jobsData) : []),
+        ...(bookingsData ? transformBookingsData(bookingsData) : [])
+      ];
       
       if (allJobs.length === 0) {
         console.log("No jobs or bookings found for this technician");
       } else {
         console.log("All jobs after transformation:", allJobs);
         // Cache the jobs we found
-        cacheJobs(allJobs);
+        cacheJobs(JOBS_STORAGE_KEY, allJobs);
       }
       
       // Only update state if we have data or no jobs were found
@@ -169,7 +85,7 @@ export const useFetchJobs = (
       console.error('Error fetching technician jobs:', error);
       
       // If there's an error, try to load from cache
-      const cachedJobs = loadCachedJobs();
+      const cachedJobs = loadCachedJobs(JOBS_STORAGE_KEY);
       if (cachedJobs.length > 0) {
         console.log("Loading jobs from cache due to fetch error");
         setJobs(prevJobs => {

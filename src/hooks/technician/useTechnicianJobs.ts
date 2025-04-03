@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { TechnicianJob } from "@/types/technician";
@@ -18,15 +17,11 @@ export const useTechnicianJobs = (technicianId: string | null) => {
   const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
   const { user } = useAuth();
   
-  // Use a ref to track if initial fetch has been done
   const initialFetchDone = useRef(false);
-  // Use a ref to track if a fetch is in progress
   const fetchInProgress = useRef(false);
 
-  // Initialize the fetch jobs action
   const fetchJobs = useFetchJobs(technicianId, user?.id || null, setIsLoading, setJobs);
   
-  // Initialize job actions
   const updateJobStatus = useUpdateJobStatus(setJobs, setOfflineOperations);
   const toggleJobTimer = useToggleJobTimer(
     setJobs, 
@@ -39,9 +34,7 @@ export const useTechnicianJobs = (technicianId: string | null) => {
   const uploadJobPhoto = useUploadJobPhoto(setJobs, setOfflineOperations);
   const requestJobParts = useRequestJobParts(setJobs, setOfflineOperations);
 
-  // Memoized refresh function to prevent unnecessary recreations
   const refreshJobs = useCallback(async () => {
-    // Prevent multiple simultaneous fetches
     if (fetchInProgress.current) {
       console.log("Refresh skipped - fetch already in progress");
       return;
@@ -55,7 +48,6 @@ export const useTechnicianJobs = (technicianId: string | null) => {
     console.log("Job refresh completed, jobs count:", jobs.length);
   }, [fetchJobs, jobs.length]);
 
-  // Sync offline operations when coming back online
   useEffect(() => {
     const syncOfflineData = async () => {
       if (navigator.onLine && offlineOperations.length > 0) {
@@ -67,7 +59,6 @@ export const useTechnicianJobs = (technicianId: string | null) => {
     syncOfflineData();
   }, [navigator.onLine, offlineOperations.length, refreshJobs]);
 
-  // Initial data fetch - only run once
   useEffect(() => {
     if (technicianId && !initialFetchDone.current) {
       console.log("Initial job fetch triggered");
