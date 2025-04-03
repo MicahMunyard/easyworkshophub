@@ -42,13 +42,18 @@ export const useTechnicianJobs = (technicianId: string | null) => {
   // Memoized refresh function to prevent unnecessary recreations
   const refreshJobs = useCallback(async () => {
     // Prevent multiple simultaneous fetches
-    if (fetchInProgress.current) return;
+    if (fetchInProgress.current) {
+      console.log("Refresh skipped - fetch already in progress");
+      return;
+    }
     
+    console.log("Starting job refresh");
     fetchInProgress.current = true;
     await fetchJobs();
     fetchInProgress.current = false;
     initialFetchDone.current = true;
-  }, [fetchJobs]);
+    console.log("Job refresh completed, jobs count:", jobs.length);
+  }, [fetchJobs, jobs.length]);
 
   // Sync offline operations when coming back online
   useEffect(() => {
@@ -65,6 +70,7 @@ export const useTechnicianJobs = (technicianId: string | null) => {
   // Initial data fetch - only run once
   useEffect(() => {
     if (technicianId && !initialFetchDone.current) {
+      console.log("Initial job fetch triggered");
       refreshJobs();
     }
   }, [technicianId, refreshJobs]);

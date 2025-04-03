@@ -18,7 +18,9 @@ export const useFetchJobs = (
     try {
       const cachedData = localStorage.getItem(JOBS_STORAGE_KEY);
       if (cachedData) {
-        return JSON.parse(cachedData);
+        const parsedData = JSON.parse(cachedData);
+        console.log("Loaded cached jobs:", parsedData);
+        return parsedData;
       }
     } catch (e) {
       console.error('Error loading cached jobs:', e);
@@ -30,6 +32,7 @@ export const useFetchJobs = (
   const cacheJobs = (jobs: TechnicianJob[]) => {
     try {
       localStorage.setItem(JOBS_STORAGE_KEY, JSON.stringify(jobs));
+      console.log("Cached jobs to localStorage:", jobs);
     } catch (e) {
       console.error('Error caching jobs:', e);
     }
@@ -39,7 +42,10 @@ export const useFetchJobs = (
   let fetchInProgress = false;
 
   const fetchJobs = async (): Promise<void> => {
-    if (!technicianId || !userId || fetchInProgress) return;
+    if (!technicianId || !userId || fetchInProgress) {
+      console.log("Skipping fetchJobs: missing data or fetch already in progress");
+      return;
+    }
     
     fetchInProgress = true;
     setIsLoading(true);
@@ -150,7 +156,13 @@ export const useFetchJobs = (
       setJobs(prevJobs => {
         // Only update if the data has actually changed
         const hasChanged = JSON.stringify(prevJobs) !== JSON.stringify(allJobs);
-        return hasChanged ? allJobs : prevJobs;
+        if (hasChanged) {
+          console.log("Updating jobs state with new data");
+          return allJobs;
+        } else {
+          console.log("Jobs data unchanged, keeping previous state");
+          return prevJobs;
+        }
       });
       
     } catch (error) {

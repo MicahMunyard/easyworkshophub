@@ -35,6 +35,9 @@ const TechnicianDashboard: React.FC<TechnicianDashboardProps> = ({
   // Debug log for jobs - only log when jobs actually change
   useEffect(() => {
     console.log("TechnicianDashboard - Jobs updated:", jobs);
+    console.log("TechnicianDashboard - Pending jobs count:", pendingJobs.length);
+    console.log("TechnicianDashboard - Active jobs count:", activeJobs.length);
+    console.log("TechnicianDashboard - Completed jobs count:", completedJobs.length);
   }, [jobs]);
   
   const handleRefresh = async () => {
