@@ -15,14 +15,22 @@ const TechnicianPortal = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isRetrying, setIsRetrying] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
   const { 
     isTechnicianAuthenticated, 
     technicianProfile, 
     isOffline, 
-    isLoading, 
-    error, 
     logout 
   } = useTechnicianPortal();
+  
+  // Set loading state to false when data is loaded
+  useEffect(() => {
+    if (isTechnicianAuthenticated !== undefined) {
+      setIsLoading(false);
+    }
+  }, [isTechnicianAuthenticated]);
   
   // Handle connection recovery attempt
   const handleRetryConnection = () => {
@@ -58,32 +66,7 @@ const TechnicianPortal = () => {
       <TechPortalHeader />
       
       {isOffline && (
-        <TechnicianOfflineBanner>
-          <div className="flex items-center justify-between w-full">
-            <p className="text-sm font-medium text-white">
-              You're currently offline. Limited functionality available.
-            </p>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleRetryConnection}
-              disabled={isRetrying}
-              className="bg-white/20 hover:bg-white/30 text-white border-white/30"
-            >
-              {isRetrying ? (
-                <>
-                  <RefreshCw className="h-4 w-4 mr-1 animate-spin" /> 
-                  Checking...
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="h-4 w-4 mr-1" /> 
-                  Try again
-                </>
-              )}
-            </Button>
-          </div>
-        </TechnicianOfflineBanner>
+        <TechnicianOfflineBanner onRetry={handleRetryConnection} isRetrying={isRetrying} />
       )}
       
       <div className="container mx-auto px-4 py-6">
