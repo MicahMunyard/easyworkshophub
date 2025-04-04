@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { BookingType } from "@/types/booking";
@@ -62,10 +61,14 @@ export const useBookingFetch = (date: Date, view: BookingView) => {
 
       if (data) {
         console.log(`Fetched ${data.length} bookings for user ${user.id}:`, data);
+        
+        // IMPORTANT: Keep the ID in its original format for Supabase operations
         const transformedData: BookingType[] = data.map(booking => ({
-          id: booking.id ? parseInt(booking.id.toString().replace(/-/g, '').substring(0, 8), 16) : Math.floor(Math.random() * 1000),
+          // Use the original ID as is (as a string) - this is the key fix
+          id: booking.id,
           customer: booking.customer_name,
           phone: booking.customer_phone,
+          email: booking.customer_email,
           service: booking.service,
           time: booking.booking_time,
           duration: booking.duration,
@@ -74,6 +77,7 @@ export const useBookingFetch = (date: Date, view: BookingView) => {
                  booking.status === 'completed' ? 'completed' : 
                  booking.status === 'cancelled' ? 'cancelled' : 'pending') as 'confirmed' | 'pending' | 'cancelled' | 'completed',
           date: booking.booking_date,
+          notes: booking.notes,
           technician_id: booking.technician_id,
           service_id: booking.service_id,
           bay_id: booking.bay_id

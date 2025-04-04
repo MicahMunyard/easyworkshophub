@@ -8,12 +8,13 @@ export const updateBookingInSupabase = async (
   bookingCost: number | null | undefined
 ) => {
   console.log("Updating booking in Supabase:", updatedBooking, "Cost:", bookingCost);
+  console.log("Booking ID:", updatedBooking.id, "Type:", typeof updatedBooking.id);
   
   // Get the original booking first to compare fields
   const { data: originalBooking, error: fetchError } = await supabase
     .from('user_bookings')
     .select('*')
-    .eq('id', updatedBooking.id.toString())
+    .eq('id', typeof updatedBooking.id === 'number' ? updatedBooking.id.toString() : updatedBooking.id)
     .eq('user_id', userId)
     .single();
   
@@ -46,11 +47,11 @@ export const updateBookingInSupabase = async (
   
   console.log("Final update data:", updateData);
   
-  // Update user_bookings table
+  // Update user_bookings table with more flexible ID handling
   const { error: updateError } = await supabase
     .from('user_bookings')
     .update(updateData)
-    .eq('id', updatedBooking.id.toString())
+    .eq('id', typeof updatedBooking.id === 'number' ? updatedBooking.id.toString() : updatedBooking.id)
     .eq('user_id', userId);
   
   if (updateError) {
