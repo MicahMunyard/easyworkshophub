@@ -6,6 +6,7 @@ import { Facebook, Instagram, RefreshCcw, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { connectSocialPlatform } from "@/hooks/communication/api/connectSocialPlatform";
+import FacebookIntegration from "./FacebookIntegration";
 
 const SocialConnections: React.FC = () => {
   const { user } = useAuth();
@@ -44,13 +45,7 @@ const SocialConnections: React.FC = () => {
                   </p>
                 </div>
               </div>
-              <Button 
-                variant="outline" 
-                disabled={isConnecting === 'facebook'}
-                onClick={() => handleConnectPlatform('facebook')}
-              >
-                {isConnecting === 'facebook' ? 'Connecting...' : 'Connect'}
-              </Button>
+              <FacebookIntegration />
             </div>
             
             <div className="flex items-center justify-between p-4 border rounded-lg">
