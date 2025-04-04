@@ -1,6 +1,6 @@
 
 export interface BookingType {
-  id: number;
+  id: number | string;
   customer: string;
   phone: string;
   email?: string;

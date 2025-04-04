@@ -16,7 +16,6 @@ export const useBookingFetch = (date: Date, view: BookingView) => {
     setIsLoading(true);
     try {
       if (!user) {
-        // If no user is logged in, return empty bookings
         setBookings([]);
         setIsLoading(false);
         return;
@@ -47,7 +46,6 @@ export const useBookingFetch = (date: Date, view: BookingView) => {
 
       console.log(`Fetching bookings from ${startDate} to ${endDate} for user ${user.id}`);
       
-      // Query user_bookings table instead of bookings table
       const { data, error } = await supabase
         .from('user_bookings')
         .select('*')
@@ -62,9 +60,7 @@ export const useBookingFetch = (date: Date, view: BookingView) => {
       if (data) {
         console.log(`Fetched ${data.length} bookings for user ${user.id}:`, data);
         
-        // IMPORTANT: Keep the ID in its original format for Supabase operations
         const transformedData: BookingType[] = data.map(booking => ({
-          // Use the original ID as is (as a string) - this is the key fix
           id: booking.id,
           customer: booking.customer_name,
           phone: booking.customer_phone,
@@ -97,19 +93,16 @@ export const useBookingFetch = (date: Date, view: BookingView) => {
     }
   };
 
-  // Set up real-time subscription to booking changes
   useEffect(() => {
     console.log("Setting up real-time subscription for bookings");
     
     if (!user) {
-      // Don't attempt to fetch or subscribe if no user is logged in
       setBookings([]);
       return;
     }
     
     fetchBookings();
     
-    // Subscribe to booking changes for the current user
     const bookingsChannel = supabase
       .channel('user-bookings-changes')
       .on('postgres_changes', 
@@ -128,7 +121,6 @@ export const useBookingFetch = (date: Date, view: BookingView) => {
         console.log("User bookings subscription status:", status);
       });
     
-    // Clean up subscription
     return () => {
       console.log("Cleaning up bookings subscription");
       supabase.removeChannel(bookingsChannel);
