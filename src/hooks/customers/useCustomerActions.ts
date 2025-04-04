@@ -120,8 +120,14 @@ export const useCustomerActions = (
   };
 
   const convertBookingToCustomer = (booking: BookingType): CustomerType => {
+    // Generate a unique ID by converting the booking ID to a string and adding a suffix
+    // This ensures we have a string ID for the customer that won't conflict with other IDs
+    const customerId = typeof booking.id === 'number' 
+      ? `cust_${booking.id + 1000}` 
+      : `cust_${booking.id}`;
+    
     return {
-      id: String(booking.id + 1000),
+      id: customerId,
       name: booking.customer,
       phone: booking.phone,
       status: "active" as const,
