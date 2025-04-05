@@ -9,48 +9,68 @@ export const deleteBookingFromSupabase = async (booking: BookingType, userId: st
   console.log("Deleting booking ID:", booking.id, "Type:", typeof booking.id);
   
   try {
-    let deleteResult;
+    // First step: Find the actual booking record in the database
+    const { data: foundBookings, error: findError } = await supabase
+      .from('user_bookings')
+      .select('id')
+      .eq('user_id', userId)
+      .or(`id.eq.${booking.id},id.eq.${booking.id.toString()}`);
     
-    if (typeof booking.id === 'number') {
-      // Try multiple approaches if ID is a number
-      console.log("Using numeric ID approach for deletion");
+    if (findError || !foundBookings || foundBookings.length === 0) {
+      console.log("Could not find booking by ID, trying to find by customer details");
       
-      // Try to delete using both formats (as string and as is)
-      deleteResult = await supabase
+      // Try to find by customer name and phone
+      const { data: altBookings, error: altFindError } = await supabase
         .from('user_bookings')
-        .delete()
-        .eq('user_id', userId)
-        .or(`id.eq.${booking.id},id.eq.${booking.id.toString()}`);
-    } else {
-      // If it's already a string or other format, use it directly
-      console.log("Using direct ID approach for deletion");
-      
-      deleteResult = await supabase
-        .from('user_bookings')
-        .delete()
-        .eq('user_id', userId)
-        .eq('id', String(booking.id)); // Convert to string to be safe
-    }
-    
-    if (deleteResult.error) {
-      console.error('Error deleting from user_bookings table:', deleteResult.error);
-      
-      // Fallback approach - try matching other fields
-      console.log("Trying alternative deletion approach by matching other fields");
-      deleteResult = await supabase
-        .from('user_bookings')
-        .delete()
+        .select('id')
         .eq('user_id', userId)
         .eq('customer_name', booking.customer)
+        .eq('customer_phone', booking.phone)
         .eq('booking_date', booking.date);
-        
-      if (deleteResult.error) {
-        throw deleteResult.error;
+      
+      if (altFindError || !altBookings || altBookings.length === 0) {
+        console.error("Could not find booking to delete:", altFindError || "No matching booking found");
+        throw new Error("Could not find booking to delete");
       }
+      
+      // Use the ID from the found booking
+      const bookingId = altBookings[0].id;
+      console.log("Found booking to delete with ID:", bookingId);
+      
+      // Delete the booking with the correct ID
+      const { error: deleteError } = await supabase
+        .from('user_bookings')
+        .delete()
+        .eq('id', bookingId)
+        .eq('user_id', userId);
+      
+      if (deleteError) {
+        console.error("Error deleting booking:", deleteError);
+        throw deleteError;
+      }
+      
+      console.log("Successfully deleted booking with ID:", bookingId);
+      return { success: true };
     }
     
-    console.log("Delete result:", deleteResult);
-    return deleteResult;
+    // Use the ID from the found booking
+    const bookingId = foundBookings[0].id;
+    console.log("Found booking to delete with ID:", bookingId);
+    
+    // Delete the booking with the correct ID
+    const { error: deleteError } = await supabase
+      .from('user_bookings')
+      .delete()
+      .eq('id', bookingId)
+      .eq('user_id', userId);
+    
+    if (deleteError) {
+      console.error("Error deleting booking:", deleteError);
+      throw deleteError;
+    }
+    
+    console.log("Successfully deleted booking with ID:", bookingId);
+    return { success: true };
   } catch (error) {
     console.error('Error in deleteBookingFromSupabase:', error);
     throw error;

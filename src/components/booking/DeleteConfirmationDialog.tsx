@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,20 +29,37 @@ const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> = ({
   onConfirm,
   isDeleting = false,
 }) => {
+  const [localIsDeleting, setLocalIsDeleting] = useState(false);
+  const effectiveIsDeleting = isDeleting || localIsDeleting;
+
   const handleConfirmClick = async (event: React.MouseEvent) => {
     event.preventDefault();
-    if (isDeleting) return; // Prevent multiple clicks
+    if (effectiveIsDeleting) return; // Prevent multiple clicks
     
     try {
+      setLocalIsDeleting(true);
+      console.log("Starting delete operation for booking:", booking);
       await onConfirm();
+      console.log("Delete operation completed successfully");
     } catch (error) {
       console.error("Error in DeleteConfirmationDialog confirmation:", error);
+    } finally {
+      setLocalIsDeleting(false);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    try {
+      return format(new Date(dateString), 'PP');
+    } catch (error) {
+      console.error("Error formatting date:", error);
+      return dateString;
     }
   };
 
   return (
     <AlertDialog open={isOpen} onOpenChange={(open) => {
-      if (!isDeleting) {
+      if (!effectiveIsDeleting) {
         onOpenChange(open);
       }
     }}>
@@ -56,19 +73,20 @@ const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> = ({
             {booking && (
               <div className="mt-2 p-3 bg-muted rounded-md">
                 <p className="font-medium">{booking.customer}</p>
-                <p className="text-sm">{booking.service} - {format(new Date(booking.date), 'PP')} at {booking.time}</p>
+                <p className="text-sm">{booking.service} - {formatDate(booking.date)} at {booking.time}</p>
+                <p className="text-xs text-muted-foreground">Booking ID: {booking.id}</p>
               </div>
             )}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={effectiveIsDeleting}>Cancel</AlertDialogCancel>
           <AlertDialogAction 
             onClick={handleConfirmClick}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            disabled={isDeleting}
+            disabled={effectiveIsDeleting}
           >
-            {isDeleting ? (
+            {effectiveIsDeleting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 
                 Deleting...

@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -17,7 +17,7 @@ interface BookingModalProps {
   isOpen: boolean;
   onClose: () => void;
   booking: BookingType | null;
-  onSave: (booking: BookingType) => void;
+  onSave: (booking: BookingType) => Promise<void>;
   onDelete?: (booking: BookingType) => Promise<boolean>;
 }
 
@@ -29,6 +29,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
   onDelete 
 }) => {
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteSuccess, setDeleteSuccess] = useState(false);
   const { toast } = useToast();
   
   const {
@@ -49,6 +50,14 @@ const BookingModal: React.FC<BookingModalProps> = ({
     handleDeleteClick
   } = useEditBookingForm(isOpen, onClose, booking, onSave);
 
+  // Reset state when modal is reopened
+  useEffect(() => {
+    if (isOpen) {
+      setIsDeleting(false);
+      setDeleteSuccess(false);
+    }
+  }, [isOpen]);
+
   if (!editedBooking) return null;
 
   const handleDeleteConfirm = async () => {
@@ -62,6 +71,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
       
       if (success) {
         console.log("Delete successful, closing dialogs");
+        setDeleteSuccess(true);
+        
         toast({
           title: "Success",
           description: "Booking was successfully deleted",
@@ -69,7 +80,11 @@ const BookingModal: React.FC<BookingModalProps> = ({
         
         // Close dialogs after successful deletion
         setIsDeleteDialogOpen(false);
-        onClose();
+        
+        // Brief delay before closing the main modal
+        setTimeout(() => {
+          onClose();
+        }, 300);
       } else {
         throw new Error("Delete operation returned false");
       }
@@ -87,8 +102,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
   return (
     <>
-      <Dialog open={isOpen && !isDeleting} onOpenChange={(open) => {
-        if (!isDeleting && !open) {
+      <Dialog open={isOpen && !isDeleting && !deleteSuccess} onOpenChange={(open) => {
+        if (!isDeleting && !deleteSuccess && !open) {
           onClose();
         }
       }}>
