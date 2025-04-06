@@ -12,6 +12,7 @@ import BookingForm from "./booking/BookingForm";
 import DeleteConfirmationDialog from "./booking/DeleteConfirmationDialog";
 import { useEditBookingForm } from "@/hooks/bookings/useEditBookingForm";
 import { useToast } from "@/hooks/use-toast";
+import { useMediaQuery } from "@/hooks/use-media-query";
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -31,6 +32,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteSuccess, setDeleteSuccess] = useState(false);
   const { toast } = useToast();
+  const isMobile = useMediaQuery("(max-width: 640px)");
   
   const {
     editedBooking,
@@ -123,7 +125,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
           onClose();
         }
       }}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className={`${isMobile ? 'w-[95%] p-4 max-h-[90vh] overflow-y-auto' : 'sm:max-w-[500px]'}`}>
           <DialogHeader>
             <DialogTitle>Edit Booking</DialogTitle>
             <DialogDescription>

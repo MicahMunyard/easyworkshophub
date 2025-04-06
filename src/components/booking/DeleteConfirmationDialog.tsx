@@ -13,6 +13,7 @@ import {
 import { format } from "date-fns";
 import { BookingType } from "@/types/booking";
 import { Loader2 } from "lucide-react";
+import { useMediaQuery } from "@/hooks/use-media-query";
 
 interface DeleteConfirmationDialogProps {
   isOpen: boolean;
@@ -31,6 +32,7 @@ const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> = ({
 }) => {
   const [localIsDeleting, setLocalIsDeleting] = useState(false);
   const effectiveIsDeleting = isDeleting || localIsDeleting;
+  const isMobile = useMediaQuery("(max-width: 640px)");
 
   const handleConfirmClick = async (event: React.MouseEvent) => {
     event.preventDefault();
@@ -65,7 +67,7 @@ const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> = ({
         onOpenChange(open);
       }
     }}>
-      <AlertDialogContent>
+      <AlertDialogContent className={isMobile ? "w-[95%] p-4 max-w-full" : ""}>
         <AlertDialogHeader>
           <AlertDialogTitle>Delete Booking</AlertDialogTitle>
           <AlertDialogDescription className="space-y-2">
@@ -74,20 +76,20 @@ const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> = ({
             </div>
             {booking && (
               <div className="mt-2 p-3 bg-muted rounded-md">
-                <p className="font-medium">{booking.customer || "Unknown customer"}</p>
-                <p className="text-sm">
+                <p className="font-medium text-wrap break-words">{booking.customer || "Unknown customer"}</p>
+                <p className="text-sm text-wrap break-words">
                   {booking.service || "Unknown service"} - {formatDate(booking.date)} at {booking.time || "Unknown time"}
                 </p>
-                <p className="text-xs text-muted-foreground">Booking ID: {booking.id || "Unknown"}</p>
+                <p className="text-xs text-muted-foreground text-wrap break-words">Booking ID: {booking.id || "Unknown"}</p>
               </div>
             )}
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={effectiveIsDeleting}>Cancel</AlertDialogCancel>
+        <AlertDialogFooter className={isMobile ? "flex-col space-y-2" : ""}>
+          <AlertDialogCancel disabled={effectiveIsDeleting} className={isMobile ? "w-full mt-2" : ""}>Cancel</AlertDialogCancel>
           <AlertDialogAction 
             onClick={handleConfirmClick}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            className={`bg-destructive text-destructive-foreground hover:bg-destructive/90 ${isMobile ? "w-full" : ""}`}
             disabled={effectiveIsDeleting}
           >
             {effectiveIsDeleting ? (

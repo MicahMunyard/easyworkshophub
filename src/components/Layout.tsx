@@ -90,16 +90,31 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     }
   }, [isMobile, location.pathname]);
 
+  // Handle sidebar toggle for mobile
+  const handleSidebarToggle = () => {
+    if (isMobile) {
+      setSidebarExpanded(!sidebarExpanded);
+    }
+  };
+
   return (
     <div className="min-h-screen flex bg-background text-foreground">
       {/* Collapsible Sidebar */}
       <aside 
         className={`fixed top-0 left-0 h-full bg-black z-40 transition-all duration-300 ease-in-out pt-16 ${
-          sidebarExpanded ? "w-64" : "w-16"
-        }`}
+          sidebarExpanded ? (isMobile ? "w-full" : "w-64") : "w-16"
+        } ${isMobile && sidebarExpanded ? "overflow-y-auto" : ""}`}
         onMouseEnter={() => !isMobile && setSidebarExpanded(true)}
         onMouseLeave={() => !isMobile && setSidebarExpanded(false)}
       >
+        {/* Overlay for mobile */}
+        {isMobile && sidebarExpanded && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-30"
+            onClick={handleSidebarToggle}
+          />
+        )}
+
         <div className="flex flex-col h-full">
           {/* Main navigation icons */}
           <div className="flex-1 py-4 overflow-y-auto scrollbar-none">
@@ -108,7 +123,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               return (
                 <button
                   key={section.name}
-                  onClick={() => navigate(section.path)}
+                  onClick={() => {
+                    navigate(section.path);
+                    if (isMobile) setSidebarExpanded(false);
+                  }}
                   className={`flex items-center w-full py-3 px-4 text-white transition-colors hover:bg-white/10 relative ${
                     isActive ? "bg-white/5" : ""
                   }`}
@@ -133,6 +151,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               );
             })}
           </div>
+          {/* Mobile close button visible only when expanded on mobile */}
+          {isMobile && sidebarExpanded && (
+            <button 
+              className="p-4 text-white border-t border-white/10 mt-auto"
+              onClick={() => setSidebarExpanded(false)}
+            >
+              Close Menu
+            </button>
+          )}
         </div>
       </aside>
 
@@ -142,6 +169,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           secondaryNavSections={currentSecondaryNav}
           currentPath={location.pathname}
           onNavigate={(path) => navigate(path)}
+          onMenuToggle={handleSidebarToggle}
         />
         <main className="pt-16 px-2 sm:px-4 md:px-6 animate-fadeIn">
           <div className="container mx-auto py-6 min-h-[calc(100vh-4rem)] max-w-full">

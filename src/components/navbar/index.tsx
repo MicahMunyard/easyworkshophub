@@ -9,19 +9,23 @@ import MobileNav from "./MobileNav";
 import MobileMenuButton from "./MobileMenuButton";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface NavbarProps {
   secondaryNavSections: { name: string; path: string }[];
   currentPath: string;
   onNavigate: (path: string) => void;
+  onMenuToggle?: () => void; // New prop for sidebar toggle
 }
 
 const Navbar: React.FC<NavbarProps> = ({ 
   secondaryNavSections, 
   currentPath, 
-  onNavigate 
+  onNavigate,
+  onMenuToggle 
 }) => {
   const { isOpen, toggleMenu } = useMobileMenu();
+  const isMobile = useIsMobile();
   
   // Get current tab based on path
   const getCurrentTab = (path: string, sections: { name: string; path: string }[]): string => {
@@ -36,6 +40,15 @@ const Navbar: React.FC<NavbarProps> = ({
     const section = secondaryNavSections.find(section => section.name.toLowerCase() === value);
     if (section) {
       onNavigate(section.path);
+    }
+  };
+
+  // Handle the menu button click, either toggling mobile menu or sidebar
+  const handleMenuClick = () => {
+    if (onMenuToggle) {
+      onMenuToggle();
+    } else {
+      toggleMenu();
     }
   };
 
@@ -80,7 +93,7 @@ const Navbar: React.FC<NavbarProps> = ({
 
         {/* Mobile Menu Toggle */}
         <div className="absolute top-4 right-4 lg:hidden">
-          <MobileMenuButton toggleMenu={toggleMenu} />
+          <MobileMenuButton toggleMenu={handleMenuClick} />
         </div>
       </header>
 

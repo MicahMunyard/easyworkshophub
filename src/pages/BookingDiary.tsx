@@ -6,6 +6,7 @@ import BookingsSidebar from "@/components/booking-diary/BookingsSidebar";
 import BookingContent from "@/components/booking-diary/BookingContent";
 import BookingModals from "@/components/booking-diary/BookingModals";
 import { useBookingDiaryState } from "@/hooks/bookings/useBookingDiaryState";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const timeSlots = [
   "8:00 AM", "8:30 AM", "9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM",
@@ -37,6 +38,8 @@ const BookingDiary = () => {
     handleAddNewBooking,
     handleDeleteBooking
   } = useBookingDiaryState();
+  
+  const isMobile = useIsMobile();
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -53,8 +56,8 @@ const BookingDiary = () => {
         />
       )}
 
-      <div className="flex flex-col md:flex-row gap-4">
-        <div className="md:w-64">
+      <div className={`flex ${isMobile ? 'flex-col' : 'flex-row'} gap-4`}>
+        <div className={isMobile ? 'w-full' : 'md:w-64'}>
           <BookingsSidebar 
             date={date}
             setDate={setDate}
