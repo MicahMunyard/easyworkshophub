@@ -6,6 +6,12 @@ import { supabase } from "@/integrations/supabase/client";
  * Deletes a booking from Supabase
  */
 export const deleteBookingFromSupabase = async (booking: BookingType, userId: string) => {
+  // Validate inputs to prevent null/undefined issues
+  if (!booking || !booking.id || !userId) {
+    console.error("Invalid booking or userId provided");
+    throw new Error("Invalid booking data provided for deletion");
+  }
+
   console.log("Deleting booking ID:", booking.id, "Type:", typeof booking.id);
   
   try {

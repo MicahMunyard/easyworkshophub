@@ -49,11 +49,13 @@ const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> = ({
   };
 
   const formatDate = (dateString: string) => {
+    if (!dateString) return "Unknown date";
+    
     try {
       return format(new Date(dateString), 'PP');
     } catch (error) {
       console.error("Error formatting date:", error);
-      return dateString;
+      return dateString || "Unknown date";
     }
   };
 
@@ -72,9 +74,11 @@ const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> = ({
             </div>
             {booking && (
               <div className="mt-2 p-3 bg-muted rounded-md">
-                <p className="font-medium">{booking.customer}</p>
-                <p className="text-sm">{booking.service} - {formatDate(booking.date)} at {booking.time}</p>
-                <p className="text-xs text-muted-foreground">Booking ID: {booking.id}</p>
+                <p className="font-medium">{booking.customer || "Unknown customer"}</p>
+                <p className="text-sm">
+                  {booking.service || "Unknown service"} - {formatDate(booking.date)} at {booking.time || "Unknown time"}
+                </p>
+                <p className="text-xs text-muted-foreground">Booking ID: {booking.id || "Unknown"}</p>
               </div>
             )}
           </AlertDialogDescription>
