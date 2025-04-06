@@ -88,11 +88,27 @@ const BookingModal: React.FC<BookingModalProps> = ({
       } else {
         throw new Error("Delete operation returned false");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error deleting booking in BookingModal:", error);
+      
+      // Provide more specific error messages based on the error type
+      let errorMessage = "An unexpected error occurred while deleting the booking.";
+      
+      if (error?.message) {
+        if (error.message.includes("Could not find booking")) {
+          errorMessage = "Could not find the booking to delete. It may have been already removed.";
+        } else if (error.message.includes("network")) {
+          errorMessage = "Network error. Please check your connection and try again.";
+        } else if (error.message.includes("permission") || error.message.includes("access")) {
+          errorMessage = "You don't have permission to delete this booking.";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       toast({
         title: "Error",
-        description: "An unexpected error occurred while deleting the booking.",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
