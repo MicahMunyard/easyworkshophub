@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Building2 } from 'lucide-react';
-import { SupplierFormProps, supplierFormSchema } from './types';
+import { SupplierFormProps, supplierFormSchema, SupplierFormValues } from './types';
 import LogoUploadField from './LogoUploadField';
 import ContactInfoFields from './ContactInfoFields';
 import AddressNotesFields from './AddressNotesFields';
@@ -14,7 +14,7 @@ import AddressNotesFields from './AddressNotesFields';
 const SupplierForm: React.FC<SupplierFormProps> = ({ supplier, onSubmit, onCancel }) => {
   const [logoPreview, setLogoPreview] = useState<string | undefined>(supplier?.logoUrl);
 
-  const form = useForm({
+  const form = useForm<SupplierFormValues>({
     resolver: zodResolver(supplierFormSchema),
     defaultValues: {
       name: supplier?.name || '',
