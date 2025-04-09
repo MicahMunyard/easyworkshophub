@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Supplier } from '@/types/inventory';
 import { v4 as uuidv4 } from 'uuid';
@@ -15,7 +14,8 @@ const defaultSuppliers: Supplier[] = [
     phone: '555-123-4567',
     status: 'active',
     notes: 'Primary supplier for cleaning products',
-    isDefault: true
+    isDefault: true,
+    logoUrl: 'https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?auto=format&fit=crop&w=64&h=64&q=80'
   },
   {
     id: uuidv4(),
@@ -26,7 +26,8 @@ const defaultSuppliers: Supplier[] = [
     phone: '555-987-6543',
     status: 'active',
     notes: 'Specializes in high-quality wiping solutions',
-    isDefault: true
+    isDefault: true,
+    logoUrl: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=64&h=64&q=80'
   }
 ];
 

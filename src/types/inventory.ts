@@ -10,6 +10,7 @@ export interface Supplier {
   status: 'active' | 'inactive';
   notes?: string;
   isDefault?: boolean; // Indicates if this is a default supplier available to all users
+  logoUrl?: string;    // URL to the supplier's logo image
 }
 
 export interface InventoryItem {

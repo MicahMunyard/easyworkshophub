@@ -5,13 +5,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus, Search, Mail, Phone, Edit, Trash2, Building2 } from 'lucide-react';
+import { Plus, Search, Mail, Phone, Edit, Trash2 } from 'lucide-react';
 import { Supplier } from '@/types/inventory';
 import SupplierForm from './SupplierForm';
 import { useSuppliers } from '@/hooks/inventory/useSuppliers';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/components/ui/use-toast';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 const SupplierManagement: React.FC = () => {
   const { suppliers, addSupplier, updateSupplier, deleteSupplier } = useSuppliers();
@@ -57,6 +58,15 @@ const SupplierManagement: React.FC = () => {
       title: "Email Copied",
       description: "Email address copied to clipboard",
     });
+  };
+
+  const getSupplierInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(word => word[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
   };
 
   return (
@@ -110,12 +120,22 @@ const SupplierManagement: React.FC = () => {
                   filteredSuppliers.map((supplier) => (
                     <TableRow key={supplier.id}>
                       <TableCell>
-                        <div className="font-medium flex items-center gap-2">
-                          <Building2 className="h-4 w-4 text-muted-foreground" />
-                          {supplier.name}
-                        </div>
-                        <div className="text-sm text-muted-foreground md:hidden">
-                          {supplier.category}
+                        <div className="font-medium flex items-center gap-3">
+                          <Avatar>
+                            {supplier.logoUrl ? (
+                              <AvatarImage src={supplier.logoUrl} alt={supplier.name} />
+                            ) : (
+                              <AvatarFallback>
+                                {getSupplierInitials(supplier.name)}
+                              </AvatarFallback>
+                            )}
+                          </Avatar>
+                          <div>
+                            {supplier.name}
+                            <div className="text-sm text-muted-foreground md:hidden">
+                              {supplier.category}
+                            </div>
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell className="hidden md:table-cell">{supplier.category}</TableCell>
