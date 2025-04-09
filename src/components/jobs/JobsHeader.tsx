@@ -1,7 +1,8 @@
 
 import React from "react";
-import { Filter, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Plus, Filter, FileText } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface JobsHeaderProps {
   onNewJobClick: () => void;
@@ -9,28 +10,45 @@ interface JobsHeaderProps {
   isFilterOpen: boolean;
 }
 
-const JobsHeader = ({ onNewJobClick, onFilterToggle, isFilterOpen }: JobsHeaderProps) => {
+const JobsHeader: React.FC<JobsHeaderProps> = ({
+  onNewJobClick,
+  onFilterToggle,
+  isFilterOpen,
+}) => {
+  const navigate = useNavigate();
+  
   return (
     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Job Management</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Jobs</h1>
         <p className="text-muted-foreground">
-          Track, assign and manage workshop jobs
+          Manage and track all your workshop jobs
         </p>
       </div>
-      <div className="flex gap-2">
-        <Button 
-          variant="outline" 
-          className="h-9"
+      <div className="flex flex-wrap gap-2">
+        <Button
+          variant="outline"
+          size="sm"
           onClick={onFilterToggle}
         >
-          <Filter className="h-4 w-4 mr-2" /> Filter
+          <Filter className="mr-2 h-4 w-4" />
+          {isFilterOpen ? "Hide Filters" : "Show Filters"}
         </Button>
-        <Button 
-          className="h-9"
-          onClick={onNewJobClick}
+        
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => navigate('/invoicing')}
         >
-          <Plus className="h-4 w-4 mr-2" /> New Job
+          <FileText className="mr-2 h-4 w-4" />
+          Invoicing
+        </Button>
+        
+        <Button
+          onClick={onNewJobClick}
+          className="bg-workshop-red hover:bg-workshop-red/90"
+        >
+          <Plus className="mr-2 h-4 w-4" /> New Job
         </Button>
       </div>
     </div>

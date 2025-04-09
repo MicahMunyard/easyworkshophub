@@ -3,7 +3,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, Settings, Wrench } from "lucide-react";
+import { Calendar, Settings, Wrench, FileText } from "lucide-react";
 
 /**
  * Workshop page that serves as the main container for all workshop-related functionality
@@ -20,7 +20,7 @@ const Workshop: React.FC = () => {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="hover:shadow-md transition-shadow">
           <CardContent className="pt-6">
             <div className="flex flex-col items-center text-center space-y-2">
@@ -64,6 +64,22 @@ const Workshop: React.FC = () => {
                 className="mt-4 w-full"
               >
                 View Jobs
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow">
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center text-center space-y-2">
+              <FileText className="h-12 w-12 text-workshop-red mb-2" />
+              <h3 className="font-medium text-lg">Invoicing</h3>
+              <p className="text-sm text-muted-foreground">Create and manage invoices for completed jobs</p>
+              <Button 
+                onClick={() => navigate("/invoicing")} 
+                className="mt-4 w-full"
+              >
+                Manage Invoices
               </Button>
             </div>
           </CardContent>
