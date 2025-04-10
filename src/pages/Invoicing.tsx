@@ -29,7 +29,7 @@ const Invoicing = () => {
     return invoice.status === activeTab;
   });
 
-  const handleCreateInvoice = (invoiceData: Omit<Invoice, 'id' | 'customerId' | 'status' | 'createdAt' | 'updatedAt'>) => {
+  const handleCreateInvoice = (invoiceData: Omit<Invoice, 'id' | 'customerId' | 'createdAt' | 'updatedAt'>) => {
     const success = createInvoice({
       ...invoiceData,
       customerId: 'temp-id' // This would be replaced with real customer ID in a real system

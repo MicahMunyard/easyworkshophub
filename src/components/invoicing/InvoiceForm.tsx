@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -25,7 +24,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
 import { CalendarIcon, Plus, Trash } from "lucide-react";
-import { Invoice, InvoiceItem } from '@/types/invoice';
+import { Invoice, InvoiceItem, InvoiceStatus } from '@/types/invoice';
 import { JobType } from '@/types/job';
 
 const invoiceSchema = z.object({
@@ -54,7 +53,7 @@ const invoiceSchema = z.object({
 type InvoiceFormValues = z.infer<typeof invoiceSchema>;
 
 interface InvoiceFormProps {
-  onSubmit: (data: Omit<Invoice, 'id' | 'customerId' | 'status' | 'createdAt' | 'updatedAt'>) => void;
+  onSubmit: (data: Omit<Invoice, 'id' | 'customerId' | 'createdAt' | 'updatedAt'>) => void;
   completedJobs: JobType[];
   onCancel: () => void;
 }
@@ -81,25 +80,22 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ onSubmit, completedJobs, onCa
 
   const watchItems = form.watch('items');
 
-  // Update the form when a job is selected
   const handleJobChange = (jobId: string) => {
     const selectedJob = completedJobs.find(job => job.id === jobId);
     if (selectedJob) {
       form.setValue('customerName', selectedJob.customer);
-      // Add the service as the first item
       form.setValue('items', [
         {
           id: `item-${Date.now()}`,
           description: selectedJob.service,
           quantity: 1,
-          unitPrice: 0, // This would be fetched from a price list in a real system
+          unitPrice: 0,
           total: 0
         }
       ]);
     }
   };
 
-  // Calculate totals when items change
   React.useEffect(() => {
     const items = form.getValues().items;
     const subtotal = items.reduce((sum, item) => sum + item.total, 0);
@@ -114,7 +110,6 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ onSubmit, completedJobs, onCa
     form.setValue('total', total);
   }, [watchItems, form]);
 
-  // Update item total when quantity or unit price changes
   const updateItemTotal = (index: number) => {
     const items = form.getValues().items;
     const item = items[index];
@@ -141,7 +136,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ onSubmit, completedJobs, onCa
       ...data,
       date: format(data.date, 'yyyy-MM-dd'),
       dueDate: format(data.dueDate, 'yyyy-MM-dd'),
-      status: 'pending' // Default status when creating a new invoice
+      status: 'pending' as InvoiceStatus
     });
   };
 
@@ -410,7 +405,6 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ onSubmit, completedJobs, onCa
                             value={field.value || 0}
                             onChange={(e) => {
                               field.onChange(Number(e.target.value));
-                              // Recalculate tax on change
                               setTimeout(() => {
                                 const items = form.getValues().items;
                                 const subtotal = items.reduce((sum, item) => sum + item.total, 0);
