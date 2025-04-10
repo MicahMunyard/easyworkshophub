@@ -98,25 +98,39 @@ export const useInvoices = () => {
     try {
       const { data, error } = await supabase
         .from('jobs')
-        .select('*')
+        .select(`
+          *,
+          user_bookings!jobs_id_fkey (
+            customer_email,
+            customer_phone
+          )
+        `)
         .eq('status', 'completed')
         .eq('user_id', user.id);
         
       if (error) throw error;
       
       if (data) {
-        const transformedJobs = data.map(job => ({
-          id: job.id,
-          customer: job.customer,
-          vehicle: job.vehicle,
-          service: job.service,
-          status: job.status as "pending" | "inProgress" | "working" | "completed" | "cancelled",
-          assignedTo: job.assigned_to,
-          date: job.date,
-          time: job.time || '',
-          timeEstimate: job.time_estimate,
-          priority: job.priority
-        })) as JobType[];
+        const transformedJobs = data.map(job => {
+          // Extract booking details if available
+          const booking = job.user_bookings ? job.user_bookings[0] : null;
+          
+          return {
+            id: job.id,
+            customer: job.customer,
+            vehicle: job.vehicle,
+            service: job.service,
+            status: job.status as "pending" | "inProgress" | "working" | "completed" | "cancelled",
+            assignedTo: job.assigned_to,
+            date: job.date,
+            time: job.time || '',
+            timeEstimate: job.time_estimate,
+            priority: job.priority,
+            cost: job.cost || 0,
+            customerEmail: booking?.customer_email || '',
+            customerPhone: booking?.customer_phone || ''
+          };
+        }) as (JobType & { customerEmail?: string, customerPhone?: string })[];
         
         setCompletedJobs(transformedJobs);
       }

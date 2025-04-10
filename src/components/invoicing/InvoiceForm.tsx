@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -85,13 +84,26 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ onSubmit, completedJobs, onCa
     const selectedJob = completedJobs.find(job => job.id === jobId);
     if (selectedJob) {
       form.setValue('customerName', selectedJob.customer);
+      
+      const jobWithContact = selectedJob as JobType & { customerEmail?: string, customerPhone?: string };
+      
+      if (jobWithContact.customerEmail) {
+        form.setValue('customerEmail', jobWithContact.customerEmail);
+      }
+      
+      if (jobWithContact.customerPhone) {
+        form.setValue('customerPhone', jobWithContact.customerPhone);
+      }
+      
+      const jobCost = typeof selectedJob.cost === 'number' ? selectedJob.cost : 0;
+      
       form.setValue('items', [
         {
           id: `item-${Date.now()}`,
           description: selectedJob.service,
           quantity: 1,
-          unitPrice: 0,
-          total: 0
+          unitPrice: jobCost,
+          total: jobCost
         }
       ]);
     }
@@ -133,7 +145,6 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ onSubmit, completedJobs, onCa
   };
 
   const handleSubmit = (data: InvoiceFormValues) => {
-    // Ensure all required fields are properly set before submitting
     const formattedInvoice: Omit<Invoice, 'id' | 'customerId' | 'createdAt' | 'updatedAt'> = {
       invoiceNumber: data.invoiceNumber,
       jobId: data.jobId,
@@ -142,7 +153,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ onSubmit, completedJobs, onCa
       customerPhone: data.customerPhone || undefined,
       date: format(data.date, 'yyyy-MM-dd'),
       dueDate: format(data.dueDate, 'yyyy-MM-dd'),
-      items: data.items as InvoiceItem[], // Explicit cast to ensure TypeScript recognizes all required fields
+      items: data.items as InvoiceItem[],
       subtotal: data.subtotal,
       taxTotal: data.taxTotal,
       total: data.total,
