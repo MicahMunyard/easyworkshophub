@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Invoice, InvoiceStatus } from '@/types/invoice';
+import { Invoice, InvoiceStatus, InvoiceItem } from '@/types/invoice';
 import { useAuth } from '@/contexts/AuthContext';
 import { JobType } from '@/types/job';
 
@@ -24,15 +24,17 @@ export const useInvoices = () => {
     }
 
     try {
+      // Using explicit typed query for user_invoices
       const { data: invoicesData, error: invoicesError } = await supabase
         .from('user_invoices')
         .select('*')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (invoicesError) throw invoicesError;
 
       if (invoicesData) {
-        // Now fetch the invoice items for each invoice
+        // Now fetch the invoice items for each invoice with proper typing
         const invoicesWithItems = await Promise.all(
           invoicesData.map(async (invoice) => {
             const { data: invoiceItems, error: itemsError } = await supabase
@@ -43,14 +45,14 @@ export const useInvoices = () => {
             if (itemsError) throw itemsError;
 
             // Transform the items to match our InvoiceItem interface
-            const transformedItems = invoiceItems?.map(item => ({
+            const transformedItems: InvoiceItem[] = (invoiceItems || []).map(item => ({
               id: item.id,
               description: item.description,
               quantity: Number(item.quantity),
               unitPrice: Number(item.unit_price),
               total: Number(item.total),
               taxRate: item.tax_rate ? Number(item.tax_rate) : undefined
-            })) || [];
+            }));
 
             // Transform to match our Invoice interface
             return {
@@ -72,7 +74,7 @@ export const useInvoices = () => {
               termsAndConditions: invoice.terms_and_conditions,
               createdAt: invoice.created_at,
               updatedAt: invoice.updated_at
-            };
+            } as Invoice;
           })
         );
 
@@ -97,7 +99,8 @@ export const useInvoices = () => {
       const { data, error } = await supabase
         .from('jobs')
         .select('*')
-        .eq('status', 'completed');
+        .eq('status', 'completed')
+        .eq('user_id', user.id);
         
       if (error) throw error;
       
@@ -133,7 +136,7 @@ export const useInvoices = () => {
     }
     
     try {
-      // Insert the invoice record
+      // Insert the invoice record with proper type definition
       const { data: invoiceData, error: invoiceError } = await supabase
         .from('user_invoices')
         .insert({
@@ -169,6 +172,7 @@ export const useInvoices = () => {
           total: item.total
         }));
 
+        // Insert all items at once with proper typing
         const { error: itemsError } = await supabase
           .from('user_invoice_items')
           .insert(invoiceItems);
@@ -207,6 +211,7 @@ export const useInvoices = () => {
     }
     
     try {
+      // Use typed update with proper parameters
       const { error } = await supabase
         .from('user_invoices')
         .update({
