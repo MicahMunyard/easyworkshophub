@@ -142,7 +142,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ onSubmit, completedJobs, onCa
       customerPhone: data.customerPhone || undefined,
       date: format(data.date, 'yyyy-MM-dd'),
       dueDate: format(data.dueDate, 'yyyy-MM-dd'),
-      items: data.items,
+      items: data.items as InvoiceItem[], // Explicit cast to ensure TypeScript recognizes all required fields
       subtotal: data.subtotal,
       taxTotal: data.taxTotal,
       total: data.total,

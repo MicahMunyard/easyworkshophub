@@ -12,8 +12,7 @@ import WorkshopSetup from "./pages/WorkshopSetup";
 import Workshop from "./pages/Workshop";
 import Inventory from "./pages/Inventory";
 import Customers from "./pages/Customers";
-import Invoices from "./pages/Invoices";
-import Invoicing from "./pages/Invoicing"; // Add the new Invoicing page
+import Invoicing from "./pages/Invoicing"; 
 import PointOfSale from "./pages/PointOfSale";
 import Suppliers from "./pages/Suppliers";
 import Reports from "./pages/Reports";
@@ -107,8 +106,8 @@ const App = () => (
             
             <Route path="/inventory" element={<ProtectedRoute><Layout><Inventory /></Layout></ProtectedRoute>} />
             <Route path="/customers" element={<ProtectedRoute><Layout><Customers /></Layout></ProtectedRoute>} />
-            <Route path="/invoices" element={<ProtectedRoute><Layout><Invoices /></Layout></ProtectedRoute>} />
-            <Route path="/invoicing" element={<ProtectedRoute><Layout><Invoicing /></Layout></ProtectedRoute>} /> {/* Add the new Invoicing route */}
+            <Route path="/invoicing" element={<ProtectedRoute><Layout><Invoicing /></Layout></ProtectedRoute>} />
+            <Route path="/invoices" element={<Navigate to="/invoicing" replace />} /> {/* Redirect to combined page */}
             <Route path="/pos" element={<ProtectedRoute><Layout><PointOfSale /></Layout></ProtectedRoute>} />
             <Route path="/suppliers" element={<ProtectedRoute><Layout><Suppliers /></Layout></ProtectedRoute>} />
             <Route path="/reports" element={<ProtectedRoute><Layout><Reports /></Layout></ProtectedRoute>} />

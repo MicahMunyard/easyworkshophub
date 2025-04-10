@@ -10,7 +10,8 @@ import {
   Package,
   Users,
   Megaphone,
-  FileBarChart
+  FileBarChart,
+  Receipt
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -21,6 +22,7 @@ interface LayoutProps {
 const mainNavSections = [
   { name: "Dashboard", path: "/", icon: <LayoutDashboard className="h-5 w-5" /> },
   { name: "Workshop", path: "/workshop", icon: <Hammer className="h-5 w-5" /> },
+  { name: "Invoicing", path: "/invoicing", icon: <Receipt className="h-5 w-5" /> },
   { name: "Email", path: "/email-integration", icon: <Mail className="h-5 w-5" /> },
   { name: "Communication", path: "/communication", icon: <MessageCircle className="h-5 w-5" /> },
   { name: "Inventory", path: "/inventory", icon: <Package className="h-5 w-5" /> },
@@ -35,6 +37,9 @@ const secondaryNavSections = {
     { name: "Booking Diary", path: "/booking-diary" },
     { name: "Jobs", path: "/jobs" },
     { name: "Workshop Setup", path: "/workshop-setup" }
+  ],
+  invoicing: [
+    { name: "Invoicing", path: "/invoicing" }
   ],
   email: [
     { name: "Email Integration", path: "/email-integration" }
