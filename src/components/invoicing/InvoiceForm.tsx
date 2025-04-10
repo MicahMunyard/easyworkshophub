@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -132,12 +133,25 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ onSubmit, completedJobs, onCa
   };
 
   const handleSubmit = (data: InvoiceFormValues) => {
-    onSubmit({
-      ...data,
+    // Ensure all required fields are properly set before submitting
+    const formattedInvoice: Omit<Invoice, 'id' | 'customerId' | 'createdAt' | 'updatedAt'> = {
+      invoiceNumber: data.invoiceNumber,
+      jobId: data.jobId,
+      customerName: data.customerName,
+      customerEmail: data.customerEmail || undefined,
+      customerPhone: data.customerPhone || undefined,
       date: format(data.date, 'yyyy-MM-dd'),
       dueDate: format(data.dueDate, 'yyyy-MM-dd'),
+      items: data.items,
+      subtotal: data.subtotal,
+      taxTotal: data.taxTotal,
+      total: data.total,
+      notes: data.notes || undefined,
+      termsAndConditions: data.termsAndConditions || undefined,
       status: 'pending' as InvoiceStatus
-    });
+    };
+    
+    onSubmit(formattedInvoice);
   };
 
   return (
