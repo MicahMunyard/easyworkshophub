@@ -17,12 +17,12 @@ export const useInvoices = () => {
   
   const { completedJobs } = useCompletedJobs();
   
+  const [setInvoicesState] = useState<any>(() => (newInvoices: any) => {});
+
   const { 
     createInvoice: createInvoiceMutation, 
     updateInvoiceStatus: updateInvoiceStatusMutation 
-  } = useInvoiceMutations(refetchInvoices, setInvoices, selectedInvoice, setSelectedInvoice);
-
-  const [setInvoices] = useState<any>(() => (newInvoices: any) => {});
+  } = useInvoiceMutations(refetchInvoices, setInvoicesState, selectedInvoice, setSelectedInvoice);
 
   // Forward the createInvoice function with the same signature as before
   const createInvoice = (invoice: CreateInvoiceParams) => {
