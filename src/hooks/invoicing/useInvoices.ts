@@ -96,33 +96,42 @@ export const useInvoices = () => {
     if (!user) return;
     
     try {
+      // This query needs to be modified since the relationship between jobs and user_bookings 
+      // is causing errors. Let's retrieve jobs and customer details separately.
       const { data, error } = await supabase
         .from('jobs')
-        .select(`
-          *,
-          user_bookings!jobs_id_fkey (
-            customer_email,
-            customer_phone
-          )
-        `)
+        .select('*')
         .eq('status', 'completed')
         .eq('user_id', user.id);
         
       if (error) throw error;
       
       if (data) {
-        const transformedJobs = data.map(job => {
-          // Type-safe handling of the user_bookings relation
-          type BookingType = { customer_email?: string, customer_phone?: string };
-          // Default empty array for bookings in case the relation doesn't exist
-          let customerDetails: BookingType | null = null;
+        // Transform jobs data
+        const transformedJobs = await Promise.all(data.map(async (job) => {
+          // For each job, let's separately fetch any related customer info from user_bookings
+          let customerEmail = '';
+          let customerPhone = '';
           
-          // Check if user_bookings exists and is an array (not an error)
-          if (job.user_bookings && 
-              typeof job.user_bookings === 'object' && 
-              Array.isArray(job.user_bookings)) {
-            // If it's a valid array and has items, get the first one
-            customerDetails = job.user_bookings.length > 0 ? job.user_bookings[0] : null;
+          // Try to find matching booking with the customer info
+          const { data: bookingData } = await supabase
+            .from('user_bookings')
+            .select('customer_email, customer_phone')
+            .eq('customer_name', job.customer)
+            .eq('user_id', user.id)
+            .maybeSingle();
+            
+          if (bookingData) {
+            customerEmail = bookingData.customer_email || '';
+            customerPhone = bookingData.customer_phone || '';
+          }
+          
+          // Type-safe handling of the cost field
+          let jobCost = 0;
+          if (job.cost !== undefined && job.cost !== null) {
+            // Handle numeric or string cost
+            const parsedCost = typeof job.cost === 'number' ? job.cost : parseFloat(String(job.cost));
+            jobCost = isNaN(parsedCost) ? 0 : parsedCost;
           }
           
           return {
@@ -136,12 +145,11 @@ export const useInvoices = () => {
             time: job.time || '',
             timeEstimate: job.time_estimate,
             priority: job.priority,
-            cost: typeof job.cost === 'number' ? job.cost : 
-                  job.cost ? Number(job.cost) : 0,
-            customerEmail: customerDetails?.customer_email || '',
-            customerPhone: customerDetails?.customer_phone || ''
+            cost: jobCost,
+            customerEmail: customerEmail,
+            customerPhone: customerPhone
           };
-        }) as (JobType & { customerEmail?: string, customerPhone?: string })[];
+        }));
         
         setCompletedJobs(transformedJobs);
       }
