@@ -112,9 +112,18 @@ export const useInvoices = () => {
       
       if (data) {
         const transformedJobs = data.map(job => {
-          // Extract booking details if available
-          const bookings = job.user_bookings as Array<{ customer_email: string, customer_phone: string }> | null;
-          const booking = bookings && bookings.length > 0 ? bookings[0] : null;
+          // Type-safe handling of the user_bookings relation
+          type BookingType = { customer_email?: string, customer_phone?: string };
+          // Default empty array for bookings in case the relation doesn't exist
+          let customerDetails: BookingType | null = null;
+          
+          // Check if user_bookings exists and is an array (not an error)
+          if (job.user_bookings && 
+              typeof job.user_bookings === 'object' && 
+              Array.isArray(job.user_bookings)) {
+            // If it's a valid array and has items, get the first one
+            customerDetails = job.user_bookings.length > 0 ? job.user_bookings[0] : null;
+          }
           
           return {
             id: job.id,
@@ -127,9 +136,10 @@ export const useInvoices = () => {
             time: job.time || '',
             timeEstimate: job.time_estimate,
             priority: job.priority,
-            cost: job.cost ? Number(job.cost) : 0,
-            customerEmail: booking?.customer_email || '',
-            customerPhone: booking?.customer_phone || ''
+            cost: typeof job.cost === 'number' ? job.cost : 
+                  job.cost ? Number(job.cost) : 0,
+            customerEmail: customerDetails?.customer_email || '',
+            customerPhone: customerDetails?.customer_phone || ''
           };
         }) as (JobType & { customerEmail?: string, customerPhone?: string })[];
         
