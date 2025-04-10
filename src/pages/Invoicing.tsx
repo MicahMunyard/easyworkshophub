@@ -8,12 +8,13 @@ import InvoicesList from "@/components/invoicing/InvoicesList";
 import InvoiceForm from "@/components/invoicing/InvoiceForm";
 import InvoiceDetail from "@/components/invoicing/InvoiceDetail";
 import { Invoice, InvoiceStatus } from "@/types/invoice";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Invoicing = () => {
+  const { user } = useAuth();
   const { 
     invoices, 
     isLoading, 
-    isAdmin, 
     selectedInvoice,
     setSelectedInvoice,
     createInvoice,
@@ -51,18 +52,18 @@ const Invoicing = () => {
     setSelectedInvoice(null);
   };
 
-  if (!isAdmin) {
+  if (!user) {
     return (
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Invoices</h1>
           <p className="text-muted-foreground">
-            Only admin users can access the invoicing functionality
+            Please log in to access the invoicing functionality
           </p>
         </div>
         <Card className="p-8 text-center">
-          <h2 className="text-xl font-semibold mb-2">Access Restricted</h2>
-          <p className="text-muted-foreground">You don't have permission to view this page.</p>
+          <h2 className="text-xl font-semibold mb-2">Authentication Required</h2>
+          <p className="text-muted-foreground">You need to be logged in to view your invoices.</p>
         </Card>
       </div>
     );
@@ -105,7 +106,6 @@ const Invoicing = () => {
     <div className="space-y-6 animate-fadeIn">
       <InvoiceHeader 
         onCreateInvoice={() => setIsCreating(true)}
-        isAdmin={isAdmin}
       />
 
       <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="space-y-4">

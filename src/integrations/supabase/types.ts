@@ -996,6 +996,113 @@ export type Database = {
         }
         Relationships: []
       }
+      user_invoice_items: {
+        Row: {
+          created_at: string | null
+          description: string
+          id: string
+          invoice_id: string
+          quantity: number
+          tax_rate: number | null
+          total: number
+          unit_price: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description: string
+          id?: string
+          invoice_id: string
+          quantity?: number
+          tax_rate?: number | null
+          total?: number
+          unit_price?: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string
+          id?: string
+          invoice_id?: string
+          quantity?: number
+          tax_rate?: number | null
+          total?: number
+          unit_price?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_invoice_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "user_invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_invoices: {
+        Row: {
+          created_at: string | null
+          customer_email: string | null
+          customer_id: string
+          customer_name: string
+          customer_phone: string | null
+          date: string
+          due_date: string
+          id: string
+          invoice_number: string
+          job_id: string
+          notes: string | null
+          status: string
+          subtotal: number
+          tax_total: number
+          terms_and_conditions: string | null
+          total: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          customer_email?: string | null
+          customer_id: string
+          customer_name: string
+          customer_phone?: string | null
+          date: string
+          due_date: string
+          id?: string
+          invoice_number: string
+          job_id: string
+          notes?: string | null
+          status?: string
+          subtotal?: number
+          tax_total?: number
+          terms_and_conditions?: string | null
+          total?: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          customer_email?: string | null
+          customer_id?: string
+          customer_name?: string
+          customer_phone?: string | null
+          date?: string
+          due_date?: string
+          id?: string
+          invoice_number?: string
+          job_id?: string
+          notes?: string | null
+          status?: string
+          subtotal?: number
+          tax_total?: number
+          terms_and_conditions?: string | null
+          total?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_jobs: {
         Row: {
           bay_id: string | null

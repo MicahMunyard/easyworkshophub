@@ -11,9 +11,8 @@ export const useInvoices = () => {
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [completedJobs, setCompletedJobs] = useState<JobType[]>([]);
-  const [isAdmin, setIsAdmin] = useState(false);
   const { toast } = useToast();
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
 
   // Fetch invoices from the database
   const fetchInvoices = async () => {
@@ -25,83 +24,60 @@ export const useInvoices = () => {
     }
 
     try {
-      // This would be replaced with actual Supabase query once the table is created
-      // For now, we'll return mock data
-      const mockInvoices: Invoice[] = [
-        {
-          id: '1',
-          invoiceNumber: 'INV-2024-0001',
-          jobId: 'JOB-2024-001',
-          customerId: 'CUST001',
-          customerName: 'John Smith',
-          customerEmail: 'john@example.com',
-          customerPhone: '555-123-4567',
-          date: '2024-06-15',
-          dueDate: '2024-07-15',
-          items: [
-            { 
-              id: 'item1', 
-              description: 'Brake System Repair', 
-              quantity: 1, 
-              unitPrice: 350, 
-              total: 350 
-            },
-            { 
-              id: 'item2', 
-              description: 'Brake Pads', 
-              quantity: 2, 
-              unitPrice: 75, 
-              total: 150 
-            }
-          ],
-          subtotal: 500,
-          taxTotal: 40,
-          total: 540,
-          status: 'paid',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        },
-        {
-          id: '2',
-          invoiceNumber: 'INV-2024-0002',
-          jobId: 'JOB-2024-002',
-          customerId: 'CUST002',
-          customerName: 'Sarah Williams',
-          customerEmail: 'sarah@example.com',
-          customerPhone: '555-234-5678',
-          date: '2024-06-16',
-          dueDate: '2024-07-16',
-          items: [
-            { 
-              id: 'item1', 
-              description: 'Oil Change', 
-              quantity: 1, 
-              unitPrice: 85, 
-              total: 85 
-            },
-            { 
-              id: 'item2', 
-              description: 'Oil Filter', 
-              quantity: 1, 
-              unitPrice: 15, 
-              total: 15 
-            }
-          ],
-          subtotal: 100,
-          taxTotal: 8,
-          total: 108,
-          status: 'pending',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }
-      ];
+      const { data: invoicesData, error: invoicesError } = await supabase
+        .from('user_invoices')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-      setInvoices(mockInvoices);
+      if (invoicesError) throw invoicesError;
 
-      // Check if user is admin
-      // This logic would be replaced by actual role checking
-      setIsAdmin(true);
+      if (invoicesData) {
+        // Now fetch the invoice items for each invoice
+        const invoicesWithItems = await Promise.all(
+          invoicesData.map(async (invoice) => {
+            const { data: invoiceItems, error: itemsError } = await supabase
+              .from('user_invoice_items')
+              .select('*')
+              .eq('invoice_id', invoice.id);
 
+            if (itemsError) throw itemsError;
+
+            // Transform the items to match our InvoiceItem interface
+            const transformedItems = invoiceItems?.map(item => ({
+              id: item.id,
+              description: item.description,
+              quantity: Number(item.quantity),
+              unitPrice: Number(item.unit_price),
+              total: Number(item.total),
+              taxRate: item.tax_rate ? Number(item.tax_rate) : undefined
+            })) || [];
+
+            // Transform to match our Invoice interface
+            return {
+              id: invoice.id,
+              invoiceNumber: invoice.invoice_number,
+              jobId: invoice.job_id,
+              customerId: invoice.customer_id,
+              customerName: invoice.customer_name,
+              customerEmail: invoice.customer_email,
+              customerPhone: invoice.customer_phone,
+              date: invoice.date,
+              dueDate: invoice.due_date,
+              items: transformedItems,
+              subtotal: Number(invoice.subtotal),
+              taxTotal: Number(invoice.tax_total),
+              total: Number(invoice.total),
+              status: invoice.status as InvoiceStatus,
+              notes: invoice.notes,
+              termsAndConditions: invoice.terms_and_conditions,
+              createdAt: invoice.created_at,
+              updatedAt: invoice.updated_at
+            };
+          })
+        );
+
+        setInvoices(invoicesWithItems);
+      }
     } catch (error) {
       console.error('Error fetching invoices:', error);
       toast({
@@ -121,7 +97,6 @@ export const useInvoices = () => {
       const { data, error } = await supabase
         .from('jobs')
         .select('*')
-        .eq('user_id', user.id)
         .eq('status', 'completed');
         
       if (error) throw error;
@@ -148,26 +123,61 @@ export const useInvoices = () => {
   };
 
   const createInvoice = async (invoice: Omit<Invoice, 'id' | 'createdAt' | 'updatedAt'>) => {
-    if (!user || !isAdmin) {
+    if (!user) {
       toast({
-        title: 'Permission Denied',
-        description: 'Only admins can create invoices',
+        title: 'Authentication Required',
+        description: 'You must be logged in to create invoices',
         variant: 'destructive'
       });
       return false;
     }
     
     try {
-      // This would be replaced with actual Supabase insert
-      // For mock purposes, we'll just add it to our state
-      const newInvoice: Invoice = {
-        ...invoice,
-        id: `inv-${Date.now()}`,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
+      // Insert the invoice record
+      const { data: invoiceData, error: invoiceError } = await supabase
+        .from('user_invoices')
+        .insert({
+          user_id: user.id,
+          invoice_number: invoice.invoiceNumber,
+          job_id: invoice.jobId,
+          customer_id: invoice.customerId,
+          customer_name: invoice.customerName,
+          customer_email: invoice.customerEmail,
+          customer_phone: invoice.customerPhone,
+          date: invoice.date,
+          due_date: invoice.dueDate,
+          subtotal: invoice.subtotal,
+          tax_total: invoice.taxTotal,
+          total: invoice.total,
+          status: invoice.status,
+          notes: invoice.notes,
+          terms_and_conditions: invoice.termsAndConditions
+        })
+        .select()
+        .single();
+
+      if (invoiceError) throw invoiceError;
+
+      // Insert all invoice items
+      if (invoiceData) {
+        const invoiceItems = invoice.items.map(item => ({
+          invoice_id: invoiceData.id,
+          description: item.description,
+          quantity: item.quantity,
+          unit_price: item.unitPrice,
+          tax_rate: item.taxRate || 0,
+          total: item.total
+        }));
+
+        const { error: itemsError } = await supabase
+          .from('user_invoice_items')
+          .insert(invoiceItems);
+
+        if (itemsError) throw itemsError;
+      }
       
-      setInvoices(prev => [...prev, newInvoice]);
+      // Fetch updated invoices list
+      await fetchInvoices();
       
       toast({
         title: 'Success',
@@ -187,17 +197,28 @@ export const useInvoices = () => {
   };
 
   const updateInvoiceStatus = async (invoiceId: string, status: InvoiceStatus) => {
-    if (!user || !isAdmin) {
+    if (!user) {
       toast({
-        title: 'Permission Denied',
-        description: 'Only admins can update invoices',
+        title: 'Authentication Required',
+        description: 'You must be logged in to update invoices',
         variant: 'destructive'
       });
       return false;
     }
     
     try {
-      // This would be replaced with actual Supabase update
+      const { error } = await supabase
+        .from('user_invoices')
+        .update({
+          status,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', invoiceId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+      
+      // Update local state
       setInvoices(prev => 
         prev.map(inv => 
           inv.id === invoiceId 
@@ -205,6 +226,15 @@ export const useInvoices = () => {
             : inv
         )
       );
+      
+      // If we have a selected invoice and it's the one being updated, update that too
+      if (selectedInvoice && selectedInvoice.id === invoiceId) {
+        setSelectedInvoice({
+          ...selectedInvoice,
+          status,
+          updatedAt: new Date().toISOString()
+        });
+      }
       
       toast({
         title: 'Success',
@@ -233,7 +263,6 @@ export const useInvoices = () => {
   return {
     invoices,
     isLoading,
-    isAdmin,
     selectedInvoice,
     setSelectedInvoice,
     createInvoice,
