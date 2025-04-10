@@ -10,7 +10,7 @@ export const useInvoices = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [completedJobs, setCompletedJobs] = useState<JobType[]>([]);
+  const [completedJobs, setCompletedJobs] = useState<(JobType & { customerEmail?: string, customerPhone?: string })[]>([]);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -113,7 +113,8 @@ export const useInvoices = () => {
       if (data) {
         const transformedJobs = data.map(job => {
           // Extract booking details if available
-          const booking = job.user_bookings ? job.user_bookings[0] : null;
+          const bookings = job.user_bookings as Array<{ customer_email: string, customer_phone: string }> | null;
+          const booking = bookings && bookings.length > 0 ? bookings[0] : null;
           
           return {
             id: job.id,
@@ -126,7 +127,7 @@ export const useInvoices = () => {
             time: job.time || '',
             timeEstimate: job.time_estimate,
             priority: job.priority,
-            cost: job.cost || 0,
+            cost: job.cost ? Number(job.cost) : 0,
             customerEmail: booking?.customer_email || '',
             customerPhone: booking?.customer_phone || ''
           };

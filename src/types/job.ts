@@ -10,4 +10,5 @@ export interface JobType {
   time?: string; // Time field is optional
   timeEstimate: string;
   priority: string;
+  cost?: number; // Added cost field as optional
 }

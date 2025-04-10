@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -95,7 +96,14 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ onSubmit, completedJobs, onCa
         form.setValue('customerPhone', jobWithContact.customerPhone);
       }
       
-      const jobCost = typeof selectedJob.cost === 'number' ? selectedJob.cost : 0;
+      // Handle the cost properly with type checking and fallbacks
+      let jobCost = 0;
+      if (typeof selectedJob.cost === 'number') {
+        jobCost = selectedJob.cost;
+      } else if (selectedJob.cost !== undefined) {
+        const parsedCost = parseFloat(String(selectedJob.cost));
+        jobCost = isNaN(parsedCost) ? 0 : parsedCost;
+      }
       
       form.setValue('items', [
         {
