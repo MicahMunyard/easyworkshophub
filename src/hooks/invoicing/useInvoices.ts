@@ -6,6 +6,25 @@ import { Invoice, InvoiceStatus, InvoiceItem } from '@/types/invoice';
 import { useAuth } from '@/contexts/AuthContext';
 import { JobType } from '@/types/job';
 
+// Define the actual type returned from the database
+interface JobFromDB {
+  assigned_to: string;
+  created_at: string;
+  customer: string;
+  date: string;
+  id: string;
+  priority: string;
+  service: string;
+  status: string;
+  time: string;
+  time_estimate: string;
+  updated_at: string;
+  user_id: string;
+  vehicle: string;
+  // Add the missing cost field as optional
+  cost?: number | string | null;
+}
+
 export const useInvoices = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
@@ -96,8 +115,7 @@ export const useInvoices = () => {
     if (!user) return;
     
     try {
-      // This query needs to be modified since the relationship between jobs and user_bookings 
-      // is causing errors. Let's retrieve jobs and customer details separately.
+      // Use the new JobFromDB type for the query response
       const { data, error } = await supabase
         .from('jobs')
         .select('*')
@@ -108,7 +126,7 @@ export const useInvoices = () => {
       
       if (data) {
         // Transform jobs data
-        const transformedJobs = await Promise.all(data.map(async (job) => {
+        const transformedJobs = await Promise.all(data.map(async (job: JobFromDB) => {
           // For each job, let's separately fetch any related customer info from user_bookings
           let customerEmail = '';
           let customerPhone = '';
@@ -126,7 +144,7 @@ export const useInvoices = () => {
             customerPhone = bookingData.customer_phone || '';
           }
           
-          // Type-safe handling of the cost field
+          // Type-safe handling of the cost field - ensure we check if it exists first
           let jobCost = 0;
           if (job.cost !== undefined && job.cost !== null) {
             // Handle numeric or string cost
