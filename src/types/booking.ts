@@ -1,5 +1,5 @@
 
-export interface BookingType {
+export type BookingType = {
   id: number | string;
   customer: string;
   phone: string;
@@ -9,12 +9,20 @@ export interface BookingType {
   duration: number;
   car: string;
   status: "pending" | "confirmed" | "cancelled" | "completed";
-  date: string; // Date in YYYY-MM-DD format
+  date: string;
   notes?: string;
-  cost?: number;
-  
-  // New additions for Supabase integration
   technician_id?: string | null;
   service_id?: string | null;
   bay_id?: string | null;
-}
+  // Add vehicle details
+  vehicleDetails?: {
+    make?: string;
+    model?: string;
+    year?: string;
+    vin?: string;
+    color?: string;
+    bodyType?: string;
+    plateNumber?: string;
+    state?: string;
+  };
+};

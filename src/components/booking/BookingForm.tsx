@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { DialogFooter } from "@/components/ui/dialog";
@@ -81,14 +80,12 @@ const BookingForm: React.FC<BookingFormProps> = ({
   const [activeStep, setActiveStep] = useState<FormStep>(currentStep);
   const lastCheckedInfo = useRef({ phone: '', email: '' });
   
-  // Update active step when currentStep prop changes
   useEffect(() => {
     if (currentStep) {
       setActiveStep(currentStep);
     }
   }, [currentStep]);
   
-  // Navigate to next step
   const goToNextStep = () => {
     if (activeStep === "customer") {
       if (!booking.customer || !booking.phone || !booking.car) {
@@ -119,7 +116,6 @@ const BookingForm: React.FC<BookingFormProps> = ({
     }
   };
 
-  // Navigate to previous step
   const goToPreviousStep = () => {
     if (activeStep === "scheduling") {
       setActiveStep("workshop");
@@ -133,16 +129,12 @@ const BookingForm: React.FC<BookingFormProps> = ({
     }
   };
   
-  // Check if customer exists when customer info changes
   useEffect(() => {
-    // Don't trigger customer check if the form is being edited
     if (isEditing) return;
     
-    // Only check if we have sufficient customer info AND it's different from last check
     if ((booking.phone && booking.phone.length > 5 && booking.phone !== lastCheckedInfo.current.phone) || 
         (booking.email && booking.email.length > 5 && booking.email !== lastCheckedInfo.current.email)) {
       
-      // Update last checked info
       lastCheckedInfo.current = {
         phone: booking.phone || '',
         email: booking.email || ''
@@ -155,7 +147,6 @@ const BookingForm: React.FC<BookingFormProps> = ({
         setIsReturningCustomer(!!existingCustomer);
         setIsCheckingCustomer(false);
         
-        // Only show toast if customer just identified and not previously notified
         if (existingCustomer && !wasReturningCustomer && !returnNotified) {
           setReturnNotified(true);
           toast({
@@ -169,11 +160,9 @@ const BookingForm: React.FC<BookingFormProps> = ({
     }
   }, [booking.phone, booking.email, findCustomerByEmailOrPhone, isEditing, isReturningCustomer, returnNotified]);
 
-  // Determine which form section to show based on active step or currentStep
   const renderFormSection = () => {
     const step = activeStep;
     
-    // For the tabbed layout when using from NewBookingModal
     if (currentStep === "customer") {
       return (
         <>
@@ -182,6 +171,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
             phone={booking.phone}
             email={booking.email}
             car={booking.car}
+            vehicleDetails={booking.vehicleDetails}
             handleChange={handleChange}
             isReturningCustomer={isReturningCustomer}
             isCheckingCustomer={isCheckingCustomer}
@@ -266,7 +256,6 @@ const BookingForm: React.FC<BookingFormProps> = ({
       );
     }
     
-    // For the original step-by-step layout when used from BookingModal
     if (step === "customer") {
       return (
         <div className="space-y-4">

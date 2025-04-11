@@ -42,17 +42,30 @@ const NewBookingModal: React.FC<NewBookingModalProps> = ({ isOpen, onClose, onSa
   const [activeTab, setActiveTab] = useState<string>("vehicle");
 
   const handleVehicleFound = (vehicle: Vehicle) => {
-    // Map NEVDIS vehicle data to booking form fields
-    const carInfo = [
-      vehicle.extendedData?.makeDescription, 
-      vehicle.extendedData?.model,
-      vehicle.vehicleAge?.yearOfManufacture && `(${vehicle.vehicleAge.yearOfManufacture})`,
-      vehicle.extendedData?.colour && `- ${vehicle.extendedData.colour}`
-    ].filter(Boolean).join(" ");
+    // Map NEVDIS vehicle data to booking form fields with additional details
+    const carMake = vehicle.extendedData?.makeDescription || "";
+    const carModel = vehicle.extendedData?.model || "";
+    const carYear = vehicle.vehicleAge?.yearOfManufacture ? `(${vehicle.vehicleAge.yearOfManufacture})` : "";
+    const carColor = vehicle.extendedData?.colour ? `- ${vehicle.extendedData.colour}` : "";
+    const carBodyType = vehicle.extendedData?.bodyType || "";
     
+    // Create a comprehensive car description
+    const carInfo = [carMake, carModel, carYear, carColor].filter(Boolean).join(" ");
+    
+    // Store additional vehicle details in the booking
     setNewBooking(prev => ({
       ...prev,
-      car: carInfo
+      car: carInfo,
+      vehicleDetails: {
+        make: carMake,
+        model: carModel,
+        year: vehicle.vehicleAge?.yearOfManufacture?.toString() || "",
+        vin: vehicle.identification?.vin || "",
+        color: vehicle.extendedData?.colour || "",
+        bodyType: carBodyType,
+        plateNumber: vehicle.identification?.plate || plateNumber,
+        state: state
+      }
     }));
 
     // Move to customer tab automatically

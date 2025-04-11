@@ -33,7 +33,17 @@ const defaultBooking: BookingType = {
   car: "",
   status: "pending",
   date: format(new Date(), 'yyyy-MM-dd'),
-  notes: ""
+  notes: "",
+  vehicleDetails: {
+    make: "",
+    model: "",
+    year: "",
+    vin: "",
+    color: "",
+    bodyType: "",
+    plateNumber: "",
+    state: ""
+  }
 };
 
 export const useNewBookingForm = (
