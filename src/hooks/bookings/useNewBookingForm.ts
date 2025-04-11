@@ -194,6 +194,7 @@ export const useNewBookingForm = (
 
   return {
     newBooking,
+    setNewBooking,
     date,
     technicians,
     services,
