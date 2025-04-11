@@ -63,8 +63,8 @@ const NewBookingModal: React.FC<NewBookingModalProps> = ({ isOpen, onClose, onSa
         vin: vehicle.identification?.vin || "",
         color: vehicle.extendedData?.colour || "",
         bodyType: carBodyType,
-        plateNumber: vehicle.identification?.plate || plateNumber,
-        state: state
+        plateNumber: vehicle.identification?.plate || "",
+        state: vehicle.identification?.state || ""
       }
     }));
 

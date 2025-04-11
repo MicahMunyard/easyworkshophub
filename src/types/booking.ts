@@ -14,6 +14,7 @@ export type BookingType = {
   technician_id?: string | null;
   service_id?: string | null;
   bay_id?: string | null;
+  cost?: number;
   // Add vehicle details
   vehicleDetails?: {
     make?: string;
