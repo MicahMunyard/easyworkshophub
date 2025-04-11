@@ -4,7 +4,8 @@ import { nevdisService } from "@/services/nevdisService";
 import { 
   VehicleReportRequest, 
   Vehicle,
-  AustralianState
+  AustralianState,
+  NevdisProduct
 } from "@/types/nevdis";
 
 interface UseVehicleSearchReturn {
@@ -20,13 +21,13 @@ export const useVehicleSearch = (): UseVehicleSearchReturn => {
   const [error, setError] = useState<string | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   
-  // Default products to request - can be customized based on needs
-  const defaultProducts = [
+  // Default products to request - using NevdisProduct type
+  const defaultProducts: NevdisProduct[] = [
     "VEHICLE_AGE",
     "EXTENDED_DATA",
     "HIGH_PERFORMANCE_INFO",
     "REGISTRATION"
-  ];
+  ] as NevdisProduct[];
   
   /**
    * Search for a vehicle by plate number and state
