@@ -14,6 +14,8 @@ import { useNewBookingForm } from "@/hooks/bookings/useNewBookingForm";
 import VehicleLookupForm from "./booking/VehicleLookupForm";
 import { Vehicle } from "@/types/nevdis";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import VehicleDetailsForm from "./booking/VehicleDetailsForm";
+import { toast } from "@/components/ui/use-toast";
 
 interface NewBookingModalProps {
   isOpen: boolean;
@@ -40,6 +42,7 @@ const NewBookingModal: React.FC<NewBookingModalProps> = ({ isOpen, onClose, onSa
   } = useNewBookingForm(isOpen, onClose, onSave);
 
   const [activeTab, setActiveTab] = useState<string>("vehicle");
+  const [isManualEntry, setIsManualEntry] = useState<boolean>(false);
 
   const handleVehicleFound = (vehicle: Vehicle) => {
     // Map NEVDIS vehicle data to booking form fields with additional details
@@ -69,6 +72,38 @@ const NewBookingModal: React.FC<NewBookingModalProps> = ({ isOpen, onClose, onSa
     }));
 
     // Move to customer tab automatically
+    toast({
+      title: "Vehicle Found",
+      description: `Successfully loaded details for ${carMake} ${carModel}`
+    });
+    setActiveTab("customer");
+  };
+
+  const handleManualEntry = () => {
+    setIsManualEntry(true);
+  };
+
+  const handleVehicleDetailsUpdate = (vehicleDetails: BookingType['vehicleDetails']) => {
+    // Create a comprehensive car description
+    const carInfo = [
+      vehicleDetails?.make, 
+      vehicleDetails?.model, 
+      vehicleDetails?.year ? `(${vehicleDetails.year})` : "",
+      vehicleDetails?.color ? `- ${vehicleDetails.color}` : ""
+    ].filter(Boolean).join(" ");
+    
+    // Update booking state with vehicle details
+    setNewBooking(prev => ({
+      ...prev,
+      car: carInfo,
+      vehicleDetails
+    }));
+    
+    // Move to customer tab
+    toast({
+      title: "Vehicle Details Added",
+      description: "Vehicle information has been added to the booking"
+    });
     setActiveTab("customer");
   };
 
@@ -90,16 +125,29 @@ const NewBookingModal: React.FC<NewBookingModalProps> = ({ isOpen, onClose, onSa
           </TabsList>
           
           <TabsContent value="vehicle">
-            <VehicleLookupForm onVehicleFound={handleVehicleFound} />
+            {!isManualEntry ? (
+              <VehicleLookupForm 
+                onVehicleFound={handleVehicleFound} 
+                onManualEntry={handleManualEntry}
+              />
+            ) : (
+              <VehicleDetailsForm 
+                initialDetails={newBooking.vehicleDetails}
+                onSubmit={handleVehicleDetailsUpdate}
+                onCancel={() => setIsManualEntry(false)}
+              />
+            )}
             
-            <div className="flex justify-end mt-4">
-              <button
-                onClick={() => setActiveTab("customer")}
-                className="text-sm text-muted-foreground hover:underline"
-              >
-                Skip vehicle lookup →
-              </button>
-            </div>
+            {!isManualEntry && (
+              <div className="flex justify-end mt-4">
+                <button
+                  onClick={() => setActiveTab("customer")}
+                  className="text-sm text-muted-foreground hover:underline"
+                >
+                  Skip vehicle lookup →
+                </button>
+              </div>
+            )}
           </TabsContent>
           
           <TabsContent value="customer">

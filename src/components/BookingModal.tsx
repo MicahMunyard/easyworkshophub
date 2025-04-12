@@ -13,6 +13,11 @@ import DeleteConfirmationDialog from "./booking/DeleteConfirmationDialog";
 import { useEditBookingForm } from "@/hooks/bookings/useEditBookingForm";
 import { useToast } from "@/hooks/use-toast";
 import { useMediaQuery } from "@/hooks/use-media-query";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import VehicleLookupForm from "./booking/VehicleLookupForm";
+import VehicleDetailsForm from "./booking/VehicleDetailsForm";
+import { Vehicle } from "@/types/nevdis";
+import { Button } from "./ui/button";
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -36,6 +41,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
   
   const {
     editedBooking,
+    setEditedBooking,
     date,
     technicians,
     services,
@@ -52,11 +58,18 @@ const BookingModal: React.FC<BookingModalProps> = ({
     handleDeleteClick
   } = useEditBookingForm(isOpen, onClose, booking, onSave);
 
+  const [activeTab, setActiveTab] = useState<string>("customer");
+  const [showVehicleLookup, setShowVehicleLookup] = useState<boolean>(false);
+  const [isManualEntry, setIsManualEntry] = useState<boolean>(false);
+
   // Reset state when modal is reopened
   useEffect(() => {
     if (isOpen) {
       setIsDeleting(false);
       setDeleteSuccess(false);
+      setActiveTab("customer");
+      setShowVehicleLookup(false);
+      setIsManualEntry(false);
     }
   }, [isOpen]);
 
@@ -118,6 +131,71 @@ const BookingModal: React.FC<BookingModalProps> = ({
     }
   };
 
+  const handleVehicleFound = (vehicle: Vehicle) => {
+    // Map NEVDIS vehicle data to booking form fields with additional details
+    const carMake = vehicle.extendedData?.makeDescription || "";
+    const carModel = vehicle.extendedData?.model || "";
+    const carYear = vehicle.vehicleAge?.yearOfManufacture ? `(${vehicle.vehicleAge.yearOfManufacture})` : "";
+    const carColor = vehicle.extendedData?.colour ? `- ${vehicle.extendedData.colour}` : "";
+    const carBodyType = vehicle.extendedData?.bodyType || "";
+    
+    // Create a comprehensive car description
+    const carInfo = [carMake, carModel, carYear, carColor].filter(Boolean).join(" ");
+    
+    // Store additional vehicle details in the booking
+    setEditedBooking(prev => prev ? {
+      ...prev,
+      car: carInfo,
+      vehicleDetails: {
+        make: carMake,
+        model: carModel,
+        year: vehicle.vehicleAge?.yearOfManufacture?.toString() || "",
+        vin: vehicle.identification?.vin || "",
+        color: vehicle.extendedData?.colour || "",
+        bodyType: carBodyType,
+        plateNumber: vehicle.identification?.plate || "",
+        state: vehicle.identification?.state || ""
+      }
+    } : null);
+
+    // Hide vehicle lookup after success
+    toast({
+      title: "Vehicle Updated",
+      description: `Successfully updated to ${carMake} ${carModel}`
+    });
+    setShowVehicleLookup(false);
+    setActiveTab("customer");
+  };
+
+  const handleManualEntry = () => {
+    setIsManualEntry(true);
+  };
+
+  const handleVehicleDetailsUpdate = (vehicleDetails: BookingType['vehicleDetails']) => {
+    // Create a comprehensive car description
+    const carInfo = [
+      vehicleDetails?.make, 
+      vehicleDetails?.model, 
+      vehicleDetails?.year ? `(${vehicleDetails.year})` : "",
+      vehicleDetails?.color ? `- ${vehicleDetails.color}` : ""
+    ].filter(Boolean).join(" ");
+    
+    // Update booking state with vehicle details
+    setEditedBooking(prev => prev ? {
+      ...prev,
+      car: carInfo,
+      vehicleDetails
+    } : null);
+    
+    // Hide vehicle lookup after success
+    toast({
+      title: "Vehicle Updated",
+      description: "Vehicle information has been updated"
+    });
+    setShowVehicleLookup(false);
+    setActiveTab("customer");
+  };
+
   return (
     <>
       <Dialog open={isOpen && !isDeleting && !deleteSuccess} onOpenChange={(open) => {
@@ -132,23 +210,126 @@ const BookingModal: React.FC<BookingModalProps> = ({
               Make changes to the booking details. Click save when you're done.
             </DialogDescription>
           </DialogHeader>
-          <BookingForm
-            booking={editedBooking}
-            date={date}
-            services={services}
-            technicians={technicians}
-            bays={bays}
-            selectedServiceId={selectedServiceId}
-            selectedTechnicianId={selectedTechnicianId}
-            selectedBayId={selectedBayId}
-            handleChange={handleChange}
-            handleSelectChange={handleSelectChange}
-            handleDateChange={handleDateChange}
-            handleSubmit={handleSubmit}
-            onClose={onClose}
-            isEditing={true}
-            onDeleteClick={handleDeleteClick}
-          />
+
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid grid-cols-3 mb-4">
+              {showVehicleLookup && <TabsTrigger value="vehicle">Vehicle</TabsTrigger>}
+              <TabsTrigger value="customer">Customer</TabsTrigger>
+              <TabsTrigger value="details">Details</TabsTrigger>
+              <TabsTrigger value="notes">Notes</TabsTrigger>
+            </TabsList>
+            
+            {showVehicleLookup && (
+              <TabsContent value="vehicle">
+                {!isManualEntry ? (
+                  <VehicleLookupForm 
+                    onVehicleFound={handleVehicleFound} 
+                    onManualEntry={handleManualEntry}
+                  />
+                ) : (
+                  <VehicleDetailsForm 
+                    initialDetails={editedBooking.vehicleDetails}
+                    onSubmit={handleVehicleDetailsUpdate}
+                    onCancel={() => setIsManualEntry(false)}
+                  />
+                )}
+                
+                <div className="flex justify-end mt-4">
+                  <Button 
+                    onClick={() => {
+                      setShowVehicleLookup(false); 
+                      setActiveTab("customer");
+                    }}
+                    variant="outline"
+                  >
+                    Cancel Vehicle Update
+                  </Button>
+                </div>
+              </TabsContent>
+            )}
+            
+            <TabsContent value="customer">
+              <BookingForm
+                booking={editedBooking}
+                date={date}
+                services={services}
+                technicians={technicians}
+                bays={bays}
+                selectedServiceId={selectedServiceId}
+                selectedTechnicianId={selectedTechnicianId}
+                selectedBayId={selectedBayId}
+                handleChange={handleChange}
+                handleSelectChange={handleSelectChange}
+                handleDateChange={handleDateChange}
+                handleSubmit={handleSubmit}
+                onClose={onClose}
+                isEditing={true}
+                currentStep="customer"
+                onStepChange={setActiveTab}
+                onDeleteClick={handleDeleteClick}
+              />
+              
+              {!showVehicleLookup && (
+                <div className="mt-4 border-t pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setShowVehicleLookup(true);
+                      setActiveTab("vehicle");
+                    }}
+                    className="text-sm"
+                  >
+                    Update Vehicle Information
+                  </Button>
+                </div>
+              )}
+            </TabsContent>
+            
+            <TabsContent value="details">
+              <BookingForm
+                booking={editedBooking}
+                date={date}
+                services={services}
+                technicians={technicians}
+                bays={bays}
+                selectedServiceId={selectedServiceId}
+                selectedTechnicianId={selectedTechnicianId}
+                selectedBayId={selectedBayId}
+                handleChange={handleChange}
+                handleSelectChange={handleDateChange}
+                handleDateChange={handleDateChange}
+                handleSubmit={handleSubmit}
+                onClose={onClose}
+                isEditing={true}
+                currentStep="scheduling"
+                onStepChange={setActiveTab}
+                onDeleteClick={handleDeleteClick}
+              />
+            </TabsContent>
+            
+            <TabsContent value="notes">
+              <BookingForm
+                booking={editedBooking}
+                date={date}
+                services={services}
+                technicians={technicians}
+                bays={bays}
+                selectedServiceId={selectedServiceId}
+                selectedTechnicianId={selectedTechnicianId}
+                selectedBayId={selectedBayId}
+                handleChange={handleChange}
+                handleSelectChange={handleSelectChange}
+                handleDateChange={handleDateChange}
+                handleSubmit={handleSubmit}
+                onClose={onClose}
+                isEditing={true}
+                currentStep="notes"
+                onStepChange={setActiveTab}
+                onDeleteClick={handleDeleteClick}
+              />
+            </TabsContent>
+          </Tabs>
         </DialogContent>
       </Dialog>
 

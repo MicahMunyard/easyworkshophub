@@ -11,7 +11,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Trash } from "lucide-react";
 import { UseFormReturn } from "react-hook-form";
-import { cn } from "@/lib/utils";
 
 interface InvoiceItemRowProps {
   index: number;
@@ -28,6 +27,29 @@ const InvoiceItemRow: React.FC<InvoiceItemRowProps> = ({
   removeItem,
   isRemoveDisabled
 }) => {
+  // This function allows manual override of the total
+  const handleTotalChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newTotal = parseFloat(e.target.value);
+    if (!isNaN(newTotal)) {
+      form.setValue(`items.${index}.total`, newTotal);
+      
+      // Update subtotal and total
+      setTimeout(() => {
+        const items = form.getValues().items;
+        const subtotal = items.reduce((sum, item) => sum + item.total, 0);
+        const taxTotal = items.reduce((sum, item) => {
+          const taxRate = item.taxRate || 0;
+          return sum + (item.total * (taxRate / 100));
+        }, 0);
+        const total = subtotal + taxTotal;
+        
+        form.setValue('subtotal', subtotal);
+        form.setValue('taxTotal', taxTotal);
+        form.setValue('total', total);
+      }, 0);
+    }
+  };
+
   return (
     <div className="grid grid-cols-12 gap-4 items-end">
       <div className="col-span-4">
@@ -141,9 +163,10 @@ const InvoiceItemRow: React.FC<InvoiceItemRowProps> = ({
               <FormLabel>Total</FormLabel>
               <FormControl>
                 <Input 
-                  type="number" 
-                  readOnly 
-                  value={field.value.toFixed(2)} 
+                  type="number"
+                  step={0.01}
+                  value={field.value.toFixed(2)}
+                  onChange={handleTotalChange}
                 />
               </FormControl>
             </FormItem>

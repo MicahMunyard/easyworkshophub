@@ -161,6 +161,18 @@ const CustomerInfoFields: React.FC<CustomerInfoFieldsProps> = ({
                     <p className="text-sm font-mono">{vehicleDetails.vin}</p>
                   </div>
                 )}
+                {vehicleDetails?.plateNumber && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Registration</Label>
+                    <p className="text-sm">{vehicleDetails.plateNumber}</p>
+                  </div>
+                )}
+                {vehicleDetails?.state && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground">State</Label>
+                    <p className="text-sm">{vehicleDetails.state}</p>
+                  </div>
+                )}
               </div>
             </CollapsibleContent>
           </Collapsible>
