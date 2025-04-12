@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import {
   Dialog,
@@ -206,7 +207,15 @@ const BookingModal: React.FC<BookingModalProps> = ({
     }
     
     if (localEditedBooking) {
-      handleSubmit(localEditedBooking);
+      // Create a merged booking with both the edited booking and our local vehicle updates
+      const updatedBooking = {
+        ...editedBooking,
+        car: localEditedBooking.car,
+        vehicleDetails: localEditedBooking.vehicleDetails
+      };
+      
+      // Call onSave with the merged booking
+      onSave(updatedBooking);
     }
   };
 
@@ -230,7 +239,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
               {showVehicleLookup && <TabsTrigger value="vehicle">Vehicle</TabsTrigger>}
               <TabsTrigger value="customer">Customer</TabsTrigger>
               <TabsTrigger value="details">Details</TabsTrigger>
-              <TabsTrigger value="notes">Notes</TabsTrigger>
+              <TabsTrigger value="workshop">Notes</TabsTrigger>
             </TabsList>
             
             {showVehicleLookup && (
@@ -311,7 +320,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                 selectedTechnicianId={selectedTechnicianId}
                 selectedBayId={selectedBayId}
                 handleChange={handleChange}
-                handleSelectChange={handleSelectChange}
+                handleSelectChange={handleDateChange}
                 handleDateChange={handleDateChange}
                 handleSubmit={handleSaveWithUpdates}
                 onClose={onClose}
@@ -322,7 +331,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
               />
             </TabsContent>
             
-            <TabsContent value="notes">
+            <TabsContent value="workshop">
               <BookingForm
                 booking={localEditedBooking}
                 date={date}
