@@ -39,9 +39,11 @@ const BookingModal: React.FC<BookingModalProps> = ({
   const { toast } = useToast();
   const isMobile = useMediaQuery("(max-width: 640px)");
   
+  // Define a local state for edited booking
+  const [localEditedBooking, setLocalEditedBooking] = useState<BookingType | null>(null);
+  
   const {
     editedBooking,
-    setEditedBooking,
     date,
     technicians,
     services,
@@ -58,6 +60,13 @@ const BookingModal: React.FC<BookingModalProps> = ({
     handleDeleteClick
   } = useEditBookingForm(isOpen, onClose, booking, onSave);
 
+  // Use local state to track and modify the booking
+  useEffect(() => {
+    if (editedBooking) {
+      setLocalEditedBooking(editedBooking);
+    }
+  }, [editedBooking]);
+
   const [activeTab, setActiveTab] = useState<string>("customer");
   const [showVehicleLookup, setShowVehicleLookup] = useState<boolean>(false);
   const [isManualEntry, setIsManualEntry] = useState<boolean>(false);
@@ -73,7 +82,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
     }
   }, [isOpen]);
 
-  if (!editedBooking) return null;
+  if (!localEditedBooking || !editedBooking) return null;
 
   const handleDeleteConfirm = async () => {
     if (!editedBooking || !onDelete) return;
@@ -132,6 +141,10 @@ const BookingModal: React.FC<BookingModalProps> = ({
   };
 
   const handleVehicleFound = (vehicle: Vehicle) => {
+    // Get registration details
+    const plateNumber = vehicle.identification?.plate || "";
+    const state = vehicle.identification?.state || "";
+    
     // Map NEVDIS vehicle data to booking form fields with additional details
     const carMake = vehicle.extendedData?.makeDescription || "";
     const carModel = vehicle.extendedData?.model || "";
@@ -142,21 +155,24 @@ const BookingModal: React.FC<BookingModalProps> = ({
     // Create a comprehensive car description
     const carInfo = [carMake, carModel, carYear, carColor].filter(Boolean).join(" ");
     
-    // Store additional vehicle details in the booking
-    setEditedBooking(prev => prev ? {
-      ...prev,
-      car: carInfo,
-      vehicleDetails: {
-        make: carMake,
-        model: carModel,
-        year: vehicle.vehicleAge?.yearOfManufacture?.toString() || "",
-        vin: vehicle.identification?.vin || "",
-        color: vehicle.extendedData?.colour || "",
-        bodyType: carBodyType,
-        plateNumber: vehicle.identification?.plate || "",
-        state: vehicle.identification?.state || ""
-      }
-    } : null);
+    // Store additional vehicle details in the booking using local state
+    setLocalEditedBooking(prev => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        car: carInfo,
+        vehicleDetails: {
+          make: carMake,
+          model: carModel,
+          year: vehicle.vehicleAge?.yearOfManufacture?.toString() || "",
+          vin: vehicle.identification?.vin || "",
+          color: vehicle.extendedData?.colour || "",
+          bodyType: carBodyType,
+          plateNumber: plateNumber,
+          state: state
+        }
+      };
+    });
 
     // Hide vehicle lookup after success
     toast({
@@ -180,12 +196,15 @@ const BookingModal: React.FC<BookingModalProps> = ({
       vehicleDetails?.color ? `- ${vehicleDetails.color}` : ""
     ].filter(Boolean).join(" ");
     
-    // Update booking state with vehicle details
-    setEditedBooking(prev => prev ? {
-      ...prev,
-      car: carInfo,
-      vehicleDetails
-    } : null);
+    // Update booking state with vehicle details using local state
+    setLocalEditedBooking(prev => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        car: carInfo,
+        vehicleDetails
+      };
+    });
     
     // Hide vehicle lookup after success
     toast({
@@ -194,6 +213,13 @@ const BookingModal: React.FC<BookingModalProps> = ({
     });
     setShowVehicleLookup(false);
     setActiveTab("customer");
+  };
+
+  // When saving the form, use the local state
+  const handleSaveWithUpdates = () => {
+    if (localEditedBooking) {
+      handleSubmit(localEditedBooking);
+    }
   };
 
   return (
@@ -228,7 +254,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                   />
                 ) : (
                   <VehicleDetailsForm 
-                    initialDetails={editedBooking.vehicleDetails}
+                    initialDetails={localEditedBooking.vehicleDetails}
                     onSubmit={handleVehicleDetailsUpdate}
                     onCancel={() => setIsManualEntry(false)}
                   />
@@ -250,7 +276,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
             
             <TabsContent value="customer">
               <BookingForm
-                booking={editedBooking}
+                booking={localEditedBooking}
                 date={date}
                 services={services}
                 technicians={technicians}
@@ -261,7 +287,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                 handleChange={handleChange}
                 handleSelectChange={handleSelectChange}
                 handleDateChange={handleDateChange}
-                handleSubmit={handleSubmit}
+                handleSubmit={handleSaveWithUpdates}
                 onClose={onClose}
                 isEditing={true}
                 currentStep="customer"
@@ -288,29 +314,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
             
             <TabsContent value="details">
               <BookingForm
-                booking={editedBooking}
-                date={date}
-                services={services}
-                technicians={technicians}
-                bays={bays}
-                selectedServiceId={selectedServiceId}
-                selectedTechnicianId={selectedTechnicianId}
-                selectedBayId={selectedBayId}
-                handleChange={handleChange}
-                handleSelectChange={handleDateChange}
-                handleDateChange={handleDateChange}
-                handleSubmit={handleSubmit}
-                onClose={onClose}
-                isEditing={true}
-                currentStep="scheduling"
-                onStepChange={setActiveTab}
-                onDeleteClick={handleDeleteClick}
-              />
-            </TabsContent>
-            
-            <TabsContent value="notes">
-              <BookingForm
-                booking={editedBooking}
+                booking={localEditedBooking}
                 date={date}
                 services={services}
                 technicians={technicians}
@@ -321,10 +325,32 @@ const BookingModal: React.FC<BookingModalProps> = ({
                 handleChange={handleChange}
                 handleSelectChange={handleSelectChange}
                 handleDateChange={handleDateChange}
-                handleSubmit={handleSubmit}
+                handleSubmit={handleSaveWithUpdates}
                 onClose={onClose}
                 isEditing={true}
-                currentStep="notes"
+                currentStep="scheduling"
+                onStepChange={setActiveTab}
+                onDeleteClick={handleDeleteClick}
+              />
+            </TabsContent>
+            
+            <TabsContent value="notes">
+              <BookingForm
+                booking={localEditedBooking}
+                date={date}
+                services={services}
+                technicians={technicians}
+                bays={bays}
+                selectedServiceId={selectedServiceId}
+                selectedTechnicianId={selectedTechnicianId}
+                selectedBayId={selectedBayId}
+                handleChange={handleChange}
+                handleSelectChange={handleSelectChange}
+                handleDateChange={handleDateChange}
+                handleSubmit={handleSaveWithUpdates}
+                onClose={onClose}
+                isEditing={true}
+                currentStep="workshop"
                 onStepChange={setActiveTab}
                 onDeleteClick={handleDeleteClick}
               />

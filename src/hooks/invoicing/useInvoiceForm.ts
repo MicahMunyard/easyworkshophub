@@ -32,6 +32,24 @@ const invoiceSchema = z.object({
 
 export type InvoiceFormValues = z.infer<typeof invoiceSchema>;
 
+// Define an extended job type to handle the properties we need to access
+interface ExtendedJobType extends JobType {
+  email?: string;
+  phone?: string;
+  car?: string;
+  vehicleDetails?: {
+    make?: string;
+    model?: string;
+    year?: string;
+    vin?: string;
+    color?: string;
+    bodyType?: string;
+    plateNumber?: string;
+    state?: string;
+  };
+  price?: number;
+}
+
 export const useInvoiceForm = (completedJobs: JobType[]) => {
   const form = useForm<InvoiceFormValues>({
     resolver: zodResolver(invoiceSchema),
@@ -90,71 +108,72 @@ export const useInvoiceForm = (completedJobs: JobType[]) => {
   };
 
   const handleJobChange = (jobId: string) => {
-    const selectedJob = completedJobs.find(job => job.id === jobId);
-    if (selectedJob) {
-      form.setValue('customerName', selectedJob.customer);
+    const selectedJob = completedJobs.find(job => job.id === jobId) as ExtendedJobType | undefined;
+    if (!selectedJob) return;
+
+    form.setValue('customerName', selectedJob.customer);
       
-      // Handle customer contact information
-      if ('email' in selectedJob) {
-        form.setValue('customerEmail', selectedJob.email || '');
-      }
-      
-      if ('phone' in selectedJob) {
-        form.setValue('customerPhone', selectedJob.phone || '');
-      }
-      
-      // Handle the cost properly with type checking and fallbacks
-      let jobCost = 0;
-      
-      // Try to get cost from different possible properties
-      if (typeof selectedJob.cost === 'number') {
-        jobCost = selectedJob.cost;
-      } else if (selectedJob.cost !== undefined) {
-        const parsedCost = parseFloat(String(selectedJob.cost));
-        jobCost = isNaN(parsedCost) ? 0 : parsedCost;
-      }
-      
-      // If cost is still 0, check for price property
-      if (jobCost === 0 && 'price' in selectedJob && selectedJob.price !== undefined) {
-        const price = typeof selectedJob.price === 'number' 
-          ? selectedJob.price 
-          : parseFloat(String(selectedJob.price));
-          
-        if (!isNaN(price)) {
-          jobCost = price;
-        }
-      }
-      
-      // Vehicle information formatting
-      let vehicleInfo = '';
-      
-      if (selectedJob.car) {
-        vehicleInfo = selectedJob.car;
-      } else if (selectedJob.vehicleDetails) {
-        const vd = selectedJob.vehicleDetails;
-        const vehicleParts = [];
-        if (vd.make) vehicleParts.push(vd.make);
-        if (vd.model) vehicleParts.push(vd.model);
-        if (vd.year) vehicleParts.push(`(${vd.year})`);
-        if (vd.color) vehicleParts.push(`- ${vd.color}`);
-        
-        vehicleInfo = vehicleParts.join(' ');
-      }
-      
-      // Create invoice item with vehicle details
-      const serviceDescription = selectedJob.service || 'Service';
-      const description = vehicleInfo ? `${serviceDescription} - ${vehicleInfo}` : serviceDescription;
-      
-      form.setValue('items', [
-        {
-          id: `item-${Date.now()}`,
-          description,
-          quantity: 1,
-          unitPrice: jobCost,
-          total: jobCost
-        }
-      ]);
+    // Handle customer contact information safely
+    if (typeof selectedJob.email === 'string') {
+      form.setValue('customerEmail', selectedJob.email);
     }
+    
+    if (typeof selectedJob.phone === 'string') {
+      form.setValue('customerPhone', selectedJob.phone);
+    }
+    
+    // Handle the cost properly with type checking and fallbacks
+    let jobCost = 0;
+    
+    // Try to get cost from different possible properties
+    if (typeof selectedJob.cost === 'number') {
+      jobCost = selectedJob.cost;
+    } else if (selectedJob.cost !== undefined) {
+      const parsedCost = parseFloat(String(selectedJob.cost));
+      jobCost = isNaN(parsedCost) ? 0 : parsedCost;
+    }
+    
+    // If cost is still 0, check for price property
+    if (jobCost === 0 && selectedJob.price !== undefined) {
+      const price = typeof selectedJob.price === 'number' 
+        ? selectedJob.price 
+        : parseFloat(String(selectedJob.price));
+          
+      if (!isNaN(price)) {
+        jobCost = price;
+      }
+    }
+    
+    // Vehicle information formatting
+    let vehicleInfo = '';
+    
+    // Handle different ways vehicle information might be stored
+    if (typeof selectedJob.car === 'string') {
+      vehicleInfo = selectedJob.car;
+    } else if (selectedJob.vehicleDetails) {
+      const vd = selectedJob.vehicleDetails;
+      const vehicleParts = [];
+      if (vd.make) vehicleParts.push(vd.make);
+      if (vd.model) vehicleParts.push(vd.model);
+      if (vd.year) vehicleParts.push(`(${vd.year})`);
+      if (vd.color) vehicleParts.push(`- ${vd.color}`);
+      
+      vehicleInfo = vehicleParts.join(' ');
+    }
+    
+    // Create invoice item with vehicle details
+    const serviceDescription = selectedJob.service || 'Service';
+    const description = vehicleInfo ? `${serviceDescription} - ${vehicleInfo}` : serviceDescription;
+    
+    form.setValue('items', [
+      {
+        id: `item-${Date.now()}`,
+        description,
+        quantity: 1,
+        unitPrice: jobCost,
+        total: jobCost
+      }
+    ]);
   };
 
   const formatInvoiceForSubmission = (data: InvoiceFormValues) => {
