@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import {
   Dialog,
@@ -39,7 +38,6 @@ const BookingModal: React.FC<BookingModalProps> = ({
   const { toast } = useToast();
   const isMobile = useMediaQuery("(max-width: 640px)");
   
-  // Define a local state for edited booking
   const [localEditedBooking, setLocalEditedBooking] = useState<BookingType | null>(null);
   
   const {
@@ -60,7 +58,6 @@ const BookingModal: React.FC<BookingModalProps> = ({
     handleDeleteClick
   } = useEditBookingForm(isOpen, onClose, booking, onSave);
 
-  // Use local state to track and modify the booking
   useEffect(() => {
     if (editedBooking) {
       setLocalEditedBooking(editedBooking);
@@ -71,7 +68,6 @@ const BookingModal: React.FC<BookingModalProps> = ({
   const [showVehicleLookup, setShowVehicleLookup] = useState<boolean>(false);
   const [isManualEntry, setIsManualEntry] = useState<boolean>(false);
 
-  // Reset state when modal is reopened
   useEffect(() => {
     if (isOpen) {
       setIsDeleting(false);
@@ -102,10 +98,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
           description: "Booking was successfully deleted",
         });
         
-        // Close dialogs after successful deletion
         setIsDeleteDialogOpen(false);
         
-        // Brief delay before closing the main modal
         setTimeout(() => {
           onClose();
         }, 300);
@@ -115,7 +109,6 @@ const BookingModal: React.FC<BookingModalProps> = ({
     } catch (error: any) {
       console.error("Error deleting booking in BookingModal:", error);
       
-      // Provide more specific error messages based on the error type
       let errorMessage = "An unexpected error occurred while deleting the booking.";
       
       if (error?.message) {
@@ -141,21 +134,17 @@ const BookingModal: React.FC<BookingModalProps> = ({
   };
 
   const handleVehicleFound = (vehicle: Vehicle) => {
-    // Get registration details
     const plateNumber = vehicle.identification?.plate || "";
     const state = vehicle.identification?.state || "";
     
-    // Map NEVDIS vehicle data to booking form fields with additional details
     const carMake = vehicle.extendedData?.makeDescription || "";
     const carModel = vehicle.extendedData?.model || "";
     const carYear = vehicle.vehicleAge?.yearOfManufacture ? `(${vehicle.vehicleAge.yearOfManufacture})` : "";
     const carColor = vehicle.extendedData?.colour ? `- ${vehicle.extendedData.colour}` : "";
     const carBodyType = vehicle.extendedData?.bodyType || "";
     
-    // Create a comprehensive car description
     const carInfo = [carMake, carModel, carYear, carColor].filter(Boolean).join(" ");
     
-    // Store additional vehicle details in the booking using local state
     setLocalEditedBooking(prev => {
       if (!prev) return null;
       return {
@@ -174,7 +163,6 @@ const BookingModal: React.FC<BookingModalProps> = ({
       };
     });
 
-    // Hide vehicle lookup after success
     toast({
       title: "Vehicle Updated",
       description: `Successfully updated to ${carMake} ${carModel}`
@@ -188,7 +176,6 @@ const BookingModal: React.FC<BookingModalProps> = ({
   };
 
   const handleVehicleDetailsUpdate = (vehicleDetails: BookingType['vehicleDetails']) => {
-    // Create a comprehensive car description
     const carInfo = [
       vehicleDetails?.make, 
       vehicleDetails?.model, 
@@ -196,7 +183,6 @@ const BookingModal: React.FC<BookingModalProps> = ({
       vehicleDetails?.color ? `- ${vehicleDetails.color}` : ""
     ].filter(Boolean).join(" ");
     
-    // Update booking state with vehicle details using local state
     setLocalEditedBooking(prev => {
       if (!prev) return null;
       return {
@@ -206,7 +192,6 @@ const BookingModal: React.FC<BookingModalProps> = ({
       };
     });
     
-    // Hide vehicle lookup after success
     toast({
       title: "Vehicle Updated",
       description: "Vehicle information has been updated"
@@ -215,8 +200,11 @@ const BookingModal: React.FC<BookingModalProps> = ({
     setActiveTab("customer");
   };
 
-  // When saving the form, use the local state
-  const handleSaveWithUpdates = () => {
+  const handleSaveWithUpdates = (event?: React.FormEvent) => {
+    if (event) {
+      event.preventDefault();
+    }
+    
     if (localEditedBooking) {
       handleSubmit(localEditedBooking);
     }
