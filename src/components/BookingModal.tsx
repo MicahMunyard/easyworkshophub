@@ -79,6 +79,22 @@ const BookingModal: React.FC<BookingModalProps> = ({
     }
   }, [isOpen]);
 
+  // Create a wrapper for handleDateChange that matches the expected signature
+  const handleDateChangeWrapper = (name: string, value: string) => {
+    // This is a wrapper function to handle type mismatches
+    console.log(`Date change attempted for field: ${name}, value: ${value}`);
+    
+    // If your actual date handling requires conversion:
+    if (name === 'date' && value) {
+      try {
+        const dateValue = new Date(value);
+        handleDateChange(dateValue);
+      } catch (err) {
+        console.error("Error converting date:", err);
+      }
+    }
+  };
+
   if (!localEditedBooking || !editedBooking) return null;
 
   const handleDeleteConfirm = async () => {
@@ -201,12 +217,12 @@ const BookingModal: React.FC<BookingModalProps> = ({
     setActiveTab("customer");
   };
 
-  const handleSaveWithUpdates = (event?: React.FormEvent) => {
-    if (event) {
-      event.preventDefault();
+  const handleSaveWithUpdates = (e: React.FormEvent) => {
+    if (e) {
+      e.preventDefault();
     }
     
-    if (localEditedBooking) {
+    if (localEditedBooking && editedBooking) {
       // Create a merged booking with both the edited booking and our local vehicle updates
       const updatedBooking = {
         ...editedBooking,
@@ -283,7 +299,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                 selectedBayId={selectedBayId}
                 handleChange={handleChange}
                 handleSelectChange={handleSelectChange}
-                handleDateChange={handleDateChange}
+                handleDateChange={handleDateChangeWrapper}
                 handleSubmit={handleSaveWithUpdates}
                 onClose={onClose}
                 isEditing={true}
@@ -320,8 +336,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
                 selectedTechnicianId={selectedTechnicianId}
                 selectedBayId={selectedBayId}
                 handleChange={handleChange}
-                handleSelectChange={handleDateChange}
-                handleDateChange={handleDateChange}
+                handleSelectChange={handleSelectChange}
+                handleDateChange={handleDateChangeWrapper}
                 handleSubmit={handleSaveWithUpdates}
                 onClose={onClose}
                 isEditing={true}
@@ -343,7 +359,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                 selectedBayId={selectedBayId}
                 handleChange={handleChange}
                 handleSelectChange={handleSelectChange}
-                handleDateChange={handleDateChange}
+                handleDateChange={handleDateChangeWrapper}
                 handleSubmit={handleSaveWithUpdates}
                 onClose={onClose}
                 isEditing={true}
