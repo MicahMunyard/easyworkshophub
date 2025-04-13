@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import {
   Dialog,
@@ -79,20 +78,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
     }
   }, [isOpen]);
 
-  // Create a wrapper for handleDateChange that matches the expected signature
-  const handleDateChangeWrapper = (name: string, value: string) => {
-    // This is a wrapper function to handle type mismatches
-    console.log(`Date change attempted for field: ${name}, value: ${value}`);
-    
-    // If your actual date handling requires conversion:
-    if (name === 'date' && value) {
-      try {
-        const dateValue = new Date(value);
-        handleDateChange(dateValue);
-      } catch (err) {
-        console.error("Error converting date:", err);
-      }
-    }
+  const handleDateChangeWrapper = (newDate: Date | undefined) => {
+    handleDateChange(newDate);
   };
 
   if (!localEditedBooking || !editedBooking) return null;
@@ -223,14 +210,12 @@ const BookingModal: React.FC<BookingModalProps> = ({
     }
     
     if (localEditedBooking && editedBooking) {
-      // Create a merged booking with both the edited booking and our local vehicle updates
       const updatedBooking = {
         ...editedBooking,
         car: localEditedBooking.car,
         vehicleDetails: localEditedBooking.vehicleDetails
       };
       
-      // Call onSave with the merged booking
       onSave(updatedBooking);
     }
   };
