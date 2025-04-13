@@ -1,2 +1,4 @@
 
-export { useBookings } from "./bookings";
+import { useBookings } from "./bookings";
+
+export { useBookings };

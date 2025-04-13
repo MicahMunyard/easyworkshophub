@@ -1,6 +1,6 @@
 
 import React from "react";
-import BookingModal from "@/components/BookingModal";
+import BookingModal from "@/components/booking-modal";
 import NewBookingModal from "@/components/NewBookingModal";
 import { BookingType } from "@/types/booking";
 
