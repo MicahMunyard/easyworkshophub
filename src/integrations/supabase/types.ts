@@ -294,10 +294,13 @@ export type Database = {
           connected_at: string | null
           created_at: string | null
           email_address: string
+          encryption_key: string | null
           id: string
+          last_error: string | null
           last_sync_at: string | null
           provider: string
           refresh_token: string | null
+          status: string | null
           token_expires_at: string | null
           updated_at: string | null
           user_id: string
@@ -308,10 +311,13 @@ export type Database = {
           connected_at?: string | null
           created_at?: string | null
           email_address: string
+          encryption_key?: string | null
           id?: string
+          last_error?: string | null
           last_sync_at?: string | null
           provider: string
           refresh_token?: string | null
+          status?: string | null
           token_expires_at?: string | null
           updated_at?: string | null
           user_id: string
@@ -322,11 +328,92 @@ export type Database = {
           connected_at?: string | null
           created_at?: string | null
           email_address?: string
+          encryption_key?: string | null
           id?: string
+          last_error?: string | null
           last_sync_at?: string | null
           provider?: string
           refresh_token?: string | null
+          status?: string | null
           token_expires_at?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      email_rules: {
+        Row: {
+          action_data: Json | null
+          action_type: string
+          condition_type: string
+          condition_value: string
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          action_data?: Json | null
+          action_type: string
+          condition_type: string
+          condition_value: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          action_data?: Json | null
+          action_type?: string
+          condition_type?: string
+          condition_value?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      email_templates: {
+        Row: {
+          body: string
+          created_at: string | null
+          id: string
+          is_default: boolean | null
+          name: string
+          subject: string
+          template_type: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string | null
+          id?: string
+          is_default?: boolean | null
+          name: string
+          subject: string
+          template_type: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string | null
+          id?: string
+          is_default?: boolean | null
+          name?: string
+          subject?: string
+          template_type?: string
           updated_at?: string | null
           user_id?: string
         }
@@ -384,22 +471,34 @@ export type Database = {
         Row: {
           booking_created: boolean
           email_id: string
+          extracted_data: Json | null
           id: string
           processed_at: string
+          processing_notes: string | null
+          processing_status: string | null
+          retry_count: number | null
           user_id: string
         }
         Insert: {
           booking_created?: boolean
           email_id: string
+          extracted_data?: Json | null
           id?: string
           processed_at?: string
+          processing_notes?: string | null
+          processing_status?: string | null
+          retry_count?: number | null
           user_id: string
         }
         Update: {
           booking_created?: boolean
           email_id?: string
+          extracted_data?: Json | null
           id?: string
           processed_at?: string
+          processing_notes?: string | null
+          processing_status?: string | null
+          retry_count?: number | null
           user_id?: string
         }
         Relationships: []

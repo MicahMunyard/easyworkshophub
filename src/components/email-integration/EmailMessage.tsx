@@ -1,24 +1,31 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, User, Mail, Phone, Car } from "lucide-react";
+import { AlertCircle, Calendar, Car, CheckCircle, Loader2, Mail, Phone, User } from "lucide-react";
 import { EmailType } from "@/types/email";
+import EmailReplyForm from "./EmailReplyForm";
 
 interface EmailMessageProps {
   email: EmailType;
-  onCreateBooking: () => void;
+  onCreateBooking: () => Promise<boolean>;
+  onReply: (content: string) => Promise<boolean>;
   bookingCreated: boolean;
   isPotentialBooking: boolean;
+  isProcessing: boolean;
 }
 
 const EmailMessage: React.FC<EmailMessageProps> = ({ 
   email, 
   onCreateBooking,
+  onReply,
   bookingCreated,
-  isPotentialBooking
+  isPotentialBooking,
+  isProcessing
 }) => {
+  const [showReplyForm, setShowReplyForm] = useState(false);
+  
   // Extract potential booking details
   const extractedDetails = email.extracted_details || {
     name: null,
@@ -27,6 +34,43 @@ const EmailMessage: React.FC<EmailMessageProps> = ({
     time: null,
     service: null,
     vehicle: null
+  };
+
+  // Get status badge
+  const getStatusBadge = () => {
+    if (bookingCreated) {
+      return (
+        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 flex items-center gap-1">
+          <CheckCircle className="h-3 w-3" /> Booking Created
+        </Badge>
+      );
+    }
+    
+    if (isProcessing) {
+      return (
+        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 flex items-center gap-1">
+          <Loader2 className="h-3 w-3 animate-spin" /> Processing
+        </Badge>
+      );
+    }
+    
+    if (email.processing_status === 'failed') {
+      return (
+        <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 flex items-center gap-1">
+          <AlertCircle className="h-3 w-3" /> Failed
+        </Badge>
+      );
+    }
+    
+    if (isPotentialBooking) {
+      return (
+        <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+          Potential Booking
+        </Badge>
+      );
+    }
+    
+    return null;
   };
   
   return (
@@ -42,11 +86,7 @@ const EmailMessage: React.FC<EmailMessageProps> = ({
               Date: {new Date(email.date).toLocaleDateString()} at {new Date(email.date).toLocaleTimeString()}
             </div>
           </div>
-          {bookingCreated && (
-            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-              Booking Created
-            </Badge>
-          )}
+          {getStatusBadge()}
         </div>
       </CardHeader>
       
@@ -101,26 +141,47 @@ const EmailMessage: React.FC<EmailMessageProps> = ({
             </div>
           </div>
         )}
+        
+        {showReplyForm && (
+          <EmailReplyForm 
+            email={email} 
+            onSendReply={onReply}
+            onCancel={() => setShowReplyForm(false)}
+          />
+        )}
       </CardContent>
       
-      <CardFooter className="border-t pt-3 flex justify-between">
-        <div>
-          {isPotentialBooking && !bookingCreated && (
+      {!showReplyForm && (
+        <CardFooter className="border-t pt-3 flex justify-between">
+          <div>
+            {isPotentialBooking && !bookingCreated && (
+              <Button 
+                variant="default" 
+                onClick={onCreateBooking}
+                disabled={bookingCreated || isProcessing}
+                className="gap-1"
+              >
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" /> Processing...
+                  </>
+                ) : (
+                  "Create Booking from Email"
+                )}
+              </Button>
+            )}
+          </div>
+          <div>
             <Button 
-              variant="default" 
-              onClick={onCreateBooking}
-              disabled={bookingCreated}
+              variant="outline"
+              className="gap-1"
+              onClick={() => setShowReplyForm(true)}
             >
-              Create Booking from Email
+              <Mail className="h-4 w-4" /> Reply
             </Button>
-          )}
-        </div>
-        <div>
-          <Button variant="outline">
-            Reply
-          </Button>
-        </div>
-      </CardFooter>
+          </div>
+        </CardFooter>
+      )}
     </>
   );
 };

@@ -1,34 +1,38 @@
+
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { getEdgeFunctionUrl } from "./utils/supabaseUtils";
+import { EmailConnectionConfig } from "@/types/email";
 
 export const useEmailConnection = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const [isConnected, setIsConnected] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
   const [emailAddress, setEmailAddress] = useState("");
   const [password, setPassword] = useState("");
   const [provider, setProvider] = useState("gmail");
   const [autoCreateBookings, setAutoCreateBookings] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState("disconnected");
+  const [lastError, setLastError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   
   useEffect(() => {
     if (user) {
       checkConnection();
-      if (isConnected) {
-        fetchEmailSettings();
-      }
     }
-  }, [user, isConnected]);
+  }, [user]);
 
-  const checkConnection = async () => {
+  const checkConnection = async (): Promise<boolean> => {
+    if (!user) return false;
+    
     try {
       const { data, error } = await supabase
         .from('email_connections')
-        .select('*')
-        .eq('user_id', user?.id)
+        .select('email_address, provider, auto_create_bookings, status, last_error')
+        .eq('user_id', user.id)
         .single();
       
       if (error) {
@@ -37,8 +41,18 @@ export const useEmailConnection = () => {
         return false;
       }
       
-      setIsConnected(!!data);
-      return !!data;
+      if (data) {
+        setEmailAddress(data.email_address);
+        setProvider(data.provider);
+        setAutoCreateBookings(data.auto_create_bookings);
+        setConnectionStatus(data.status || 'disconnected');
+        setLastError(data.last_error);
+        setIsConnected(data.status === 'connected');
+        return data.status === 'connected';
+      }
+      
+      setIsConnected(false);
+      return false;
     } catch (error) {
       console.error("Error checking email connection:", error);
       setIsConnected(false);
@@ -46,30 +60,16 @@ export const useEmailConnection = () => {
     }
   };
 
-  const fetchEmailSettings = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('email_connections')
-        .select('email_address, provider, auto_create_bookings')
-        .eq('user_id', user?.id)
-        .single();
-      
-      if (error) {
-        console.error("Error fetching email settings:", error);
-        return;
-      }
-      
-      if (data) {
-        setEmailAddress(data.email_address);
-        setProvider(data.provider);
-        setAutoCreateBookings(data.auto_create_bookings);
-      }
-    } catch (error) {
-      console.error("Error fetching email settings:", error);
-    }
-  };
-
   const connectEmail = async () => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to connect your email account",
+        variant: "destructive"
+      });
+      return false;
+    }
+    
     if (!emailAddress || !password) {
       toast({
         title: "Missing Information",
@@ -80,15 +80,31 @@ export const useEmailConnection = () => {
     }
     
     setIsLoading(true);
+    setIsConnecting(true);
     
     try {
+      // Update status in database first
+      await supabase
+        .from('email_connections')
+        .upsert({
+          user_id: user.id,
+          email_address: emailAddress,
+          provider: provider,
+          auto_create_bookings: autoCreateBookings,
+          status: 'connecting',
+          last_error: null,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id'
+        });
+      
       // Get the user's session token for authorization
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData.session) {
         throw new Error("No active session found");
       }
       
-      const response = await fetch(getEdgeFunctionUrl('email-integration/connect'), {
+      const response = await fetch(`${getEdgeFunctionUrl('email-integration')}/connect`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -104,11 +120,45 @@ export const useEmailConnection = () => {
       const result = await response.json();
       
       if (!response.ok) {
+        // Update database with error
+        await supabase
+          .from('email_connections')
+          .upsert({
+            user_id: user.id,
+            email_address: emailAddress,
+            provider: provider,
+            status: 'error',
+            last_error: result.error || "Failed to connect email account",
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'user_id'
+          });
+        
+        setConnectionStatus('error');
+        setLastError(result.error || "Failed to connect email account");
         throw new Error(result.error || "Failed to connect email account");
       }
       
+      // Update database with success
+      await supabase
+        .from('email_connections')
+        .upsert({
+          user_id: user.id,
+          email_address: emailAddress,
+          provider: provider,
+          auto_create_bookings: autoCreateBookings,
+          status: 'connected',
+          connected_at: new Date().toISOString(),
+          last_error: null,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id'
+        });
+      
       setPassword(""); // Clear password for security
       setIsConnected(true);
+      setConnectionStatus('connected');
+      setLastError(null);
       
       toast({
         title: "Success",
@@ -117,8 +167,13 @@ export const useEmailConnection = () => {
       
       return true;
       
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error connecting email:", error);
+      
+      // Set local state for error
+      setConnectionStatus('error');
+      setLastError(error.message || "Failed to connect to email account");
+      
       toast({
         title: "Connection Failed",
         description: error.message || "Failed to connect to email account. Please try again.",
@@ -127,12 +182,26 @@ export const useEmailConnection = () => {
       return false;
     } finally {
       setIsLoading(false);
+      setIsConnecting(false);
     }
   };
 
   const disconnectEmail = async () => {
+    if (!user) return false;
+    
     try {
       setIsLoading(true);
+      
+      // Update database status first
+      await supabase
+        .from('email_connections')
+        .upsert({
+          user_id: user.id,
+          status: 'disconnecting',
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id'
+        });
       
       // Get the user's session token for authorization
       const { data: sessionData } = await supabase.auth.getSession();
@@ -140,7 +209,7 @@ export const useEmailConnection = () => {
         throw new Error("No active session found");
       }
       
-      const response = await fetch(getEdgeFunctionUrl('email-integration/disconnect'), {
+      const response = await fetch(`${getEdgeFunctionUrl('email-integration')}/disconnect`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -154,11 +223,23 @@ export const useEmailConnection = () => {
         throw new Error(result.error || "Failed to disconnect email account");
       }
       
+      // Update database with disconnected status
+      await supabase
+        .from('email_connections')
+        .upsert({
+          user_id: user.id,
+          status: 'disconnected',
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id'
+        });
+      
       setEmailAddress("");
       setPassword("");
       setProvider("gmail");
       setAutoCreateBookings(false);
       setIsConnected(false);
+      setConnectionStatus('disconnected');
       
       toast({
         title: "Email Disconnected",
@@ -167,8 +248,21 @@ export const useEmailConnection = () => {
       
       return true;
       
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error disconnecting email:", error);
+      
+      // Update database with error
+      await supabase
+        .from('email_connections')
+        .upsert({
+          user_id: user.id,
+          status: 'error',
+          last_error: error.message || "Failed to disconnect email account",
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id'
+        });
+      
       toast({
         title: "Error",
         description: error.message || "Failed to disconnect email account",
@@ -181,7 +275,7 @@ export const useEmailConnection = () => {
   };
 
   const updateSettings = async () => {
-    if (!isConnected) {
+    if (!user || !isConnected) {
       return false;
     }
     
@@ -192,8 +286,9 @@ export const useEmailConnection = () => {
         .from('email_connections')
         .update({
           auto_create_bookings: autoCreateBookings,
+          updated_at: new Date().toISOString()
         })
-        .eq('user_id', user?.id);
+        .eq('user_id', user.id);
       
       if (error) {
         throw error;
@@ -206,7 +301,7 @@ export const useEmailConnection = () => {
       
       return true;
       
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating email settings:", error);
       toast({
         title: "Error",
@@ -219,8 +314,43 @@ export const useEmailConnection = () => {
     }
   };
 
+  // Get provider configuration (host, port, etc)
+  const getProviderConfig = (providerName: string): EmailConnectionConfig => {
+    switch (providerName) {
+      case 'gmail':
+        return {
+          provider: 'gmail',
+          host: 'imap.gmail.com',
+          port: 993,
+          secure: true
+        };
+      case 'outlook':
+        return {
+          provider: 'outlook',
+          host: 'outlook.office365.com',
+          port: 993,
+          secure: true
+        };
+      case 'yahoo':
+        return {
+          provider: 'yahoo',
+          host: 'imap.mail.yahoo.com',
+          port: 993,
+          secure: true
+        };
+      default:
+        return {
+          provider: 'other',
+          host: 'imap.example.com',
+          port: 993,
+          secure: true
+        };
+    }
+  };
+
   return {
     isConnected,
+    isConnecting,
     emailAddress,
     setEmailAddress,
     password,
@@ -229,10 +359,13 @@ export const useEmailConnection = () => {
     setProvider,
     autoCreateBookings,
     setAutoCreateBookings,
+    connectionStatus,
+    lastError,
     isLoading,
     connectEmail,
     disconnectEmail,
     updateSettings,
-    checkConnection
+    checkConnection,
+    getProviderConfig
   };
 };

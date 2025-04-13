@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { EmailType } from "@/types/email";
@@ -10,25 +10,16 @@ import { getEdgeFunctionUrl } from "./utils/supabaseUtils";
 export const useEmailIntegration = () => {
   const { toast } = useToast();
   const { user } = useAuth();
-  const { isConnected, checkConnection } = useEmailConnection();
+  const { isConnected, checkConnection, connectionStatus } = useEmailConnection();
   const [emails, setEmails] = useState<EmailType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedEmail, setSelectedEmail] = useState<EmailType | null>(null);
+  const [processingEmailId, setProcessingEmailId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (user) {
-      checkConnection().then(connected => {
-        if (connected) {
-          fetchEmails();
-        } else {
-          setIsLoading(false);
-        }
-      });
-    }
-  }, [user]);
-
-  const fetchEmails = async () => {
+  const fetchEmails = useCallback(async () => {
+    if (!user) return;
     setIsLoading(true);
+    
     try {
       // Get the user's session token for authorization
       const { data: sessionData } = await supabase.auth.getSession();
@@ -36,14 +27,14 @@ export const useEmailIntegration = () => {
         throw new Error("No active session found");
       }
       
-      // Updated endpoint path - removed /fetch
+      // Call the edge function to fetch emails
       const response = await fetch(getEdgeFunctionUrl('email-integration'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${sessionData.session.access_token}`,
         },
-        body: JSON.stringify({}), // Add empty body to prevent JSON parsing errors
+        body: JSON.stringify({}),
       });
       
       if (!response.ok) {
@@ -55,31 +46,24 @@ export const useEmailIntegration = () => {
       
       if (result.emails) {
         // Check which emails have already been processed
-        const processedEmails = new Set<string>();
-        
         const { data: processed } = await supabase
           .from('processed_emails')
-          .select('email_id, booking_created')
-          .eq('user_id', user?.id);
-        
-        if (processed) {
-          processed.forEach(item => {
-            processedEmails.add(item.email_id);
-          });
-        }
+          .select('email_id, booking_created, processing_status')
+          .eq('user_id', user.id);
         
         // Update booking_created status based on processed emails data
         const updatedEmails = result.emails.map(email => {
           const processedEmail = processed?.find(p => p.email_id === email.id);
           return {
             ...email,
-            booking_created: processedEmail ? processedEmail.booking_created : false
+            booking_created: processedEmail ? processedEmail.booking_created : false,
+            processing_status: processedEmail ? processedEmail.processing_status : 'pending'
           };
         });
         
         setEmails(updatedEmails);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching emails:", error);
       toast({
         title: "Error",
@@ -89,21 +73,58 @@ export const useEmailIntegration = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user, toast]);
 
-  const refreshEmails = () => {
-    fetchEmails();
-  };
+  useEffect(() => {
+    if (user) {
+      checkConnection().then(connected => {
+        if (connected) {
+          fetchEmails();
+        } else {
+          setIsLoading(false);
+        }
+      });
+    }
+  }, [user, checkConnection, fetchEmails]);
+
+  // Refresh connection status and emails periodically
+  useEffect(() => {
+    if (!user || !isConnected) return;
+
+    const intervalId = setInterval(() => {
+      checkConnection().then(connected => {
+        if (connected) fetchEmails();
+      });
+    }, 60000); // Check every minute
+
+    return () => clearInterval(intervalId);
+  }, [user, isConnected, checkConnection, fetchEmails]);
 
   const createBookingFromEmail = async (email: EmailType): Promise<boolean> => {
+    if (!user) return false;
+    
     try {
+      setProcessingEmailId(email.id);
+      
+      // Update processed_email record to show we're working on it
+      await supabase
+        .from('processed_emails')
+        .upsert({
+          user_id: user.id,
+          email_id: email.id,
+          booking_created: false,
+          processing_status: 'processing',
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'email_id,user_id'
+        });
+      
       // Get the user's session token for authorization
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData.session) {
         throw new Error("No active session found");
       }
       
-      // Updated endpoint path - removed /create-booking
       const response = await fetch(getEdgeFunctionUrl('email-integration'), {
         method: 'POST',
         headers: {
@@ -124,15 +145,37 @@ export const useEmailIntegration = () => {
       const result = await response.json();
       
       if (result.success) {
+        // Update the processed_emails table
+        await supabase
+          .from('processed_emails')
+          .upsert({
+            user_id: user.id,
+            email_id: email.id,
+            booking_created: true,
+            processing_status: 'completed',
+            processing_notes: `Booking created with ID: ${result.bookingId || 'unknown'}`,
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'email_id,user_id'
+          });
+        
         // Update the email list to mark this email as having created a booking
         const updatedEmails = emails.map(e => 
-          e.id === email.id ? { ...e, booking_created: true } : e
+          e.id === email.id ? { 
+            ...e, 
+            booking_created: true,
+            processing_status: 'completed'
+          } : e
         );
         
         setEmails(updatedEmails);
         
         if (selectedEmail && selectedEmail.id === email.id) {
-          setSelectedEmail({ ...selectedEmail, booking_created: true });
+          setSelectedEmail({ 
+            ...selectedEmail, 
+            booking_created: true,
+            processing_status: 'completed'
+          });
         }
         
         toast({
@@ -143,13 +186,100 @@ export const useEmailIntegration = () => {
         return true;
       }
       
-      return false;
+      // Handle case where the operation was unsuccessful but didn't throw an error
+      await supabase
+        .from('processed_emails')
+        .upsert({
+          user_id: user.id,
+          email_id: email.id,
+          booking_created: false,
+          processing_status: 'failed',
+          processing_notes: result.error || 'Failed to create booking',
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'email_id,user_id'
+        });
       
-    } catch (error) {
+      throw new Error(result.error || "Failed to create booking from email");
+      
+    } catch (error: any) {
       console.error("Error creating booking from email:", error);
+      
+      // Update processed_emails to reflect the error
+      if (user) {
+        await supabase
+          .from('processed_emails')
+          .upsert({
+            user_id: user.id,
+            email_id: email.id,
+            booking_created: false,
+            processing_status: 'failed',
+            processing_notes: error.message || 'Error creating booking',
+            retry_count: supabase.rpc('increment_retry_count', { email_id_param: email.id }),
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'email_id,user_id'
+          });
+      }
+      
       toast({
         title: "Error",
         description: error.message || "Failed to create booking from email",
+        variant: "destructive"
+      });
+      return false;
+    } finally {
+      setProcessingEmailId(null);
+    }
+  };
+
+  const replyToEmail = async (email: EmailType, replyContent: string): Promise<boolean> => {
+    if (!user || !email) return false;
+    
+    try {
+      // Get the user's session token for authorization
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        throw new Error("No active session found");
+      }
+      
+      const response = await fetch(getEdgeFunctionUrl('email-integration'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionData.session.access_token}`,
+        },
+        body: JSON.stringify({
+          action: 'send-email',
+          to: email.sender_email,
+          subject: `Re: ${email.subject}`,
+          body: replyContent
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to send reply");
+      }
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        toast({
+          title: "Reply Sent",
+          description: "Your reply has been sent successfully"
+        });
+        
+        return true;
+      }
+      
+      throw new Error(result.error || "Failed to send reply");
+      
+    } catch (error: any) {
+      console.error("Error replying to email:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send reply",
         variant: "destructive"
       });
       return false;
@@ -161,8 +291,11 @@ export const useEmailIntegration = () => {
     isLoading,
     selectedEmail,
     setSelectedEmail,
-    refreshEmails,
+    processingEmailId,
+    refreshEmails: fetchEmails,
     createBookingFromEmail,
-    isConnected
+    replyToEmail,
+    isConnected,
+    connectionStatus
   };
 };

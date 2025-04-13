@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { Mail, Search, RefreshCw, Clock } from "lucide-react";
+import { AlertCircle, CheckCircle, Loader2, Mail, RefreshCw, Search } from "lucide-react";
 import { useEmailIntegration } from "@/hooks/email/useEmailIntegration";
 import EmailMessage from "./EmailMessage";
 import { EmailType } from "@/types/email";
@@ -18,8 +18,10 @@ const EmailInbox = () => {
     isLoading, 
     selectedEmail,
     setSelectedEmail,
+    processingEmailId,
     refreshEmails, 
-    createBookingFromEmail 
+    createBookingFromEmail,
+    replyToEmail
   } = useEmailIntegration();
   const [searchTerm, setSearchTerm] = useState("");
   
@@ -37,6 +39,50 @@ const EmailInbox = () => {
         description: "A new booking has been created from this email."
       });
     }
+  };
+  
+  const handleSendReply = async (content: string) => {
+    if (!selectedEmail) return false;
+    
+    const success = await replyToEmail(selectedEmail, content);
+    return success;
+  };
+  
+  // Get status badge for email list item
+  const getEmailStatusBadge = (email: EmailType) => {
+    if (email.booking_created) {
+      return (
+        <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200 flex items-center gap-1">
+          <CheckCircle className="h-3 w-3" /> Booking Created
+        </Badge>
+      );
+    }
+    
+    if (processingEmailId === email.id) {
+      return (
+        <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200 flex items-center gap-1">
+          <Loader2 className="h-3 w-3 animate-spin" /> Processing
+        </Badge>
+      );
+    }
+    
+    if (email.processing_status === 'failed') {
+      return (
+        <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200 flex items-center gap-1">
+          <AlertCircle className="h-3 w-3" /> Failed
+        </Badge>
+      );
+    }
+    
+    if (email.is_booking_email) {
+      return (
+        <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">
+          Potential Booking
+        </Badge>
+      );
+    }
+    
+    return null;
   };
   
   return (
@@ -70,7 +116,7 @@ const EmailInbox = () => {
           <CardContent className="p-0">
             {isLoading ? (
               <div className="flex justify-center items-center py-8">
-                <Clock className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 <span>Loading emails...</span>
               </div>
             ) : filteredEmails.length === 0 ? (
@@ -90,7 +136,7 @@ const EmailInbox = () => {
                     >
                       <div className="flex justify-between items-start mb-1">
                         <div className="font-medium truncate">{email.from}</div>
-                        <div className="text-xs text-muted-foreground">
+                        <div className="text-xs text-muted-foreground whitespace-nowrap ml-2">
                           {new Date(email.date).toLocaleDateString()}
                         </div>
                       </div>
@@ -101,15 +147,7 @@ const EmailInbox = () => {
                         {email.content.replace(/<[^>]*>/g, ' ')}
                       </div>
                       <div className="mt-2 flex gap-1">
-                        {email.booking_created ? (
-                          <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
-                            Booking Created
-                          </Badge>
-                        ) : email.is_booking_email ? (
-                          <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
-                            Potential Booking
-                          </Badge>
-                        ) : null}
+                        {getEmailStatusBadge(email)}
                       </div>
                     </div>
                   ))}
@@ -124,8 +162,10 @@ const EmailInbox = () => {
             <EmailMessage 
               email={selectedEmail} 
               onCreateBooking={() => handleCreateBooking(selectedEmail)}
+              onReply={handleSendReply}
               bookingCreated={selectedEmail.booking_created}
               isPotentialBooking={selectedEmail.is_booking_email}
+              isProcessing={processingEmailId === selectedEmail.id}
             />
           ) : (
             <div className="flex flex-col items-center justify-center h-[500px] text-muted-foreground">

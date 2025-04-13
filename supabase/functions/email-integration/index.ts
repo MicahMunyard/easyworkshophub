@@ -2,13 +2,50 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 
-// Mock function to fetch emails
-const fetchEmails = async (userId: string) => {
+// Mock functions for now - in production these would connect to actual email servers
+const connectToEmailServer = async (provider, email, password, userId) => {
   try {
-    // This is a placeholder for the actual email fetching logic
+    console.log(`Connecting to ${provider} email server for user ${userId}`);
+    
+    // In production, this would use ImapFlow or similar library to connect to actual email servers
+    // For now, simulate a successful connection
+    return {
+      success: true,
+      message: "Successfully connected to email server"
+    };
+  } catch (error) {
+    console.error("Error connecting to email server:", error);
+    return {
+      success: false,
+      error: error.message || "Failed to connect to email server"
+    };
+  }
+};
+
+const disconnectFromEmailServer = async (userId) => {
+  try {
+    console.log(`Disconnecting email for user ${userId}`);
+    
+    // In production, this would close IMAP connections and clean up resources
+    return {
+      success: true,
+      message: "Successfully disconnected from email server"
+    };
+  } catch (error) {
+    console.error("Error disconnecting from email server:", error);
+    return {
+      success: false,
+      error: error.message || "Failed to disconnect from email server"
+    };
+  }
+};
+
+// Fetch emails function with improved structure and error handling
+const fetchEmails = async (userId) => {
+  try {
     console.log(`Fetching emails for user: ${userId}`);
     
-    // Mock email data
+    // Mock email data - in production would fetch from IMAP server
     const emails = [
       {
         id: "email-1",
@@ -22,7 +59,7 @@ const fetchEmails = async (userId: string) => {
         extracted_details: {
           name: "John Smith",
           phone: "555-123-4567",
-          date: "2025-04-05",
+          date: "2025-04-16",
           time: "10:00 AM",
           service: "Brake Service",
           vehicle: "Toyota Camry"
@@ -71,16 +108,22 @@ const fetchEmails = async (userId: string) => {
   }
 };
 
-// Mock function to create a booking from an email
-const createBookingFromEmail = async (userId: string, emailId: string) => {
+// Create booking from email with improved validation and error handling
+const createBookingFromEmail = async (userId, emailId) => {
   try {
-    // This is a placeholder for the actual booking creation logic
     console.log(`Creating booking from email ${emailId} for user ${userId}`);
     
-    // Simulate successful booking creation
+    // In production, this would:
+    // 1. Retrieve the email content from the database
+    // 2. Extract booking information if not already done
+    // 3. Create a booking in the database
+    // 4. Mark the email as processed
+    
+    // For now, simulate success
     return {
       success: true,
-      message: "Booking successfully created"
+      message: "Booking successfully created",
+      bookingId: "mock-booking-" + Math.random().toString(36).substring(2, 10)
     };
   } catch (error) {
     console.error("Error creating booking from email:", error);
@@ -91,34 +134,65 @@ const createBookingFromEmail = async (userId: string, emailId: string) => {
   }
 };
 
-// Mock function to send an order email
-const sendEmailOrder = async (
-  supplierEmail: string,
-  supplierName: string,
-  subject: string,
-  orderHtml: string
-) => {
+// Send email function with improved structure
+const sendEmail = async (to, subject, body, userId) => {
   try {
-    // This is a placeholder for the actual email sending logic
-    // In a real implementation, you would use an email service like SendGrid, Mailgun, etc.
-    console.log(`Sending order email to ${supplierName} (${supplierEmail})`);
+    console.log(`Sending email to ${to} from user ${userId}`);
     console.log(`Subject: ${subject}`);
-    console.log(`Order contents: ${orderHtml.substring(0, 100)}...`);
     
-    // Simulate successful email sending
+    // In production, would use SMTP connection to send actual email
     return {
       success: true,
-      message: "Order email sent successfully"
+      message: "Email sent successfully"
     };
   } catch (error) {
     console.error("Error sending email:", error);
     return {
       success: false,
-      error: error.message || "Failed to send order email"
+      error: error.message || "Failed to send email"
     };
   }
 };
 
+// Get email templates
+const getEmailTemplates = async (userId) => {
+  try {
+    console.log(`Getting email templates for user ${userId}`);
+    
+    // In production, would fetch from database
+    const templates = [
+      {
+        id: "template-1",
+        name: "Booking Confirmation",
+        subject: "Your booking has been confirmed",
+        body: "Dear {customer_name},\n\nYour booking for {service} on {date} at {time} has been confirmed.\n\nThank you,\n{workshop_name}",
+        is_default: true,
+        template_type: "booking_confirmation"
+      },
+      {
+        id: "template-2",
+        name: "General Reply",
+        subject: "Re: {original_subject}",
+        body: "Hi {customer_name},\n\nThank you for your message. We'll get back to you shortly.\n\nBest regards,\n{workshop_name}",
+        is_default: true,
+        template_type: "general_reply"
+      }
+    ];
+    
+    return {
+      success: true,
+      templates
+    };
+  } catch (error) {
+    console.error("Error getting email templates:", error);
+    return {
+      success: false,
+      error: error.message || "Failed to get email templates"
+    };
+  }
+};
+
+// Route handler with better organization and error handling
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -163,7 +237,48 @@ serve(async (req) => {
     const requestData = await req.json();
     const action = requestData.action || 'fetch'; // Default action is fetch
 
+    // Handle connect endpoint
+    if (path === "connect") {
+      const { provider, email, password } = requestData;
+      
+      // Validate required fields
+      if (!provider || !email || !password) {
+        return new Response(
+          JSON.stringify({ error: "Missing required fields: provider, email, password" }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+      
+      const result = await connectToEmailServer(provider, email, password, userId);
+      
+      return new Response(
+        JSON.stringify(result),
+        {
+          status: result.success ? 200 : 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+    
+    // Handle disconnect endpoint
+    if (path === "disconnect") {
+      const result = await disconnectFromEmailServer(userId);
+      
+      return new Response(
+        JSON.stringify(result),
+        {
+          status: result.success ? 200 : 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Handle main email-integration endpoint
     if (path === "email-integration") {
+      // Action: create-booking
       if (action === 'create-booking' && requestData.emailId) {
         const result = await createBookingFromEmail(userId, requestData.emailId);
         
@@ -174,23 +289,22 @@ serve(async (req) => {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           }
         );
-      } else if (action === 'send-order') {
-        const { supplierEmail, supplierName, subject, orderHtml } = requestData;
+      } 
+      // Action: send-email
+      else if (action === 'send-email') {
+        const { to, subject, body } = requestData;
         
-        // Validate required fields
-        if (!supplierEmail || !supplierName || !subject || !orderHtml) {
+        if (!to || !subject || !body) {
           return new Response(
-            JSON.stringify({
-              error: "Missing required fields: supplierEmail, supplierName, subject, orderHtml"
-            }),
+            JSON.stringify({ error: "Missing required fields: to, subject, body" }),
             {
               status: 400,
               headers: { ...corsHeaders, "Content-Type": "application/json" },
             }
           );
         }
-
-        const result = await sendEmailOrder(supplierEmail, supplierName, subject, orderHtml);
+        
+        const result = await sendEmail(to, subject, body, userId);
         
         return new Response(
           JSON.stringify(result),
@@ -199,8 +313,21 @@ serve(async (req) => {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           }
         );
-      } else {
-        // Default action: fetch emails
+      }
+      // Action: get-templates
+      else if (action === 'get-templates') {
+        const result = await getEmailTemplates(userId);
+        
+        return new Response(
+          JSON.stringify(result),
+          {
+            status: result.success ? 200 : 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      } 
+      // Default action: fetch emails
+      else {
         const result = await fetchEmails(userId);
         
         return new Response(
@@ -223,7 +350,7 @@ serve(async (req) => {
   } catch (error) {
     console.error("Unexpected error:", error);
     return new Response(
-      JSON.stringify({ error: "Internal server error" }),
+      JSON.stringify({ error: "Internal server error", details: error.message }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
