@@ -52,7 +52,7 @@ export const useEmailIntegration = () => {
           .eq('user_id', user.id);
         
         // Update booking_created status based on processed emails data
-        const updatedEmails = result.emails.map(email => {
+        const updatedEmails = result.emails.map((email: EmailType) => {
           const processedEmail = processed?.find(p => p.email_id === email.id);
           return {
             ...email,
@@ -215,11 +215,11 @@ export const useEmailIntegration = () => {
             booking_created: false,
             processing_status: 'failed',
             processing_notes: error.message || 'Error creating booking',
-            retry_count: supabase.rpc('increment_retry_count', { email_id_param: email.id }),
+            retry_count: 0,
             updated_at: new Date().toISOString()
           }, {
-            onConflict: 'email_id,user_id'
-          });
+          onConflict: 'email_id,user_id'
+        });
       }
       
       toast({

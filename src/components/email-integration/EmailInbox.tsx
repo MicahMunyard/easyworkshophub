@@ -39,6 +39,7 @@ const EmailInbox = () => {
         description: "A new booking has been created from this email."
       });
     }
+    return success;
   };
   
   const handleSendReply = async (content: string) => {

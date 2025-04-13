@@ -8,7 +8,7 @@ import { useNewBookingForm } from "./useNewBookingForm";
 import { useEditBookingForm } from "./useEditBookingForm";
 import { useBookingDiaryState } from "./useBookingDiaryState";
 import { useBookingForm } from "./useBookingForm";
-import { useEmailBookings } from "./useEmailBookings"; // Add this import
+import { useEmailBookings } from "./useEmailBookings";
 
 export const useBookings = (initialDate = new Date(), initialView: BookingView = "day"): UseBookingsReturn => {
   const { date, setDate, view, setView, navigateDate } = useBookingNavigation(initialDate, initialView);
@@ -35,5 +35,5 @@ export {
   useEditBookingForm, 
   useBookingDiaryState, 
   useBookingForm,
-  useEmailBookings // Export the email bookings hook
+  useEmailBookings
 };

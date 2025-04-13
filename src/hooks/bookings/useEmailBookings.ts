@@ -24,15 +24,15 @@ export const useEmailBookings = () => {
       // Process date to standardized format
       const bookingDate = parseEmailDate(details.date) || new Date().toISOString().split('T')[0];
       
-      // Create booking object
-      const newBooking: Partial<BookingType> = {
+      // Create booking object with required fields
+      const newBooking = {
         customer: details.name || "Unknown Customer",
-        phone: details.phone || "",
+        customer_phone: details.phone || "",
         service: details.service || "General Service",
         car: details.vehicle || "Not specified",
-        time: details.time || "9:00 AM",
+        booking_time: details.time || "9:00 AM",
         duration: 60, // Default duration
-        status: "pending",
+        status: "pending" as const,
         booking_date: bookingDate,
         notes: `Created from email: ${email.subject}\n\nOriginal email content:\n${email.content.replace(/<[^>]*>/g, '')}`,
         technician_id: null,
@@ -80,7 +80,7 @@ export const useEmailBookings = () => {
           booking_created: false,
           processing_status: 'failed',
           processing_notes: error.message || 'Error creating booking',
-          retry_count: supabase.rpc('increment_retry_count', { email_id_param: email.id }),
+          retry_count: 0, // We can't use RPC function directly here due to type limitations
           updated_at: new Date().toISOString()
         }, {
           onConflict: 'email_id,user_id'

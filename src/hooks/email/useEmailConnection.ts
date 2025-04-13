@@ -123,16 +123,12 @@ export const useEmailConnection = () => {
         // Update database with error
         await supabase
           .from('email_connections')
-          .upsert({
-            user_id: user.id,
-            email_address: emailAddress,
-            provider: provider,
+          .update({
             status: 'error',
             last_error: result.error || "Failed to connect email account",
             updated_at: new Date().toISOString()
-          }, {
-            onConflict: 'user_id'
-          });
+          })
+          .eq('user_id', user.id);
         
         setConnectionStatus('error');
         setLastError(result.error || "Failed to connect email account");
@@ -142,18 +138,14 @@ export const useEmailConnection = () => {
       // Update database with success
       await supabase
         .from('email_connections')
-        .upsert({
-          user_id: user.id,
-          email_address: emailAddress,
-          provider: provider,
+        .update({
           auto_create_bookings: autoCreateBookings,
           status: 'connected',
           connected_at: new Date().toISOString(),
           last_error: null,
           updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'user_id'
-        });
+        })
+        .eq('user_id', user.id);
       
       setPassword(""); // Clear password for security
       setIsConnected(true);
@@ -195,13 +187,11 @@ export const useEmailConnection = () => {
       // Update database status first
       await supabase
         .from('email_connections')
-        .upsert({
-          user_id: user.id,
+        .update({
           status: 'disconnecting',
           updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'user_id'
-        });
+        })
+        .eq('user_id', user.id);
       
       // Get the user's session token for authorization
       const { data: sessionData } = await supabase.auth.getSession();
@@ -226,13 +216,11 @@ export const useEmailConnection = () => {
       // Update database with disconnected status
       await supabase
         .from('email_connections')
-        .upsert({
-          user_id: user.id,
+        .update({
           status: 'disconnected',
           updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'user_id'
-        });
+        })
+        .eq('user_id', user.id);
       
       setEmailAddress("");
       setPassword("");
@@ -254,14 +242,12 @@ export const useEmailConnection = () => {
       // Update database with error
       await supabase
         .from('email_connections')
-        .upsert({
-          user_id: user.id,
+        .update({
           status: 'error',
           last_error: error.message || "Failed to disconnect email account",
           updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'user_id'
-        });
+        })
+        .eq('user_id', user.id);
       
       toast({
         title: "Error",

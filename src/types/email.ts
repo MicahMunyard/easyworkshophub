@@ -8,6 +8,7 @@ export interface EmailType {
   content: string;
   is_booking_email: boolean;
   booking_created: boolean;
+  processing_status?: 'pending' | 'processing' | 'completed' | 'failed';
   extracted_details?: {
     name: string | null;
     phone: string | null;
