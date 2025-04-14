@@ -3,7 +3,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
 // JWT secret key from environment variables
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET || 'default-key-change-in-production';
 
 // Extend Request type to include user
 declare global {
@@ -19,6 +19,11 @@ declare global {
 
 export const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
   try {
+    // Skip auth for health check
+    if (req.path === '/health') {
+      return next();
+    }
+
     // Get token from header
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
