@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,7 +11,6 @@ export const useEmailBookings = () => {
   const { user } = useAuth();
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Create booking from extracted email data
   const createBookingFromEmailData = useCallback(async (
     email: EmailType
   ): Promise<Partial<BookingType> | null> => {
@@ -21,18 +19,16 @@ export const useEmailBookings = () => {
     try {
       const details = email.extracted_details;
       
-      // Process date to standardized format
       const bookingDate = parseEmailDate(details.date) || new Date().toISOString().split('T')[0];
       
-      // Create booking object with required fields
-      const newBooking = {
+      const newBooking: Partial<BookingType> = {
         customer_name: details.name || "Unknown Customer",
         customer_phone: details.phone || "",
         service: details.service || "General Service",
         car: details.vehicle || "Not specified",
         booking_time: details.time || "9:00 AM",
-        duration: 60, // Default duration
-        status: "pending" as "pending", // Explicitly type this as a valid status
+        duration: 60,
+        status: "pending",
         booking_date: bookingDate,
         notes: `Created from email: ${email.subject}\n\nOriginal email content:\n${email.content.replace(/<[^>]*>/g, '')}`,
         technician_id: null,
@@ -41,7 +37,6 @@ export const useEmailBookings = () => {
         user_id: user.id
       };
       
-      // Insert booking into database
       const { data, error } = await supabase
         .from('user_bookings')
         .insert(newBooking)
@@ -52,7 +47,6 @@ export const useEmailBookings = () => {
         throw error;
       }
       
-      // Mark the email as processed
       await supabase
         .from('processed_emails')
         .upsert({
@@ -71,7 +65,6 @@ export const useEmailBookings = () => {
     } catch (error: any) {
       console.error("Error creating booking from email data:", error);
       
-      // Mark processing as failed
       await supabase
         .from('processed_emails')
         .upsert({
@@ -80,7 +73,7 @@ export const useEmailBookings = () => {
           booking_created: false,
           processing_status: 'failed' as const,
           processing_notes: error.message || 'Error creating booking',
-          retry_count: 0, // We can't use RPC function directly here due to type limitations
+          retry_count: 0,
           updated_at: new Date().toISOString()
         }, {
           onConflict: 'email_id,user_id'
