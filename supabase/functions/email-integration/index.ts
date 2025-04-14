@@ -1,272 +1,310 @@
 
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+// Define CORS headers
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
 };
 
+// Handle NLP extraction of booking details from email content
+async function extractBookingDetails(content: string) {
+  // This is a simplified version just for demo
+  // In a production environment, you might use a more sophisticated NLP library
+  const textContent = content.replace(/<[^>]*>/g, ' ');
+  
+  return {
+    name: extractName(textContent),
+    phone: extractPhone(textContent),
+    date: extractDate(textContent),
+    time: extractTime(textContent),
+    service: extractService(textContent),
+    vehicle: extractVehicle(textContent)
+  };
+}
+
+// Simple extractors (placeholder implementations)
+function extractName(text: string): string | null {
+  const nameMatch = text.match(/(?:name is|I am|this is) ([A-Za-z]+ [A-Za-z]+)/i);
+  return nameMatch ? nameMatch[1] : null;
+}
+
+function extractPhone(text: string): string | null {
+  const phoneMatch = text.match(/(\d{3}[-.\s]?\d{3}[-.\s]?\d{4})/);
+  return phoneMatch ? phoneMatch[1] : null;
+}
+
+function extractDate(text: string): string | null {
+  const datePatterns = [
+    /(?:on|for) (monday|tuesday|wednesday|thursday|friday|saturday|sunday)/i,
+    /(?:on|for) (january|february|march|april|may|june|july|august|september|october|november|december) (\d{1,2})(?:rd|th|st|nd)?/i,
+    /(?:on|for) (\d{1,2})(?:\/|-)(\d{1,2})(?:\/|-)(\d{2,4})/
+  ];
+  
+  for (const pattern of datePatterns) {
+    const match = text.match(pattern);
+    if (match) {
+      return match[0].replace(/(?:on|for) /i, '');
+    }
+  }
+  
+  return null;
+}
+
+function extractTime(text: string): string | null {
+  const timeMatch = text.match(/(\d{1,2}(?::\d{2})? ?(?:am|pm))/i);
+  return timeMatch ? timeMatch[1] : null;
+}
+
+function extractService(text: string): string | null {
+  const serviceTypes = [
+    'oil change', 'tune up', 'brake repair', 'inspection',
+    'tire rotation', 'alignment', 'battery replacement'
+  ];
+  
+  const textLower = text.toLowerCase();
+  for (const service of serviceTypes) {
+    if (textLower.includes(service)) {
+      return service.charAt(0).toUpperCase() + service.slice(1);
+    }
+  }
+  
+  return null;
+}
+
+function extractVehicle(text: string): string | null {
+  const vehicleMatch = text.match(/(?:car is|vehicle is|drive) a (\d{4}|\d{2})? ?([A-Za-z]+) ([A-Za-z0-9]+)/i);
+  
+  if (vehicleMatch) {
+    const year = vehicleMatch[1] || '';
+    const make = vehicleMatch[2] || '';
+    const model = vehicleMatch[3] || '';
+    return `${make} ${model}${year ? ` (${year})` : ''}`.trim();
+  }
+  
+  return null;
+}
+
+// Main function handler
 serve(async (req) => {
   // Handle CORS preflight requests
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+  if (req.method === 'OPTIONS') {
+    return new Response(null, {
+      headers: corsHeaders,
+      status: 204,
+    });
   }
 
+  // Create Supabase client with Admin key for API operations
+  const supabaseClient = createClient(
+    Deno.env.get('SUPABASE_URL') || '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
+  );
+
+  // Get Authorization header from request
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return new Response(
+      JSON.stringify({ error: 'Missing or invalid authorization header' }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+    );
+  }
+
+  // Get the JWT token from the Authorization header
+  const jwt = authHeader.substring(7);
+  
   try {
-    // Create Supabase client
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: "Missing authorization header" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Create authenticated Supabase client using the auth header
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-    const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+    // Verify user authentication
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(jwt);
     
-    const supabaseClient = createClient(
-      supabaseUrl,
-      supabaseKey,
-      { global: { headers: { Authorization: authHeader } } }
-    );
-
-    // Get the user from the auth header
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
     if (userError || !user) {
+      console.error("Auth error:", userError);
       return new Response(
-        JSON.stringify({ error: "Invalid authorization" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Get request data if available
-    let requestData = {};
-    if (req.method === "POST") {
-      try {
-        requestData = await req.json();
-      } catch (error) {
-        // If request body parsing fails, continue with empty data
-        console.error("Failed to parse request body:", error);
-      }
-    }
-
-    const { action, emailId, to, subject, body } = requestData as any;
-
-    // Extract the path to determine specific operations
-    const url = new URL(req.url);
-    const path = url.pathname.split("/").pop();
-
-    // GET /email-integration/connect - Connect to email account
-    if (path === "connect") {
-      // This would connect to the external email service
-      // For now, we'll just simulate a successful connection
-      
-      // In a real implementation, you would:
-      // 1. Call your Node.js email service to set up the connection
-      // 2. Store encrypted credentials securely
-      // 3. Return proper status and errors
-      
-      console.log("Processing email connection request");
-      
-      // Get request data
-      const { provider = "gmail", email = "" } = requestData as any;
-      
-      // Log the connection request for debugging
-      console.log(`Simulating email connection for: ${email} using provider: ${provider}`);
-      
-      // Update the connection status in the database
-      const { error: updateError } = await supabaseClient
-        .from('email_connections')
-        .update({
-          status: 'connected',
-          connected_at: new Date().toISOString(),
-        })
-        .eq('user_id', user.id);
-        
-      if (updateError) {
-        console.error("Error updating connection status:", updateError);
-        return new Response(
-          JSON.stringify({ error: "Failed to update connection status" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      
-      return new Response(
-        JSON.stringify({ success: true, message: "Email connection simulated successfully" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: 'Unauthorized - Invalid token' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
       );
     }
     
-    // GET /email-integration/disconnect - Disconnect from email account
-    if (path === "disconnect") {
-      // This would disconnect from the external email service
+    // Get the user's email connection info
+    const { data: connection, error: connectionError } = await supabaseClient
+      .from('email_connections')
+      .select('*')
+      .eq('user_id', user.id)
+      .single();
       
-      // Update the connection status in the database
-      const { error: updateError } = await supabaseClient
-        .from('email_connections')
-        .update({
-          status: 'disconnected',
+    if (connectionError || !connection) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'No email connection found. Please set up your email integration.',
+          details: connectionError 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+    
+    // Parse request body
+    const requestData = req.method === 'POST' ? await req.json() : {};
+    const { action = 'fetch-emails' } = requestData;
+    
+    if (action === 'fetch-emails') {
+      // Sample emails for testing (in a real app, these would be fetched from Gmail API)
+      const mockEmails = [
+        {
+          id: 'email1',
+          subject: 'Car Service Request',
+          from: 'John Doe',
+          sender_email: 'johndoe@example.com',
+          date: new Date().toISOString(),
+          content: '<p>Hello, I am John Doe and I would like to schedule an oil change for my Toyota Camry (2019) on Monday at 10:00 am. My phone number is 555-123-4567.</p>',
+          is_booking_email: true,
+          booking_created: false,
+          extracted_details: await extractBookingDetails('<p>Hello, I am John Doe and I would like to schedule an oil change for my Toyota Camry (2019) on Monday at 10:00 am. My phone number is 555-123-4567.</p>')
+        },
+        {
+          id: 'email2',
+          subject: 'Need urgent brake repair',
+          from: 'Jane Smith',
+          sender_email: 'janesmith@example.com',
+          date: new Date().toISOString(),
+          content: '<p>My car is a Honda Civic and the brakes are making a terrible noise. Can I bring it in tomorrow at 2:00 pm? - Jane Smith (555-987-6543)</p>',
+          is_booking_email: true,
+          booking_created: false,
+          extracted_details: await extractBookingDetails('<p>My car is a Honda Civic and the brakes are making a terrible noise. Can I bring it in tomorrow at 2:00 pm? - Jane Smith (555-987-6543)</p>')
+        },
+        {
+          id: 'email3',
+          subject: 'Newsletter subscription',
+          from: 'Auto News',
+          sender_email: 'news@autonews.com',
+          date: new Date().toISOString(),
+          content: '<p>Thank you for subscribing to our weekly newsletter!</p>',
+          is_booking_email: false,
+          booking_created: false,
+          extracted_details: null
+        }
+      ];
+      
+      // Check if these emails are already processed
+      for (const email of mockEmails) {
+        const { data: processed } = await supabaseClient
+          .from('processed_emails')
+          .select('*')
+          .eq('email_id', email.id)
+          .eq('user_id', user.id)
+          .single();
+          
+        if (processed) {
+          email.booking_created = processed.booking_created;
+          email.processing_status = processed.processing_status;
+        }
+      }
+    
+      return new Response(
+        JSON.stringify({ success: true, emails: mockEmails }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    } else if (action === 'create-booking') {
+      const { emailId } = requestData;
+      
+      // In a real app, this would fetch the email from your database
+      // For demo purposes, we'll create a mock email
+      const mockEmail = {
+        id: emailId,
+        subject: 'Car Service Request',
+        from: 'John Doe',
+        sender_email: 'johndoe@example.com',
+        date: new Date().toISOString(),
+        content: '<p>Hello, I am John Doe and I would like to schedule an oil change for my Toyota Camry (2019) on Monday at 10:00 am. My phone number is 555-123-4567.</p>',
+        is_booking_email: true,
+        extracted_details: await extractBookingDetails('<p>Hello, I am John Doe and I would like to schedule an oil change for my Toyota Camry (2019) on Monday at 10:00 am. My phone number is 555-123-4567.</p>')
+      };
+      
+      const details = mockEmail.extracted_details;
+      const bookingDate = new Date().toISOString().split('T')[0]; // Today as fallback
+      
+      const newBooking = {
+        user_id: user.id,
+        customer_name: details?.name || "Unknown Customer",
+        customer_phone: details?.phone || "",
+        service: details?.service || "General Service",
+        car: details?.vehicle || "Not specified",
+        booking_time: details?.time || "9:00 AM",
+        duration: 60,
+        status: "pending",
+        booking_date: bookingDate,
+        notes: `Created from email: ${mockEmail.subject}\n\nOriginal email content:\n${mockEmail.content.replace(/<[^>]*>/g, '')}`
+      };
+      
+      // Insert the new booking
+      const { data: booking, error: bookingError } = await supabaseClient
+        .from('user_bookings')
+        .insert(newBooking)
+        .select()
+        .single();
+        
+      if (bookingError) {
+        console.error("Error creating booking:", bookingError);
+        return new Response(
+          JSON.stringify({ success: false, error: 'Failed to create booking', details: bookingError }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        );
+      }
+      
+      // Update the processed_emails table
+      await supabaseClient
+        .from('processed_emails')
+        .upsert({
+          user_id: user.id,
+          email_id: emailId,
+          booking_created: true,
+          processing_status: 'completed',
+          processing_notes: `Booking created with ID: ${booking.id}`,
+          extracted_data: details,
           updated_at: new Date().toISOString()
-        })
-        .eq('user_id', user.id);
-        
-      if (updateError) {
+        }, {
+          onConflict: 'email_id,user_id'
+        });
+      
+      return new Response(
+        JSON.stringify({ success: true, bookingId: booking.id }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    } else if (action === 'send-email') {
+      const { to, subject, body } = requestData;
+      
+      if (!to || !subject || !body) {
         return new Response(
-          JSON.stringify({ error: "Failed to update disconnection status" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ success: false, error: 'Missing required fields (to, subject, body)' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
         );
       }
       
-      return new Response(
-        JSON.stringify({ success: true, message: "Email disconnected successfully" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Handle specific actions
-    if (action === "create-booking" && emailId) {
-      // This would call your email service to create a booking
-      console.log(`Creating booking from email ID: ${emailId}`);
-      
-      // Simulate processing time
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Sample booking creation (simulated)
-      const bookingId = `booking-${Math.floor(Math.random() * 1000000)}`;
-      
+      // In a real app, you'd use the Gmail API to send the email
+      // Here, we just simulate a successful send
       return new Response(
         JSON.stringify({ 
           success: true, 
-          bookingId,
-          message: "Booking created successfully (simulated)" 
+          message: `Email sent to ${to} with subject "${subject}"` 
         }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    
-    if (action === "send-email" && to && subject && body) {
-      // This would call your email service to send an email
-      console.log(`Sending email to: ${to}`);
-      console.log(`Subject: ${subject}`);
-      
-      // Simulate sending email
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: "Email sent successfully (simulated)" 
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Default action: Fetch emails
-    // In production, this would call your Node.js service to get real emails
-    // For now, generate mock emails
-    const mockEmails = generateMockEmails(10);
     
     return new Response(
-      JSON.stringify({ emails: mockEmails }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ error: 'Invalid action' }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
     );
-
-  } catch (error) {
-    console.error("Error in email integration:", error);
     
+  } catch (error) {
+    console.error("Error processing request:", error);
     return new Response(
-      JSON.stringify({ error: error.message || "Internal server error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ 
+        error: 'Internal server error', 
+        details: error instanceof Error ? error.message : String(error)
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }
 });
-
-// Helper function to generate mock emails for testing
-function generateMockEmails(count: number) {
-  const emails = [];
-  const subjects = [
-    "Booking request for oil change",
-    "Need my car serviced next week",
-    "Appointment inquiry for brake repair",
-    "Car maintenance needed ASAP",
-    "Tire rotation and alignment request",
-    "Engine check - strange noise",
-    "Regular servicing for Toyota Corolla",
-    "Urgent - Car won't start",
-    "Looking to book a service appointment",
-    "Question about service packages"
-  ];
-  
-  const senders = [
-    { name: "John Smith", email: "john.smith@example.com" },
-    { name: "Emma Johnson", email: "emma.j@example.com" },
-    { name: "Michael Brown", email: "m.brown@example.com" },
-    { name: "Sarah Wilson", email: "sarahw@example.com" },
-    { name: "David Lee", email: "david.lee@example.com" }
-  ];
-  
-  const vehicles = [
-    "Toyota Corolla (2018)",
-    "Honda Civic (2019)",
-    "Ford F-150 (2020)",
-    "Hyundai Elantra (2017)",
-    "BMW 3 Series (2021)"
-  ];
-  
-  const dates = [
-    "next Monday",
-    "January 20th",
-    "this weekend",
-    "tomorrow at 2pm",
-    "next Tuesday afternoon"
-  ];
-  
-  const contents = [
-    `Hi, I need to get my car serviced. Can you fit me in for an oil change and general check-up? I'm free most weekdays after 3pm. Thanks!`,
-    `Hello, my car is making a strange noise when I brake. I think I need to get the brakes checked. Do you have any appointments available this week?`,
-    `Good morning, I'd like to schedule a regular maintenance for my vehicle. It's been about 10,000 miles since the last service. Please let me know what times you have available.`,
-    `I need to get my tires rotated and balanced. Also, could you check the alignment? The car seems to pull slightly to the left. I'm available any day next week.`,
-    `My car battery died yesterday and I had to get a jump. I think it's time for a replacement. Do you sell and install batteries? What would be the cost for my vehicle?`
-  ];
-  
-  for (let i = 0; i < count; i++) {
-    const senderIndex = i % senders.length;
-    const contentIndex = i % contents.length;
-    const vehicleIndex = i % vehicles.length;
-    const dateIndex = i % dates.length;
-    
-    const isBookingEmail = i % 3 === 0; // Make every third email a booking request
-    const bookingCreated = i === 0; // Mark the first email as having had a booking created
-    
-    const email = {
-      id: `email-${i + 1}`,
-      subject: subjects[i % subjects.length],
-      from: senders[senderIndex].name,
-      sender_email: senders[senderIndex].email,
-      date: new Date(Date.now() - (i * 86400000)).toISOString(), // Each email one day older
-      content: `<p>${contents[contentIndex]}</p>`,
-      is_booking_email: isBookingEmail,
-      booking_created: bookingCreated,
-      processing_status: bookingCreated ? 'completed' : (i === 1 ? 'failed' : 'pending')
-    };
-    
-    // Add extracted details for booking emails
-    if (isBookingEmail) {
-      email.extracted_details = {
-        name: senders[senderIndex].name,
-        phone: `(555) ${100 + i}-${1000 + i}`,
-        date: dates[dateIndex],
-        time: i % 2 === 0 ? '10:00 AM' : '2:30 PM',
-        service: i % 2 === 0 ? 'Oil Change' : 'Brake Inspection',
-        vehicle: vehicles[vehicleIndex]
-      };
-    }
-    
-    emails.push(email);
-  }
-  
-  return emails;
-}

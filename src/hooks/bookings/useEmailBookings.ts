@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,14 +22,14 @@ export const useEmailBookings = () => {
       
       const bookingDate = parseEmailDate(details.date) || new Date().toISOString().split('T')[0];
       
-      const newBooking: Partial<BookingType> = {
+      const newBooking = {
         customer_name: details.name || "Unknown Customer",
         customer_phone: details.phone || "",
         service: details.service || "General Service",
         car: details.vehicle || "Not specified",
         booking_time: details.time || "9:00 AM",
         duration: 60,
-        status: "pending",
+        status: "pending" as "pending" | "confirmed" | "cancelled" | "completed",
         booking_date: bookingDate,
         notes: `Created from email: ${email.subject}\n\nOriginal email content:\n${email.content.replace(/<[^>]*>/g, '')}`,
         technician_id: null,
