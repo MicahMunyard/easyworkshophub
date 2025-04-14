@@ -57,11 +57,11 @@ export const useEmailIntegration = () => {
           return {
             ...email,
             booking_created: processedEmail ? processedEmail.booking_created : false,
-            processing_status: processedEmail ? processedEmail.processing_status : 'pending'
+            processing_status: processedEmail ? (processedEmail.processing_status as "pending" | "processing" | "completed" | "failed") : 'pending' as const
           };
         });
         
-        setEmails(updatedEmails);
+        setEmails(updatedEmails as EmailType[]);
       }
     } catch (error: any) {
       console.error("Error fetching emails:", error);
@@ -113,7 +113,7 @@ export const useEmailIntegration = () => {
           user_id: user.id,
           email_id: email.id,
           booking_created: false,
-          processing_status: 'processing',
+          processing_status: 'processing' as const,
           updated_at: new Date().toISOString()
         }, {
           onConflict: 'email_id,user_id'
@@ -152,7 +152,7 @@ export const useEmailIntegration = () => {
             user_id: user.id,
             email_id: email.id,
             booking_created: true,
-            processing_status: 'completed',
+            processing_status: 'completed' as const,
             processing_notes: `Booking created with ID: ${result.bookingId || 'unknown'}`,
             updated_at: new Date().toISOString()
           }, {
@@ -164,7 +164,7 @@ export const useEmailIntegration = () => {
           e.id === email.id ? { 
             ...e, 
             booking_created: true,
-            processing_status: 'completed'
+            processing_status: 'completed' as const
           } : e
         );
         
@@ -174,7 +174,7 @@ export const useEmailIntegration = () => {
           setSelectedEmail({ 
             ...selectedEmail, 
             booking_created: true,
-            processing_status: 'completed'
+            processing_status: 'completed' as const
           });
         }
         
@@ -193,7 +193,7 @@ export const useEmailIntegration = () => {
           user_id: user.id,
           email_id: email.id,
           booking_created: false,
-          processing_status: 'failed',
+          processing_status: 'failed' as const,
           processing_notes: result.error || 'Failed to create booking',
           updated_at: new Date().toISOString()
         }, {
@@ -213,7 +213,7 @@ export const useEmailIntegration = () => {
             user_id: user.id,
             email_id: email.id,
             booking_created: false,
-            processing_status: 'failed',
+            processing_status: 'failed' as const,
             processing_notes: error.message || 'Error creating booking',
             retry_count: 0,
             updated_at: new Date().toISOString()

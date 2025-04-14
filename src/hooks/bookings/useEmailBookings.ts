@@ -26,7 +26,7 @@ export const useEmailBookings = () => {
       
       // Create booking object with required fields
       const newBooking = {
-        customer: details.name || "Unknown Customer",
+        customer_name: details.name || "Unknown Customer",
         customer_phone: details.phone || "",
         service: details.service || "General Service",
         car: details.vehicle || "Not specified",
@@ -59,7 +59,7 @@ export const useEmailBookings = () => {
           user_id: user.id,
           email_id: email.id,
           booking_created: true,
-          processing_status: 'completed',
+          processing_status: 'completed' as const,
           processing_notes: `Booking created with ID: ${data.id}`,
           extracted_data: details,
           updated_at: new Date().toISOString()
@@ -78,7 +78,7 @@ export const useEmailBookings = () => {
           user_id: user.id,
           email_id: email.id,
           booking_created: false,
-          processing_status: 'failed',
+          processing_status: 'failed' as const,
           processing_notes: error.message || 'Error creating booking',
           retry_count: 0, // We can't use RPC function directly here due to type limitations
           updated_at: new Date().toISOString()

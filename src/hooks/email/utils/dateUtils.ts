@@ -1,73 +1,80 @@
 
-import { parse, isValid } from 'date-fns';
-
 /**
- * Parse a date from an email in various formats
- * @param dateString The date string to parse
- * @returns ISO string date or null if parsing fails
+ * Parse a date string from an email into a standardized format
+ * @param dateString The date string from an email (e.g., "next Monday", "tomorrow", etc.)
+ * @returns A standardized date string in YYYY-MM-DD format, or null if parsing failed
  */
-export const parseEmailDate = (dateString: string | null): string | null => {
+export function parseEmailDate(dateString: string | null): string | null {
   if (!dateString) return null;
   
-  // Try to handle common date formats and expressions
+  // Current date as fallback
+  const today = new Date();
   
-  // Try date-fns parsing for common formats
-  const formats = [
-    'yyyy-MM-dd',
-    'MM/dd/yyyy',
-    'MMMM d, yyyy',
-    'MMMM d yyyy',
-    'MMM d, yyyy',
-    'MMM d yyyy',
-    'd MMMM yyyy',
-    'EEEE, MMMM d',
-    'EEEE, MMM d',
-  ];
-  
-  // Today, tomorrow, etc.
-  if (dateString.toLowerCase().includes('today')) {
-    const today = new Date();
-    return today.toISOString().split('T')[0];
+  // Try to match common date formats
+  const dateMap = getDateMappings();
+  if (dateMap[dateString.toLowerCase()]) {
+    return dateMap[dateString.toLowerCase()];
   }
   
-  if (dateString.toLowerCase().includes('tomorrow')) {
-    const tomorrow = new Date();
+  // Try to parse the date string using Date constructor
+  try {
+    const date = new Date(dateString);
+    if (!isNaN(date.getTime())) {
+      return date.toISOString().split('T')[0];
+    }
+  } catch (e) {
+    // Parsing failed, continue with other methods
+  }
+  
+  // Handle common relative date expressions
+  if (/tomorrow/i.test(dateString)) {
+    const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
     return tomorrow.toISOString().split('T')[0];
   }
   
-  // Next weekday (e.g. "next Monday")
-  const weekdays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-  const lowercaseDate = dateString.toLowerCase();
-  
-  for (let i = 0; i < weekdays.length; i++) {
-    if (lowercaseDate.includes(`next ${weekdays[i]}`)) {
-      const today = new Date();
-      const currentDay = today.getDay();
-      let daysUntilNextDay = i - currentDay;
-      
-      if (daysUntilNextDay <= 0) {
-        daysUntilNextDay += 7;
-      }
-      
-      const nextDay = new Date();
-      nextDay.setDate(today.getDate() + daysUntilNextDay);
-      return nextDay.toISOString().split('T')[0];
-    }
+  if (/next week/i.test(dateString)) {
+    const nextWeek = new Date(today);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    return nextWeek.toISOString().split('T')[0];
   }
   
-  // Try standard format parsing
-  for (const format of formats) {
-    try {
-      const date = parse(dateString, format, new Date());
-      if (isValid(date)) {
-        return date.toISOString().split('T')[0];
-      }
-    } catch {
-      // Continue trying other formats
-    }
-  }
-  
-  // If all else fails, return null
+  // If all parsing attempts fail, return null
   return null;
-};
+}
+
+/**
+ * Get a mapping of common date expressions to actual dates
+ * @returns An object mapping date expressions to ISO date strings
+ */
+export function getDateMappings(): { [key: string]: string } {
+  const today = new Date();
+  const dateMap: { [key: string]: string } = {};
+  
+  // Today
+  dateMap['today'] = today.toISOString().split('T')[0];
+  
+  // Tomorrow
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  dateMap['tomorrow'] = tomorrow.toISOString().split('T')[0];
+  
+  // Days of the week
+  const daysOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  const currentDay = today.getDay();
+  
+  for (let i = 0; i < daysOfWeek.length; i++) {
+    // Calculate days until the target day
+    let daysUntil = i - currentDay;
+    if (daysUntil <= 0) daysUntil += 7; // If day has passed this week, get next week's date
+    
+    const targetDate = new Date(today);
+    targetDate.setDate(today.getDate() + daysUntil);
+    
+    // Add both "next Tuesday" and just "Tuesday" formats
+    dateMap[`next ${daysOfWeek[i]}`] = targetDate.toISOString().split('T')[0];
+    dateMap[daysOfWeek[i]] = targetDate.toISOString().split('T')[0];
+  }
+  
+  return dateMap;
+}
