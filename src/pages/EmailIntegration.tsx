@@ -11,14 +11,25 @@ import { useEmailConnection } from "@/hooks/email/useEmailConnection";
 
 const EmailIntegration = () => {
   const { user } = useAuth();
-  const { isConnected, checkConnection } = useEmailConnection();
+  const { isConnected, checkConnection, connectionStatus } = useEmailConnection();
   const [activeTab, setActiveTab] = useState("inbox");
+  const [isCheckingConnection, setIsCheckingConnection] = useState(true);
   
   useEffect(() => {
     if (user) {
-      checkConnection();
+      setIsCheckingConnection(true);
+      checkConnection().finally(() => {
+        setIsCheckingConnection(false);
+      });
     }
-  }, [user]);
+  }, [user, checkConnection]);
+
+  // If not connected, default to settings tab
+  useEffect(() => {
+    if (!isCheckingConnection && !isConnected) {
+      setActiveTab("settings");
+    }
+  }, [isConnected, isCheckingConnection]);
 
   return (
     <div className="space-y-6">
@@ -30,7 +41,7 @@ const EmailIntegration = () => {
       </div>
 
       <Tabs 
-        defaultValue={activeTab} 
+        value={activeTab} 
         onValueChange={setActiveTab} 
         className="space-y-4"
       >
@@ -64,8 +75,7 @@ const EmailIntegration = () => {
           <EmailSettings 
             isConnected={isConnected} 
             onConnectionChange={(connected) => {
-              // This will be updated by the hook itself
-              // We just need to refresh the UI
+              // Refresh connection status
               checkConnection();
             }} 
           />

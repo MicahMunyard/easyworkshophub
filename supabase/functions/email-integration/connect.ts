@@ -58,6 +58,8 @@ serve(async (req) => {
       );
     }
     
+    console.log(`Processing connection request for user ${user.id} with email ${email} and provider ${provider}`);
+    
     // Generate OAuth URL for the specified provider
     let authUrl;
     if (provider === 'gmail' || provider === 'google') {
@@ -80,39 +82,66 @@ serve(async (req) => {
       .from('email_connections')
       .select('*')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
       
-    // Save connection information to database (upsert will create or update)
-    const { error: connectionError } = await supabaseClient
-      .from('email_connections')
-      .upsert({
-        user_id: user.id,
-        email_address: email,
-        provider: provider,
-        status: 'connected',
-        connected_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        auto_create_bookings: existingConnection?.auto_create_bookings || false
-      }, {
-        onConflict: 'user_id'
-      });
+    console.log("Existing connection:", existingConnection ? "found" : "not found");
+    
+    // Check if the email_connections table exists
+    try {
+      // Save connection information to database (upsert will create or update)
+      const { error: connectionError } = await supabaseClient
+        .from('email_connections')
+        .upsert({
+          user_id: user.id,
+          email_address: email,
+          provider: provider,
+          status: 'connected',
+          connected_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          auto_create_bookings: existingConnection?.auto_create_bookings || false
+        }, {
+          onConflict: 'user_id'
+        });
+        
+      if (connectionError) {
+        console.error("Error saving connection:", connectionError);
+        
+        if (connectionError.code === "42P01") {
+          // Table doesn't exist
+          return new Response(
+            JSON.stringify({ 
+              error: 'Email integration tables not set up properly in the database',
+              details: 'The email_connections table does not exist. Please set up the required database tables.'
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+          );
+        }
+        
+        return new Response(
+          JSON.stringify({ error: 'Failed to save connection data', details: connectionError }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        );
+      }
       
-    if (connectionError) {
+      // If we got here, we've successfully created or updated the connection
       return new Response(
-        JSON.stringify({ error: 'Failed to save connection data', details: connectionError }),
+        JSON.stringify({ 
+          success: true, 
+          auth_url: authUrl,
+          message: 'Email connected successfully' 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    } catch (dbError: any) {
+      console.error("Database operation error:", dbError);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Database operation failed',
+          details: dbError instanceof Error ? dbError.message : String(dbError)
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
-    
-    // If we got here, we've successfully created or updated the connection
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        auth_url: authUrl,
-        message: 'Email connected successfully' 
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
     
   } catch (error) {
     console.error("Error processing connection request:", error);

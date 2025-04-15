@@ -17,9 +17,10 @@ export const hasValidEmailConnection = async (userId: string): Promise<boolean> 
       .from('email_connections')
       .select('status')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
     
     if (error || !data) {
+      console.log("No valid email connection found for user:", userId);
       return false;
     }
     

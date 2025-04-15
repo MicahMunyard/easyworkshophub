@@ -44,16 +44,21 @@ export const useEmailConnection = () => {
       // Check if we have at least one email connection record
       if (data && data.length > 0) {
         const connectionData = data[0]; // Take the first record
-        setEmailAddress(connectionData.email_address);
-        setProvider(connectionData.provider);
-        setAutoCreateBookings(connectionData.auto_create_bookings);
+        setEmailAddress(connectionData.email_address || "");
+        setProvider(connectionData.provider || "gmail");
+        setAutoCreateBookings(connectionData.auto_create_bookings || false);
         setConnectionStatus(connectionData.status || 'disconnected');
-        setLastError(connectionData.last_error);
+        setLastError(connectionData.last_error || null);
         setIsConnected(connectionData.status === 'connected');
         return connectionData.status === 'connected';
       }
       
-      // No connection records found
+      // No connection records found - initialize default state
+      setEmailAddress("");
+      setProvider("gmail");
+      setAutoCreateBookings(false);
+      setConnectionStatus("disconnected");
+      setLastError(null);
       setIsConnected(false);
       return false;
     } catch (error) {
@@ -84,6 +89,7 @@ export const useEmailConnection = () => {
     
     setIsLoading(true);
     setIsConnecting(true);
+    setLastError(null); // Clear any previous errors
     
     try {
       // Update status in database first
@@ -107,7 +113,11 @@ export const useEmailConnection = () => {
         throw new Error("No active session found");
       }
       
-      const response = await fetch(`${getEdgeFunctionUrl('email-integration')}/connect`, {
+      // Request URL for the connect function
+      const edgeFunctionUrl = getEdgeFunctionUrl('email-integration');
+      console.log("Connecting to edge function:", edgeFunctionUrl + "/connect");
+      
+      const response = await fetch(`${edgeFunctionUrl}/connect`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -116,11 +126,12 @@ export const useEmailConnection = () => {
         body: JSON.stringify({
           provider,
           email: emailAddress,
-          password, // In production, use proper encryption and secure handling
+          password,
         }),
       });
       
       const result = await response.json();
+      console.log("Connection result:", result);
       
       if (!response.ok) {
         // Update database with error
