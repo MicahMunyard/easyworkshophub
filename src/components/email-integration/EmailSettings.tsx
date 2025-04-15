@@ -7,6 +7,8 @@ import EmailProviderSelector from "./settings/EmailProviderSelector";
 import EmailCredentials from "./settings/EmailCredentials";
 import AutoCreateToggle from "./settings/AutoCreateToggle";
 import EmailSettingsActions from "./settings/EmailSettingsActions";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 interface EmailSettingsProps {
   isConnected: boolean;
@@ -28,6 +30,7 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({
     autoCreateBookings,
     setAutoCreateBookings,
     isLoading,
+    lastError,
     connectEmail,
     disconnectEmail,
     updateSettings
@@ -66,6 +69,14 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {lastError && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Connection Error</AlertTitle>
+            <AlertDescription>{lastError}</AlertDescription>
+          </Alert>
+        )}
+        
         <EmailProviderSelector 
           provider={provider} 
           setProvider={setProvider} 

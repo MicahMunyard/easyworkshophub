@@ -29,11 +29,11 @@ export const useEmailConnection = () => {
     if (!user) return false;
     
     try {
+      // Changed from .single() to handle case when no record exists
       const { data, error } = await supabase
         .from('email_connections')
         .select('email_address, provider, auto_create_bookings, status, last_error')
-        .eq('user_id', user.id)
-        .single();
+        .eq('user_id', user.id);
       
       if (error) {
         console.error("Error checking email connection:", error);
@@ -41,16 +41,19 @@ export const useEmailConnection = () => {
         return false;
       }
       
-      if (data) {
-        setEmailAddress(data.email_address);
-        setProvider(data.provider);
-        setAutoCreateBookings(data.auto_create_bookings);
-        setConnectionStatus(data.status || 'disconnected');
-        setLastError(data.last_error);
-        setIsConnected(data.status === 'connected');
-        return data.status === 'connected';
+      // Check if we have at least one email connection record
+      if (data && data.length > 0) {
+        const connectionData = data[0]; // Take the first record
+        setEmailAddress(connectionData.email_address);
+        setProvider(connectionData.provider);
+        setAutoCreateBookings(connectionData.auto_create_bookings);
+        setConnectionStatus(connectionData.status || 'disconnected');
+        setLastError(connectionData.last_error);
+        setIsConnected(connectionData.status === 'connected');
+        return connectionData.status === 'connected';
       }
       
+      // No connection records found
       setIsConnected(false);
       return false;
     } catch (error) {

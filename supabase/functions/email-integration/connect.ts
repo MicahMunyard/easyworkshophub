@@ -75,7 +75,14 @@ serve(async (req) => {
     // In a real implementation, you would redirect the user to the authUrl
     // and handle the callback with the authorization code
     
-    // Save connection information to database
+    // Check if a connection record already exists
+    const { data: existingConnection } = await supabaseClient
+      .from('email_connections')
+      .select('*')
+      .eq('user_id', user.id)
+      .single();
+      
+    // Save connection information to database (upsert will create or update)
     const { error: connectionError } = await supabaseClient
       .from('email_connections')
       .upsert({
@@ -85,7 +92,7 @@ serve(async (req) => {
         status: 'connected',
         connected_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        auto_create_bookings: false
+        auto_create_bookings: existingConnection?.auto_create_bookings || false
       }, {
         onConflict: 'user_id'
       });
@@ -97,6 +104,7 @@ serve(async (req) => {
       );
     }
     
+    // If we got here, we've successfully created or updated the connection
     return new Response(
       JSON.stringify({ 
         success: true, 
