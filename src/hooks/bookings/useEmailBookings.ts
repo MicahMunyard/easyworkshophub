@@ -22,15 +22,16 @@ export const useEmailBookings = () => {
       
       const bookingDate = parseEmailDate(details.date) || new Date().toISOString().split('T')[0];
       
-      // Define booking with explicit status type to match BookingType
-      const newBooking: Partial<BookingType> = {
+      // Instead of using Partial<BookingType>, use a database-compatible structure
+      // with the correct field names that Supabase expects
+      const dbBooking = {
         customer_name: details.name || "Unknown Customer",
         customer_phone: details.phone || "",
         service: details.service || "General Service",
         car: details.vehicle || "Not specified",
         booking_time: details.time || "9:00 AM",
         duration: 60,
-        status: "pending" as "pending" | "confirmed" | "cancelled" | "completed", // Explicitly type to match BookingType
+        status: "pending" as "pending" | "confirmed" | "cancelled" | "completed", // Explicitly type to match allowed values
         booking_date: bookingDate,
         notes: `Created from email: ${email.subject}\n\nOriginal email content:\n${email.content.replace(/<[^>]*>/g, '')}`,
         technician_id: null,
@@ -41,7 +42,7 @@ export const useEmailBookings = () => {
       
       const { data, error } = await supabase
         .from('user_bookings')
-        .insert(newBooking)
+        .insert(dbBooking)
         .select()
         .single();
       
@@ -63,7 +64,24 @@ export const useEmailBookings = () => {
           onConflict: 'email_id,user_id'
         });
       
-      return data;
+      // Convert the database booking to the BookingType format for the frontend
+      const bookingData: Partial<BookingType> = {
+        id: data.id,
+        customer: data.customer_name,
+        phone: data.customer_phone,
+        service: data.service,
+        car: data.car,
+        time: data.booking_time,
+        duration: data.duration,
+        status: data.status as BookingType["status"], // Ensure type safety
+        date: data.booking_date,
+        notes: data.notes,
+        technician_id: data.technician_id,
+        service_id: data.service_id,
+        bay_id: data.bay_id
+      };
+      
+      return bookingData;
     } catch (error: any) {
       console.error("Error creating booking from email data:", error);
       
