@@ -29,7 +29,7 @@ export const useEmailBookings = () => {
         car: details.vehicle || "Not specified",
         booking_time: details.time || "9:00 AM",
         duration: 60,
-        status: "pending" as "pending" | "confirmed" | "cancelled" | "completed",
+        status: "pending" as "pending" | "confirmed" | "cancelled" | "completed", // Explicitly type this
         booking_date: bookingDate,
         notes: `Created from email: ${email.subject}\n\nOriginal email content:\n${email.content.replace(/<[^>]*>/g, '')}`,
         technician_id: null,
