@@ -22,6 +22,7 @@ export const useEmailBookings = () => {
       
       const bookingDate = parseEmailDate(details.date) || new Date().toISOString().split('T')[0];
       
+      // Define booking with explicit status type to match BookingType
       const newBooking = {
         customer_name: details.name || "Unknown Customer",
         customer_phone: details.phone || "",
@@ -29,7 +30,7 @@ export const useEmailBookings = () => {
         car: details.vehicle || "Not specified",
         booking_time: details.time || "9:00 AM",
         duration: 60,
-        status: "pending" as "pending" | "confirmed" | "cancelled" | "completed", // Explicitly type this
+        status: "pending" as const, // Using const assertion to ensure correct type
         booking_date: bookingDate,
         notes: `Created from email: ${email.subject}\n\nOriginal email content:\n${email.content.replace(/<[^>]*>/g, '')}`,
         technician_id: null,
