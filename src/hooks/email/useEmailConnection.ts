@@ -24,7 +24,6 @@ export const useEmailConnection = () => {
     try {
       console.log("Checking email connection for user:", user.id);
       
-      // Changed from .single() to handle case when no record exists
       const { data, error } = await supabase
         .from('email_connections')
         .select('email_address, provider, auto_create_bookings, status, last_error')
@@ -37,7 +36,6 @@ export const useEmailConnection = () => {
         return false;
       }
       
-      // Check if we have at least one email connection record
       if (data) {
         console.log("Found email connection:", data);
         setEmailAddress(data.email_address || "");
@@ -51,7 +49,6 @@ export const useEmailConnection = () => {
         return connected;
       }
       
-      // No connection records found - initialize default state
       console.log("No email connection found, initializing default state");
       setEmailAddress("");
       setProvider("gmail");
@@ -94,10 +91,9 @@ export const useEmailConnection = () => {
     
     setIsLoading(true);
     setIsConnecting(true);
-    setLastError(null); // Clear any previous errors
+    setLastError(null);
     
     try {
-      // Update status in database first
       await supabase
         .from('email_connections')
         .upsert({
@@ -112,13 +108,11 @@ export const useEmailConnection = () => {
           onConflict: 'user_id'
         });
       
-      // Get the user's session token for authorization
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData.session) {
         throw new Error("No active session found");
       }
       
-      // Request URL for the connect function
       const edgeFunctionUrl = getEdgeFunctionUrl('email-integration');
       console.log("Connecting to edge function:", edgeFunctionUrl + "/connect");
       
@@ -139,7 +133,6 @@ export const useEmailConnection = () => {
       console.log("Connection result:", result);
       
       if (!response.ok) {
-        // Update database with error
         await supabase
           .from('email_connections')
           .update({
@@ -154,7 +147,6 @@ export const useEmailConnection = () => {
         throw new Error(result.error || "Failed to connect email account");
       }
       
-      // Update database with success
       await supabase
         .from('email_connections')
         .update({
@@ -166,7 +158,7 @@ export const useEmailConnection = () => {
         })
         .eq('user_id', user.id);
       
-      setPassword(""); // Clear password for security
+      setPassword("");
       setIsConnected(true);
       setConnectionStatus('connected');
       setLastError(null);
@@ -181,7 +173,6 @@ export const useEmailConnection = () => {
     } catch (error: any) {
       console.error("Error connecting email:", error);
       
-      // Set local state for error
       setConnectionStatus('error');
       setLastError(error.message || "Failed to connect to email account");
       
@@ -203,7 +194,6 @@ export const useEmailConnection = () => {
     try {
       setIsLoading(true);
       
-      // Update database status first
       await supabase
         .from('email_connections')
         .update({
@@ -212,7 +202,6 @@ export const useEmailConnection = () => {
         })
         .eq('user_id', user.id);
       
-      // Get the user's session token for authorization
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData.session) {
         throw new Error("No active session found");
@@ -232,7 +221,6 @@ export const useEmailConnection = () => {
         throw new Error(result.error || "Failed to disconnect email account");
       }
       
-      // Update database with disconnected status
       await supabase
         .from('email_connections')
         .update({
@@ -258,7 +246,6 @@ export const useEmailConnection = () => {
     } catch (error: any) {
       console.error("Error disconnecting email:", error);
       
-      // Update database with error
       await supabase
         .from('email_connections')
         .update({
@@ -360,42 +347,64 @@ export const useEmailConnection = () => {
     try {
       setIsLoading(true);
       
-      // Check if the email_connections table exists
-      const { count, error: tableCheckError } = await supabase
+      const { data: existingConn, error: fetchError } = await supabase
         .from('email_connections')
-        .select('*', { count: 'exact', head: true });
-        
-      if (tableCheckError && tableCheckError.code === "42P01") {
-        return "The email_connections table doesn't exist. Database setup may be incomplete.";
-      }
-      
-      // Try to insert a test record (this will be removed afterward)
-      const testEmail = "test@example.com";
-      const testProvider = "gmail";
-      const insertResult = await createOrUpdateEmailConnection(
-        user.id,
-        testEmail,
-        testProvider,
-        "testing"
-      );
-      
-      if (!insertResult) {
-        return "Failed to insert a test connection. You may have permission issues.";
-      }
-      
-      // Clean up the test record
-      await supabase
-        .from('email_connections')
-        .delete()
+        .select('*')
         .eq('user_id', user.id)
-        .eq('email_address', testEmail);
+        .maybeSingle();
       
-      return "Database access seems fine. Try connecting again with valid credentials.";
+      if (fetchError) {
+        return `Database error: ${fetchError.message}. This may be due to permission issues.`;
+      }
+      
+      if (existingConn) {
+        return "Database connection is working. You have permission to read your connection data. If you're having issues connecting email, check your credentials.";
+      }
+      
+      try {
+        console.log(`Creating test connection for user ${user.id}`);
+        
+        const testEmail = "test@example.com";
+        const testProvider = "gmail";
+        
+        const { error: insertError } = await supabase
+          .from('email_connections')
+          .insert({
+            user_id: user.id,
+            email_address: testEmail,
+            provider: testProvider,
+            status: "testing"
+          });
+        
+        if (insertError) {
+          console.error("Insert error details:", insertError);
+          
+          if (insertError.code === "42501") {
+            return "Permission denied. Row Level Security may be preventing insert operations.";
+          } else if (insertError.code === "23505") {
+            return "A connection already exists. Try disconnecting first before reconnecting.";
+          }
+          
+          return `Failed to create test connection: ${insertError.message}. Error code: ${insertError.code}`;
+        }
+        
+        await supabase
+          .from('email_connections')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('email_address', testEmail);
+        
+        return "Database access is working correctly. You should be able to connect your email account.";
+      } catch (error: any) {
+        console.error("Detailed error during test connection:", error);
+        return `Connection test error: ${error.message || "Unknown error"}. Check browser console for details.`;
+      }
     } catch (error: any) {
+      console.error("Diagnostic outer error:", error);
       return `Diagnostic error: ${error.message || "Unknown error"}`;
     } finally {
       setIsLoading(false);
-      checkConnection(); // Refresh the connection state
+      checkConnection();
     }
   };
 
