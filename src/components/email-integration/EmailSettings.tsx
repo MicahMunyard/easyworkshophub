@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -95,7 +94,10 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({
         )}
         
         {diagnosticResult && (
-          <Alert variant={diagnosticResult.includes("fine") ? "default" : "warning"} className="mb-4">
+          <Alert 
+            variant={diagnosticResult.includes("fine") ? "default" : "destructive"} 
+            className="mb-4"
+          >
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Connection Diagnostic</AlertTitle>
             <AlertDescription>{diagnosticResult}</AlertDescription>
