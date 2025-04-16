@@ -17,6 +17,8 @@ serve(async (req) => {
     });
   }
 
+  console.log("Email integration disconnect function called");
+  
   // Create Supabase client with Admin key for API operations
   const supabaseClient = createClient(
     Deno.env.get('SUPABASE_URL') || '',

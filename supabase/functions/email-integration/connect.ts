@@ -18,6 +18,9 @@ serve(async (req) => {
     });
   }
 
+  console.log("Email integration connect function called");
+  console.log("SUPABASE_URL:", Deno.env.get('SUPABASE_URL'));
+
   // Create Supabase client with Admin key for API operations
   const supabaseClient = createClient(
     Deno.env.get('SUPABASE_URL') || '',
@@ -73,21 +76,32 @@ serve(async (req) => {
       );
     }
     
-    // For development/demo purposes, we'll simulate a successful connection
-    // In a real implementation, you would redirect the user to the authUrl
-    // and handle the callback with the authorization code
-    
-    // Check if a connection record already exists
-    const { data: existingConnection } = await supabaseClient
-      .from('email_connections')
-      .select('*')
-      .eq('user_id', user.id)
-      .maybeSingle();
-      
-    console.log("Existing connection:", existingConnection ? "found" : "not found");
-    
     // Check if the email_connections table exists
     try {
+      // Check if a connection record already exists
+      const { data: existingConnection, error: existingConnectionError } = await supabaseClient
+        .from('email_connections')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      if (existingConnectionError) {
+        console.error("Error checking existing connection:", existingConnectionError);
+        
+        // Check if it's a "relation does not exist" error, which would mean the table doesn't exist
+        if (existingConnectionError.code === "42P01") {
+          return new Response(
+            JSON.stringify({ 
+              error: 'Email integration tables not set up properly in the database',
+              details: 'The email_connections table does not exist. Please set up the required database tables.'
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+          );
+        }
+      }
+        
+      console.log("Existing connection:", existingConnection ? "found" : "not found");
+      
       // Save connection information to database (upsert will create or update)
       const { error: connectionError } = await supabaseClient
         .from('email_connections')
