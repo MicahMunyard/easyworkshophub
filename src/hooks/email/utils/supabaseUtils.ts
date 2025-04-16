@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 // Function to get the edge function URL
@@ -13,20 +12,39 @@ export const getEdgeFunctionUrl = (functionName: string): string => {
 // Function to check if a user has an active email connection
 export const hasValidEmailConnection = async (userId: string): Promise<boolean> => {
   try {
+    console.log("Checking email connection for user:", userId);
+
+    if (!userId) {
+      console.error("No user ID provided when checking email connection");
+      return false;
+    }
+
     const { data, error } = await supabase
       .from('email_connections')
-      .select('status')
+      .select('status, email_address, provider')
       .eq('user_id', userId)
       .maybeSingle();
     
-    if (error || !data) {
-      console.log("No valid email connection found for user:", userId);
+    // Log detailed information for debugging
+    if (error) {
+      console.error("Error checking email connection:", error);
       return false;
     }
     
+    if (!data) {
+      console.log("No email connection record found for user:", userId);
+      return false;
+    }
+
+    console.log("Email connection record found:", {
+      status: data.status,
+      email: data.email_address,
+      provider: data.provider
+    });
+    
     return data.status === 'connected';
   } catch (error) {
-    console.error("Error checking email connection:", error);
+    console.error("Exception when checking email connection:", error);
     return false;
   }
 };
@@ -99,5 +117,41 @@ export const getEmailTemplates = async (userId: string, templateType?: string) =
   } catch (error) {
     console.error("Error fetching email templates:", error);
     return [];
+  }
+};
+
+// Create a new function to manually insert or update a connection for testing
+export const createOrUpdateEmailConnection = async (
+  userId: string,
+  emailAddress: string,
+  provider: string,
+  status: string = 'connected'
+): Promise<boolean> => {
+  try {
+    console.log(`Creating/updating email connection for user ${userId} with status: ${status}`);
+    
+    const { error } = await supabase
+      .from('email_connections')
+      .upsert({
+        user_id: userId,
+        email_address: emailAddress,
+        provider: provider,
+        status: status,
+        updated_at: new Date().toISOString(),
+        connected_at: status === 'connected' ? new Date().toISOString() : null
+      }, {
+        onConflict: 'user_id'
+      });
+    
+    if (error) {
+      console.error("Error creating/updating email connection:", error);
+      return false;
+    }
+    
+    console.log("Email connection created/updated successfully");
+    return true;
+  } catch (error) {
+    console.error("Exception when creating/updating email connection:", error);
+    return false;
   }
 };

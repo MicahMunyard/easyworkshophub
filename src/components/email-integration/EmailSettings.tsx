@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useEmailConnection } from "@/hooks/email/useEmailConnection";
@@ -8,7 +8,8 @@ import EmailCredentials from "./settings/EmailCredentials";
 import AutoCreateToggle from "./settings/AutoCreateToggle";
 import EmailSettingsActions from "./settings/EmailSettingsActions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface EmailSettingsProps {
   isConnected: boolean;
@@ -20,6 +21,9 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({
   onConnectionChange 
 }) => {
   const { toast } = useToast();
+  const [diagnosticResult, setDiagnosticResult] = useState<string | null>(null);
+  const [isDiagnosing, setIsDiagnosing] = useState(false);
+  
   const {
     emailAddress,
     setEmailAddress,
@@ -33,7 +37,8 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({
     lastError,
     connectEmail,
     disconnectEmail,
-    updateSettings
+    updateSettings,
+    diagnoseConnectionIssues
   } = useEmailConnection();
 
   const handleConnectEmail = async () => {
@@ -59,6 +64,18 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({
       });
     }
   };
+  
+  const handleDiagnoseIssues = async () => {
+    setIsDiagnosing(true);
+    setDiagnosticResult(null);
+    
+    try {
+      const result = await diagnoseConnectionIssues();
+      setDiagnosticResult(result);
+    } finally {
+      setIsDiagnosing(false);
+    }
+  };
 
   return (
     <Card>
@@ -74,6 +91,14 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Connection Error</AlertTitle>
             <AlertDescription>{lastError}</AlertDescription>
+          </Alert>
+        )}
+        
+        {diagnosticResult && (
+          <Alert variant={diagnosticResult.includes("fine") ? "default" : "warning"} className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Connection Diagnostic</AlertTitle>
+            <AlertDescription>{diagnosticResult}</AlertDescription>
           </Alert>
         )}
         
@@ -97,6 +122,28 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({
           setAutoCreateBookings={setAutoCreateBookings}
           disabled={!isConnected || isLoading}
         />
+        
+        <div className="flex justify-end">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={handleDiagnoseIssues}
+            disabled={isDiagnosing || isLoading}
+            className="flex items-center gap-1"
+          >
+            {isDiagnosing ? (
+              <>
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                Diagnosing...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="h-4 w-4" />
+                Diagnose Connection Issues
+              </>
+            )}
+          </Button>
+        </div>
       </CardContent>
       <CardFooter className="flex justify-between">
         <EmailSettingsActions 

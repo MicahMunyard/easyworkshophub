@@ -1,9 +1,8 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { getEdgeFunctionUrl } from "./utils/supabaseUtils";
+import { getEdgeFunctionUrl, createOrUpdateEmailConnection } from "./utils/supabaseUtils";
 import { EmailConnectionConfig } from "@/types/email";
 
 export const useEmailConnection = () => {
@@ -19,21 +18,18 @@ export const useEmailConnection = () => {
   const [lastError, setLastError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   
-  useEffect(() => {
-    if (user) {
-      checkConnection();
-    }
-  }, [user]);
-
-  const checkConnection = async (): Promise<boolean> => {
+  const checkConnection = useCallback(async (): Promise<boolean> => {
     if (!user) return false;
     
     try {
+      console.log("Checking email connection for user:", user.id);
+      
       // Changed from .single() to handle case when no record exists
       const { data, error } = await supabase
         .from('email_connections')
         .select('email_address, provider, auto_create_bookings, status, last_error')
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .maybeSingle();
       
       if (error) {
         console.error("Error checking email connection:", error);
@@ -42,18 +38,21 @@ export const useEmailConnection = () => {
       }
       
       // Check if we have at least one email connection record
-      if (data && data.length > 0) {
-        const connectionData = data[0]; // Take the first record
-        setEmailAddress(connectionData.email_address || "");
-        setProvider(connectionData.provider || "gmail");
-        setAutoCreateBookings(connectionData.auto_create_bookings || false);
-        setConnectionStatus(connectionData.status || 'disconnected');
-        setLastError(connectionData.last_error || null);
-        setIsConnected(connectionData.status === 'connected');
-        return connectionData.status === 'connected';
+      if (data) {
+        console.log("Found email connection:", data);
+        setEmailAddress(data.email_address || "");
+        setProvider(data.provider || "gmail");
+        setAutoCreateBookings(data.auto_create_bookings || false);
+        setConnectionStatus(data.status || 'disconnected');
+        setLastError(data.last_error || null);
+        
+        const connected = data.status === 'connected';
+        setIsConnected(connected);
+        return connected;
       }
       
       // No connection records found - initialize default state
+      console.log("No email connection found, initializing default state");
       setEmailAddress("");
       setProvider("gmail");
       setAutoCreateBookings(false);
@@ -62,11 +61,17 @@ export const useEmailConnection = () => {
       setIsConnected(false);
       return false;
     } catch (error) {
-      console.error("Error checking email connection:", error);
+      console.error("Exception checking email connection:", error);
       setIsConnected(false);
       return false;
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      checkConnection();
+    }
+  }, [user, checkConnection]);
 
   const connectEmail = async () => {
     if (!user) {
@@ -314,7 +319,6 @@ export const useEmailConnection = () => {
     }
   };
 
-  // Get provider configuration (host, port, etc)
   const getProviderConfig = (providerName: string): EmailConnectionConfig => {
     switch (providerName) {
       case 'gmail':
@@ -348,6 +352,53 @@ export const useEmailConnection = () => {
     }
   };
 
+  const diagnoseConnectionIssues = async () => {
+    if (!user) {
+      return "No authenticated user found. Please sign in first.";
+    }
+    
+    try {
+      setIsLoading(true);
+      
+      // Check if the email_connections table exists
+      const { count, error: tableCheckError } = await supabase
+        .from('email_connections')
+        .select('*', { count: 'exact', head: true });
+        
+      if (tableCheckError && tableCheckError.code === "42P01") {
+        return "The email_connections table doesn't exist. Database setup may be incomplete.";
+      }
+      
+      // Try to insert a test record (this will be removed afterward)
+      const testEmail = "test@example.com";
+      const testProvider = "gmail";
+      const insertResult = await createOrUpdateEmailConnection(
+        user.id,
+        testEmail,
+        testProvider,
+        "testing"
+      );
+      
+      if (!insertResult) {
+        return "Failed to insert a test connection. You may have permission issues.";
+      }
+      
+      // Clean up the test record
+      await supabase
+        .from('email_connections')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('email_address', testEmail);
+      
+      return "Database access seems fine. Try connecting again with valid credentials.";
+    } catch (error: any) {
+      return `Diagnostic error: ${error.message || "Unknown error"}`;
+    } finally {
+      setIsLoading(false);
+      checkConnection(); // Refresh the connection state
+    }
+  };
+
   return {
     isConnected,
     isConnecting,
@@ -366,6 +417,7 @@ export const useEmailConnection = () => {
     disconnectEmail,
     updateSettings,
     checkConnection,
-    getProviderConfig
+    getProviderConfig,
+    diagnoseConnectionIssues
   };
 };
