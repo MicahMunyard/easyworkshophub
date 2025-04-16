@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 // Function to get the edge function URL
 export const getEdgeFunctionUrl = (functionName: string): string => {
-  // Get Supabase project URL from environment or constants
+  // Get Supabase project URL from the client
   const supabaseUrl = "https://qyjjbpyqxwrluhymvshn.supabase.co";
 
   // Return the edge function URL

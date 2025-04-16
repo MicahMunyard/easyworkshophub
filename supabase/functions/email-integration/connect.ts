@@ -19,12 +19,35 @@ serve(async (req) => {
   }
 
   console.log("Email integration connect function called");
-  console.log("SUPABASE_URL:", Deno.env.get('SUPABASE_URL'));
+  
+  // Make sure environment variables are available
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  
+  console.log("SUPABASE_URL available:", !!supabaseUrl);
+  
+  // Verify Supabase URL is available
+  if (!supabaseUrl) {
+    console.error("SUPABASE_URL environment variable is missing");
+    return new Response(
+      JSON.stringify({ error: 'Server configuration error: Missing SUPABASE_URL' }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+    );
+  }
+  
+  // Verify Supabase service role key is available
+  if (!supabaseServiceRoleKey) {
+    console.error("SUPABASE_SERVICE_ROLE_KEY environment variable is missing");
+    return new Response(
+      JSON.stringify({ error: 'Server configuration error: Missing SUPABASE_SERVICE_ROLE_KEY' }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+    );
+  }
 
   // Create Supabase client with Admin key for API operations
   const supabaseClient = createClient(
-    Deno.env.get('SUPABASE_URL') || '',
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
+    supabaseUrl,
+    supabaseServiceRoleKey
   );
 
   // Get Authorization header from request
@@ -66,8 +89,30 @@ serve(async (req) => {
     // Generate OAuth URL for the specified provider
     let authUrl;
     if (provider === 'gmail' || provider === 'google') {
+      if (!oauthConfig.google.clientId || !oauthConfig.google.redirectUri) {
+        console.error("Missing Google OAuth configuration");
+        return new Response(
+          JSON.stringify({ 
+            error: 'Server configuration error: Missing Google OAuth configuration',
+            details: 'The Google client ID or redirect URI is not configured'
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        );
+      }
+      
       authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(oauthConfig.google.clientId)}&response_type=code&redirect_uri=${encodeURIComponent(oauthConfig.google.redirectUri)}&scope=${encodeURIComponent(oauthConfig.google.scopes.join(' '))}&access_type=offline&prompt=consent`;
     } else if (provider === 'microsoft' || provider === 'outlook') {
+      if (!oauthConfig.microsoft.clientId || !oauthConfig.microsoft.redirectUri) {
+        console.error("Missing Microsoft OAuth configuration");
+        return new Response(
+          JSON.stringify({ 
+            error: 'Server configuration error: Missing Microsoft OAuth configuration',
+            details: 'The Microsoft client ID or redirect URI is not configured'
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        );
+      }
+      
       authUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${oauthConfig.microsoft.clientId}&response_type=code&redirect_uri=${encodeURIComponent(oauthConfig.microsoft.redirectUri)}&scope=${encodeURIComponent(oauthConfig.microsoft.scopes.join(' '))}&response_mode=query`;
     } else {
       return new Response(
@@ -78,6 +123,25 @@ serve(async (req) => {
     
     // Check if the email_connections table exists
     try {
+      // Try to check if the table exists using a simple query
+      const { count, error: countError } = await supabaseClient
+        .from('email_connections')
+        .select('*', { count: 'exact', head: true });
+      
+      if (countError) {
+        console.error("Error checking if email_connections table exists:", countError);
+        // If the error is that the relation doesn't exist, that means the table doesn't exist
+        if (countError.code === "42P01") {
+          return new Response(
+            JSON.stringify({ 
+              error: 'Email integration tables not set up properly in the database',
+              details: 'The email_connections table does not exist. Please set up the required database tables.'
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+          );
+        }
+      }
+    
       // Check if a connection record already exists
       const { data: existingConnection, error: existingConnectionError } = await supabaseClient
         .from('email_connections')
@@ -87,17 +151,13 @@ serve(async (req) => {
       
       if (existingConnectionError) {
         console.error("Error checking existing connection:", existingConnectionError);
-        
-        // Check if it's a "relation does not exist" error, which would mean the table doesn't exist
-        if (existingConnectionError.code === "42P01") {
-          return new Response(
-            JSON.stringify({ 
-              error: 'Email integration tables not set up properly in the database',
-              details: 'The email_connections table does not exist. Please set up the required database tables.'
-            }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-          );
-        }
+        return new Response(
+          JSON.stringify({ 
+            error: 'Failed to check existing connection',
+            details: existingConnectionError
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        );
       }
         
       console.log("Existing connection:", existingConnection ? "found" : "not found");
@@ -109,7 +169,7 @@ serve(async (req) => {
           user_id: user.id,
           email_address: email,
           provider: provider,
-          status: 'connected',
+          status: 'connected', // For demo purposes, set to connected right away
           connected_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
           auto_create_bookings: existingConnection?.auto_create_bookings || false
@@ -119,18 +179,6 @@ serve(async (req) => {
         
       if (connectionError) {
         console.error("Error saving connection:", connectionError);
-        
-        if (connectionError.code === "42P01") {
-          // Table doesn't exist
-          return new Response(
-            JSON.stringify({ 
-              error: 'Email integration tables not set up properly in the database',
-              details: 'The email_connections table does not exist. Please set up the required database tables.'
-            }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-          );
-        }
-        
         return new Response(
           JSON.stringify({ error: 'Failed to save connection data', details: connectionError }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }

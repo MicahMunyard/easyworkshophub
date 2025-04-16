@@ -8,12 +8,6 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
 };
 
-// Create Supabase client with environment variables
-const supabaseClient = createClient(
-  Deno.env.get('SUPABASE_URL') || '',
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
-);
-
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -24,16 +18,36 @@ serve(async (req) => {
   }
 
   console.log("Email integration function called");
-  console.log("SUPABASE_URL:", Deno.env.get('SUPABASE_URL'));
+  
+  // Make sure environment variables are available
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  
+  console.log("SUPABASE_URL available:", !!supabaseUrl);
   
   // Verify Supabase URL is available
-  if (!Deno.env.get('SUPABASE_URL')) {
+  if (!supabaseUrl) {
     console.error("SUPABASE_URL environment variable is missing");
     return new Response(
       JSON.stringify({ error: 'Server configuration error: Missing SUPABASE_URL' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }
+  
+  // Verify Supabase service role key is available
+  if (!supabaseServiceRoleKey) {
+    console.error("SUPABASE_SERVICE_ROLE_KEY environment variable is missing");
+    return new Response(
+      JSON.stringify({ error: 'Server configuration error: Missing SUPABASE_SERVICE_ROLE_KEY' }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+    );
+  }
+
+  // Create Supabase client with environment variables
+  const supabaseClient = createClient(
+    supabaseUrl,
+    supabaseServiceRoleKey
+  );
 
   // Get Authorization header from request
   const authHeader = req.headers.get('Authorization');

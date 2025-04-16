@@ -19,10 +19,34 @@ serve(async (req) => {
 
   console.log("Email integration disconnect function called");
   
+  // Make sure environment variables are available
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  
+  console.log("SUPABASE_URL available:", !!supabaseUrl);
+  
+  // Verify Supabase URL is available
+  if (!supabaseUrl) {
+    console.error("SUPABASE_URL environment variable is missing");
+    return new Response(
+      JSON.stringify({ error: 'Server configuration error: Missing SUPABASE_URL' }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+    );
+  }
+  
+  // Verify Supabase service role key is available
+  if (!supabaseServiceRoleKey) {
+    console.error("SUPABASE_SERVICE_ROLE_KEY environment variable is missing");
+    return new Response(
+      JSON.stringify({ error: 'Server configuration error: Missing SUPABASE_SERVICE_ROLE_KEY' }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+    );
+  }
+  
   // Create Supabase client with Admin key for API operations
   const supabaseClient = createClient(
-    Deno.env.get('SUPABASE_URL') || '',
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
+    supabaseUrl,
+    supabaseServiceRoleKey
   );
 
   // Get Authorization header from request
