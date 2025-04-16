@@ -80,10 +80,10 @@ export const useEmailConnection = () => {
       return false;
     }
     
-    if (!emailAddress || !password) {
+    if (!emailAddress) {
       toast({
         title: "Missing Information",
-        description: "Please provide email address and password",
+        description: "Please provide your email address",
         variant: "destructive"
       });
       return false;
@@ -116,60 +116,84 @@ export const useEmailConnection = () => {
       const edgeFunctionUrl = getEdgeFunctionUrl('email-integration');
       console.log("Connecting to edge function:", edgeFunctionUrl + "/connect");
       
-      const response = await fetch(`${edgeFunctionUrl}/connect`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${sessionData.session.access_token}`,
-        },
-        body: JSON.stringify({
-          provider,
-          email: emailAddress,
-          password,
-        }),
-      });
-      
-      const result = await response.json();
-      console.log("Connection result:", result);
-      
-      if (!response.ok) {
-        await supabase
-          .from('email_connections')
-          .update({
-            status: 'error',
-            last_error: result.error || "Failed to connect email account",
-            updated_at: new Date().toISOString()
-          })
-          .eq('user_id', user.id);
+      if (provider === 'gmail' || provider === 'outlook') {
+        const response = await fetch(`${edgeFunctionUrl}/connect`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionData.session.access_token}`,
+          },
+          body: JSON.stringify({
+            provider,
+            email: emailAddress,
+            password: provider === 'other' ? password : undefined,
+          }),
+        });
         
-        setConnectionStatus('error');
-        setLastError(result.error || "Failed to connect email account");
-        throw new Error(result.error || "Failed to connect email account");
+        const result = await response.json();
+        console.log("Connection result:", result);
+        
+        if (!response.ok) {
+          throw new Error(result.error || "Failed to initiate email connection");
+        }
+        
+        if (result.auth_url) {
+          console.log("Redirecting to OAuth URL:", result.auth_url);
+          window.location.href = result.auth_url;
+          return true;
+        }
+        
+        await updateConnectionStatus('connected');
+        setIsConnected(true);
+        setConnectionStatus('connected');
+        setLastError(null);
+        
+        toast({
+          title: "Success",
+          description: "Email account connected successfully",
+        });
+        
+        return true;
+      } else {
+        if (!password) {
+          throw new Error("Password is required for this email provider");
+        }
+        
+        const response = await fetch(`${edgeFunctionUrl}/connect`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionData.session.access_token}`,
+          },
+          body: JSON.stringify({
+            provider,
+            email: emailAddress,
+            password,
+          }),
+        });
+        
+        const result = await response.json();
+        console.log("Connection result:", result);
+        
+        if (!response.ok) {
+          await updateConnectionStatus('error', result.error || "Failed to connect email account");
+          throw new Error(result.error || "Failed to connect email account");
+        }
+        
+        await updateConnectionStatus('connected');
+        
+        setPassword("");
+        setIsConnected(true);
+        setConnectionStatus('connected');
+        setLastError(null);
+        
+        toast({
+          title: "Success",
+          description: "Email account connected successfully",
+        });
+        
+        return true;
       }
-      
-      await supabase
-        .from('email_connections')
-        .update({
-          auto_create_bookings: autoCreateBookings,
-          status: 'connected',
-          connected_at: new Date().toISOString(),
-          last_error: null,
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', user.id);
-      
-      setPassword("");
-      setIsConnected(true);
-      setConnectionStatus('connected');
-      setLastError(null);
-      
-      toast({
-        title: "Success",
-        description: "Email account connected successfully",
-      });
-      
-      return true;
-      
     } catch (error: any) {
       console.error("Error connecting email:", error);
       
@@ -186,6 +210,27 @@ export const useEmailConnection = () => {
       setIsLoading(false);
       setIsConnecting(false);
     }
+  };
+
+  const updateConnectionStatus = async (status: string, errorMessage?: string) => {
+    if (!user) return;
+    
+    const updateData: any = {
+      status,
+      updated_at: new Date().toISOString()
+    };
+    
+    if (status === 'connected') {
+      updateData.connected_at = new Date().toISOString();
+      updateData.last_error = null;
+    } else if (status === 'error' && errorMessage) {
+      updateData.last_error = errorMessage;
+    }
+    
+    await supabase
+      .from('email_connections')
+      .update(updateData)
+      .eq('user_id', user.id);
   };
 
   const disconnectEmail = async () => {
