@@ -155,7 +155,7 @@ export const useEmailConnection = () => {
         
         return true;
       } else {
-        if (!password) {
+        if (provider !== 'gmail' && provider !== 'outlook' && !password) {
           throw new Error("Password is required for this email provider");
         }
         
