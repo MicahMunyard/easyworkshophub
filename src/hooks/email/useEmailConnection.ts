@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,7 +13,7 @@ export const useEmailConnection = () => {
   const [isConnecting, setIsConnecting] = useState(false);
   const [emailAddress, setEmailAddress] = useState("");
   const [password, setPassword] = useState("");
-  const [provider, setProvider] = useState("gmail");
+  const [provider, setProvider] = useState<"gmail" | "outlook" | "yahoo" | "other">("gmail");
   const [autoCreateBookings, setAutoCreateBookings] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState("disconnected");
   const [lastError, setLastError] = useState<string | null>(null);
@@ -155,7 +156,8 @@ export const useEmailConnection = () => {
         
         return true;
       } else {
-        if (provider !== 'gmail' && provider !== 'outlook' && !password) {
+        // At this point, provider is neither 'gmail' nor 'outlook'
+        if (!password) {
           throw new Error("Password is required for this email provider");
         }
         
