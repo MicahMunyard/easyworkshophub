@@ -40,7 +40,7 @@ export const useEmailConnection = () => {
       if (data) {
         console.log("Found email connection:", data);
         setEmailAddress(data.email_address || "");
-        setProvider(data.provider as "gmail" | "outlook" | "yahoo" | "other" || "gmail");
+        setProvider((data.provider || "gmail") as "gmail" | "outlook" | "yahoo" | "other");
         setAutoCreateBookings(data.auto_create_bookings || false);
         setConnectionStatus(data.status || 'disconnected');
         setLastError(data.last_error || null);
