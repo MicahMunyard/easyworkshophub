@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -72,6 +71,7 @@ export const useEmailConnection = () => {
   }, [user, checkConnection]);
 
   const connectEmail = async () => {
+    
     if (!user) {
       toast({
         title: "Authentication Required",
@@ -156,7 +156,7 @@ export const useEmailConnection = () => {
         
         return true;
       } else {
-        // At this point, provider is neither 'gmail' nor 'outlook'
+        
         if (!password) {
           throw new Error("Password is required for this email provider");
         }
@@ -213,6 +213,8 @@ export const useEmailConnection = () => {
       setIsConnecting(false);
     }
   };
+
+  
 
   const updateConnectionStatus = async (status: string, errorMessage?: string) => {
     if (!user) return;
