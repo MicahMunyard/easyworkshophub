@@ -2,8 +2,10 @@ import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { getEdgeFunctionUrl, createOrUpdateEmailConnection } from "./utils/supabaseUtils";
-import { EmailConnectionConfig } from "@/types/email";
+import { getEdgeFunctionUrl } from "./utils/supabaseUtils";
+import { getProviderConfig } from "./utils/providerConfigs";
+import { useEmailConnectionStatus } from "./useEmailConnectionStatus";
+import { useEmailDiagnostics } from "./useEmailDiagnostics";
 
 export const useEmailConnection = () => {
   const { toast } = useToast();
@@ -14,10 +16,17 @@ export const useEmailConnection = () => {
   const [password, setPassword] = useState("");
   const [provider, setProvider] = useState<"gmail" | "outlook" | "yahoo" | "other">("gmail");
   const [autoCreateBookings, setAutoCreateBookings] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState("disconnected");
-  const [lastError, setLastError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
   
+  const {
+    connectionStatus,
+    lastError,
+    isLoading,
+    setIsLoading,
+    updateConnectionStatus
+  } = useEmailConnectionStatus(user);
+  
+  const { diagnoseConnectionIssues } = useEmailDiagnostics(user);
+
   const checkConnection = useCallback(async (): Promise<boolean> => {
     if (!user) return false;
     
@@ -41,8 +50,6 @@ export const useEmailConnection = () => {
         setEmailAddress(data.email_address || "");
         setProvider((data.provider || "gmail") as "gmail" | "outlook" | "yahoo" | "other");
         setAutoCreateBookings(data.auto_create_bookings || false);
-        setConnectionStatus(data.status || 'disconnected');
-        setLastError(data.last_error || null);
         
         const connected = data.status === 'connected';
         setIsConnected(connected);
@@ -53,8 +60,6 @@ export const useEmailConnection = () => {
       setEmailAddress("");
       setProvider("gmail");
       setAutoCreateBookings(false);
-      setConnectionStatus("disconnected");
-      setLastError(null);
       setIsConnected(false);
       return false;
     } catch (error) {
@@ -214,27 +219,6 @@ export const useEmailConnection = () => {
     }
   };
 
-  const updateConnectionStatus = async (status: string, errorMessage?: string) => {
-    if (!user) return;
-    
-    const updateData: any = {
-      status,
-      updated_at: new Date().toISOString()
-    };
-    
-    if (status === 'connected') {
-      updateData.connected_at = new Date().toISOString();
-      updateData.last_error = null;
-    } else if (status === 'error' && errorMessage) {
-      updateData.last_error = errorMessage;
-    }
-    
-    await supabase
-      .from('email_connections')
-      .update(updateData)
-      .eq('user_id', user.id);
-  };
-
   const disconnectEmail = async () => {
     if (!user) return false;
     
@@ -350,108 +334,6 @@ export const useEmailConnection = () => {
       return false;
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const getProviderConfig = (providerName: string): EmailConnectionConfig => {
-    switch (providerName) {
-      case 'gmail':
-        return {
-          provider: 'gmail',
-          host: 'imap.gmail.com',
-          port: 993,
-          secure: true
-        };
-      case 'outlook':
-        return {
-          provider: 'outlook',
-          host: 'outlook.office365.com',
-          port: 993,
-          secure: true
-        };
-      case 'yahoo':
-        return {
-          provider: 'yahoo',
-          host: 'imap.mail.yahoo.com',
-          port: 993,
-          secure: true
-        };
-      default:
-        return {
-          provider: 'other',
-          host: 'imap.example.com',
-          port: 993,
-          secure: true
-        };
-    }
-  };
-
-  const diagnoseConnectionIssues = async () => {
-    if (!user) {
-      return "No authenticated user found. Please sign in first.";
-    }
-    
-    try {
-      setIsLoading(true);
-      
-      const { data: existingConn, error: fetchError } = await supabase
-        .from('email_connections')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle();
-      
-      if (fetchError) {
-        return `Database error: ${fetchError.message}. This may be due to permission issues.`;
-      }
-      
-      if (existingConn) {
-        return "Database connection is working. You have permission to read your connection data. If you're having issues connecting email, check your credentials.";
-      }
-      
-      try {
-        console.log(`Creating test connection for user ${user.id}`);
-        
-        const testEmail = "test@example.com";
-        const testProvider = "gmail";
-        
-        const { error: insertError } = await supabase
-          .from('email_connections')
-          .insert({
-            user_id: user.id,
-            email_address: testEmail,
-            provider: testProvider,
-            status: "testing"
-          });
-        
-        if (insertError) {
-          console.error("Insert error details:", insertError);
-          
-          if (insertError.code === "42501") {
-            return "Permission denied. Row Level Security may be preventing insert operations.";
-          } else if (insertError.code === "23505") {
-            return "A connection already exists. Try disconnecting first before reconnecting.";
-          }
-          
-          return `Failed to create test connection: ${insertError.message}. Error code: ${insertError.code}`;
-        }
-        
-        await supabase
-          .from('email_connections')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('email_address', testEmail);
-        
-        return "Database access is working correctly. You should be able to connect your email account.";
-      } catch (error: any) {
-        console.error("Detailed error during test connection:", error);
-        return `Connection test error: ${error.message || "Unknown error"}. Check browser console for details.`;
-      }
-    } catch (error: any) {
-      console.error("Diagnostic outer error:", error);
-      return `Diagnostic error: ${error.message || "Unknown error"}`;
-    } finally {
-      setIsLoading(false);
-      checkConnection();
     }
   };
 
