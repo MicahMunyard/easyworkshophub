@@ -1,48 +1,47 @@
 
 import React, { useEffect, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { getEdgeFunctionUrl } from "@/hooks/email/utils/supabaseUtils";
-import { Loader2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Loader2 } from "lucide-react";
+import { getEdgeFunctionUrl } from "@/hooks/email/utils/supabaseUtils";
 
-const EmailCallback = () => {
+const EmailCallback: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const [error, setError] = useState<string | null>(null);
-  const [isProcessing, setIsProcessing] = useState(true);
   const { user } = useAuth();
-  const { toast } = useToast();
-  
+  const [isProcessing, setIsProcessing] = useState(true);
+  const [status, setStatus] = useState<"processing" | "success" | "error">("processing");
+  const [message, setMessage] = useState("Processing OAuth callback...");
+
   useEffect(() => {
-    const handleOAuthCallback = async () => {
+    const processOAuthCallback = async () => {
+      if (!user) {
+        setStatus("error");
+        setMessage("You must be logged in to complete the email connection process");
+        setIsProcessing(false);
+        return;
+      }
+
       try {
-        const params = new URLSearchParams(location.search);
-        const code = params.get("code");
-        const state = params.get("state");
-        const provider = params.get("provider") || localStorage.getItem("email_oauth_provider") || "gmail";
-        
-        console.log("Received OAuth callback with code:", code ? "Present" : "Missing", "and state:", state);
-        
+        // Get the auth code from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get("code");
+        const provider = urlParams.get("state") || "gmail"; // Get the provider from state or default to gmail
+
         if (!code) {
-          const error = params.get("error");
-          throw new Error(error || "Authorization code missing from callback");
+          throw new Error("No authorization code found in the callback URL");
         }
-        
-        if (!user) {
-          throw new Error("User authentication required. Please sign in again.");
-        }
-        
+
+        // Get the user's session token
         const { data: sessionData } = await supabase.auth.getSession();
         if (!sessionData.session) {
-          throw new Error("No active session found. Please sign in again.");
+          throw new Error("No active session found");
         }
-        
-        // Process the OAuth callback with our edge function
-        const edgeFunctionUrl = getEdgeFunctionUrl('email-integration');
-        
-        const response = await fetch(`${edgeFunctionUrl}/oauth-callback`, {
+
+        // Call the edge function to handle the OAuth callback
+        const response = await fetch(`${getEdgeFunctionUrl('email-integration')}/oauth-callback`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -50,76 +49,75 @@ const EmailCallback = () => {
           },
           body: JSON.stringify({
             code,
-            state,
-            provider
+            provider,
           }),
         });
-        
+
         const result = await response.json();
-        
+
         if (!response.ok) {
-          throw new Error(result.error || "Failed to complete email authentication");
+          throw new Error(result.error || "Failed to complete email connection");
         }
-        
-        toast({
-          title: "Success!",
-          description: `Your ${provider} account has been connected successfully.`
-        });
-        
-        // Clear any stored state
-        localStorage.removeItem("email_oauth_provider");
-        
-        // Redirect back to the email integration page
-        navigate("/EmailIntegration");
+
+        setStatus("success");
+        setMessage(`Successfully connected ${result.email || "your email account"}`);
       } catch (error: any) {
-        console.error("OAuth callback error:", error);
-        setError(error.message || "An error occurred during email connection");
-        
-        toast({
-          variant: "destructive",
-          title: "Connection Failed",
-          description: error.message || "Failed to connect email account"
-        });
-        
-        // After showing the error, redirect back to the email settings
-        setTimeout(() => {
-          navigate("/EmailIntegration?tab=settings");
-        }, 3000);
+        console.error("Error processing OAuth callback:", error);
+        setStatus("error");
+        setMessage(error.message || "Failed to complete email connection");
       } finally {
         setIsProcessing(false);
       }
     };
-    
-    handleOAuthCallback();
-  }, [location.search, user, navigate, toast]);
-  
+
+    processOAuthCallback();
+  }, [user, navigate]);
+
+  const handleContinue = () => {
+    navigate("/email-integration");
+  };
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4">
-      {isProcessing ? (
-        <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-primary" />
-          <h2 className="text-2xl font-semibold mb-2">Processing Email Connection</h2>
-          <p className="text-muted-foreground">
-            Please wait while we complete connecting your email account...
-          </p>
-        </div>
-      ) : error ? (
-        <div className="text-center max-w-md">
-          <div className="bg-destructive/10 p-4 rounded-lg mb-4">
-            <h2 className="text-xl font-semibold text-destructive mb-2">Connection Failed</h2>
-            <p>{error}</p>
-          </div>
-          <p>Redirecting you back to settings...</p>
-        </div>
-      ) : (
-        <div className="text-center">
-          <div className="bg-green-50 p-4 rounded-lg mb-4">
-            <h2 className="text-xl font-semibold text-green-600 mb-2">Connection Successful</h2>
-            <p>Your email account has been connected successfully!</p>
-          </div>
-          <p>Redirecting you back to the application...</p>
-        </div>
-      )}
+    <div className="container flex items-center justify-center min-h-screen py-8">
+      <Card className="w-full max-w-md mx-auto">
+        <CardHeader>
+          <CardTitle>Email Connection {status === "success" ? "Complete" : "In Progress"}</CardTitle>
+          <CardDescription>
+            {status === "processing" ? "We're connecting your email account..." : "Email connection status"}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col items-center justify-center py-6">
+          {isProcessing ? (
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          ) : status === "success" ? (
+            <div className="flex flex-col items-center text-center">
+              <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <p className="text-lg font-medium">{message}</p>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center text-center">
+              <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </div>
+              <p className="text-lg font-medium text-destructive">{message}</p>
+            </div>
+          )}
+        </CardContent>
+        <CardFooter className="flex justify-center">
+          <Button 
+            onClick={handleContinue} 
+            disabled={isProcessing}
+          >
+            {status === "success" ? "Continue to Email Integration" : "Back to Email Settings"}
+          </Button>
+        </CardFooter>
+      </Card>
     </div>
   );
 };

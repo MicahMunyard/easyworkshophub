@@ -147,11 +147,12 @@ export const useEmailConnection = () => {
         
         if (result.auth_url) {
           console.log("Redirecting to OAuth URL:", result.auth_url);
+          // This is the key change: directly redirect to the OAuth URL
           window.location.href = result.auth_url;
           return true;
         }
         
-        await updateConnectionStatus('connected');
+        updateConnectionStatus('connected');
         setIsConnected(true);
         setConnectionStatus('connected');
         setLastError(null);
