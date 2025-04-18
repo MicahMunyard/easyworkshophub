@@ -1,8 +1,9 @@
+
 import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useEmailConnection } from "@/hooks/email/useEmailConnection";
-import EmailProviderSelector from "./settings/EmailProviderSelector";
+import EmailProviderButtons from "./settings/EmailProviderButtons";
 import EmailCredentials from "./settings/EmailCredentials";
 import AutoCreateToggle from "./settings/AutoCreateToggle";
 import EmailSettingsActions from "./settings/EmailSettingsActions";
@@ -39,6 +40,15 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({
     updateSettings,
     diagnoseConnectionIssues
   } = useEmailConnection();
+
+  const handleSelectProvider = (selectedProvider: "gmail" | "outlook" | "yahoo" | "other") => {
+    setProvider(selectedProvider);
+    
+    // For OAuth providers, we can start the connection flow immediately
+    if (selectedProvider === "gmail" || selectedProvider === "outlook") {
+      connectEmail();
+    }
+  };
 
   const handleConnectEmail = async () => {
     const success = await connectEmail();
@@ -104,48 +114,69 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({
           </Alert>
         )}
         
-        <EmailProviderSelector 
-          provider={provider} 
-          setProvider={setProvider} 
-          disabled={isConnected || isLoading} 
-        />
-        
-        <EmailCredentials 
-          emailAddress={emailAddress}
-          setEmailAddress={setEmailAddress}
-          password={password}
-          setPassword={setPassword}
-          isConnected={isConnected}
-          isLoading={isLoading}
-        />
-        
-        <AutoCreateToggle 
-          autoCreateBookings={autoCreateBookings}
-          setAutoCreateBookings={setAutoCreateBookings}
-          disabled={!isConnected || isLoading}
-        />
-        
-        <div className="flex justify-end">
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={handleDiagnoseIssues}
-            disabled={isDiagnosing || isLoading}
-            className="flex items-center gap-1"
-          >
-            {isDiagnosing ? (
-              <>
-                <RefreshCw className="h-4 w-4 animate-spin" />
-                Diagnosing...
-              </>
-            ) : (
-              <>
-                <RefreshCw className="h-4 w-4" />
-                Diagnose Connection Issues
-              </>
+        {!isConnected ? (
+          <>
+            <EmailProviderButtons 
+              onSelectProvider={handleSelectProvider} 
+              isLoading={isLoading} 
+            />
+            
+            {(provider === "yahoo" || provider === "other") && (
+              <EmailCredentials 
+                emailAddress={emailAddress}
+                setEmailAddress={setEmailAddress}
+                password={password}
+                setPassword={setPassword}
+                isConnected={isConnected}
+                isLoading={isLoading}
+              />
             )}
-          </Button>
-        </div>
+          </>
+        ) : (
+          <>
+            <div className="p-4 bg-green-50 border border-green-200 rounded-md flex items-center gap-2">
+              <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <div>
+                <p className="font-medium text-green-800">Email Connected</p>
+                <p className="text-sm text-green-600">{emailAddress} ({provider})</p>
+              </div>
+            </div>
+            
+            <AutoCreateToggle 
+              autoCreateBookings={autoCreateBookings}
+              setAutoCreateBookings={setAutoCreateBookings}
+              disabled={!isConnected || isLoading}
+            />
+          </>
+        )}
+        
+        {isConnected && (
+          <div className="flex justify-end">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={handleDiagnoseIssues}
+              disabled={isDiagnosing || isLoading}
+              className="flex items-center gap-1"
+            >
+              {isDiagnosing ? (
+                <>
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  Diagnosing...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4" />
+                  Diagnose Connection Issues
+                </>
+              )}
+            </Button>
+          </div>
+        )}
       </CardContent>
       <CardFooter className="flex justify-between">
         <EmailSettingsActions 

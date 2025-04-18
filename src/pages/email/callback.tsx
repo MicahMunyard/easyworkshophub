@@ -14,6 +14,7 @@ const EmailCallback: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(true);
   const [status, setStatus] = useState<"processing" | "success" | "error">("processing");
   const [message, setMessage] = useState("Processing OAuth callback...");
+  const [email, setEmail] = useState<string | null>(null);
 
   useEffect(() => {
     const processOAuthCallback = async () => {
@@ -33,6 +34,8 @@ const EmailCallback: React.FC = () => {
         if (!code) {
           throw new Error("No authorization code found in the callback URL");
         }
+
+        console.log(`Processing OAuth callback with code ${code} for provider ${provider}`);
 
         // Get the user's session token
         const { data: sessionData } = await supabase.auth.getSession();
@@ -56,9 +59,12 @@ const EmailCallback: React.FC = () => {
         const result = await response.json();
 
         if (!response.ok) {
+          console.error('OAuth callback error:', result);
           throw new Error(result.error || "Failed to complete email connection");
         }
 
+        console.log('OAuth callback successful:', result);
+        setEmail(result.email || "your email account");
         setStatus("success");
         setMessage(`Successfully connected ${result.email || "your email account"}`);
       } catch (error: any) {
@@ -97,6 +103,7 @@ const EmailCallback: React.FC = () => {
                 </svg>
               </div>
               <p className="text-lg font-medium">{message}</p>
+              {email && <p className="text-sm text-muted-foreground mt-2">{email}</p>}
             </div>
           ) : (
             <div className="flex flex-col items-center text-center">

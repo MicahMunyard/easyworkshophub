@@ -24,8 +24,8 @@ export const useEmailConnection = () => {
     isLoading,
     setIsLoading,
     updateConnectionStatus,
-    setConnectionStatus,
-    setLastError
+    connectionStatus: setConnectionStatus,
+    lastError: setLastError
   } = useEmailConnectionStatus(user);
   
   const { diagnoseConnectionIssues } = useEmailDiagnostics(user);
@@ -88,7 +88,7 @@ export const useEmailConnection = () => {
       return false;
     }
     
-    if (!emailAddress) {
+    if (!emailAddress && (provider === "yahoo" || provider === "other")) {
       toast({
         title: "Missing Information",
         description: "Please provide your email address",
@@ -99,7 +99,7 @@ export const useEmailConnection = () => {
     
     setIsLoading(true);
     setIsConnecting(true);
-    setLastError(null);
+    updateConnectionStatus('connecting');
     
     try {
       await supabase
@@ -147,15 +147,13 @@ export const useEmailConnection = () => {
         
         if (result.auth_url) {
           console.log("Redirecting to OAuth URL:", result.auth_url);
-          // This is the key change: directly redirect to the OAuth URL
+          // Direct redirection to OAuth provider
           window.location.href = result.auth_url;
           return true;
         }
         
         updateConnectionStatus('connected');
         setIsConnected(true);
-        setConnectionStatus('connected');
-        setLastError(null);
         
         toast({
           title: "Success",
@@ -193,8 +191,6 @@ export const useEmailConnection = () => {
         
         setPassword("");
         setIsConnected(true);
-        setConnectionStatus('connected');
-        setLastError(null);
         
         toast({
           title: "Success",
@@ -208,8 +204,7 @@ export const useEmailConnection = () => {
     } catch (error: any) {
       console.error("Error connecting email:", error);
       
-      setConnectionStatus('error');
-      setLastError(error.message || "Failed to connect to email account");
+      updateConnectionStatus('error', error.message || "Failed to connect to email account");
       
       toast({
         title: "Connection Failed",
@@ -269,7 +264,7 @@ export const useEmailConnection = () => {
       setProvider("gmail");
       setAutoCreateBookings(false);
       setIsConnected(false);
-      setConnectionStatus('disconnected');
+      updateConnectionStatus('disconnected');
       
       toast({
         title: "Email Disconnected",
