@@ -71,7 +71,6 @@ export const useEmailConnection = () => {
   }, [user, checkConnection]);
 
   const connectEmail = async () => {
-    
     if (!user) {
       toast({
         title: "Authentication Required",
@@ -127,7 +126,7 @@ export const useEmailConnection = () => {
           body: JSON.stringify({
             provider,
             email: emailAddress,
-            password: provider === 'other' ? password : undefined,
+            password: undefined,
           }),
         });
         
@@ -155,8 +154,7 @@ export const useEmailConnection = () => {
         });
         
         return true;
-      } else {
-        
+      } else if (provider === 'yahoo' || provider === 'other') {
         if (!password) {
           throw new Error("Password is required for this email provider");
         }
@@ -195,6 +193,8 @@ export const useEmailConnection = () => {
         });
         
         return true;
+      } else {
+        throw new Error("Unsupported email provider");
       }
     } catch (error: any) {
       console.error("Error connecting email:", error);
@@ -213,8 +213,6 @@ export const useEmailConnection = () => {
       setIsConnecting(false);
     }
   };
-
-  
 
   const updateConnectionStatus = async (status: string, errorMessage?: string) => {
     if (!user) return;
@@ -336,7 +334,7 @@ export const useEmailConnection = () => {
       }
       
       toast({
-        title: "Settings Updated",
+        title: "Settings Saved",
         description: "Your email settings have been updated"
       });
       
