@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,7 +23,9 @@ export const useEmailConnection = () => {
     lastError,
     isLoading,
     setIsLoading,
-    updateConnectionStatus
+    updateConnectionStatus,
+    setConnectionStatus,
+    setLastError
   } = useEmailConnectionStatus(user);
   
   const { diagnoseConnectionIssues } = useEmailDiagnostics(user);
