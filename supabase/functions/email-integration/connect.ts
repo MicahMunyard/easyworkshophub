@@ -77,14 +77,23 @@ serve(async (req) => {
     const requestData = await req.json();
     const { provider, email, password } = requestData;
     
-    if (!provider || !email) {
+    if (!provider) {
       return new Response(
-        JSON.stringify({ error: 'Missing required fields' }),
+        JSON.stringify({ error: 'Missing required field: provider' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       );
     }
     
-    console.log(`Processing connection request for user ${user.id} with email ${email} and provider ${provider}`);
+    // For OAuth providers, email is optional
+    // For IMAP providers, email is required
+    if ((provider === 'yahoo' || provider === 'other') && !email) {
+      return new Response(
+        JSON.stringify({ error: 'Missing required field: email' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+    
+    console.log(`Processing connection request for user ${user.id} with provider ${provider}`);
     
     // Generate OAuth URL for the specified provider
     let authUrl;
@@ -100,7 +109,7 @@ serve(async (req) => {
         );
       }
       
-      authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(oauthConfig.google.clientId)}&response_type=code&redirect_uri=${encodeURIComponent(oauthConfig.google.redirectUri)}&scope=${encodeURIComponent(oauthConfig.google.scopes.join(' '))}&access_type=offline&prompt=consent`;
+      authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(oauthConfig.google.clientId)}&response_type=code&redirect_uri=${encodeURIComponent(oauthConfig.google.redirectUri)}&scope=${encodeURIComponent(oauthConfig.google.scopes.join(' '))}&access_type=offline&prompt=consent&state=${provider}`;
     } else if (provider === 'microsoft' || provider === 'outlook') {
       if (!oauthConfig.microsoft.clientId || !oauthConfig.microsoft.redirectUri) {
         console.error("Missing Microsoft OAuth configuration");
@@ -113,8 +122,8 @@ serve(async (req) => {
         );
       }
       
-      authUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${oauthConfig.microsoft.clientId}&response_type=code&redirect_uri=${encodeURIComponent(oauthConfig.microsoft.redirectUri)}&scope=${encodeURIComponent(oauthConfig.microsoft.scopes.join(' '))}&response_mode=query`;
-    } else {
+      authUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${oauthConfig.microsoft.clientId}&response_type=code&redirect_uri=${encodeURIComponent(oauthConfig.microsoft.redirectUri)}&scope=${encodeURIComponent(oauthConfig.microsoft.scopes.join(' '))}&response_mode=query&state=${provider}`;
+    } else if (provider !== 'yahoo' && provider !== 'other') {
       return new Response(
         JSON.stringify({ error: 'Unsupported provider' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
@@ -167,10 +176,9 @@ serve(async (req) => {
         .from('email_connections')
         .upsert({
           user_id: user.id,
-          email_address: email,
+          email_address: email || null, // Email can be null for OAuth flows
           provider: provider,
-          status: 'connected', // For demo purposes, set to connected right away
-          connected_at: new Date().toISOString(),
+          status: 'connecting', // Set to connecting, will be updated after OAuth flow completes
           updated_at: new Date().toISOString(),
           auto_create_bookings: existingConnection?.auto_create_bookings || false
         }, {
@@ -185,15 +193,27 @@ serve(async (req) => {
         );
       }
       
-      // If we got here, we've successfully created or updated the connection
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          auth_url: authUrl,
-          message: 'Email connected successfully' 
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      // For OAuth providers, return the authentication URL
+      if (authUrl) {
+        // If we got here, we've successfully created or updated the connection
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            auth_url: authUrl,
+            message: 'OAuth authentication URL generated' 
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      } else {
+        // For non-OAuth providers that don't have an auth_url
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            message: 'Email connection information saved' 
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     } catch (dbError: any) {
       console.error("Database operation error:", dbError);
       return new Response(

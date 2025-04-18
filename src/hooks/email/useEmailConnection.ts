@@ -88,6 +88,8 @@ export const useEmailConnection = () => {
       return false;
     }
     
+    // For OAuth providers (gmail or outlook), we don't need to validate email address
+    // Only validate email for IMAP providers (yahoo or other)
     if (!emailAddress && (provider === "yahoo" || provider === "other")) {
       toast({
         title: "Missing Information",
@@ -106,7 +108,7 @@ export const useEmailConnection = () => {
         .from('email_connections')
         .upsert({
           user_id: user.id,
-          email_address: emailAddress,
+          email_address: emailAddress || null, // Make email optional for OAuth flows
           provider: provider,
           auto_create_bookings: autoCreateBookings,
           status: 'connecting',
@@ -133,7 +135,7 @@ export const useEmailConnection = () => {
           },
           body: JSON.stringify({
             provider,
-            email: emailAddress,
+            email: emailAddress || null, // Email can be null for OAuth flows
             password: undefined,
           }),
         });

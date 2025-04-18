@@ -44,9 +44,9 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({
   const handleSelectProvider = (selectedProvider: "gmail" | "outlook" | "yahoo" | "other") => {
     setProvider(selectedProvider);
     
-    // For OAuth providers, we can start the connection flow immediately
+    // For OAuth providers, we start the connection flow immediately
     if (selectedProvider === "gmail" || selectedProvider === "outlook") {
-      connectEmail();
+      connectEmail(); // This will now redirect to OAuth properly
     }
   };
 
