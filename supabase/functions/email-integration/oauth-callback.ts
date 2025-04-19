@@ -18,69 +18,32 @@ serve(async (req) => {
     });
   }
 
-  console.log("Email integration OAuth callback function called");
+  const url = new URL(req.url);
+  const code = url.searchParams.get('code');
+  const state = url.searchParams.get('state');
   
-  // Get Supabase env vars
-  const supabaseUrl = Deno.env.get('SUPABASE_URL');
-  const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  
-  if (!supabaseUrl || !supabaseServiceRoleKey) {
-    console.error("Missing required environment variables");
+  if (!code) {
     return new Response(
-      JSON.stringify({ error: 'Server configuration error' }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      JSON.stringify({ error: 'Missing authorization code' }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
     );
   }
-
-  // Create Supabase client
-  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
-
-  // Parse auth header
-  const authHeader = req.headers.get('Authorization');
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return new Response(
-      JSON.stringify({ error: 'Missing or invalid authorization header' }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
-    );
-  }
-
-  // Extract token
-  const jwt = authHeader.substring(7);
+  
+  // Determine the provider from the state parameter
+  const provider = state || 'gmail';
   
   try {
-    // Verify user auth
-    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(jwt);
+    let tokenResponse;
+    let userEmail = '';
     
-    if (userError || !user) {
-      console.error("Auth error:", userError);
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized - Invalid token' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
-      );
-    }
-    
-    // Get callback data
-    const requestData = await req.json();
-    const { code, provider, state } = requestData;
-    
-    console.log(`Processing OAuth callback for user ${user.id} with provider ${provider}`);
-    
-    if (!code) {
-      return new Response(
-        JSON.stringify({ error: 'Missing authorization code' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      );
-    }
-    
-    let tokens;
-    let email;
-    
-    // Handle different providers
+    // Exchange code for tokens based on provider
     if (provider === 'gmail' || provider === 'google') {
-      // Exchange code for tokens with Google
-      const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+      // Google OAuth token exchange
+      tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
         body: new URLSearchParams({
           code,
           client_id: oauthConfig.google.clientId,
@@ -91,40 +54,79 @@ serve(async (req) => {
       });
       
       if (!tokenResponse.ok) {
-        const errorText = await tokenResponse.text();
-        console.error("Google token exchange error:", errorText);
-        return new Response(
-          JSON.stringify({ error: `Failed to exchange authorization code: ${errorText}` }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-        );
+        const errorData = await tokenResponse.json();
+        throw new Error(`Google token exchange error: ${JSON.stringify(errorData)}`);
       }
       
-      tokens = await tokenResponse.json();
-      console.log("Received tokens from Google:", tokens.access_token ? "Access token present" : "No access token");
+      const tokens = await tokenResponse.json();
       
-      // Get user email from Google profile
-      const profileResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-        headers: { Authorization: `Bearer ${tokens.access_token}` },
+      // Get user profile to get email address
+      const userProfileResponse = await fetch('https://www.googleapis.com/oauth2/v1/userinfo', {
+        headers: {
+          'Authorization': `Bearer ${tokens.access_token}`
+        }
       });
       
-      if (!profileResponse.ok) {
-        console.error("Failed to get Google profile");
-        return new Response(
-          JSON.stringify({ error: 'Failed to retrieve user profile from Google' }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-        );
+      if (userProfileResponse.ok) {
+        const userProfile = await userProfileResponse.json();
+        userEmail = userProfile.email;
       }
       
-      const profile = await profileResponse.json();
-      email = profile.email;
-      console.log(`Retrieved email ${email} from Google profile`);
-      
-    } else if (provider === 'outlook' || provider === 'microsoft') {
-      // Exchange code for tokens with Microsoft
-      // Similar implementation as Google but with Microsoft endpoints
+      // Return a success response
       return new Response(
-        JSON.stringify({ error: 'Microsoft integration not implemented yet' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 501 }
+        JSON.stringify({
+          success: true,
+          provider: 'gmail',
+          email: userEmail,
+          message: 'Successfully authenticated with Google'
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+      
+    } else if (provider === 'microsoft' || provider === 'outlook') {
+      // Microsoft OAuth token exchange
+      tokenResponse = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          code,
+          client_id: oauthConfig.microsoft.clientId,
+          client_secret: oauthConfig.microsoft.clientSecret,
+          redirect_uri: oauthConfig.microsoft.redirectUri,
+          grant_type: 'authorization_code',
+        }).toString(),
+      });
+      
+      if (!tokenResponse.ok) {
+        const errorData = await tokenResponse.json();
+        throw new Error(`Microsoft token exchange error: ${JSON.stringify(errorData)}`);
+      }
+      
+      const tokens = await tokenResponse.json();
+      
+      // Get user profile to get email address
+      const userProfileResponse = await fetch('https://graph.microsoft.com/v1.0/me', {
+        headers: {
+          'Authorization': `Bearer ${tokens.access_token}`
+        }
+      });
+      
+      if (userProfileResponse.ok) {
+        const userProfile = await userProfileResponse.json();
+        userEmail = userProfile.mail || userProfile.userPrincipalName;
+      }
+      
+      // Return a success response
+      return new Response(
+        JSON.stringify({
+          success: true,
+          provider: 'outlook',
+          email: userEmail,
+          message: 'Successfully authenticated with Microsoft'
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     } else {
       return new Response(
@@ -133,76 +135,11 @@ serve(async (req) => {
       );
     }
     
-    // Store the tokens securely in the database
-    try {
-      // First encrypt the tokens
-      const encryptedTokens = JSON.stringify(tokens); // In production, encrypt this properly
-      
-      // Update the email_connections table with the new connection info
-      const { error: connectionError } = await supabaseAdmin
-        .from('email_connections')
-        .upsert({
-          user_id: user.id,
-          email_address: email,
-          provider,
-          status: 'connected',
-          connected_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          // Don't store tokens in this table for security
-        }, {
-          onConflict: 'user_id'
-        });
-      
-      if (connectionError) {
-        console.error("Error saving connection:", connectionError);
-        return new Response(
-          JSON.stringify({ error: 'Failed to save connection data', details: connectionError }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-        );
-      }
-      
-      // Store the tokens in a separate, more secure table
-      const { error: tokensError } = await supabaseAdmin
-        .from('email_connection_tokens')
-        .upsert({
-          user_id: user.id,
-          tokens: encryptedTokens,
-          updated_at: new Date().toISOString(),
-        }, {
-          onConflict: 'user_id'
-        });
-      
-      if (tokensError) {
-        console.error("Error saving tokens:", tokensError);
-        return new Response(
-          JSON.stringify({ error: 'Failed to save authentication tokens', details: tokensError }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-        );
-      }
-      
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          email,
-          message: 'Email connected successfully' 
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    } catch (dbError: any) {
-      console.error("Database operation error:", dbError);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Database operation failed',
-          details: dbError instanceof Error ? dbError.message : String(dbError)
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-      );
-    }
   } catch (error) {
-    console.error("Error processing OAuth callback:", error);
+    console.error("OAuth callback error:", error);
     return new Response(
       JSON.stringify({ 
-        error: 'Internal server error', 
+        error: 'OAuth authentication failed', 
         details: error instanceof Error ? error.message : String(error)
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }

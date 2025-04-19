@@ -17,32 +17,21 @@ serve(async (req) => {
     });
   }
 
-  console.log("Email integration disconnect function called");
+  console.log("Email integration disconnect endpoint called");
   
   // Make sure environment variables are available
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   
-  console.log("SUPABASE_URL available:", !!supabaseUrl);
-  
   // Verify Supabase URL is available
-  if (!supabaseUrl) {
-    console.error("SUPABASE_URL environment variable is missing");
+  if (!supabaseUrl || !supabaseServiceRoleKey) {
+    console.error("Missing Supabase environment variables");
     return new Response(
-      JSON.stringify({ error: 'Server configuration error: Missing SUPABASE_URL' }),
+      JSON.stringify({ error: 'Server configuration error: Missing Supabase configuration' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }
-  
-  // Verify Supabase service role key is available
-  if (!supabaseServiceRoleKey) {
-    console.error("SUPABASE_SERVICE_ROLE_KEY environment variable is missing");
-    return new Response(
-      JSON.stringify({ error: 'Server configuration error: Missing SUPABASE_SERVICE_ROLE_KEY' }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-    );
-  }
-  
+
   // Create Supabase client with Admin key for API operations
   const supabaseClient = createClient(
     supabaseUrl,
@@ -73,34 +62,40 @@ serve(async (req) => {
       );
     }
     
-    // Update connection information in database
-    const { error: connectionError } = await supabaseClient
-      .from('email_connections')
-      .update({
-        status: 'disconnected',
-        updated_at: new Date().toISOString(),
-        access_token: null,
-        refresh_token: null
-      })
-      .eq('user_id', user.id);
+    try {
+      const { error } = await supabaseClient
+        .from('email_connections')
+        .update({
+          status: 'disconnected',
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', user.id);
       
-    if (connectionError) {
+      if (error) {
+        console.error("Error disconnecting email:", error);
+        return new Response(
+          JSON.stringify({ error: 'Failed to disconnect email', details: error }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        );
+      }
+      
       return new Response(
-        JSON.stringify({ error: 'Failed to update connection data', details: connectionError }),
+        JSON.stringify({ success: true, message: 'Email disconnected successfully' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    } catch (error: any) {
+      console.error("Error disconnecting email:", error);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Failed to disconnect email', 
+          details: error instanceof Error ? error.message : String(error) 
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
     
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: 'Email disconnected successfully' 
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-    
   } catch (error) {
-    console.error("Error processing disconnection request:", error);
+    console.error("Error in disconnect function:", error);
     return new Response(
       JSON.stringify({ 
         error: 'Internal server error', 
