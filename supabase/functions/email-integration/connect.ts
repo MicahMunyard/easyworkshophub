@@ -22,7 +22,6 @@ serve(async (req) => {
   console.log("GOOGLE_CLIENT_ID:", Deno.env.get('GOOGLE_CLIENT_ID') ? 'Set' : 'Not set');
   console.log("GOOGLE_CLIENT_SECRET:", Deno.env.get('GOOGLE_CLIENT_SECRET') ? 'Set' : 'Not set');
   console.log("GOOGLE_REDIRECT_URI:", Deno.env.get('GOOGLE_REDIRECT_URI') ? 'Set' : 'Not set');
-  console.log("PROJECT_URL:", Deno.env.get('PROJECT_URL') ? 'Set' : 'Not set');
   
   try {
     const { provider } = await req.json();
@@ -37,8 +36,12 @@ serve(async (req) => {
     // Generate OAuth URL for the specified provider
     let authUrl;
     if (provider === 'gmail' || provider === 'google') {
+      // Use the client ID directly from environment variable
       const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID');
-      const googleRedirectUri = Deno.env.get('GOOGLE_REDIRECT_URI') || `${Deno.env.get('PROJECT_URL') || ''}/email/callback`;
+      
+      // Use the correct redirect URI that matches what's configured in Google Cloud
+      // This should match one of the URIs you've added in Google Cloud
+      const googleRedirectUri = 'https://qyjjbpyqxwrluhymvshn.supabase.co/functions/v1/email-integration/oauth-callback';
       
       console.log("Google OAuth configuration:");
       console.log("- Client ID:", googleClientId ? 'Available' : 'Missing');
@@ -55,6 +58,7 @@ serve(async (req) => {
         );
       }
       
+      // Create Google OAuth URL with the configured redirect URI
       authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(googleClientId)}&response_type=code&redirect_uri=${encodeURIComponent(googleRedirectUri)}&scope=${encodeURIComponent(oauthConfig.google.scopes.join(' '))}&access_type=offline&prompt=consent&state=${provider}`;
       console.log("Generated auth URL:", authUrl.substring(0, 100) + '...');
     } else if (provider === 'microsoft' || provider === 'outlook') {
