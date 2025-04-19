@@ -1,73 +1,57 @@
 
-import { User } from "@supabase/supabase-js";
+import { useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
+import { getEdgeFunctionUrl } from "./utils/supabaseUtils";
+import { User } from '@supabase/supabase-js';
 
 export const useEmailDiagnostics = (user: User | null) => {
-  const diagnoseConnectionIssues = async () => {
+  const [isDiagnosing, setIsDiagnosing] = useState(false);
+
+  const diagnoseConnectionIssues = async (): Promise<string> => {
     if (!user) {
-      return "No authenticated user found. Please sign in first.";
+      return "Error: You must be logged in to diagnose email connection issues";
     }
+
+    setIsDiagnosing(true);
     
     try {
-      const { data: existingConn, error: fetchError } = await supabase
-        .from('email_connections')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle();
-      
-      if (fetchError) {
-        return `Database error: ${fetchError.message}. This may be due to permission issues.`;
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        throw new Error("No active session found");
       }
       
-      if (existingConn) {
-        return "Database connection is working. You have permission to read your connection data. If you're having issues connecting email, check your credentials.";
-      }
+      const edgeFunctionUrl = getEdgeFunctionUrl('email-integration');
       
-      try {
-        console.log(`Creating test connection for user ${user.id}`);
-        
-        const testEmail = "test@example.com";
-        const testProvider = "gmail";
-        
-        const { error: insertError } = await supabase
-          .from('email_connections')
-          .insert({
-            user_id: user.id,
-            email_address: testEmail,
-            provider: testProvider,
-            status: "testing"
-          });
-        
-        if (insertError) {
-          console.error("Insert error details:", insertError);
-          
-          if (insertError.code === "42501") {
-            return "Permission denied. Row Level Security may be preventing insert operations.";
-          } else if (insertError.code === "23505") {
-            return "A connection already exists. Try disconnecting first before reconnecting.";
-          }
-          
-          return `Failed to create test connection: ${insertError.message}. Error code: ${insertError.code}`;
+      const response = await fetch(edgeFunctionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionData.session.access_token}`,
+        },
+        body: JSON.stringify({
+          action: 'diagnose'
+        }),
+      });
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          return "No email connection found. Please set up your email integration first.";
         }
-        
-        await supabase
-          .from('email_connections')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('email_address', testEmail);
-        
-        return "Database access is working correctly. You should be able to connect your email account.";
-      } catch (error: any) {
-        console.error("Detailed error during test connection:", error);
-        return `Connection test error: ${error.message || "Unknown error"}. Check browser console for details.`;
+        throw new Error(`Error ${response.status}: ${await response.text()}`);
       }
+      
+      const data = await response.json();
+      return data.diagnosticMessage || "Diagnosis completed but no specific issues found.";
     } catch (error: any) {
-      console.error("Diagnostic outer error:", error);
-      return `Diagnostic error: ${error.message || "Unknown error"}`;
+      console.error("Error diagnosing connection:", error);
+      return `Diagnostic error: ${error.message}`;
+    } finally {
+      setIsDiagnosing(false);
     }
   };
 
   return {
+    isDiagnosing,
     diagnoseConnectionIssues
   };
 };

@@ -124,16 +124,17 @@ export const useEmailConnection = () => {
       }
       
       const edgeFunctionUrl = getEdgeFunctionUrl('email-integration');
-      console.log("Connecting to edge function:", edgeFunctionUrl + "/connect");
+      console.log("Connecting to edge function:", edgeFunctionUrl);
       
       if (provider === 'gmail' || provider === 'outlook') {
-        const response = await fetch(`${edgeFunctionUrl}/connect`, {
+        const response = await fetch(edgeFunctionUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${sessionData.session.access_token}`,
           },
           body: JSON.stringify({
+            action: 'connect',
             provider,
             email: emailAddress || null, // Email can be null for OAuth flows
             password: undefined,
@@ -168,13 +169,14 @@ export const useEmailConnection = () => {
           throw new Error("Password is required for this email provider");
         }
         
-        const response = await fetch(`${edgeFunctionUrl}/connect`, {
+        const response = await fetch(edgeFunctionUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${sessionData.session.access_token}`,
           },
           body: JSON.stringify({
+            action: 'connect',
             provider,
             email: emailAddress,
             password,
@@ -239,12 +241,17 @@ export const useEmailConnection = () => {
         throw new Error("No active session found");
       }
       
-      const response = await fetch(`${getEdgeFunctionUrl('email-integration')}/disconnect`, {
+      const edgeFunctionUrl = getEdgeFunctionUrl('email-integration');
+      
+      const response = await fetch(edgeFunctionUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${sessionData.session.access_token}`,
         },
+        body: JSON.stringify({
+          action: 'disconnect'
+        }),
       });
       
       const result = await response.json();
