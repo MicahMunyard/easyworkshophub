@@ -8,3 +8,15 @@ verify_jwt = true
 [[functions.email-integration.routes]]
 path = "/"
 method = "POST"
+
+[[functions.email-integration.routes]]
+path = "/connect"
+method = "POST"
+
+[[functions.email-integration.routes]]
+path = "/disconnect"
+method = "POST"
+
+[[functions.email-integration.routes]]
+path = "/oauth-callback"
+method = "POST"

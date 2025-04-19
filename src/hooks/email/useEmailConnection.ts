@@ -1,241 +1,200 @@
 
-import { useState, useEffect, useCallback } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { useState, useCallback } from 'react';
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
 import { getEdgeFunctionUrl } from "./utils/supabaseUtils";
-import { getProviderConfig } from "./utils/providerConfigs";
-import { useEmailConnectionStatus } from "./useEmailConnectionStatus";
-import { useEmailDiagnostics } from "./useEmailDiagnostics";
+import { User } from '@supabase/supabase-js';
+import { useEmailDiagnostics } from './useEmailDiagnostics';
+import { useToast } from '@/hooks/use-toast';
 
 export const useEmailConnection = () => {
-  const { toast } = useToast();
-  const { user } = useAuth();
-  const [isConnected, setIsConnected] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
+  // State management
+  const [provider, setProvider] = useState<"gmail" | "outlook" | "yahoo" | "other">("gmail");
   const [emailAddress, setEmailAddress] = useState("");
   const [password, setPassword] = useState("");
-  const [provider, setProvider] = useState<"gmail" | "outlook" | "yahoo" | "other">("gmail");
+  const [isConnected, setIsConnected] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<"connected" | "disconnected" | "connecting" | "error">("disconnected");
+  const [isLoading, setIsLoading] = useState(false);
+  const [lastError, setLastError] = useState<string | null>(null);
   const [autoCreateBookings, setAutoCreateBookings] = useState(false);
+  const { toast } = useToast();
   
-  const {
-    connectionStatus,
-    lastError,
-    isLoading,
-    setIsLoading,
-    updateConnectionStatus,
-    connectionStatus: setConnectionStatus,
-    lastError: setLastError
-  } = useEmailConnectionStatus(user);
+  // Get current user
+  const [user, setUser] = useState<User | null>(null);
   
+  useState(() => {
+    // Get authenticated user
+    const getUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      setUser(data.user);
+    };
+    
+    getUser();
+  });
+  
+  // Get diagnostic functions
   const { diagnoseConnectionIssues } = useEmailDiagnostics(user);
 
-  const checkConnection = useCallback(async (): Promise<boolean> => {
-    if (!user) return false;
+  // Check if email is connected
+  const checkConnection = useCallback(async () => {
+    if (!user) {
+      console.info("No user logged in");
+      return false;
+    }
+    
+    console.info("Checking email connection for user:", user.id);
     
     try {
-      console.log("Checking email connection for user:", user.id);
+      // Get authenticated session
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        console.info("No active session");
+        return false;
+      }
       
+      // Fetch connection information from the database
       const { data, error } = await supabase
         .from('email_connections')
-        .select('email_address, provider, auto_create_bookings, status, last_error')
+        .select('*')
         .eq('user_id', user.id)
         .maybeSingle();
       
       if (error) {
-        console.error("Error checking email connection:", error);
-        setIsConnected(false);
+        console.error("Error checking connection:", error);
+        setLastError(`Database error: ${error.message}`);
+        setConnectionStatus("error");
         return false;
       }
       
-      if (data) {
-        console.log("Found email connection:", data);
-        setEmailAddress(data.email_address || "");
-        setProvider((data.provider || "gmail") as "gmail" | "outlook" | "yahoo" | "other");
-        setAutoCreateBookings(data.auto_create_bookings || false);
-        
-        const connected = data.status === 'connected';
-        setIsConnected(connected);
-        return connected;
+      if (!data) {
+        console.info("No email connection found, initializing default state");
+        setIsConnected(false);
+        setConnectionStatus("disconnected");
+        setProvider("gmail");
+        setEmailAddress("");
+        setPassword("");
+        setAutoCreateBookings(false);
+        return false;
       }
       
-      console.log("No email connection found, initializing default state");
-      setEmailAddress("");
-      setProvider("gmail");
-      setAutoCreateBookings(false);
-      setIsConnected(false);
-      return false;
-    } catch (error) {
-      console.error("Exception checking email connection:", error);
-      setIsConnected(false);
+      // Update state with connection data
+      setProvider(data.provider as any);
+      setEmailAddress(data.email_address || "");
+      setIsConnected(data.status === "connected");
+      setConnectionStatus(data.status as any);
+      setAutoCreateBookings(data.auto_create_bookings || false);
+      
+      return data.status === "connected";
+      
+    } catch (error: any) {
+      console.error("Error checking connection:", error);
+      setLastError(`Error: ${error.message}`);
       return false;
     }
   }, [user]);
 
-  useEffect(() => {
-    if (user) {
-      checkConnection();
-    }
-  }, [user, checkConnection]);
-
+  // Connect to email
   const connectEmail = async () => {
     if (!user) {
-      toast({
-        title: "Authentication Required",
-        description: "Please sign in to connect your email account",
-        variant: "destructive"
-      });
-      return false;
-    }
-    
-    // For OAuth providers (gmail or outlook), we don't need to validate email address
-    // Only validate email for IMAP providers (yahoo or other)
-    if (!emailAddress && (provider === "yahoo" || provider === "other")) {
-      toast({
-        title: "Missing Information",
-        description: "Please provide your email address",
-        variant: "destructive"
-      });
+      setLastError("You must be logged in to connect email");
       return false;
     }
     
     setIsLoading(true);
-    setIsConnecting(true);
-    updateConnectionStatus('connecting');
+    setLastError(null);
     
     try {
-      await supabase
-        .from('email_connections')
-        .upsert({
-          user_id: user.id,
-          email_address: emailAddress || null, // Make email optional for OAuth flows
-          provider: provider,
-          auto_create_bookings: autoCreateBookings,
-          status: 'connecting',
-          last_error: null,
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'user_id'
-        });
-      
+      // Get authenticated session
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData.session) {
         throw new Error("No active session found");
       }
       
-      const edgeFunctionUrl = getEdgeFunctionUrl('email-integration');
-      console.log("Connecting to edge function:", edgeFunctionUrl);
-      
-      if (provider === 'gmail' || provider === 'outlook') {
-        const response = await fetch(edgeFunctionUrl, {
+      // For OAuth providers (Gmail, Outlook), we call the edge function to get the OAuth URL
+      if (provider === "gmail" || provider === "outlook") {
+        const edgeFunctionUrl = getEdgeFunctionUrl('email-integration');
+        console.info("Connecting to edge function:", edgeFunctionUrl);
+        
+        const response = await fetch(`${edgeFunctionUrl}/connect`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${sessionData.session.access_token}`,
           },
           body: JSON.stringify({
-            action: 'connect',
             provider,
-            email: emailAddress || null, // Email can be null for OAuth flows
-            password: undefined,
           }),
         });
         
         const result = await response.json();
-        console.log("Connection result:", result);
         
         if (!response.ok) {
-          throw new Error(result.error || "Failed to initiate email connection");
+          console.error("Connection result:", result);
+          throw new Error(result.error || "Failed to connect email");
         }
         
+        // For OAuth flow, we redirect to the auth URL
         if (result.auth_url) {
-          console.log("Redirecting to OAuth URL:", result.auth_url);
-          // Direct redirection to OAuth provider
           window.location.href = result.auth_url;
-          return true;
+          return true; // Return true as we're redirecting
         }
-        
-        updateConnectionStatus('connected');
-        setIsConnected(true);
-        
-        toast({
-          title: "Success",
-          description: "Email account connected successfully",
-        });
-        
-        return true;
-      } else if (provider === 'yahoo' || provider === 'other') {
-        if (!password) {
-          throw new Error("Password is required for this email provider");
-        }
-        
-        const response = await fetch(edgeFunctionUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${sessionData.session.access_token}`,
-          },
-          body: JSON.stringify({
-            action: 'connect',
-            provider,
-            email: emailAddress,
-            password,
-          }),
-        });
-        
-        const result = await response.json();
-        console.log("Connection result:", result);
-        
-        if (!response.ok) {
-          await updateConnectionStatus('error', result.error || "Failed to connect email account");
-          throw new Error(result.error || "Failed to connect email account");
-        }
-        
-        await updateConnectionStatus('connected');
-        
-        setPassword("");
-        setIsConnected(true);
-        
-        toast({
-          title: "Success",
-          description: "Email account connected successfully",
-        });
-        
-        return true;
       } else {
-        throw new Error("Unsupported email provider");
+        // For non-OAuth providers, we save the credentials to the database
+        if (!emailAddress) {
+          setLastError("Please provide your email address");
+          return false;
+        }
+        
+        // Update the database
+        const { error } = await supabase
+          .from('email_connections')
+          .upsert({
+            user_id: user.id,
+            email_address: emailAddress,
+            provider: provider,
+            status: 'connected', // Set as connected for non-OAuth providers
+            updated_at: new Date().toISOString(),
+            auto_create_bookings: autoCreateBookings
+          }, {
+            onConflict: 'user_id'
+          });
+          
+        if (error) {
+          throw new Error(`Database error: ${error.message}`);
+        }
+        
+        // Update local state
+        setIsConnected(true);
+        setConnectionStatus("connected");
+        
+        toast({
+          title: "Email Connected",
+          description: `Successfully connected to ${emailAddress}`
+        });
       }
+      
+      return true;
     } catch (error: any) {
       console.error("Error connecting email:", error);
-      
-      updateConnectionStatus('error', error.message || "Failed to connect to email account");
-      
-      toast({
-        title: "Connection Failed",
-        description: error.message || "Failed to connect to email account. Please try again.",
-        variant: "destructive"
-      });
+      setLastError(error.message || "Failed to connect email");
+      setConnectionStatus("error");
       return false;
     } finally {
       setIsLoading(false);
-      setIsConnecting(false);
     }
   };
 
+  // Disconnect email
   const disconnectEmail = async () => {
-    if (!user) return false;
+    if (!user) {
+      setLastError("You must be logged in to disconnect email");
+      return false;
+    }
+    
+    setIsLoading(true);
+    setLastError(null);
     
     try {
-      setIsLoading(true);
-      
-      await supabase
-        .from('email_connections')
-        .update({
-          status: 'disconnecting',
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', user.id);
-      
+      // Get authenticated session
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData.session) {
         throw new Error("No active session found");
@@ -243,37 +202,22 @@ export const useEmailConnection = () => {
       
       const edgeFunctionUrl = getEdgeFunctionUrl('email-integration');
       
-      const response = await fetch(edgeFunctionUrl, {
+      const response = await fetch(`${edgeFunctionUrl}/disconnect`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${sessionData.session.access_token}`,
-        },
-        body: JSON.stringify({
-          action: 'disconnect'
-        }),
+        }
       });
       
-      const result = await response.json();
-      
       if (!response.ok) {
-        throw new Error(result.error || "Failed to disconnect email account");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to disconnect email");
       }
       
-      await supabase
-        .from('email_connections')
-        .update({
-          status: 'disconnected',
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', user.id);
-      
-      setEmailAddress("");
-      setPassword("");
-      setProvider("gmail");
-      setAutoCreateBookings(false);
+      // Update local state
       setIsConnected(false);
-      updateConnectionStatus('disconnected');
+      setConnectionStatus("disconnected");
       
       toast({
         title: "Email Disconnected",
@@ -281,38 +225,27 @@ export const useEmailConnection = () => {
       });
       
       return true;
-      
     } catch (error: any) {
       console.error("Error disconnecting email:", error);
-      
-      await supabase
-        .from('email_connections')
-        .update({
-          status: 'error',
-          last_error: error.message || "Failed to disconnect email account",
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', user.id);
-      
-      toast({
-        title: "Error",
-        description: error.message || "Failed to disconnect email account",
-        variant: "destructive"
-      });
+      setLastError(`Error: ${error.message}`);
       return false;
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Update settings
   const updateSettings = async () => {
-    if (!user || !isConnected) {
+    if (!user) {
+      setLastError("You must be logged in to update settings");
       return false;
     }
     
+    setIsLoading(true);
+    setLastError(null);
+    
     try {
-      setIsLoading(true);
-      
+      // Update the database
       const { error } = await supabase
         .from('email_connections')
         .update({
@@ -320,25 +253,15 @@ export const useEmailConnection = () => {
           updated_at: new Date().toISOString()
         })
         .eq('user_id', user.id);
-      
+        
       if (error) {
-        throw error;
+        throw new Error(`Database error: ${error.message}`);
       }
       
-      toast({
-        title: "Settings Saved",
-        description: "Your email settings have been updated"
-      });
-      
       return true;
-      
     } catch (error: any) {
-      console.error("Error updating email settings:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update email settings",
-        variant: "destructive"
-      });
+      console.error("Error updating settings:", error);
+      setLastError(`Error: ${error.message}`);
       return false;
     } finally {
       setIsLoading(false);
@@ -346,24 +269,22 @@ export const useEmailConnection = () => {
   };
 
   return {
-    isConnected,
-    isConnecting,
     emailAddress,
     setEmailAddress,
     password,
     setPassword,
     provider,
     setProvider,
+    isConnected,
+    connectionStatus,
+    isLoading,
+    lastError,
     autoCreateBookings,
     setAutoCreateBookings,
-    connectionStatus,
-    lastError,
-    isLoading,
     connectEmail,
     disconnectEmail,
-    updateSettings,
     checkConnection,
-    getProviderConfig,
+    updateSettings,
     diagnoseConnectionIssues
   };
 };
