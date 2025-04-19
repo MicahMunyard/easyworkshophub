@@ -1,5 +1,5 @@
 
-# This file provides configuration for the function
+# This file provides configuration for the project
 project_id = "qyjjbpyqxwrluhymvshn"
 
 [functions.email-integration]
@@ -7,16 +7,16 @@ verify_jwt = true
 
 [[functions.email-integration.routes]]
 path = "/"
-method = "POST"
+method = ["GET", "POST", "OPTIONS"]
 
 [[functions.email-integration.routes]]
 path = "/connect"
-method = "POST"
+method = ["POST", "OPTIONS"]
 
 [[functions.email-integration.routes]]
 path = "/disconnect"
-method = "POST"
+method = ["POST", "OPTIONS"]
 
 [[functions.email-integration.routes]]
 path = "/oauth-callback"
-method = "POST"
+method = ["POST", "OPTIONS"]

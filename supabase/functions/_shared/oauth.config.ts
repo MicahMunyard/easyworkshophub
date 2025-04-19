@@ -4,7 +4,7 @@ export const oauthConfig = {
   google: {
     clientId: Deno.env.get('GOOGLE_CLIENT_ID') || '',
     clientSecret: Deno.env.get('GOOGLE_CLIENT_SECRET') || '',
-    redirectUri: Deno.env.get('GOOGLE_REDIRECT_URI') || 'https://qyjjbpyqxwrluhymvshn.supabase.co/functions/v1/email-integration/oauth-callback',
+    redirectUri: 'https://qyjjbpyqxwrluhymvshn.supabase.co/functions/v1/email-integration/oauth-callback',
     scopes: [
       'https://www.googleapis.com/auth/gmail.readonly',
       'https://www.googleapis.com/auth/gmail.send',
@@ -17,7 +17,7 @@ export const oauthConfig = {
   microsoft: {
     clientId: Deno.env.get('MICROSOFT_CLIENT_ID') || '',
     clientSecret: Deno.env.get('MICROSOFT_CLIENT_SECRET') || '',
-    redirectUri: Deno.env.get('MICROSOFT_REDIRECT_URI') || 'https://qyjjbpyqxwrluhymvshn.supabase.co/functions/v1/email-integration/oauth-callback',
+    redirectUri: 'https://qyjjbpyqxwrluhymvshn.supabase.co/functions/v1/email-integration/oauth-callback',
     scopes: [
       'offline_access',
       'User.Read',

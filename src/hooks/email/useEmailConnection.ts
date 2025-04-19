@@ -111,10 +111,11 @@ export const useEmailConnection = () => {
       
       // For OAuth providers (Gmail, Outlook), we call the edge function to get the OAuth URL
       if (provider === "gmail" || provider === "outlook") {
-        const edgeFunctionUrl = getEdgeFunctionUrl('email-integration');
+        // This is the direct URL to the edge function
+        const edgeFunctionUrl = "https://qyjjbpyqxwrluhymvshn.supabase.co/functions/v1/email-integration/connect";
         console.info("Connecting to edge function:", edgeFunctionUrl);
         
-        const response = await fetch(`${edgeFunctionUrl}/connect`, {
+        const response = await fetch(edgeFunctionUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -125,7 +126,9 @@ export const useEmailConnection = () => {
           }),
         });
         
+        console.log("Response status:", response.status);
         const result = await response.json();
+        console.log("Connection result:", result);
         
         if (!response.ok) {
           console.error("Connection result:", result);

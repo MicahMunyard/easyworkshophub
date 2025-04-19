@@ -18,12 +18,17 @@ serve(async (req) => {
   }
 
   console.log("Email integration connect endpoint called");
-  console.log("Environment variables available:");
-  console.log("GOOGLE_CLIENT_ID:", Deno.env.get('GOOGLE_CLIENT_ID') ? 'Set' : 'Not set');
-  console.log("GOOGLE_CLIENT_SECRET:", Deno.env.get('GOOGLE_CLIENT_SECRET') ? 'Set' : 'Not set');
-  console.log("GOOGLE_REDIRECT_URI:", Deno.env.get('GOOGLE_REDIRECT_URI') ? 'Set' : 'Not set');
+  console.log("Request URL:", req.url);
+  console.log("Request method:", req.method);
   
   try {
+    // Log environment variables (for debugging)
+    console.log("Environment variables available:");
+    console.log("GOOGLE_CLIENT_ID:", Deno.env.get('GOOGLE_CLIENT_ID') ? 'Set' : 'Not set');
+    console.log("GOOGLE_CLIENT_SECRET:", Deno.env.get('GOOGLE_CLIENT_SECRET') ? 'Set' : 'Not set');
+    console.log("GOOGLE_REDIRECT_URI:", Deno.env.get('GOOGLE_REDIRECT_URI') ? 'Set' : 'Not set');
+    
+    // Parse request body
     const { provider } = await req.json();
     
     if (!provider) {
@@ -39,13 +44,12 @@ serve(async (req) => {
       // Use the client ID directly from environment variable
       const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID');
       
-      // Use the correct redirect URI that matches what's configured in Google Cloud
-      // This should match one of the URIs you've added in Google Cloud
-      const googleRedirectUri = 'https://qyjjbpyqxwrluhymvshn.supabase.co/functions/v1/email-integration/oauth-callback';
+      // Use the correct redirect URI that's configured in Google Cloud
+      const redirectUri = 'https://qyjjbpyqxwrluhymvshn.supabase.co/functions/v1/email-integration/oauth-callback';
       
       console.log("Google OAuth configuration:");
       console.log("- Client ID:", googleClientId ? 'Available' : 'Missing');
-      console.log("- Redirect URI:", googleRedirectUri);
+      console.log("- Redirect URI:", redirectUri);
       
       if (!googleClientId) {
         console.error("Missing Google OAuth configuration");
@@ -59,15 +63,24 @@ serve(async (req) => {
       }
       
       // Create Google OAuth URL with the configured redirect URI
-      authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(googleClientId)}&response_type=code&redirect_uri=${encodeURIComponent(googleRedirectUri)}&scope=${encodeURIComponent(oauthConfig.google.scopes.join(' '))}&access_type=offline&prompt=consent&state=${provider}`;
+      const scopes = [
+        'https://www.googleapis.com/auth/gmail.readonly',
+        'https://www.googleapis.com/auth/gmail.send',
+        'https://www.googleapis.com/auth/gmail.labels',
+        'https://www.googleapis.com/auth/gmail.modify',
+        'https://www.googleapis.com/auth/userinfo.email',
+        'https://www.googleapis.com/auth/userinfo.profile'
+      ];
+      
+      authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(googleClientId)}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes.join(' '))}&access_type=offline&prompt=consent&state=${provider}`;
       console.log("Generated auth URL:", authUrl.substring(0, 100) + '...');
     } else if (provider === 'microsoft' || provider === 'outlook') {
       const microsoftClientId = Deno.env.get('MICROSOFT_CLIENT_ID');
-      const microsoftRedirectUri = Deno.env.get('MICROSOFT_REDIRECT_URI') || `${Deno.env.get('PROJECT_URL') || ''}/email/callback`;
+      const redirectUri = 'https://qyjjbpyqxwrluhymvshn.supabase.co/functions/v1/email-integration/oauth-callback';
       
       console.log("Microsoft OAuth configuration:");
       console.log("- Client ID:", microsoftClientId ? 'Available' : 'Missing');
-      console.log("- Redirect URI:", microsoftRedirectUri);
+      console.log("- Redirect URI:", redirectUri);
       
       if (!microsoftClientId) {
         console.error("Missing Microsoft OAuth configuration");
@@ -80,7 +93,14 @@ serve(async (req) => {
         );
       }
       
-      authUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${microsoftClientId}&response_type=code&redirect_uri=${encodeURIComponent(microsoftRedirectUri)}&scope=${encodeURIComponent(oauthConfig.microsoft.scopes.join(' '))}&response_mode=query&state=${provider}`;
+      const scopes = [
+        'offline_access',
+        'User.Read',
+        'Mail.Read',
+        'Mail.Send'
+      ];
+      
+      authUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${microsoftClientId}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes.join(' '))}&response_mode=query&state=${provider}`;
       console.log("Generated auth URL:", authUrl.substring(0, 100) + '...');
     } else {
       return new Response(
