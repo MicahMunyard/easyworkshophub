@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { oauthConfig } from "../_shared/oauth.config.ts";
@@ -17,7 +18,418 @@ serve(async (req) => {
     });
   }
 
-  console.log("Email integration function called");
+  // Parse URL to get the path
+  const url = new URL(req.url);
+  const path = url.pathname.split('/').pop();
+  
+  console.log("Email integration function called with path:", path);
+  console.log("Full URL:", url.toString());
+  
+  try {
+    // Route requests to the appropriate handler
+    switch(path) {
+      case 'connect':
+        return await handleConnectEndpoint(req);
+      case 'disconnect':
+        return await handleDisconnectEndpoint(req);
+      case 'oauth-callback':
+        return await handleOAuthCallbackEndpoint(req);
+      default:
+        return await handleMainEndpoint(req);
+    }
+  } catch (error) {
+    console.error("Error routing request:", error);
+    return new Response(
+      JSON.stringify({ 
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : String(error),
+        path: path,
+        url: url.toString()
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+    );
+  }
+});
+
+// Handle connect endpoint
+async function handleConnectEndpoint(req: Request) {
+  console.log("Email integration connect endpoint called");
+  
+  try {
+    // Make sure environment variables are available
+    const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID');
+    const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET');
+    
+    console.log("Environment variables available:");
+    console.log("GOOGLE_CLIENT_ID:", googleClientId ? 'Set' : 'Not set');
+    console.log("GOOGLE_CLIENT_SECRET:", googleClientSecret ? 'Set' : 'Not set');
+    
+    // Parse request body
+    const { provider } = await req.json();
+    
+    if (!provider) {
+      return new Response(
+        JSON.stringify({ error: 'Missing required field: provider' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+    
+    // Generate OAuth URL for the specified provider
+    let authUrl;
+    if (provider === 'gmail' || provider === 'google') {
+      // Use the client ID directly from environment variable
+      if (!googleClientId) {
+        console.error("Missing Google OAuth configuration");
+        return new Response(
+          JSON.stringify({ 
+            error: 'Server configuration error: Missing Google OAuth configuration',
+            details: 'The Google client ID is not configured in environment variables.'
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        );
+      }
+      
+      // Use the correct redirect URI that's configured in Google Cloud
+      const redirectUri = 'https://qyjjbpyqxwrluhymvshn.supabase.co/functions/v1/email-integration/oauth-callback';
+      
+      console.log("Google OAuth configuration:");
+      console.log("- Client ID:", googleClientId ? 'Available' : 'Missing');
+      console.log("- Redirect URI:", redirectUri);
+      
+      // Create Google OAuth URL with the configured redirect URI
+      const scopes = [
+        'https://www.googleapis.com/auth/gmail.readonly',
+        'https://www.googleapis.com/auth/gmail.send',
+        'https://www.googleapis.com/auth/gmail.labels',
+        'https://www.googleapis.com/auth/gmail.modify',
+        'https://www.googleapis.com/auth/userinfo.email',
+        'https://www.googleapis.com/auth/userinfo.profile'
+      ];
+      
+      authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(googleClientId)}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes.join(' '))}&access_type=offline&prompt=consent&state=${provider}`;
+      console.log("Generated auth URL:", authUrl.substring(0, 100) + '...');
+    } else if (provider === 'microsoft' || provider === 'outlook') {
+      const microsoftClientId = Deno.env.get('MICROSOFT_CLIENT_ID');
+      const redirectUri = 'https://qyjjbpyqxwrluhymvshn.supabase.co/functions/v1/email-integration/oauth-callback';
+      
+      console.log("Microsoft OAuth configuration:");
+      console.log("- Client ID:", microsoftClientId ? 'Available' : 'Missing');
+      console.log("- Redirect URI:", redirectUri);
+      
+      if (!microsoftClientId) {
+        console.error("Missing Microsoft OAuth configuration");
+        return new Response(
+          JSON.stringify({ 
+            error: 'Server configuration error: Missing Microsoft OAuth configuration',
+            details: 'The Microsoft client ID is not configured in environment variables.'
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        );
+      }
+      
+      const scopes = [
+        'offline_access',
+        'User.Read',
+        'Mail.Read',
+        'Mail.Send'
+      ];
+      
+      authUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${microsoftClientId}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes.join(' '))}&response_mode=query&state=${provider}`;
+      console.log("Generated auth URL:", authUrl.substring(0, 100) + '...');
+    } else {
+      return new Response(
+        JSON.stringify({ error: 'Unsupported provider' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+    
+    // Return the authentication URL
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        auth_url: authUrl,
+        message: 'OAuth authentication URL generated' 
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+    
+  } catch (error: any) {
+    console.error("Error in connect endpoint:", error);
+    return new Response(
+      JSON.stringify({ 
+        error: 'Internal server error', 
+        details: error instanceof Error ? error.message : String(error)
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+    );
+  }
+}
+
+// Handle disconnect endpoint
+async function handleDisconnectEndpoint(req: Request) {
+  console.log("Email integration disconnect endpoint called");
+  
+  // Make sure environment variables are available
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  
+  // Verify Supabase URL is available
+  if (!supabaseUrl || !supabaseServiceRoleKey) {
+    console.error("Missing Supabase environment variables");
+    return new Response(
+      JSON.stringify({ error: 'Server configuration error: Missing Supabase configuration' }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+    );
+  }
+
+  // Create Supabase client with Admin key for API operations
+  const supabaseClient = createClient(
+    supabaseUrl,
+    supabaseServiceRoleKey
+  );
+
+  // Get Authorization header from request
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return new Response(
+      JSON.stringify({ error: 'Missing or invalid authorization header' }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+    );
+  }
+
+  // Get the JWT token from the Authorization header
+  const jwt = authHeader.substring(7);
+  
+  try {
+    // Verify user authentication
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(jwt);
+    
+    if (userError || !user) {
+      console.error("Auth error:", userError);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized - Invalid token' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      );
+    }
+    
+    try {
+      const { error } = await supabaseClient
+        .from('email_connections')
+        .update({
+          status: 'disconnected',
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', user.id);
+      
+      if (error) {
+        console.error("Error disconnecting email:", error);
+        return new Response(
+          JSON.stringify({ error: 'Failed to disconnect email', details: error }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        );
+      }
+      
+      return new Response(
+        JSON.stringify({ success: true, message: 'Email disconnected successfully' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    } catch (error: any) {
+      console.error("Error disconnecting email:", error);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Failed to disconnect email', 
+          details: error instanceof Error ? error.message : String(error) 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
+    }
+    
+  } catch (error) {
+    console.error("Error in disconnect function:", error);
+    return new Response(
+      JSON.stringify({ 
+        error: 'Internal server error', 
+        details: error instanceof Error ? error.message : String(error)
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+    );
+  }
+}
+
+// Handle OAuth callback endpoint
+async function handleOAuthCallbackEndpoint(req: Request) {
+  console.log("Email integration OAuth callback endpoint called");
+  
+  // Make sure environment variables are available
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  
+  if (!supabaseUrl || !supabaseServiceRoleKey) {
+    console.error("Missing Supabase environment variables");
+    return new Response(
+      JSON.stringify({ error: 'Server configuration error: Missing Supabase configuration' }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+    );
+  }
+
+  // Create Supabase client with Admin key for API operations
+  const supabaseClient = createClient(
+    supabaseUrl,
+    supabaseServiceRoleKey
+  );
+
+  try {
+    const { code, provider } = await req.json();
+    
+    if (!code) {
+      return new Response(
+        JSON.stringify({ error: 'Missing required field: code' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+    
+    if (!provider) {
+      return new Response(
+        JSON.stringify({ error: 'Missing required field: provider' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+    
+    // Get Authorization header from request for user verification
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ error: 'Missing or invalid authorization header' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      );
+    }
+    
+    // Get the JWT token from the Authorization header
+    const jwt = authHeader.substring(7);
+    
+    // Verify user authentication
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(jwt);
+    
+    if (userError || !user) {
+      console.error("Auth error:", userError);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized - Invalid token' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      );
+    }
+    
+    // Exchange authorization code for access token
+    let tokenResponse;
+    let userEmail = '';
+    
+    try {
+      if (provider === 'gmail' || provider === 'google') {
+        // Use Google OAuth configuration for token exchange
+        const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID');
+        const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET');
+        const redirectUri = 'https://qyjjbpyqxwrluhymvshn.supabase.co/functions/v1/email-integration/oauth-callback';
+        
+        if (!googleClientId || !googleClientSecret) {
+          throw new Error("Missing Google OAuth credentials");
+        }
+        
+        // Exchange authorization code for token
+        const tokenUrl = 'https://oauth2.googleapis.com/token';
+        const response = await fetch(tokenUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            code,
+            client_id: googleClientId,
+            client_secret: googleClientSecret,
+            redirect_uri: redirectUri,
+            grant_type: 'authorization_code',
+          }).toString(),
+        });
+        
+        tokenResponse = await response.json();
+        
+        if (!response.ok) {
+          console.error("Failed to exchange authorization code:", tokenResponse);
+          throw new Error(`Failed to exchange authorization code: ${tokenResponse.error_description || tokenResponse.error || 'Unknown error'}`);
+        }
+        
+        // Get user info to get email
+        const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+          headers: {
+            'Authorization': `Bearer ${tokenResponse.access_token}`
+          }
+        });
+        
+        const userInfo = await userInfoResponse.json();
+        userEmail = userInfo.email;
+        
+      } else if (provider === 'microsoft' || provider === 'outlook') {
+        // Similar implementation for Microsoft
+        // ... implementation for Microsoft OAuth token exchange
+      } else {
+        throw new Error("Unsupported provider");
+      }
+      
+      // Store tokens in database
+      const { error: dbError } = await supabaseClient
+        .from('email_connections')
+        .upsert({
+          user_id: user.id,
+          provider: provider,
+          email_address: userEmail,
+          access_token: tokenResponse.access_token,
+          refresh_token: tokenResponse.refresh_token,
+          token_expires_at: new Date(Date.now() + (tokenResponse.expires_in * 1000)).toISOString(),
+          status: 'connected',
+          connected_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'user_id'
+        });
+        
+      if (dbError) {
+        console.error("Error saving token:", dbError);
+        throw new Error(`Database error: ${dbError.message}`);
+      }
+      
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          email: userEmail,
+          message: 'Email connected successfully'
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+      
+    } catch (tokenError: any) {
+      console.error("Error exchanging authorization code:", tokenError);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Failed to exchange authorization code', 
+          details: tokenError instanceof Error ? tokenError.message : String(tokenError)
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
+    }
+    
+  } catch (error: any) {
+    console.error("Error in OAuth callback:", error);
+    return new Response(
+      JSON.stringify({ 
+        error: 'Internal server error', 
+        details: error instanceof Error ? error.message : String(error)
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+    );
+  }
+}
+
+// Handle main endpoint
+async function handleMainEndpoint(req: Request) {
+  console.log("Email integration main endpoint called");
   
   // Make sure environment variables are available
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -73,369 +485,44 @@ serve(async (req) => {
       );
     }
     
-    // Handle the request based on method and content
-    try {
-      const requestData = await req.json();
-      const { action, provider, email, password } = requestData || {};
-      
-      console.log("Action requested:", action || "fetch emails");
-      
-      // Handle action: connect - Start OAuth flow or save email credentials
-      if (action === 'connect') {
-        if (!provider) {
-          return new Response(
-            JSON.stringify({ error: 'Missing required field: provider' }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-          );
-        }
-        
-        // For OAuth providers, email is optional
-        // For IMAP providers, email is required
-        if ((provider === 'yahoo' || provider === 'other') && !email) {
-          return new Response(
-            JSON.stringify({ error: 'Missing required field: email' }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-          );
-        }
-        
-        console.log(`Processing connection request for user ${user.id} with provider ${provider}`);
-        
-        // Generate OAuth URL for the specified provider
-        let authUrl;
-        if (provider === 'gmail' || provider === 'google') {
-          if (!oauthConfig.google.clientId || !oauthConfig.google.redirectUri) {
-            console.error("Missing Google OAuth configuration");
-            return new Response(
-              JSON.stringify({ 
-                error: 'Server configuration error: Missing Google OAuth configuration',
-                details: 'The Google client ID or redirect URI is not configured'
-              }),
-              { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-            );
-          }
-          
-          authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(oauthConfig.google.clientId)}&response_type=code&redirect_uri=${encodeURIComponent(oauthConfig.google.redirectUri)}&scope=${encodeURIComponent(oauthConfig.google.scopes.join(' '))}&access_type=offline&prompt=consent&state=${provider}`;
-        } else if (provider === 'microsoft' || provider === 'outlook') {
-          if (!oauthConfig.microsoft.clientId || !oauthConfig.microsoft.redirectUri) {
-            console.error("Missing Microsoft OAuth configuration");
-            return new Response(
-              JSON.stringify({ 
-                error: 'Server configuration error: Missing Microsoft OAuth configuration',
-                details: 'The Microsoft client ID or redirect URI is not configured'
-              }),
-              { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-            );
-          }
-          
-          authUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${oauthConfig.microsoft.clientId}&response_type=code&redirect_uri=${encodeURIComponent(oauthConfig.microsoft.redirectUri)}&scope=${encodeURIComponent(oauthConfig.microsoft.scopes.join(' '))}&response_mode=query&state=${provider}`;
-        } else if (provider !== 'yahoo' && provider !== 'other') {
-          return new Response(
-            JSON.stringify({ error: 'Unsupported provider' }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-          );
-        }
-        
-        // Check if the email_connections table exists
-        try {
-          // Try to check if the table exists using a simple query
-          const { count, error: countError } = await supabaseClient
-            .from('email_connections')
-            .select('*', { count: 'exact', head: true });
-          
-          if (countError) {
-            console.error("Error checking if email_connections table exists:", countError);
-            // If the error is that the relation doesn't exist, that means the table doesn't exist
-            if (countError.code === "42P01") {
-              return new Response(
-                JSON.stringify({ 
-                  error: 'Email integration tables not set up properly in the database',
-                  details: 'The email_connections table does not exist. Please set up the required database tables.'
-                }),
-                { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-              );
+    // Default: Handle fetching emails or other actions
+    // For demo purposes, return mock emails
+    return new Response(
+      JSON.stringify({
+        success: true,
+        emails: [
+          {
+            id: '1',
+            subject: 'Booking Request',
+            from: 'John Smith',
+            sender_email: 'john@example.com',
+            date: new Date().toISOString(),
+            content: 'Hello, I would like to book a service for my car.',
+            is_booking_email: true,
+            booking_created: false,
+            extracted_details: {
+              name: 'John Smith',
+              phone: '555-1234',
+              date: new Date().toISOString().split('T')[0],
+              time: '10:00 AM',
+              service: 'Oil Change',
+              vehicle: 'Toyota Camry'
             }
+          },
+          {
+            id: '2',
+            subject: 'Question about services',
+            from: 'Jane Doe',
+            sender_email: 'jane@example.com',
+            date: new Date(Date.now() - 86400000).toISOString(),
+            content: 'Do you offer brake repairs?',
+            is_booking_email: false,
+            booking_created: false
           }
-        
-          // Check if a connection record already exists
-          const { data: existingConnection, error: existingConnectionError } = await supabaseClient
-            .from('email_connections')
-            .select('*')
-            .eq('user_id', user.id)
-            .maybeSingle();
-          
-          if (existingConnectionError) {
-            console.error("Error checking existing connection:", existingConnectionError);
-            return new Response(
-              JSON.stringify({ 
-                error: 'Failed to check existing connection',
-                details: existingConnectionError
-              }),
-              { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-            );
-          }
-            
-          console.log("Existing connection:", existingConnection ? "found" : "not found");
-          
-          // Save connection information to database (upsert will create or update)
-          const { error: connectionError } = await supabaseClient
-            .from('email_connections')
-            .upsert({
-              user_id: user.id,
-              email_address: email || null, // Email can be null for OAuth flows
-              provider: provider,
-              status: 'connecting', // Set to connecting, will be updated after OAuth flow completes
-              updated_at: new Date().toISOString(),
-              auto_create_bookings: existingConnection?.auto_create_bookings || false
-            }, {
-              onConflict: 'user_id'
-            });
-            
-          if (connectionError) {
-            console.error("Error saving connection:", connectionError);
-            return new Response(
-              JSON.stringify({ error: 'Failed to save connection data', details: connectionError }),
-              { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-            );
-          }
-          
-          // For OAuth providers, return the authentication URL
-          if (authUrl) {
-            // If we got here, we've successfully created or updated the connection
-            return new Response(
-              JSON.stringify({ 
-                success: true, 
-                auth_url: authUrl,
-                message: 'OAuth authentication URL generated' 
-              }),
-              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            );
-          } else {
-            // For non-OAuth providers that don't have an auth_url
-            return new Response(
-              JSON.stringify({ 
-                success: true, 
-                message: 'Email connection information saved' 
-              }),
-              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            );
-          }
-        } catch (dbError: any) {
-          console.error("Database operation error:", dbError);
-          return new Response(
-            JSON.stringify({ 
-              error: 'Database operation failed',
-              details: dbError instanceof Error ? dbError.message : String(dbError)
-            }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-          );
-        }
-      }
-      
-      // Handle action: disconnect - Remove email connection
-      if (action === 'disconnect') {
-        try {
-          const { error } = await supabaseClient
-            .from('email_connections')
-            .update({
-              status: 'disconnected',
-              updated_at: new Date().toISOString()
-            })
-            .eq('user_id', user.id);
-          
-          if (error) {
-            console.error("Error disconnecting email:", error);
-            return new Response(
-              JSON.stringify({ error: 'Failed to disconnect email', details: error }),
-              { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-            );
-          }
-          
-          return new Response(
-            JSON.stringify({ success: true, message: 'Email disconnected successfully' }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        } catch (error: any) {
-          console.error("Error disconnecting email:", error);
-          return new Response(
-            JSON.stringify({ 
-              error: 'Failed to disconnect email', 
-              details: error instanceof Error ? error.message : String(error) 
-            }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-          );
-        }
-      }
-      
-      // Handle action: diagnose - Check connection issues
-      if (action === 'diagnose') {
-        try {
-          // Check if user has a valid email connection
-          const { data: emailConnection, error: connectionError } = await supabaseClient
-            .from('email_connections')
-            .select('*')
-            .eq('user_id', user.id)
-            .maybeSingle();
-          
-          if (connectionError) {
-            console.error("Error checking email connection:", connectionError);
-            return new Response(
-              JSON.stringify({ 
-                error: 'Failed to check email connection',
-                details: connectionError
-              }),
-              { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-            );
-          }
-          
-          if (!emailConnection) {
-            return new Response(
-              JSON.stringify({ 
-                error: 'No email connection found',
-                message: 'Please set up your email integration'
-              }),
-              { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
-            );
-          }
-          
-          // For demo purposes, return a diagnostic message
-          let diagnosticMessage;
-          if (emailConnection.status === 'connected') {
-            diagnosticMessage = "Connection looks fine. Email integration is properly connected.";
-          } else {
-            diagnosticMessage = `Connection issue detected: Status is ${emailConnection.status}. ${emailConnection.last_error || ''}`;
-          }
-          
-          return new Response(
-            JSON.stringify({ 
-              success: true,
-              diagnosticMessage,
-              connectionDetails: {
-                provider: emailConnection.provider,
-                status: emailConnection.status,
-                last_connected: emailConnection.connected_at
-              }
-            }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        } catch (error: any) {
-          console.error("Error diagnosing connection:", error);
-          return new Response(
-            JSON.stringify({ 
-              error: 'Failed to diagnose connection', 
-              details: error instanceof Error ? error.message : String(error)
-            }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-          );
-        }
-      }
-      
-      // Default: Handle fetching emails or other actions
-      // Check if user has a valid email connection
-      const { data: emailConnection, error: connectionError } = await supabaseClient
-        .from('email_connections')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('status', 'connected')
-        .maybeSingle();
-        
-      if (connectionError) {
-        console.error("Error checking email connection:", connectionError);
-        return new Response(
-          JSON.stringify({ 
-            error: 'Failed to check email connection',
-            details: connectionError
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-        );
-      }
-      
-      if (!emailConnection) {
-        return new Response(
-          JSON.stringify({ 
-            error: 'No email connection found',
-            message: 'Please set up your email integration'
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
-        );
-      }
-      
-      // Handle different actions
-      switch (action) {
-        case 'create-booking':
-          // Implementation for creating booking from email
-          // Handle booking creation logic here
-          return new Response(
-            JSON.stringify({ 
-              success: true,
-              bookingId: 'mock-booking-id',
-              message: 'Booking created successfully'
-            }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }}
-          );
-        
-        case 'send-email':
-          // Implementation for sending emails
-          const { to, subject, body } = requestData;
-          // Implement email sending logic here
-          return new Response(
-            JSON.stringify({ 
-              success: true,
-              message: 'Email sent successfully'
-            }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }}
-          );
-          
-        default:
-          // Default action: Fetch emails
-          // For demo purposes, return mock emails
-          return new Response(
-            JSON.stringify({
-              success: true,
-              emails: [
-                {
-                  id: '1',
-                  subject: 'Booking Request',
-                  from: 'John Smith',
-                  sender_email: 'john@example.com',
-                  date: new Date().toISOString(),
-                  content: 'Hello, I would like to book a service for my car.',
-                  is_booking_email: true,
-                  booking_created: false,
-                  extracted_details: {
-                    name: 'John Smith',
-                    phone: '555-1234',
-                    date: new Date().toISOString().split('T')[0],
-                    time: '10:00 AM',
-                    service: 'Oil Change',
-                    vehicle: 'Toyota Camry'
-                  }
-                },
-                {
-                  id: '2',
-                  subject: 'Question about services',
-                  from: 'Jane Doe',
-                  sender_email: 'jane@example.com',
-                  date: new Date(Date.now() - 86400000).toISOString(),
-                  content: 'Do you offer brake repairs?',
-                  is_booking_email: false,
-                  booking_created: false
-                }
-              ]
-            }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-      }
-      
-    } catch (error) {
-      console.error("Error processing request:", error);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Error processing request',
-          details: error instanceof Error ? error.message : String(error)
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      );
-    }
+        ]
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
     
   } catch (error) {
     console.error("Error in email-integration function:", error);
@@ -447,4 +534,4 @@ serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }
-});
+}

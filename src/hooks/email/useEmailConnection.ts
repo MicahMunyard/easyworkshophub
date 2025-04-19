@@ -1,7 +1,6 @@
 
 import { useState, useCallback } from 'react';
 import { supabase } from "@/integrations/supabase/client";
-import { getEdgeFunctionUrl } from "./utils/supabaseUtils";
 import { User } from '@supabase/supabase-js';
 import { useEmailDiagnostics } from './useEmailDiagnostics';
 import { useToast } from '@/hooks/use-toast';
@@ -111,33 +110,30 @@ export const useEmailConnection = () => {
       
       // For OAuth providers (Gmail, Outlook), we call the edge function to get the OAuth URL
       if (provider === "gmail" || provider === "outlook") {
-        // This is the direct URL to the edge function
-        const edgeFunctionUrl = "https://qyjjbpyqxwrluhymvshn.supabase.co/functions/v1/email-integration/connect";
-        console.info("Connecting to edge function:", edgeFunctionUrl);
+        console.info("Connecting to edge function for OAuth URL");
         
-        const response = await fetch(edgeFunctionUrl, {
+        const { data, error } = await supabase.functions.invoke('email-integration/connect', {
           method: 'POST',
+          body: { provider },
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${sessionData.session.access_token}`,
-          },
-          body: JSON.stringify({
-            provider,
-          }),
+            Authorization: `Bearer ${sessionData.session.access_token}`,
+          }
         });
         
-        console.log("Response status:", response.status);
-        const result = await response.json();
-        console.log("Connection result:", result);
+        if (error) {
+          console.error("Edge function error:", error);
+          throw new Error(`Edge function error: ${error.message || String(error)}`);
+        }
         
-        if (!response.ok) {
-          console.error("Connection result:", result);
-          throw new Error(result.error || "Failed to connect email");
+        console.log("Connection result:", data);
+        
+        if (!data) {
+          throw new Error("No response received from edge function");
         }
         
         // For OAuth flow, we redirect to the auth URL
-        if (result.auth_url) {
-          window.location.href = result.auth_url;
+        if (data.auth_url) {
+          window.location.href = data.auth_url;
           return true; // Return true as we're redirecting
         }
       } else {
@@ -203,19 +199,15 @@ export const useEmailConnection = () => {
         throw new Error("No active session found");
       }
       
-      const edgeFunctionUrl = getEdgeFunctionUrl('email-integration');
-      
-      const response = await fetch(`${edgeFunctionUrl}/disconnect`, {
+      const { data, error } = await supabase.functions.invoke('email-integration/disconnect', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${sessionData.session.access_token}`,
+          Authorization: `Bearer ${sessionData.session.access_token}`,
         }
       });
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to disconnect email");
+      if (error) {
+        throw new Error(`Edge function error: ${error.message || "Failed to disconnect email"}`);
       }
       
       // Update local state
