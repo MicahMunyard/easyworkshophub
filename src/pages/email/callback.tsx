@@ -43,18 +43,18 @@ const EmailCallback: React.FC = () => {
         }
 
         // Call the edge function to handle the OAuth callback
-        const response = await supabase.functions.invoke('email-integration/oauth-callback', {
+        const { data, error } = await supabase.functions.invoke('email-integration/oauth-callback', {
           body: { code, provider }
         });
 
-        if ('error' in response) {
-          throw new Error(response.error.message || "Failed to complete email connection");
+        if (error) {
+          throw new Error(error.message || "Failed to complete email connection");
         }
 
-        console.log('OAuth callback successful:', response);
-        setEmail(response.data?.email || "your email account");
+        console.log('OAuth callback successful:', data);
+        setEmail(data?.email || "your email account");
         setStatus("success");
-        setMessage(`Successfully connected ${response.data?.email || "your email account"}`);
+        setMessage(`Successfully connected ${data?.email || "your email account"}`);
       } catch (error: any) {
         console.error("Error processing OAuth callback:", error);
         setStatus("error");

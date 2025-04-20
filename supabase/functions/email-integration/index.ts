@@ -134,8 +134,8 @@ async function handleConnectEndpoint(req: Request) {
     // Generate OAuth URL for the specified provider
     let authUrl;
     if (provider === 'gmail' || provider === 'google') {
-      // Use the correct redirect URI that's configured in Google Cloud
-      const redirectUri = 'https://qyjjbpyqxwrluhymvshn.supabase.co/functions/v1/email-integration/oauth-callback';
+      // *** IMPORTANT: Update the redirectUri to match what's configured in Google Cloud Console ***
+      const redirectUri = 'https://app.workshopbase.com.au/email/callback';
       
       console.log("Google OAuth configuration:");
       console.log("- Client ID:", googleClientId ? 'Available' : 'Missing');
@@ -375,7 +375,7 @@ async function handleOAuthCallbackEndpoint(req: Request) {
         // Use Google OAuth configuration for token exchange
         const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID');
         const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET');
-        const redirectUri = 'https://qyjjbpyqxwrluhymvshn.supabase.co/functions/v1/email-integration/oauth-callback';
+        const redirectUri = 'https://app.workshopbase.com.au/email/callback';
         
         if (!googleClientId || !googleClientSecret) {
           throw new Error("Missing Google OAuth credentials");
