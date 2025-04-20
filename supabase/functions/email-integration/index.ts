@@ -56,13 +56,19 @@ async function handleConnectEndpoint(req: Request) {
   console.log("Email integration connect endpoint called");
   
   try {
-    // Make sure environment variables are available
+    // Verify environment variables
     const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID');
     const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET');
     
-    console.log("Environment variables available:");
-    console.log("GOOGLE_CLIENT_ID:", googleClientId ? 'Set' : 'Not set');
-    console.log("GOOGLE_CLIENT_SECRET:", googleClientSecret ? 'Set' : 'Not set');
+    // Log available environment variables (for debugging)
+    const envVars = {
+      GOOGLE_CLIENT_ID: googleClientId ? 'Set' : 'Not set',
+      GOOGLE_CLIENT_SECRET: googleClientSecret ? 'Set' : 'Not set',
+      SUPABASE_URL: Deno.env.get('SUPABASE_URL') ? 'Set' : 'Not set',
+      SUPABASE_SERVICE_ROLE_KEY: Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ? 'Set' : 'Not set',
+    };
+    
+    console.log("Environment variables status:", envVars);
     
     // Parse request body
     const { provider } = await req.json();
@@ -77,13 +83,13 @@ async function handleConnectEndpoint(req: Request) {
     // Generate OAuth URL for the specified provider
     let authUrl;
     if (provider === 'gmail' || provider === 'google') {
-      // Use the client ID directly from environment variable
-      if (!googleClientId) {
+      // Check if Google OAuth configuration is available
+      if (!googleClientId || !googleClientSecret) {
         console.error("Missing Google OAuth configuration");
         return new Response(
           JSON.stringify({ 
             error: 'Server configuration error: Missing Google OAuth configuration',
-            details: 'The Google client ID is not configured in environment variables.'
+            details: 'The Google client ID or client secret is not configured in environment variables.'
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
         );
@@ -94,6 +100,7 @@ async function handleConnectEndpoint(req: Request) {
       
       console.log("Google OAuth configuration:");
       console.log("- Client ID:", googleClientId ? 'Available' : 'Missing');
+      console.log("- Client Secret:", googleClientSecret ? 'Available' : 'Missing');
       console.log("- Redirect URI:", redirectUri);
       
       // Create Google OAuth URL with the configured redirect URI
@@ -110,18 +117,20 @@ async function handleConnectEndpoint(req: Request) {
       console.log("Generated auth URL:", authUrl.substring(0, 100) + '...');
     } else if (provider === 'microsoft' || provider === 'outlook') {
       const microsoftClientId = Deno.env.get('MICROSOFT_CLIENT_ID');
+      const microsoftClientSecret = Deno.env.get('MICROSOFT_CLIENT_SECRET');
       const redirectUri = 'https://qyjjbpyqxwrluhymvshn.supabase.co/functions/v1/email-integration/oauth-callback';
       
       console.log("Microsoft OAuth configuration:");
       console.log("- Client ID:", microsoftClientId ? 'Available' : 'Missing');
+      console.log("- Client Secret:", microsoftClientSecret ? 'Available' : 'Missing');
       console.log("- Redirect URI:", redirectUri);
       
-      if (!microsoftClientId) {
+      if (!microsoftClientId || !microsoftClientSecret) {
         console.error("Missing Microsoft OAuth configuration");
         return new Response(
           JSON.stringify({ 
             error: 'Server configuration error: Missing Microsoft OAuth configuration',
-            details: 'The Microsoft client ID is not configured in environment variables.'
+            details: 'The Microsoft client ID or client secret is not configured in environment variables.'
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
         );

@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { User } from '@supabase/supabase-js';
 import { useEmailDiagnostics } from './useEmailDiagnostics';
@@ -20,7 +20,7 @@ export const useEmailConnection = () => {
   // Get current user
   const [user, setUser] = useState<User | null>(null);
   
-  useState(() => {
+  useEffect(() => {
     // Get authenticated user
     const getUser = async () => {
       const { data } = await supabase.auth.getUser();
@@ -28,7 +28,7 @@ export const useEmailConnection = () => {
     };
     
     getUser();
-  });
+  }, []);
   
   // Get diagnostic functions
   const { diagnoseConnectionIssues } = useEmailDiagnostics(user);
