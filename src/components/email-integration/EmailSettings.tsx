@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useEmailConnection } from "@/hooks/email/useEmailConnection";
@@ -23,6 +23,15 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({
   const { toast } = useToast();
   const [diagnosticResult, setDiagnosticResult] = useState<string | null>(null);
   const [isDiagnosing, setIsDiagnosing] = useState(false);
+  const [configStatus, setConfigStatus] = useState<{
+    googleClientId: boolean;
+    googleClientSecret: boolean;
+    checked: boolean;
+  }>({
+    googleClientId: false,
+    googleClientSecret: false,
+    checked: false
+  });
   
   const {
     emailAddress,
@@ -40,6 +49,38 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({
     updateSettings,
     diagnoseConnectionIssues
   } = useEmailConnection();
+
+  useEffect(() => {
+    // Check if the Google OAuth credentials are available in the environment
+    const checkGoogleOAuthConfig = async () => {
+      try {
+        const response = await fetch(`https://qyjjbpyqxwrluhymvshn.supabase.co/functions/v1/email-integration/connect`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ provider: 'gmail' })
+        });
+        
+        const data = await response.json();
+        
+        // Check if we got meaningful debug information
+        if (data.debug && data.debug.environmentVariables) {
+          setConfigStatus({
+            googleClientId: data.debug.environmentVariables.GOOGLE_CLIENT_ID === 'Set',
+            googleClientSecret: data.debug.environmentVariables.GOOGLE_CLIENT_SECRET === 'Set',
+            checked: true
+          });
+        }
+      } catch (error) {
+        console.error("Error checking OAuth config:", error);
+      }
+    };
+    
+    if (!isConnected && !configStatus.checked) {
+      checkGoogleOAuthConfig();
+    }
+  }, [isConnected, configStatus.checked]);
 
   const handleSelectProvider = (selectedProvider: "gmail" | "outlook" | "yahoo" | "other") => {
     setProvider(selectedProvider);
@@ -100,6 +141,26 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Connection Error</AlertTitle>
             <AlertDescription>{lastError}</AlertDescription>
+          </Alert>
+        )}
+        
+        {!configStatus.googleClientId && configStatus.checked && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Configuration Error</AlertTitle>
+            <AlertDescription>
+              Google OAuth Client ID is not configured. Please add the GOOGLE_CLIENT_ID secret to your Supabase project.
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        {!configStatus.googleClientSecret && configStatus.checked && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Configuration Error</AlertTitle>
+            <AlertDescription>
+              Google OAuth Client Secret is not configured. Please add the GOOGLE_CLIENT_SECRET secret to your Supabase project.
+            </AlertDescription>
           </Alert>
         )}
         

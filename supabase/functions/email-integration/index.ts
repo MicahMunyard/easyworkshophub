@@ -26,6 +26,13 @@ serve(async (req) => {
   console.log("Full URL:", url.toString());
   
   try {
+    // Log environment variable status (for debugging)
+    console.log("Environment variables check:");
+    console.log("- GOOGLE_CLIENT_ID:", Deno.env.get('GOOGLE_CLIENT_ID') ? 'Available' : 'Not available');
+    console.log("- GOOGLE_CLIENT_SECRET:", Deno.env.get('GOOGLE_CLIENT_SECRET') ? 'Available' : 'Not available');
+    console.log("- SUPABASE_URL:", Deno.env.get('SUPABASE_URL') ? 'Available' : 'Not available');
+    console.log("- SUPABASE_SERVICE_ROLE_KEY:", Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ? 'Available' : 'Not available');
+    
     // Route requests to the appropriate handler
     switch(path) {
       case 'connect':
@@ -56,45 +63,77 @@ async function handleConnectEndpoint(req: Request) {
   console.log("Email integration connect endpoint called");
   
   try {
-    // Verify environment variables
+    // Debug environment variables - detailed version for troubleshooting
     const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID');
     const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET');
     
-    // Log available environment variables (for debugging)
-    const envVars = {
-      GOOGLE_CLIENT_ID: googleClientId ? 'Set' : 'Not set',
-      GOOGLE_CLIENT_SECRET: googleClientSecret ? 'Set' : 'Not set',
-      SUPABASE_URL: Deno.env.get('SUPABASE_URL') ? 'Set' : 'Not set',
-      SUPABASE_SERVICE_ROLE_KEY: Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ? 'Set' : 'Not set',
+    // Create a debug object with more information
+    const debugInfo = {
+      environmentVariables: {
+        GOOGLE_CLIENT_ID: googleClientId ? 'Set' : 'Not set',
+        GOOGLE_CLIENT_ID_LENGTH: googleClientId ? googleClientId.length : 0,
+        GOOGLE_CLIENT_SECRET: googleClientSecret ? 'Set' : 'Not set',
+        GOOGLE_CLIENT_SECRET_LENGTH: googleClientSecret ? googleClientSecret.length : 0,
+        SUPABASE_URL: Deno.env.get('SUPABASE_URL') ? 'Set' : 'Not set',
+        SUPABASE_SERVICE_ROLE_KEY: Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ? 'Set' : 'Not set',
+      },
+      requestInfo: {
+        method: req.method,
+        url: req.url,
+        hasAuthHeader: req.headers.has('Authorization'),
+      }
     };
     
-    console.log("Environment variables status:", envVars);
+    console.log("Debug information:", JSON.stringify(debugInfo, null, 2));
     
     // Parse request body
-    const { provider } = await req.json();
+    let provider;
+    try {
+      const body = await req.json();
+      provider = body.provider;
+      console.log("Request body parsed successfully, provider:", provider);
+    } catch (error) {
+      console.error("Error parsing request body:", error);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid request body', 
+          details: 'Could not parse JSON body',
+          debug: debugInfo
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
     
     if (!provider) {
       return new Response(
-        JSON.stringify({ error: 'Missing required field: provider' }),
+        JSON.stringify({ 
+          error: 'Missing required field: provider',
+          debug: debugInfo 
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+    
+    // If the environment variables are missing, return a special debug response
+    if (!googleClientId || !googleClientSecret) {
+      console.error("Missing Google OAuth configuration");
+      return new Response(
+        JSON.stringify({ 
+          error: 'Server configuration error: Missing Google OAuth configuration',
+          details: 'The Google client ID or client secret is not configured in environment variables.',
+          debug: debugInfo,
+          manualConfig: {
+            GOOGLE_CLIENT_ID: '736177477108-a7cfbd4dcv3pqfk2jaolbm3j4fse0s9h.apps.googleusercontent.com',
+            GOOGLE_CLIENT_SECRET_LENGTH: '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'.length,
+          }
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
     
     // Generate OAuth URL for the specified provider
     let authUrl;
     if (provider === 'gmail' || provider === 'google') {
-      // Check if Google OAuth configuration is available
-      if (!googleClientId || !googleClientSecret) {
-        console.error("Missing Google OAuth configuration");
-        return new Response(
-          JSON.stringify({ 
-            error: 'Server configuration error: Missing Google OAuth configuration',
-            details: 'The Google client ID or client secret is not configured in environment variables.'
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-        );
-      }
-      
       // Use the correct redirect URI that's configured in Google Cloud
       const redirectUri = 'https://qyjjbpyqxwrluhymvshn.supabase.co/functions/v1/email-integration/oauth-callback';
       

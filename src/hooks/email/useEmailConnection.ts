@@ -112,29 +112,34 @@ export const useEmailConnection = () => {
       if (provider === "gmail" || provider === "outlook") {
         console.info("Connecting to edge function for OAuth URL");
         
-        const { data, error } = await supabase.functions.invoke('email-integration/connect', {
-          method: 'POST',
-          body: { provider },
-          headers: {
-            Authorization: `Bearer ${sessionData.session.access_token}`,
+        try {
+          const { data, error } = await supabase.functions.invoke('email-integration/connect', {
+            method: 'POST',
+            body: { provider },
+            headers: {
+              Authorization: `Bearer ${sessionData.session.access_token}`,
+            }
+          });
+          
+          if (error) {
+            console.error("Edge function error:", error);
+            throw new Error(`Edge function error: ${error.message || String(error)}`);
           }
-        });
-        
-        if (error) {
-          console.error("Edge function error:", error);
-          throw new Error(`Edge function error: ${error.message || String(error)}`);
-        }
-        
-        console.log("Connection result:", data);
-        
-        if (!data) {
-          throw new Error("No response received from edge function");
-        }
-        
-        // For OAuth flow, we redirect to the auth URL
-        if (data.auth_url) {
-          window.location.href = data.auth_url;
-          return true; // Return true as we're redirecting
+          
+          console.log("Connection result:", data);
+          
+          if (!data) {
+            throw new Error("No response received from edge function");
+          }
+          
+          // For OAuth flow, we redirect to the auth URL
+          if (data.auth_url) {
+            window.location.href = data.auth_url;
+            return true; // Return true as we're redirecting
+          }
+        } catch (error: any) {
+          console.error("Error invoking edge function:", error);
+          throw new Error(`Failed to connect to OAuth service: ${error.message || String(error)}`);
         }
       } else {
         // For non-OAuth providers, we save the credentials to the database
