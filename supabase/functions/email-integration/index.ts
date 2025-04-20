@@ -346,8 +346,12 @@ async function handleOAuthCallbackEndpoint(req: Request) {
     // Get Authorization header from request for user verification
     const authHeader = req.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.error("Missing or invalid authorization header");
       return new Response(
-        JSON.stringify({ error: 'Missing or invalid authorization header' }),
+        JSON.stringify({ 
+          error: 'Missing or invalid authorization header', 
+          details: 'The authorization header is required and must start with Bearer.'
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
       );
     }
@@ -373,13 +377,15 @@ async function handleOAuthCallbackEndpoint(req: Request) {
     try {
       if (provider === 'gmail' || provider === 'google') {
         // Use Google OAuth configuration for token exchange
-        const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID');
-        const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET');
+        const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID') || '736177477108-a7cfbd4dcv3pqfk2jaolbm3j4fse0s9h.apps.googleusercontent.com';
+        const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET') || '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';
         const redirectUri = 'https://app.workshopbase.com.au/email/callback';
         
         if (!googleClientId || !googleClientSecret) {
           throw new Error("Missing Google OAuth credentials");
         }
+        
+        console.log("Exchanging code for token with Google OAuth...");
         
         // Exchange authorization code for token
         const tokenUrl = 'https://oauth2.googleapis.com/token';
@@ -397,12 +403,14 @@ async function handleOAuthCallbackEndpoint(req: Request) {
           }).toString(),
         });
         
-        tokenResponse = await response.json();
-        
         if (!response.ok) {
-          console.error("Failed to exchange authorization code:", tokenResponse);
-          throw new Error(`Failed to exchange authorization code: ${tokenResponse.error_description || tokenResponse.error || 'Unknown error'}`);
+          const errorText = await response.text();
+          console.error("Token exchange failed:", response.status, errorText);
+          throw new Error(`Failed to exchange authorization code: ${errorText}`);
         }
+        
+        tokenResponse = await response.json();
+        console.log("Token exchange successful");
         
         // Get user info to get email
         const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
@@ -411,8 +419,15 @@ async function handleOAuthCallbackEndpoint(req: Request) {
           }
         });
         
+        if (!userInfoResponse.ok) {
+          const errorText = await userInfoResponse.text();
+          console.error("Failed to fetch user info:", errorText);
+          throw new Error(`Failed to get user info: ${errorText}`);
+        }
+        
         const userInfo = await userInfoResponse.json();
         userEmail = userInfo.email;
+        console.log(`Retrieved email: ${userEmail}`);
         
       } else if (provider === 'microsoft' || provider === 'outlook') {
         // Similar implementation for Microsoft
@@ -420,6 +435,8 @@ async function handleOAuthCallbackEndpoint(req: Request) {
       } else {
         throw new Error("Unsupported provider");
       }
+      
+      console.log("Storing tokens in database for user:", user.id);
       
       // Store tokens in database
       const { error: dbError } = await supabaseClient

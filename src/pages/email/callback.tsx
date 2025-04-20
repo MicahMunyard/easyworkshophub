@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
+import { toast } from "@/components/ui/use-toast";
 
 const EmailCallback: React.FC = () => {
   const navigate = useNavigate();
@@ -34,7 +35,7 @@ const EmailCallback: React.FC = () => {
           throw new Error("No authorization code found in the callback URL");
         }
 
-        console.log(`Processing OAuth callback with code ${code} for provider ${provider}`);
+        console.log(`Processing OAuth callback with code ${code.substring(0, 10)}... for provider ${provider}`);
 
         // Get the user's session token
         const { data: sessionData } = await supabase.auth.getSession();
@@ -42,12 +43,15 @@ const EmailCallback: React.FC = () => {
           throw new Error("No active session found");
         }
 
+        console.log("Calling oauth-callback endpoint with user's session...");
+        
         // Call the edge function to handle the OAuth callback
         const { data, error } = await supabase.functions.invoke('email-integration/oauth-callback', {
           body: { code, provider }
         });
 
         if (error) {
+          console.error("Edge function error:", error);
           throw new Error(error.message || "Failed to complete email connection");
         }
 
@@ -55,10 +59,24 @@ const EmailCallback: React.FC = () => {
         setEmail(data?.email || "your email account");
         setStatus("success");
         setMessage(`Successfully connected ${data?.email || "your email account"}`);
+        
+        // Show a success toast
+        toast({
+          title: "Email Connected",
+          description: `Successfully connected ${data?.email || "your email account"}`,
+          variant: "default",
+        });
       } catch (error: any) {
         console.error("Error processing OAuth callback:", error);
         setStatus("error");
         setMessage(error.message || "Failed to complete email connection");
+        
+        // Show an error toast
+        toast({
+          title: "Connection Failed",
+          description: error.message || "Failed to complete email connection",
+          variant: "destructive",
+        });
       } finally {
         setIsProcessing(false);
       }
