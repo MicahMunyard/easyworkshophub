@@ -6,7 +6,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
-import { getEdgeFunctionUrl } from "@/hooks/email/utils/supabaseUtils";
 
 const EmailCallback: React.FC = () => {
   const navigate = useNavigate();
@@ -44,29 +43,18 @@ const EmailCallback: React.FC = () => {
         }
 
         // Call the edge function to handle the OAuth callback
-        const response = await fetch(`${getEdgeFunctionUrl('email-integration')}/oauth-callback`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${sessionData.session.access_token}`,
-          },
-          body: JSON.stringify({
-            code,
-            provider,
-          }),
+        const response = await supabase.functions.invoke('email-integration/oauth-callback', {
+          body: { code, provider }
         });
 
-        const result = await response.json();
-
-        if (!response.ok) {
-          console.error('OAuth callback error:', result);
-          throw new Error(result.error || "Failed to complete email connection");
+        if ('error' in response) {
+          throw new Error(response.error.message || "Failed to complete email connection");
         }
 
-        console.log('OAuth callback successful:', result);
-        setEmail(result.email || "your email account");
+        console.log('OAuth callback successful:', response);
+        setEmail(response.data?.email || "your email account");
         setStatus("success");
-        setMessage(`Successfully connected ${result.email || "your email account"}`);
+        setMessage(`Successfully connected ${response.data?.email || "your email account"}`);
       } catch (error: any) {
         console.error("Error processing OAuth callback:", error);
         setStatus("error");
