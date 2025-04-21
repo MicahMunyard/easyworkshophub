@@ -77,7 +77,7 @@ const EmailReplyForm: React.FC<EmailReplyFormProps> = ({
             <SelectValue placeholder="Select template" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">No template</SelectItem>
+            <SelectItem value="no-template">No template</SelectItem>
             {templates.map((template) => (
               <SelectItem key={template.id} value={template.id}>
                 {template.name}
