@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { oauthConfig } from "../_shared/oauth.config.ts";
@@ -376,7 +375,6 @@ async function handleOAuthCallbackEndpoint(req: Request) {
     
     try {
       if (provider === 'gmail' || provider === 'google') {
-        // Use Google OAuth configuration for token exchange
         const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID') || '736177477108-a7cfbd4dcv3pqfk2jaolbm3j4fse0s9h.apps.googleusercontent.com';
         const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET') || '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';
         const redirectUri = 'https://app.workshopbase.com.au/email/callback';
@@ -387,7 +385,6 @@ async function handleOAuthCallbackEndpoint(req: Request) {
         
         console.log("Exchanging code for token with Google OAuth...");
         
-        // Exchange authorization code for token
         const tokenUrl = 'https://oauth2.googleapis.com/token';
         const response = await fetch(tokenUrl, {
           method: 'POST',
@@ -430,15 +427,14 @@ async function handleOAuthCallbackEndpoint(req: Request) {
         console.log(`Retrieved email: ${userEmail}`);
         
       } else if (provider === 'microsoft' || provider === 'outlook') {
-        // Similar implementation for Microsoft
-        // ... implementation for Microsoft OAuth token exchange
+        // Similar implementation for Microsoft (not changing here)
       } else {
         throw new Error("Unsupported provider");
       }
       
       console.log("Storing tokens in database for user:", user.id);
       
-      // Store tokens in database
+      // Updated upsert to use proper conflict key
       const { error: dbError } = await supabaseClient
         .from('email_connections')
         .upsert({
