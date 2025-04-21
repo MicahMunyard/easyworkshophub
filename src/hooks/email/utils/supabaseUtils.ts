@@ -3,9 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 
 // Get the URL for a Supabase Edge Function
 export const getEdgeFunctionUrl = (functionName: string): string => {
-  // Get the project ref from the supabase URL
-  const url = supabase.functions.url(functionName);
-  return url;
+  // Construct the edge function URL manually instead of using the protected url property
+  const projectRef = "qyjjbpyqxwrluhymvshn"; // Get the project ref from supabase client URL
+  return `https://${projectRef}.supabase.co/functions/v1/${functionName}`;
 };
 
 // Get user session token for authentication
