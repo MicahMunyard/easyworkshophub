@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,11 +27,27 @@ const EmailMessage: React.FC<EmailMessageProps> = ({
 }) => {
   const [showReplyForm, setShowReplyForm] = useState(false);
   const [conversation, setConversation] = useState<EmailType[]>([]);
+  const [isLoadingConversation, setIsLoadingConversation] = useState(false);
   const { fetchConversationThread } = useEmailIntegration();
 
+  // Update the useEffect to include proper error handling and loading state
   useEffect(() => {
-    fetchConversationThread(email.id).then(setConversation);
-  }, [email, fetchConversationThread]);
+    const loadConversation = async () => {
+      try {
+        setIsLoadingConversation(true);
+        const thread = await fetchConversationThread(email.id);
+        setConversation(thread.filter(msg => msg.id !== email.id)); // Filter out current email
+      } catch (error) {
+        console.error("Error loading conversation:", error);
+      } finally {
+        setIsLoadingConversation(false);
+      }
+    };
+    
+    if (email.id) {
+      loadConversation();
+    }
+  }, [email.id, fetchConversationThread]);
 
   const extractedDetails = email.extracted_details || {
     name: null,
@@ -187,19 +204,27 @@ const EmailMessage: React.FC<EmailMessageProps> = ({
         </CardFooter>
       )}
       
-      {conversation.length > 1 && (
+      {/* Improve conversation thread rendering with loading state */}
+      {conversation.length > 0 && (
         <div className="mt-6 border-t pt-4">
           <h3 className="font-semibold mb-2 text-sm text-muted-foreground">Conversation:</h3>
-          <div className="space-y-4">
-            {conversation
-              .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-              .map(msg => (
-                <div key={msg.id} className="p-2 rounded bg-muted">
-                  <div className="text-xs text-muted-foreground mb-1">{msg.from} &lt;{msg.sender_email}&gt; - {new Date(msg.date).toLocaleString()}</div>
-                  <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: msg.content }} />
-                </div>
-            ))}
-          </div>
+          {isLoadingConversation ? (
+            <div className="flex items-center justify-center p-4">
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              <span className="text-sm text-muted-foreground">Loading conversation...</span>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {conversation
+                .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                .map(msg => (
+                  <div key={msg.id} className="p-2 rounded bg-muted">
+                    <div className="text-xs text-muted-foreground mb-1">{msg.from} &lt;{msg.sender_email}&gt; - {new Date(msg.date).toLocaleString()}</div>
+                    <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: msg.content }} />
+                  </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </>

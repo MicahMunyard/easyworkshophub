@@ -252,9 +252,23 @@ export const useEmailIntegration = () => {
     }
   };
 
-  const fetchConversationThread = async (emailId: string) => {
-    const thread = emails.filter(e => e.subject === (emails.find(e => e.id === emailId)?.subject));
-    return thread;
+  const fetchConversationThread = async (emailId: string): Promise<EmailType[]> => {
+    if (!emails.length || !emailId) return [];
+    
+    try {
+      const selectedEmail = emails.find(e => e.id === emailId);
+      if (!selectedEmail) return [];
+      
+      const thread = emails.filter(e => 
+        e.subject === selectedEmail.subject &&
+        e.id !== 'loading'
+      );
+      
+      return thread;
+    } catch (error) {
+      console.error("Error fetching conversation thread:", error);
+      return [];
+    }
   };
 
   return {
