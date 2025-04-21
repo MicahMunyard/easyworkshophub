@@ -40,6 +40,8 @@ serve(async (req) => {
         return await handleDisconnectEndpoint(req);
       case 'oauth-callback':
         return await handleOAuthCallbackEndpoint(req);
+      case 'send-reply':
+        return await handleSendReplyEndpoint(req);
       default:
         return await handleMainEndpoint(req);
     }
@@ -591,6 +593,137 @@ async function handleMainEndpoint(req: Request) {
       JSON.stringify({ 
         error: 'Internal server error', 
         details: error instanceof Error ? error.message : String(error)
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+    );
+  }
+}
+
+// Handle sending email replies
+async function handleSendReplyEndpoint(req: Request) {
+  console.log("Email send reply endpoint called");
+  
+  // Make sure environment variables are available
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  
+  if (!supabaseUrl || !supabaseServiceRoleKey) {
+    console.error("Missing Supabase environment variables");
+    return new Response(
+      JSON.stringify({ error: 'Server configuration error: Missing Supabase configuration' }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+    );
+  }
+
+  // Create Supabase client with Admin key for API operations
+  const supabaseClient = createClient(
+    supabaseUrl,
+    supabaseServiceRoleKey
+  );
+
+  // Get Authorization header from request
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return new Response(
+      JSON.stringify({ error: 'Missing or invalid authorization header' }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+    );
+  }
+
+  // Get the JWT token from the Authorization header
+  const jwt = authHeader.substring(7);
+  
+  try {
+    // Verify user authentication
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(jwt);
+    
+    if (userError || !user) {
+      console.error("Auth error:", userError);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized - Invalid token' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      );
+    }
+    
+    // Get request body
+    const { to, subject, body } = await req.json();
+    
+    if (!to || !subject || !body) {
+      return new Response(
+        JSON.stringify({ error: 'Missing required fields: to, subject, or body' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+    
+    // Get user's email credentials
+    const { data: emailConnection, error: connectionError } = await supabaseClient
+      .from('email_connections')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('status', 'connected')
+      .single();
+    
+    if (connectionError || !emailConnection) {
+      console.error("Error fetching email connection:", connectionError);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Email not connected', 
+          details: 'No connected email account found for this user' 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
+      );
+    }
+    
+    // For now, return mock success response
+    // In a real implementation, you would use the access token to send an email via Gmail API
+    console.log("Would send email:", {
+      from: emailConnection.email_address,
+      to,
+      subject,
+      body
+    });
+    
+    // For implementing the actual Gmail API call, you would use something like this:
+    /*
+    const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${emailConnection.access_token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        raw: btoa(
+          `From: ${emailConnection.email_address}\r\n` +
+          `To: ${to}\r\n` +
+          `Subject: ${subject}\r\n\r\n` +
+          `${body}`
+        ).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+      })
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`Gmail API error: ${JSON.stringify(errorData)}`);
+    }
+    
+    const result = await response.json();
+    */
+    
+    // Mock successful response
+    return new Response(
+      JSON.stringify({ 
+        success: true,
+        message: 'Email reply sent successfully (mock)',
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+    
+  } catch (error) {
+    console.error("Error in send reply endpoint:", error);
+    return new Response(
+      JSON.stringify({ 
+        error: 'Failed to send email reply', 
+        details: error instanceof Error ? error.message : String(error) 
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );

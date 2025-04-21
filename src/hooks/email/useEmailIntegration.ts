@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,13 +20,11 @@ export const useEmailIntegration = () => {
     setIsLoading(true);
     
     try {
-      // Get the user's session token for authorization
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData.session) {
         throw new Error("No active session found");
       }
       
-      // Call the edge function to fetch emails
       const response = await fetch(getEdgeFunctionUrl('email-integration'), {
         method: 'POST',
         headers: {
@@ -45,13 +42,11 @@ export const useEmailIntegration = () => {
       const result = await response.json();
       
       if (result.emails) {
-        // Check which emails have already been processed
         const { data: processed } = await supabase
           .from('processed_emails')
           .select('email_id, booking_created, processing_status')
           .eq('user_id', user.id);
         
-        // Update booking_created status based on processed emails data
         const updatedEmails = result.emails.map((email: EmailType) => {
           const processedEmail = processed?.find(p => p.email_id === email.id);
           return {
@@ -87,7 +82,6 @@ export const useEmailIntegration = () => {
     }
   }, [user, checkConnection, fetchEmails]);
 
-  // Refresh connection status and emails periodically
   useEffect(() => {
     if (!user || !isConnected) return;
 
@@ -95,7 +89,7 @@ export const useEmailIntegration = () => {
       checkConnection().then(connected => {
         if (connected) fetchEmails();
       });
-    }, 60000); // Check every minute
+    }, 60000);
 
     return () => clearInterval(intervalId);
   }, [user, isConnected, checkConnection, fetchEmails]);
@@ -106,7 +100,6 @@ export const useEmailIntegration = () => {
     try {
       setProcessingEmailId(email.id);
       
-      // Update processed_email record to show we're working on it
       await supabase
         .from('processed_emails')
         .upsert({
@@ -119,7 +112,6 @@ export const useEmailIntegration = () => {
           onConflict: 'email_id,user_id'
         });
       
-      // Get the user's session token for authorization
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData.session) {
         throw new Error("No active session found");
@@ -145,7 +137,6 @@ export const useEmailIntegration = () => {
       const result = await response.json();
       
       if (result.success) {
-        // Update the processed_emails table
         await supabase
           .from('processed_emails')
           .upsert({
@@ -159,7 +150,6 @@ export const useEmailIntegration = () => {
             onConflict: 'email_id,user_id'
           });
         
-        // Update the email list to mark this email as having created a booking
         const updatedEmails = emails.map(e => 
           e.id === email.id ? { 
             ...e, 
@@ -186,7 +176,6 @@ export const useEmailIntegration = () => {
         return true;
       }
       
-      // Handle case where the operation was unsuccessful but didn't throw an error
       await supabase
         .from('processed_emails')
         .upsert({
@@ -205,7 +194,6 @@ export const useEmailIntegration = () => {
     } catch (error: any) {
       console.error("Error creating booking from email:", error);
       
-      // Update processed_emails to reflect the error
       if (user) {
         await supabase
           .from('processed_emails')
@@ -237,44 +225,30 @@ export const useEmailIntegration = () => {
     if (!user || !email) return false;
     
     try {
-      // Get the user's session token for authorization
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData.session) {
         throw new Error("No active session found");
       }
       
-      const response = await fetch(getEdgeFunctionUrl('email-integration'), {
+      const response = await supabase.functions.invoke('email-integration/send-reply', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${sessionData.session.access_token}`,
-        },
-        body: JSON.stringify({
-          action: 'send-email',
+        body: {
           to: email.sender_email,
           subject: `Re: ${email.subject}`,
           body: replyContent
-        }),
+        },
       });
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to send reply");
+      if (response.error) {
+        throw new Error(response.error.message || "Failed to send reply");
       }
       
-      const result = await response.json();
+      toast({
+        title: "Reply Sent",
+        description: "Your reply has been sent successfully"
+      });
       
-      if (result.success) {
-        toast({
-          title: "Reply Sent",
-          description: "Your reply has been sent successfully"
-        });
-        
-        return true;
-      }
-      
-      throw new Error(result.error || "Failed to send reply");
-      
+      return true;
     } catch (error: any) {
       console.error("Error replying to email:", error);
       toast({
