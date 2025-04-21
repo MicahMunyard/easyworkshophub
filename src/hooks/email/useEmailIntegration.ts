@@ -14,39 +14,43 @@ export const useEmailIntegration = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedEmail, setSelectedEmail] = useState<EmailType | null>(null);
   const [processingEmailId, setProcessingEmailId] = useState<string | null>(null);
+  const [currentFolder, setCurrentFolder] = useState<"inbox" | "sent" | "junk">("inbox");
 
-  const fetchEmails = useCallback(async () => {
+  const fetchEmailsByFolder = useCallback(async (
+    folder: "inbox" | "sent" | "junk" = "inbox"
+  ) => {
     if (!user) return;
     setIsLoading(true);
-    
+    setCurrentFolder(folder);
+
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData.session) {
         throw new Error("No active session found");
       }
-      
+
       const response = await fetch(getEdgeFunctionUrl('email-integration'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${sessionData.session.access_token}`,
         },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ folder }),
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || "Failed to fetch emails");
       }
-      
+
       const result = await response.json();
-      
+
       if (result.emails) {
         const { data: processed } = await supabase
           .from('processed_emails')
           .select('email_id, booking_created, processing_status')
           .eq('user_id', user.id);
-        
+
         const updatedEmails = result.emails.map((email: EmailType) => {
           const processedEmail = processed?.find(p => p.email_id === email.id);
           return {
@@ -55,7 +59,7 @@ export const useEmailIntegration = () => {
             processing_status: processedEmail ? (processedEmail.processing_status as "pending" | "processing" | "completed" | "failed") : 'pending' as const
           };
         });
-        
+
         setEmails(updatedEmails as EmailType[]);
       }
     } catch (error: any) {
@@ -74,25 +78,13 @@ export const useEmailIntegration = () => {
     if (user) {
       checkConnection().then(connected => {
         if (connected) {
-          fetchEmails();
+          fetchEmailsByFolder(currentFolder);
         } else {
           setIsLoading(false);
         }
       });
     }
-  }, [user, checkConnection, fetchEmails]);
-
-  useEffect(() => {
-    if (!user || !isConnected) return;
-
-    const intervalId = setInterval(() => {
-      checkConnection().then(connected => {
-        if (connected) fetchEmails();
-      });
-    }, 60000);
-
-    return () => clearInterval(intervalId);
-  }, [user, isConnected, checkConnection, fetchEmails]);
+  }, [user, checkConnection, fetchEmailsByFolder, currentFolder]);
 
   const createBookingFromEmail = async (email: EmailType): Promise<boolean> => {
     if (!user) return false;
@@ -259,17 +251,24 @@ export const useEmailIntegration = () => {
       return false;
     }
   };
-  
+
+  const fetchConversationThread = async (emailId: string) => {
+    const thread = emails.filter(e => e.subject === (emails.find(e => e.id === emailId)?.subject));
+    return thread;
+  };
+
   return {
     emails,
     isLoading,
     selectedEmail,
     setSelectedEmail,
     processingEmailId,
-    refreshEmails: fetchEmails,
+    refreshEmails: () => fetchEmailsByFolder(currentFolder),
     createBookingFromEmail,
     replyToEmail,
     isConnected,
-    connectionStatus
+    connectionStatus,
+    fetchEmailsByFolder,
+    fetchConversationThread
   };
 };

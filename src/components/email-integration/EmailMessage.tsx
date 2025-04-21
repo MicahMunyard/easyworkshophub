@@ -1,11 +1,11 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AlertCircle, Calendar, Car, CheckCircle, Loader2, Mail, Phone, User } from "lucide-react";
 import { EmailType } from "@/types/email";
 import EmailReplyForm from "./EmailReplyForm";
+import { useEmailIntegration } from "@/hooks/email/useEmailIntegration";
 
 interface EmailMessageProps {
   email: EmailType;
@@ -25,8 +25,13 @@ const EmailMessage: React.FC<EmailMessageProps> = ({
   isProcessing
 }) => {
   const [showReplyForm, setShowReplyForm] = useState(false);
-  
-  // Extract potential booking details
+  const [conversation, setConversation] = useState<EmailType[]>([]);
+  const { fetchConversationThread } = useEmailIntegration();
+
+  useEffect(() => {
+    fetchConversationThread(email.id).then(setConversation);
+  }, [email, fetchConversationThread]);
+
   const extractedDetails = email.extracted_details || {
     name: null,
     phone: null,
@@ -36,7 +41,6 @@ const EmailMessage: React.FC<EmailMessageProps> = ({
     vehicle: null
   };
 
-  // Get status badge
   const getStatusBadge = () => {
     if (bookingCreated) {
       return (
@@ -72,7 +76,7 @@ const EmailMessage: React.FC<EmailMessageProps> = ({
     
     return null;
   };
-  
+
   return (
     <>
       <CardHeader className="border-b pb-3">
@@ -181,6 +185,22 @@ const EmailMessage: React.FC<EmailMessageProps> = ({
             </Button>
           </div>
         </CardFooter>
+      )}
+      
+      {conversation.length > 1 && (
+        <div className="mt-6 border-t pt-4">
+          <h3 className="font-semibold mb-2 text-sm text-muted-foreground">Conversation:</h3>
+          <div className="space-y-4">
+            {conversation
+              .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+              .map(msg => (
+                <div key={msg.id} className="p-2 rounded bg-muted">
+                  <div className="text-xs text-muted-foreground mb-1">{msg.from} &lt;{msg.sender_email}&gt; - {new Date(msg.date).toLocaleString()}</div>
+                  <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: msg.content }} />
+                </div>
+            ))}
+          </div>
+        </div>
       )}
     </>
   );

@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +9,13 @@ import { AlertCircle, CheckCircle, Loader2, Mail, RefreshCw, Search } from "luci
 import { useEmailIntegration } from "@/hooks/email/useEmailIntegration";
 import EmailMessage from "./EmailMessage";
 import { EmailType } from "@/types/email";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+
+const FOLDERS = [
+  { label: "Inbox", value: "inbox" },
+  { label: "Sent", value: "sent" },
+  { label: "Junk", value: "junk" }
+];
 
 const EmailInbox = () => {
   const { toast } = useToast();
@@ -21,10 +27,16 @@ const EmailInbox = () => {
     processingEmailId,
     refreshEmails, 
     createBookingFromEmail,
-    replyToEmail
+    replyToEmail,
+    fetchEmailsByFolder
   } = useEmailIntegration();
+  const [folder, setFolder] = useState<"inbox" | "sent" | "junk">("inbox");
   const [searchTerm, setSearchTerm] = useState("");
-  
+
+  useEffect(() => {
+    fetchEmailsByFolder(folder);
+  }, [folder, fetchEmailsByFolder]);
+
   const filteredEmails = emails.filter(email => 
     email.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
     email.from.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -49,7 +61,6 @@ const EmailInbox = () => {
     return success;
   };
   
-  // Get status badge for email list item
   const getEmailStatusBadge = (email: EmailType) => {
     if (email.booking_created) {
       return (
@@ -89,12 +100,23 @@ const EmailInbox = () => {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
+        <Select value={folder} onValueChange={setFolder}>
+          <SelectTrigger className="w-[120px]">
+            <SelectValue placeholder="Folder" />
+          </SelectTrigger>
+          <SelectContent>
+            {FOLDERS.map(f => (
+              <SelectItem key={f.value} value={f.value}>
+                {f.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
+          <input
             type="search"
             placeholder="Search emails..."
-            className="pl-8"
+            className="pl-8 input input-bordered w-full"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
