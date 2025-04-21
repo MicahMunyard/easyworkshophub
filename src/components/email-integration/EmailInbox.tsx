@@ -97,10 +97,16 @@ const EmailInbox = () => {
     return null;
   };
   
+  const handleFolderChange = (value: string) => {
+    if (value === "inbox" || value === "sent" || value === "junk") {
+      setFolder(value);
+    }
+  };
+  
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <Select value={folder} onValueChange={setFolder}>
+        <Select value={folder} onValueChange={handleFolderChange}>
           <SelectTrigger className="w-[120px]">
             <SelectValue placeholder="Folder" />
           </SelectTrigger>
