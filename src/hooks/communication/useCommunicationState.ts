@@ -7,6 +7,7 @@ import { fetchMessages } from "./api/fetchMessages";
 import { markConversationAsRead } from "./api/markConversationAsRead";
 import { sendMessage as sendMessageApi } from "./api/sendMessage";
 import { addContactToCustomers as addContactToCustomersApi } from "./api/addContactToCustomers";
+import { cleanupDemoConversations } from "./api/cleanupDemoConversations";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -18,6 +19,38 @@ export const useCommunicationState = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [newMessage, setNewMessage] = useState("");
   const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const [hasFacebookConnection, setHasFacebookConnection] = useState(false);
+
+  // Check if user has active Facebook connection
+  useEffect(() => {
+    if (!user) return;
+    
+    const checkFacebookConnection = async () => {
+      const { data, error } = await supabase
+        .from('social_connections')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('platform', 'facebook')
+        .eq('status', 'active');
+        
+      if (error) {
+        console.error("Error checking Facebook connection:", error);
+        return;
+      }
+      
+      setHasFacebookConnection(data && data.length > 0);
+    };
+    
+    checkFacebookConnection();
+  }, [user]);
+
+  // Clean up demo conversations when real connections exist
+  useEffect(() => {
+    if (!user || !hasFacebookConnection) return;
+    
+    // Clean up demo conversations since we have a real connection
+    cleanupDemoConversations(user.id);
+  }, [user, hasFacebookConnection]);
 
   // Set up conversation real-time updates
   useEffect(() => {
@@ -71,7 +104,10 @@ export const useCommunicationState = () => {
     setIsLoading(true);
     const data = await fetchConversations();
     if (data) {
+      console.log("Fetched conversations:", data);
       setConversations(data);
+    } else {
+      console.log("No conversations found");
     }
     setIsLoading(false);
   };
@@ -81,11 +117,16 @@ export const useCommunicationState = () => {
     
     const data = await fetchMessages(conversationId);
     if (data) {
+      console.log("Fetched messages for conversation", conversationId, ":", data);
       setMessages(data);
+    } else {
+      console.log("No messages found for conversation", conversationId);
+      setMessages([]);
     }
   };
 
   const addMessage = useCallback((message: Message) => {
+    console.log("Adding new message to state:", message);
     setMessages(prev => [...prev, message]);
   }, []);
 
@@ -139,6 +180,7 @@ export const useCommunicationState = () => {
     isSendingMessage,
     fetchConversations: getConversations,
     addContactToCustomers,
-    addMessage
+    addMessage,
+    hasFacebookConnection
   };
 };

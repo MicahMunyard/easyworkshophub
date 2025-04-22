@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 // Define the type locally since we're having issues with the global declaration
 interface FacebookLoginStatus {
@@ -41,15 +42,47 @@ export const useFacebookAuth = () => {
     }
   }, []);
 
-  const handleFacebookLogin = () => {
+  const handleFacebookLogin = async () => {
     if (typeof window !== 'undefined' && window.FB) {
-      window.FB.login((response: FacebookLoginStatus) => {
+      window.FB.login(async (response: FacebookLoginStatus) => {
         if (response.status === 'connected') {
           setFbStatus(response);
-          toast({
-            title: "Facebook Connected",
-            description: "Successfully connected to Facebook.",
-          });
+          
+          try {
+            // Save the user's access token to Supabase
+            const { error } = await supabase.functions.invoke('facebook-token-exchange', {
+              body: { 
+                userAccessToken: response.authResponse?.accessToken 
+              }
+            });
+            
+            if (error) {
+              console.error('Error exchanging token:', error);
+              toast({
+                variant: "destructive",
+                title: "Connection Error",
+                description: "Could not complete Facebook connection."
+              });
+              return;
+            }
+            
+            toast({
+              title: "Facebook Connected",
+              description: "Successfully connected to Facebook. Your page conversations will appear soon.",
+            });
+            
+            // Reload the page after a short delay to refresh conversations
+            setTimeout(() => {
+              window.location.reload();
+            }, 2000);
+          } catch (error) {
+            console.error('Error processing Facebook login:', error);
+            toast({
+              variant: "destructive",
+              title: "Connection Failed",
+              description: "Could not connect to Facebook."
+            });
+          }
         } else {
           toast({
             variant: "destructive",
@@ -61,10 +94,25 @@ export const useFacebookAuth = () => {
     }
   };
 
-  const handleFacebookLogout = () => {
+  const handleFacebookLogout = async () => {
     if (typeof window !== 'undefined' && window.FB) {
-      window.FB.logout((response) => {
+      window.FB.logout(async (response) => {
         setFbStatus(null);
+        
+        try {
+          // Remove the tokens from Supabase
+          const { error } = await supabase
+            .from('social_connections')
+            .update({ status: 'disconnected' })
+            .eq('platform', 'facebook');
+            
+          if (error) {
+            console.error('Error disconnecting Facebook:', error);
+          }
+        } catch (error) {
+          console.error('Error processing Facebook logout:', error);
+        }
+        
         toast({
           title: "Logged Out",
           description: "Disconnected from Facebook."

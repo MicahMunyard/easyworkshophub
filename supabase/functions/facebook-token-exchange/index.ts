@@ -1,6 +1,6 @@
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.23.0';
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.23.0";
 
 // CORS headers for browser requests
 const corsHeaders = {
@@ -14,22 +14,15 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Only accept POST requests
-  if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
-  }
-
   try {
-    const { code, userId } = await req.json();
+    // Get the request body
+    const { userAccessToken } = await req.json();
     
-    if (!code || !userId) {
-      return new Response(JSON.stringify({ error: 'Missing required parameters' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+    if (!userAccessToken) {
+      return new Response(
+        JSON.stringify({ error: "Missing user access token" }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
     
     // Initialize Supabase client
@@ -37,146 +30,131 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') as string;
     const supabase = createClient(supabaseUrl, supabaseKey);
     
-    // Facebook app credentials
-    const appId = Deno.env.get('FACEBOOK_APP_ID');
-    const appSecret = Deno.env.get('FACEBOOK_APP_SECRET');
-    const redirectUri = 'https://app.workshopbase.com.au/facebook/callback'; // Update this
-    
-    // Exchange code for token
-    const tokenResponse = await fetch(
-      `https://graph.facebook.com/v17.0/oauth/access_token?` +
-      `client_id=${appId}&` +
-      `client_secret=${appSecret}&` +
-      `redirect_uri=${encodeURIComponent(redirectUri)}&` +
-      `code=${code}`,
-      { method: 'GET' }
-    );
-    
-    if (!tokenResponse.ok) {
-      throw new Error(`Failed to exchange token: ${await tokenResponse.text()}`);
+    // Get the authenticated user from the request
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: "Not authenticated" }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
     
-    const tokenData = await tokenResponse.json();
-    const accessToken = tokenData.access_token;
+    // Extract the JWT token
+    const token = authHeader.replace('Bearer ', '');
     
-    // Get user pages
-    const pagesResponse = await fetch(
-      `https://graph.facebook.com/v17.0/me/accounts?access_token=${accessToken}`,
-      { method: 'GET' }
-    );
+    // Verify the token and get the user
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: "Invalid token" }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Now exchange the short-lived token for a long-lived one
+    const fbAppId = Deno.env.get('FACEBOOK_APP_ID');
+    const fbAppSecret = Deno.env.get('FACEBOOK_APP_SECRET');
+    
+    if (!fbAppId || !fbAppSecret) {
+      return new Response(
+        JSON.stringify({ error: "Facebook app credentials not configured" }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Exchange the token
+    const tokenExchangeUrl = `https://graph.facebook.com/v17.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${fbAppId}&client_secret=${fbAppSecret}&fb_exchange_token=${userAccessToken}`;
+    
+    const fbResponse = await fetch(tokenExchangeUrl);
+    
+    if (!fbResponse.ok) {
+      const errorText = await fbResponse.text();
+      console.error("Facebook API error:", errorText);
+      return new Response(
+        JSON.stringify({ error: "Could not exchange token with Facebook" }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    const tokenData = await fbResponse.json();
+    const longLivedToken = tokenData.access_token;
+    
+    // Get the user's managed pages
+    const pagesUrl = `https://graph.facebook.com/v17.0/me/accounts?access_token=${longLivedToken}`;
+    const pagesResponse = await fetch(pagesUrl);
     
     if (!pagesResponse.ok) {
-      throw new Error(`Failed to get pages: ${await pagesResponse.text()}`);
+      const errorText = await pagesResponse.text();
+      console.error("Facebook Pages API error:", errorText);
+      return new Response(
+        JSON.stringify({ error: "Could not fetch Facebook pages" }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
     
     const pagesData = await pagesResponse.json();
-    const pages = pagesData.data;
     
-    // Store each page and subscribe to webhooks
-    const storedPages = [];
-    
-    for (const page of pages) {
-      const pageId = page.id;
-      const pageName = page.name;
-      const pageAccessToken = page.access_token;
+    // Store the connections in our database
+    for (const page of pagesData.data) {
+      // Check if this page connection already exists
+      const { data: existingPage } = await supabase
+        .from('social_connections')
+        .select('id')
+        .eq('platform', 'facebook')
+        .eq('page_id', page.id)
+        .eq('user_id', user.id)
+        .single();
+        
+      if (existingPage) {
+        // Update existing connection
+        await supabase
+          .from('social_connections')
+          .update({
+            page_name: page.name,
+            page_access_token: page.access_token,
+            user_access_token: longLivedToken,
+            status: 'active',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingPage.id);
+      } else {
+        // Create new connection
+        await supabase
+          .from('social_connections')
+          .insert({
+            user_id: user.id,
+            platform: 'facebook',
+            page_id: page.id,
+            page_name: page.name,
+            page_access_token: page.access_token,
+            user_access_token: longLivedToken,
+            status: 'active'
+          });
+      }
       
-      // Store page access token
-      const { data: pageData, error: pageError } = await supabase
+      // Store the page access token for the webhook to use
+      await supabase
         .from('facebook_page_tokens')
         .upsert({
-          user_id: userId,
-          page_id: pageId,
-          page_name: pageName,
-          access_token: pageAccessToken,
-          created_at: new Date().toISOString()
-        })
-        .select()
-        .single();
-        
-      if (pageError) {
-        console.error('Error storing page token:', pageError);
-        continue;
-      }
-      
-      // Create social connection record
-      const { data: connData, error: connError } = await supabase
-        .from('social_connections')
-        .upsert({
-          user_id: userId,
-          platform: 'facebook',
-          page_id: pageId,
-          page_name: pageName,
-          status: 'active',
-          connected_at: new Date().toISOString()
-        })
-        .select()
-        .single();
-        
-      if (connError) {
-        console.error('Error creating social connection:', connError);
-        continue;
-      }
-      
-      // Subscribe to webhooks for this page
-      try {
-        const subscribeResult = await subscribeToPageWebhooks(pageId, pageAccessToken);
-        storedPages.push({
-          id: pageId,
-          name: pageName,
-          subscribed: subscribeResult.success
+          page_id: page.id,
+          access_token: page.access_token,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'page_id'
         });
-      } catch (error) {
-        console.error('Error subscribing to webhooks:', error);
-        storedPages.push({
-          id: pageId,
-          name: pageName,
-          subscribed: false,
-          error: error.message
-        });
-      }
     }
     
-    return new Response(JSON.stringify({ 
-      success: true, 
-      pages: storedPages 
-    }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
-    
+    // Return success
+    return new Response(
+      JSON.stringify({ success: true }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   } catch (error) {
-    console.error('Error processing token exchange:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
+    console.error("Error processing request:", error);
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   }
 });
-
-// Function to subscribe to page webhooks
-async function subscribeToPageWebhooks(pageId, pageAccessToken) {
-  try {
-    // Subscribe to webhooks for this page - use the direct URL for webhook verification
-    const response = await fetch(
-      `https://graph.facebook.com/v17.0/${pageId}/subscribed_apps?access_token=${pageAccessToken}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          subscribed_fields: 'messages,messaging_postbacks,message_deliveries,message_reads'
-        })
-      }
-    );
-    
-    if (!response.ok) {
-      throw new Error(`Failed to subscribe to webhooks: ${await response.text()}`);
-    }
-    
-    return await response.json();
-  } catch (error) {
-    console.error('Error subscribing to webhooks:', error);
-    throw error;
-  }
-}

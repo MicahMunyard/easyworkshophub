@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -9,7 +8,13 @@ export const connectSocialPlatform = async (
   platform: SocialPlatform
 ): Promise<boolean> => {
   try {
-    // In a real implementation, this would initiate OAuth flow with the respective platform
+    // For Facebook, the connection is handled by the useFacebookAuth hook
+    if (platform === 'facebook') {
+      // Just return true since the actual connection is handled elsewhere
+      return true;
+    }
+    
+    // For other platforms, we'll keep the demo functionality for now
     console.log(`Initiating ${platform} connection for user ${userId}`);
     
     // For demonstration purposes, we'll simulate the connection process
