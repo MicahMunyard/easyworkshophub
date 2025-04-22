@@ -1,4 +1,3 @@
-
 export interface Supplier {
   id: string;
   name: string;
@@ -48,4 +47,29 @@ export interface Order {
   items: OrderItem[];
   total: number;
   notes?: string;
+}
+
+export type SupplierConnectionType = 'manual' | 'api';
+export type SupplierApiType = 'bursons' | 'other';
+
+export interface ApiSupplierConfig {
+  type: SupplierApiType;
+  connectionUrl?: string;
+  isConnected: boolean;
+}
+
+export interface Supplier {
+  id: string;
+  name: string;
+  category: string;
+  contactPerson: string;
+  email: string;
+  phone: string;
+  address?: string;
+  status: 'active' | 'inactive';
+  notes?: string;
+  isDefault?: boolean;
+  logoUrl?: string;
+  connectionType: SupplierConnectionType;
+  apiConfig?: ApiSupplierConfig;
 }

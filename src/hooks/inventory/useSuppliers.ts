@@ -7,27 +7,20 @@ import { useToast } from '@/components/ui/use-toast';
 const defaultSuppliers: Supplier[] = [
   {
     id: uuidv4(),
-    name: 'Western Industrial Cleaning Suppliers',
-    category: 'Cleaning Supplies',
-    contactPerson: 'John Smith',
-    email: 'john@westernindustrial.com',
-    phone: '555-123-4567',
+    name: 'Burson Auto Parts',
+    category: 'Auto Parts',
+    contactPerson: 'EzyParts Support',
+    email: 'ezypartssupport@bapcor.com.au',
+    phone: '1300 650 590',
     status: 'active',
-    notes: 'Primary supplier for cleaning products',
+    notes: 'Official Burson Auto Parts integration via EzyParts API',
     isDefault: true,
-    logoUrl: 'https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?auto=format&fit=crop&w=64&h=64&q=80'
-  },
-  {
-    id: uuidv4(),
-    name: 'Halowipers',
-    category: 'Cleaning Supplies',
-    contactPerson: 'Sarah Johnson',
-    email: 'sarah@halowipers.com',
-    phone: '555-987-6543',
-    status: 'active',
-    notes: 'Specializes in high-quality wiping solutions',
-    isDefault: true,
-    logoUrl: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=64&h=64&q=80'
+    logoUrl: '/lovable-uploads/toliccs-logo.png',
+    connectionType: 'api',
+    apiConfig: {
+      type: 'bursons',
+      isConnected: false,
+    }
   }
 ];
 
