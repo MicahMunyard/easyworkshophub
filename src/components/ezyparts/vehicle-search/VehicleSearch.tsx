@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useEzyParts } from '@/contexts/EzyPartsContext';
@@ -29,10 +28,10 @@ const VehicleSearch: React.FC = () => {
     isRegoSearch: true
   });
   const [detailsSearch, setDetailSearch] = useState<DetailsSearch>({
-    vehicleId: '',
+    vehicleId: 0,
     make: '',
     model: '',
-    year: '',
+    year: 0,
     seriesChassis: '',
     engine: ''
   });
@@ -154,4 +153,3 @@ const VehicleSearch: React.FC = () => {
 };
 
 export default VehicleSearch;
-

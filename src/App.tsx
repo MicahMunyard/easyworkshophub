@@ -61,59 +61,16 @@ const App: React.FC = () => {
         }
       />
       
-      <Route 
-        path="/workshop" 
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <Workshop />
-            </Layout>
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/booking-diary" 
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <BookingDiary />
-            </Layout>
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/jobs" 
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <Jobs />
-            </Layout>
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/workshop-setup" 
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <WorkshopSetup />
-            </Layout>
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/technician-portal" 
-        element={
-          <ProtectedRoute>
-            <TechnicianPortal />
-          </ProtectedRoute>
-        } 
-      />
-      
+      {/* Other protected routes */}
+      <Route path="/workshop" element={<ProtectedRoute><Layout><Workshop /></Layout></ProtectedRoute>} />
+      <Route path="/booking-diary" element={<ProtectedRoute><Layout><BookingDiary /></Layout></ProtectedRoute>} />
+      <Route path="/jobs" element={<ProtectedRoute><Layout><Jobs /></Layout></ProtectedRoute>} />
+      <Route path="/workshop-setup" element={<ProtectedRoute><Layout><WorkshopSetup /></Layout></ProtectedRoute>} />
+      <Route path="/technician-portal" element={<ProtectedRoute><TechnicianPortal /></ProtectedRoute>} />
       <Route path="/inventory" element={<ProtectedRoute><Layout><Inventory /></Layout></ProtectedRoute>} />
       <Route path="/customers" element={<ProtectedRoute><Layout><Customers /></Layout></ProtectedRoute>} />
       <Route path="/invoicing" element={<ProtectedRoute><Layout><Invoicing /></Layout></ProtectedRoute>} />
-      <Route path="/invoices" element={<Navigate to="/invoicing" replace />} /> {/* Redirect to combined page */}
+      <Route path="/invoices" element={<Navigate to="/invoicing" replace />} />
       <Route path="/pos" element={<ProtectedRoute><Layout><PointOfSale /></Layout></ProtectedRoute>} />
       <Route path="/suppliers" element={<ProtectedRoute><Layout><Suppliers /></Layout></ProtectedRoute>} />
       <Route path="/reports" element={<ProtectedRoute><Layout><Reports /></Layout></ProtectedRoute>} />

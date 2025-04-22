@@ -1,8 +1,6 @@
-
 import React from 'react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ExclamationTriangleIcon } from '@radix-ui/react-icons';
-import { BoltIcon } from 'lucide-react';
+import { ExclamationTriangleIcon, BoltIcon } from 'lucide-react';
 
 interface StatusAlertsProps {
   isConfigured: boolean;
