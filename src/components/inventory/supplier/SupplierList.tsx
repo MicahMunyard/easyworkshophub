@@ -23,6 +23,10 @@ const SupplierList: React.FC<SupplierListProps> = ({
   // Filter the suppliers directly from the filtered suppliers prop
   const apiSuppliers = filteredSuppliers.filter(s => s.connectionType === 'api');
   const manualSuppliers = filteredSuppliers.filter(s => s.connectionType === 'manual');
+  
+  console.log('API Suppliers:', apiSuppliers);
+  console.log('Manual Suppliers:', manualSuppliers);
+  console.log('All Filtered Suppliers:', filteredSuppliers);
 
   return (
     <div className="space-y-6">

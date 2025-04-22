@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Supplier } from '@/types/inventory';
 import { useSuppliers } from '@/hooks/inventory/useSuppliers';
 import SupplierHeader from './supplier/SupplierHeader';
@@ -11,6 +11,11 @@ const SupplierManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | undefined>(undefined);
+
+  // Reset defaultSuppliers in localStorage to ensure correct data
+  useEffect(() => {
+    localStorage.removeItem('defaultSuppliers'); // This will force the hook to recreate default suppliers
+  }, []);
 
   const filteredSuppliers = suppliers.filter(supplier => 
     supplier.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
