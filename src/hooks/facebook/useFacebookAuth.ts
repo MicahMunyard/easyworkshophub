@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
+// Since FacebookLoginStatus is defined in global.d.ts, we don't need to redefine it here
 export const useFacebookAuth = () => {
   const [fbStatus, setFbStatus] = useState<FacebookLoginStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
