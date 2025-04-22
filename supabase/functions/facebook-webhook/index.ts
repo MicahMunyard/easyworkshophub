@@ -31,6 +31,7 @@ serve(async (req) => {
       // Check if the mode and token are correct
       if (mode === 'subscribe' && token === FACEBOOK_VERIFY_TOKEN) {
         console.log('Webhook verified successfully');
+        // For verification requests, return only the challenge value
         return new Response(challenge, { 
           status: 200,
           headers: { ...corsHeaders } 

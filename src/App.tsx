@@ -26,6 +26,7 @@ import TechnicianPortal from "./pages/TechnicianPortal";
 import { useAuth } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import EmailCallback from "./pages/email/callback";
+import FacebookWebhook from "./pages/api/webhook/facebook";
 
 const App: React.FC = () => {
   const { user } = useAuth();
@@ -36,6 +37,9 @@ const App: React.FC = () => {
       <Route path="/auth/signin" element={<Auth />} />
       <Route path="/auth/signup" element={<Auth />} />
       <Route path="/auth" element={<Navigate to="/auth/signin" replace />} />
+      
+      {/* Facebook Webhook route - must be public */}
+      <Route path="/api/webhook/facebook" element={<FacebookWebhook />} />
       
       {/* Protected routes */}
       <Route 
