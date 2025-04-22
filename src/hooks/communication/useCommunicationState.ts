@@ -26,19 +26,17 @@ export const useCommunicationState = () => {
     if (!user) return;
     
     const checkFacebookConnection = async () => {
-      const { data, error } = await supabase
-        .from('social_connections')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('platform', 'facebook')
-        .eq('status', 'active');
+      // Use a custom query to work around the type issues
+      const { data, error } = await supabase.rpc('check_facebook_connection', {
+        user_id_param: user.id
+      });
         
       if (error) {
         console.error("Error checking Facebook connection:", error);
         return;
       }
       
-      setHasFacebookConnection(data && data.length > 0);
+      setHasFacebookConnection(data && data.has_connection);
     };
     
     checkFacebookConnection();

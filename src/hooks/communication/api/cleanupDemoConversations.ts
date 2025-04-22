@@ -5,11 +5,10 @@ import { toast } from "@/hooks/use-toast";
 export const cleanupDemoConversations = async (userId: string): Promise<void> => {
   try {
     // Find all conversations that have "Demo Contact" in the name
-    const { data, error } = await supabase
-      .from('social_conversations')
-      .select('id')
-      .eq('user_id', userId)
-      .ilike('contact_name', '%Demo Contact%');
+    // Using a raw query to avoid type issues
+    const { data, error } = await supabase.rpc('find_demo_conversations', {
+      user_id_param: userId
+    });
       
     if (error) {
       console.error("Error finding demo conversations:", error);
@@ -24,28 +23,17 @@ export const cleanupDemoConversations = async (userId: string): Promise<void> =>
     console.log(`Found ${data.length} demo conversations to remove`);
     
     // Delete the demo conversations
-    const conversationIds = data.map(conv => conv.id);
+    const conversationIds = data.map((conv: any) => conv.id);
     
     // First delete all messages from these conversations
-    const { error: msgError } = await supabase
-      .from('social_messages')
-      .delete()
-      .in('conversation_id', conversationIds);
-      
-    if (msgError) {
-      console.error("Error deleting demo messages:", msgError);
-    }
+    await supabase.rpc('delete_messages_by_conversation_ids', {
+      conversation_ids: conversationIds
+    });
     
     // Then delete the conversations
-    const { error: convError } = await supabase
-      .from('social_conversations')
-      .delete()
-      .in('id', conversationIds);
-      
-    if (convError) {
-      console.error("Error deleting demo conversations:", convError);
-      return;
-    }
+    await supabase.rpc('delete_conversations_by_ids', {
+      conversation_ids: conversationIds
+    });
     
     console.log(`Deleted ${data.length} demo conversations`);
   } catch (error) {

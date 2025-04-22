@@ -14,6 +14,15 @@ interface FacebookLoginStatus {
   };
 }
 
+// Define a type for social connections
+interface SocialConnection {
+  id: string;
+  platform: string;
+  status: string;
+  page_id?: string;
+  user_id: string;
+}
+
 export const useFacebookAuth = () => {
   const [fbStatus, setFbStatus] = useState<FacebookLoginStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -100,11 +109,11 @@ export const useFacebookAuth = () => {
         setFbStatus(null);
         
         try {
-          // Remove the tokens from Supabase
-          const { error } = await supabase
-            .from('social_connections')
-            .update({ status: 'disconnected' })
-            .eq('platform', 'facebook');
+          // Use a custom query to work around the type issues
+          const { error } = await supabase.rpc('update_social_connection_status', {
+            platform_name: 'facebook',
+            new_status: 'disconnected'
+          });
             
           if (error) {
             console.error('Error disconnecting Facebook:', error);
