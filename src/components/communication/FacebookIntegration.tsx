@@ -6,8 +6,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
-// Facebook App ID - Replace with your real Facebook App ID
-const FACEBOOK_APP_ID = "1234567890123456"; // Replace this with your actual Facebook App ID
+// Updated Facebook App ID
+const FACEBOOK_APP_ID = "2250142895379743";
 
 const FacebookIntegration: React.FC = () => {
   const { user } = useAuth();
