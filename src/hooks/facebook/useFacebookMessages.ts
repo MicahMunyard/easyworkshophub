@@ -3,12 +3,14 @@ import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Message } from '@/types/communication';
+import { useRealtimeMessages } from '../communication/useRealtimeMessages';
 
 export const useFacebookMessages = (conversationId: string | null) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
+  // Fetch initial messages
   useEffect(() => {
     if (!conversationId) {
       setMessages([]);
@@ -38,6 +40,7 @@ export const useFacebookMessages = (conversationId: string | null) => {
         }));
 
         setMessages(formattedMessages);
+        console.log('Fetched messages:', formattedMessages);
       } catch (error) {
         console.error('Error fetching messages:', error);
         toast({
@@ -51,34 +54,22 @@ export const useFacebookMessages = (conversationId: string | null) => {
     };
 
     fetchMessages();
-
-    // Subscribe to new messages
-    const subscription = supabase
-      .channel('social_messages')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'social_messages',
-        filter: `conversation_id=eq.${conversationId}`
-      }, payload => {
-        const newMessage = payload.new as any;
-        setMessages(prev => [...prev, {
-          id: newMessage.id,
-          conversation_id: newMessage.conversation_id,
-          content: newMessage.content,
-          sender_type: newMessage.sender_type as "user" | "contact",
-          sent_at: newMessage.sent_at,
-          created_at: newMessage.created_at,
-          attachment_url: newMessage.attachment_url || undefined,
-          isOutgoing: newMessage.sender_type === 'user'
-        }]);
-      })
-      .subscribe();
-
-    return () => {
-      subscription.unsubscribe();
-    };
   }, [conversationId, toast]);
 
-  return { messages, isLoading };
+  // Handle adding new messages
+  const addMessage = (message: Message) => {
+    setMessages(prev => [...prev, {
+      ...message,
+      isOutgoing: message.sender_type === 'user'
+    }]);
+  };
+
+  // Use the realtime messages hook to subscribe to new messages
+  useRealtimeMessages(conversationId, addMessage);
+
+  return { 
+    messages, 
+    isLoading,
+    addMessage 
+  };
 };
