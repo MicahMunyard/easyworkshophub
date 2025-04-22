@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Settings } from 'lucide-react';
@@ -11,7 +11,13 @@ import { StatusAlerts } from '@/components/ezyparts/dashboard/StatusAlerts';
 
 const EzyPartsDashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { apiStatus, isConfigured, currentQuote, clearQuote, credentials } = useEzyPartsDashboard();
+  const { 
+    apiStatus, 
+    isConfigured, 
+    currentQuote, 
+    clearQuote, 
+    credentials 
+  } = useEzyPartsDashboard();
 
   return (
     <div className="container mx-auto py-8">
@@ -23,7 +29,10 @@ const EzyPartsDashboard: React.FC = () => {
         </Button>
       </div>
 
-      <StatusAlerts isConfigured={isConfigured} apiStatus={apiStatus} />
+      <StatusAlerts 
+        isConfigured={isConfigured} 
+        apiStatus={apiStatus} 
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <VehicleSearchCard isConfigured={isConfigured} apiStatus={apiStatus} />

@@ -1,69 +1,83 @@
-# Welcome to your Lovable project
 
-## Project info
+# WorkshopBase - EzyParts Integration
 
-**URL**: https://lovable.dev/projects/5bc1c1b4-136f-43c6-8420-fe09f38896cc
+This project implements a complete integration between WorkshopBase and Burson's EzyParts online ordering system, following the EzyParts Integration with Workshop Management Systems Technical Specification v4.1.
 
-## How can I edit this code?
+## 🚀 Features
 
-There are several ways of editing your application.
+- **Vehicle Search**: Search for vehicles by registration number or vehicle details
+- **Parts Ordering**: Browse parts, check inventory, and place orders directly from WorkshopBase
+- **Quote Management**: Receive, view, and process quotes from EzyParts
+- **Order Tracking**: Track the status of orders and handle discrepancies
+- **Secure Authentication**: OAuth 2.0 secure token authentication with EzyParts API
 
-**Use Lovable**
+## 📂 Project Structure
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/5bc1c1b4-136f-43c6-8420-fe09f38896cc) and start prompting.
+The project is built using modern web technologies:
+- React 18
+- TypeScript
+- Tailwind CSS
+- shadcn/ui
+- Supabase Edge Functions
 
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```
+src/
+├── components/
+│   ├── ezyparts/           # EzyParts specific components
+│   └── layout/             # Layout components
+├── contexts/               # React context providers
+├── hooks/                  # Custom React hooks
+├── pages/                  # Page components
+└── routes/                 # Routing configuration
 ```
 
-**Edit a file directly in GitHub**
+## 🔄 EzyParts Integration Flow
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+1. **Configuration**: Set up EzyParts API credentials
+2. **Vehicle Search**: Find vehicles by rego or details
+3. **Parts Selection**: Choose parts in EzyParts
+4. **Quote Processing**: Retrieve quote data
+5. **Inventory Check**: Verify stock availability
+6. **Order Submission**: Submit order to EzyParts
+7. **Order Confirmation**: Process response
 
-**Use GitHub Codespaces**
+## 🛠 Setup Instructions
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### Prerequisites
 
-## What technologies are used for this project?
+- Node.js 18+
+- npm 9+
+- EzyParts Trade Account
 
-This project is built with .
+### Installation
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+1. Clone the repository
+   ```bash
+   git clone https://github.com/workshopbase/ezyparts-integration
+   cd workshopbase-ezyparts
+   ```
 
-## How can I deploy this project?
+2. Install dependencies
+   ```bash
+   npm install
+   ```
 
-Simply open [Lovable](https://lovable.dev/projects/5bc1c1b4-136f-43c6-8420-fe09f38896cc) and click on Share -> Publish.
+3. Start development server
+   ```bash
+   npm run dev
+   ```
 
-## I want to use a custom domain - is that possible?
+## 🔐 Security
 
-We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
+- Secure OAuth 2.0 authentication
+- Credentials stored via Supabase Secrets
+- Web-based, secure integration approach
+
+## 📞 Support
+
+- WorkshopBase: support@workshopbase.com
+- EzyParts: ezypartssupport@bapcor.com.au
+
+## 📄 License
+
+[Your License Here]
