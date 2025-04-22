@@ -1,10 +1,4 @@
 
-interface EzyPartsEnvironment {
-  BASE: string;
-  AUTH: string;
-  WEB: string;
-}
-
 export const EZYPARTS_CONFIG = {
   PRODUCTION: {
     BASE: 'https://api.ezyparts.burson.com.au/bapcorocc/v2/EzyParts/gms',
@@ -18,6 +12,6 @@ export const EZYPARTS_CONFIG = {
   }
 } as const;
 
-export const getEzyPartsConfig = (isProduction: boolean = false): EzyPartsEnvironment => {
+export const getEzyPartsConfig = (isProduction: boolean = false) => {
   return isProduction ? EZYPARTS_CONFIG.PRODUCTION : EZYPARTS_CONFIG.STAGING;
 };
