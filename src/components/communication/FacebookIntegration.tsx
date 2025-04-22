@@ -1,18 +1,16 @@
 
-import React, { useState } from "react";
+import React from "react";
 import { Button } from "@/components/ui/button";
 import { Facebook } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-
-// Updated Facebook App ID
-const FACEBOOK_APP_ID = "2250142895379743";
+import { useFacebookAuth } from "@/hooks/facebook/useFacebookAuth";
+import { Loader2 } from "lucide-react";
 
 const FacebookIntegration: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [isConnecting, setIsConnecting] = useState(false);
+  const { fbStatus, isLoading, handleFacebookLogin, handleFacebookLogout } = useFacebookAuth();
 
   const handleConnect = () => {
     if (!user) {
@@ -24,37 +22,40 @@ const FacebookIntegration: React.FC = () => {
       return;
     }
 
-    setIsConnecting(true);
-    
-    // Define the redirect URL - this should be a page in your app that handles the OAuth callback
-    const redirectUri = `${window.location.origin}/facebook/callback`;
-    
-    // Permissions needed for Facebook Messenger integration
-    const scope = "public_profile,pages_messaging,pages_show_list,pages_manage_metadata";
-    
-    // State parameter to validate the callback later
-    const state = user.id;
-    
-    // Build the Facebook OAuth URL
-    const authUrl = `https://www.facebook.com/v17.0/dialog/oauth?` +
-      `client_id=${FACEBOOK_APP_ID}` +
-      `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-      `&state=${state}` +
-      `&scope=${scope}`;
-    
-    // Redirect to Facebook OAuth dialog
-    window.location.href = authUrl;
+    handleFacebookLogin();
   };
+
+  if (isLoading) {
+    return (
+      <Button variant="outline" className="flex items-center gap-2" disabled>
+        <Loader2 className="h-5 w-5 animate-spin" />
+        Checking status...
+      </Button>
+    );
+  }
+
+  if (fbStatus?.status === 'connected') {
+    return (
+      <Button
+        variant="outline"
+        className="flex items-center gap-2"
+        onClick={handleFacebookLogout}
+      >
+        <Facebook className="h-5 w-5 text-blue-600" />
+        Disconnect Facebook
+      </Button>
+    );
+  }
 
   return (
     <Button
       variant="outline"
       className="flex items-center gap-2"
       onClick={handleConnect}
-      disabled={isConnecting || !user}
+      disabled={!user}
     >
       <Facebook className="h-5 w-5 text-blue-600" />
-      {isConnecting ? "Connecting..." : "Connect Facebook Page"}
+      Connect Facebook Page
     </Button>
   );
 };
