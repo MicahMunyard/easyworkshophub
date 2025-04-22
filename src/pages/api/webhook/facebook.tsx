@@ -1,7 +1,9 @@
 
+// This is a Next.js API route handler, not a React component
 import { supabase } from '@/integrations/supabase/client';
 
-const FacebookWebhook = async (req: Request) => {
+// Export a default function to handle the Facebook webhook requests
+export default async function handler(req: Request) {
   try {
     // For GET requests (verification)
     if (req.method === 'GET') {
@@ -61,6 +63,4 @@ const FacebookWebhook = async (req: Request) => {
       headers: { 'Content-Type': 'application/json' }
     });
   }
-};
-
-export default FacebookWebhook;
+}
