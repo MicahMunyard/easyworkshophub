@@ -21,7 +21,9 @@ const Communication = () => {
     sendMessage,
     isSendingMessage,
     addContactToCustomers,
-    addMessage
+    addMessage,
+    hasFacebookConnection,
+    fetchConversations
   } = useCommunicationState();
   const isMobile = useIsMobile();
   
@@ -62,6 +64,8 @@ const Communication = () => {
             setShowContactDrawer={setShowContactDrawer}
             addContactToCustomers={addContactToCustomers}
             addMessage={addMessage}
+            hasFacebookConnection={hasFacebookConnection}
+            fetchConversations={fetchConversations}
           />
         </TabsContent>
         

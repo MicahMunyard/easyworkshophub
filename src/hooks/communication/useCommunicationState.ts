@@ -42,8 +42,8 @@ export const useCommunicationState = () => {
           return;
         }
         
-        // Type assertion to ensure the data is of the expected type
-        const connectionData = data as FacebookConnectionResponse;
+        // Cast to unknown first, then to our expected type to avoid TypeScript errors
+        const connectionData = data as unknown as FacebookConnectionResponse;
         setHasFacebookConnection(connectionData && connectionData.has_connection);
       } catch (error) {
         console.error("Error checking Facebook connection:", error);
@@ -58,7 +58,13 @@ export const useCommunicationState = () => {
     if (!user || !hasFacebookConnection) return;
     
     // Clean up demo conversations since we have a real connection
-    cleanupDemoConversations(user.id);
+    const cleanup = async () => {
+      await cleanupDemoConversations(user.id);
+      // Refresh conversations after cleanup
+      getConversations();
+    };
+    
+    cleanup();
   }, [user, hasFacebookConnection]);
 
   // Set up conversation real-time updates
