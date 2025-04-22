@@ -14,6 +14,16 @@ interface Props {
 export const DetailsSearchForm: React.FC<Props> = ({ values, onChange }) => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+    
+    // Handle vehicleId specially as it needs to be a number
+    if (name === 'vehicleId') {
+      onChange({
+        ...values,
+        [name]: value ? parseInt(value, 10) : 0
+      });
+      return;
+    }
+    
     onChange({
       ...values,
       [name]: value
@@ -23,7 +33,7 @@ export const DetailsSearchForm: React.FC<Props> = ({ values, onChange }) => {
   const handleYearChange = (year: string) => {
     onChange({
       ...values,
-      year
+      year: parseInt(year, 10)
     });
   };
 
@@ -56,7 +66,7 @@ export const DetailsSearchForm: React.FC<Props> = ({ values, onChange }) => {
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="year">Year</Label>
-          <Select onValueChange={handleYearChange} value={values.year}>
+          <Select onValueChange={handleYearChange} value={values.year.toString()}>
             <SelectTrigger id="year">
               <SelectValue placeholder="Select year" />
             </SelectTrigger>
@@ -75,9 +85,10 @@ export const DetailsSearchForm: React.FC<Props> = ({ values, onChange }) => {
           <Input
             id="vehicleId"
             name="vehicleId"
-            value={values.vehicleId}
+            value={values.vehicleId || ''}
             onChange={handleInputChange}
             placeholder="EzyParts Vehicle ID"
+            type="number"
           />
         </div>
       </div>
@@ -108,4 +119,3 @@ export const DetailsSearchForm: React.FC<Props> = ({ values, onChange }) => {
     </div>
   );
 };
-

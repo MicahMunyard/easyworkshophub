@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Settings } from 'lucide-react';
@@ -19,6 +19,11 @@ const EzyPartsDashboard: React.FC = () => {
     credentials 
   } = useEzyPartsDashboard();
 
+  // We need to ensure isConfigured is treated as a boolean
+  const configuredStatus = typeof isConfigured === 'string' 
+    ? isConfigured === 'true' 
+    : Boolean(isConfigured);
+
   return (
     <div className="container mx-auto py-8">
       <div className="flex justify-between items-center mb-6">
@@ -30,12 +35,12 @@ const EzyPartsDashboard: React.FC = () => {
       </div>
 
       <StatusAlerts 
-        isConfigured={isConfigured} 
+        isConfigured={configuredStatus} 
         apiStatus={apiStatus} 
       />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <VehicleSearchCard isConfigured={isConfigured} apiStatus={apiStatus} />
+        <VehicleSearchCard isConfigured={configuredStatus} apiStatus={apiStatus} />
         <CurrentQuoteCard quote={currentQuote} onClearQuote={clearQuote} />
         <ConfigurationCard 
           apiStatus={apiStatus}
