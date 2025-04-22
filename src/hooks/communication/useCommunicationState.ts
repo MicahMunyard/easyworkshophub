@@ -11,6 +11,11 @@ import { cleanupDemoConversations } from "./api/cleanupDemoConversations";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
+// Define a type for the Facebook connection check response
+interface FacebookConnectionResponse {
+  has_connection: boolean;
+}
+
 export const useCommunicationState = () => {
   const { user } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -26,17 +31,23 @@ export const useCommunicationState = () => {
     if (!user) return;
     
     const checkFacebookConnection = async () => {
-      // Use a custom query to work around the type issues
-      const { data, error } = await supabase.rpc('check_facebook_connection', {
-        user_id_param: user.id
-      });
+      try {
+        // Use a custom RPC to check for Facebook connection
+        const { data, error } = await supabase.rpc('check_facebook_connection', {
+          user_id_param: user.id
+        });
+          
+        if (error) {
+          console.error("Error checking Facebook connection:", error);
+          return;
+        }
         
-      if (error) {
+        // Type assertion to ensure the data is of the expected type
+        const connectionData = data as FacebookConnectionResponse;
+        setHasFacebookConnection(connectionData && connectionData.has_connection);
+      } catch (error) {
         console.error("Error checking Facebook connection:", error);
-        return;
       }
-      
-      setHasFacebookConnection(data && data.has_connection);
     };
     
     checkFacebookConnection();
