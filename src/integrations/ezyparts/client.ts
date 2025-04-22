@@ -7,6 +7,7 @@ import {
   OrderSubmissionResponse,
   QuoteResponse
 } from '@/types/ezyparts';
+import { getEzyPartsConfig } from './config';
 
 /**
  * EzyParts API Client
