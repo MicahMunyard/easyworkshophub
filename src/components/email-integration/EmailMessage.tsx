@@ -2,11 +2,13 @@
 import React, { useState, useEffect } from "react";
 import { CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { AlertCircle, Calendar, Car, CheckCircle, Loader2, Mail, Phone, User } from "lucide-react";
+import { Mail, Loader2 } from "lucide-react";
 import { EmailType } from "@/types/email";
 import EmailReplyForm from "./EmailReplyForm";
 import { useEmailIntegration } from "@/hooks/email/useEmailIntegration";
+import EmailStatusBadge from "./email-message/EmailStatusBadge";
+import BookingDetails from "./email-message/BookingDetails";
+import ConversationThread from "./email-message/ConversationThread";
 
 interface EmailMessageProps {
   email: EmailType;
@@ -30,13 +32,14 @@ const EmailMessage: React.FC<EmailMessageProps> = ({
   const [isLoadingConversation, setIsLoadingConversation] = useState(false);
   const { fetchConversationThread } = useEmailIntegration();
 
-  // Update the useEffect to include proper error handling and loading state
   useEffect(() => {
     const loadConversation = async () => {
+      if (!email.id) return;
+      
       try {
         setIsLoadingConversation(true);
         const thread = await fetchConversationThread(email.id);
-        setConversation(thread.filter(msg => msg.id !== email.id)); // Filter out current email
+        setConversation(thread.filter(msg => msg.id !== email.id));
       } catch (error) {
         console.error("Error loading conversation:", error);
       } finally {
@@ -44,9 +47,7 @@ const EmailMessage: React.FC<EmailMessageProps> = ({
       }
     };
     
-    if (email.id) {
-      loadConversation();
-    }
+    loadConversation();
   }, [email.id, fetchConversationThread]);
 
   const extractedDetails = email.extracted_details || {
@@ -56,42 +57,6 @@ const EmailMessage: React.FC<EmailMessageProps> = ({
     time: null,
     service: null,
     vehicle: null
-  };
-
-  const getStatusBadge = () => {
-    if (bookingCreated) {
-      return (
-        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 flex items-center gap-1">
-          <CheckCircle className="h-3 w-3" /> Booking Created
-        </Badge>
-      );
-    }
-    
-    if (isProcessing) {
-      return (
-        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 flex items-center gap-1">
-          <Loader2 className="h-3 w-3 animate-spin" /> Processing
-        </Badge>
-      );
-    }
-    
-    if (email.processing_status === 'failed') {
-      return (
-        <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 flex items-center gap-1">
-          <AlertCircle className="h-3 w-3" /> Failed
-        </Badge>
-      );
-    }
-    
-    if (isPotentialBooking) {
-      return (
-        <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-          Potential Booking
-        </Badge>
-      );
-    }
-    
-    return null;
   };
 
   return (
@@ -107,7 +72,12 @@ const EmailMessage: React.FC<EmailMessageProps> = ({
               Date: {new Date(email.date).toLocaleDateString()} at {new Date(email.date).toLocaleTimeString()}
             </div>
           </div>
-          {getStatusBadge()}
+          <EmailStatusBadge
+            bookingCreated={bookingCreated}
+            isProcessing={isProcessing}
+            processingStatus={email.processing_status}
+            isPotentialBooking={isPotentialBooking}
+          />
         </div>
       </CardHeader>
       
@@ -118,49 +88,7 @@ const EmailMessage: React.FC<EmailMessageProps> = ({
         />
         
         {isPotentialBooking && !bookingCreated && (
-          <div className="mt-6 border rounded-md p-4 bg-blue-50/50">
-            <h3 className="text-base font-semibold mb-3">Detected Booking Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex items-center gap-2">
-                <User className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <div className="text-sm text-muted-foreground">Customer Name</div>
-                  <div className="font-medium">{extractedDetails.name || "Not detected"}</div>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <Phone className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <div className="text-sm text-muted-foreground">Phone Number</div>
-                  <div className="font-medium">{extractedDetails.phone || "Not detected"}</div>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <div className="text-sm text-muted-foreground">Date & Time</div>
-                  <div className="font-medium">
-                    {extractedDetails.date ? `${extractedDetails.date} at ${extractedDetails.time || "TBD"}` : "Not detected"}
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <Car className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <div className="text-sm text-muted-foreground">Vehicle</div>
-                  <div className="font-medium">{extractedDetails.vehicle || "Not detected"}</div>
-                </div>
-              </div>
-              
-              <div className="col-span-2">
-                <div className="text-sm text-muted-foreground mb-1">Service Requested</div>
-                <div className="font-medium">{extractedDetails.service || "Not detected"}</div>
-              </div>
-            </div>
-          </div>
+          <BookingDetails extractedDetails={extractedDetails} />
         )}
         
         {showReplyForm && (
@@ -204,29 +132,10 @@ const EmailMessage: React.FC<EmailMessageProps> = ({
         </CardFooter>
       )}
       
-      {/* Improve conversation thread rendering with loading state */}
-      {conversation.length > 0 && (
-        <div className="mt-6 border-t pt-4">
-          <h3 className="font-semibold mb-2 text-sm text-muted-foreground">Conversation:</h3>
-          {isLoadingConversation ? (
-            <div className="flex items-center justify-center p-4">
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              <span className="text-sm text-muted-foreground">Loading conversation...</span>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {conversation
-                .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-                .map(msg => (
-                  <div key={msg.id} className="p-2 rounded bg-muted">
-                    <div className="text-xs text-muted-foreground mb-1">{msg.from} &lt;{msg.sender_email}&gt; - {new Date(msg.date).toLocaleString()}</div>
-                    <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: msg.content }} />
-                  </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      <ConversationThread
+        conversation={conversation}
+        isLoadingConversation={isLoadingConversation}
+      />
     </>
   );
 };
