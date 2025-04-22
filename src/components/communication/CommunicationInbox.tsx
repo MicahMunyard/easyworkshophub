@@ -29,7 +29,6 @@ const CommunicationInbox: React.FC<CommunicationInboxProps> = ({
   conversations,
   selectedConversation,
   setSelectedConversation,
-  messages,
   isLoading,
   newMessage,
   setNewMessage,
@@ -69,7 +68,6 @@ const CommunicationInbox: React.FC<CommunicationInboxProps> = ({
             <Card className="flex flex-col overflow-hidden">
               <MessageThread 
                 conversation={selectedConversation}
-                messages={messages}
                 newMessage={newMessage}
                 setNewMessage={setNewMessage}
                 sendMessage={sendMessage}
@@ -117,7 +115,6 @@ const CommunicationInbox: React.FC<CommunicationInboxProps> = ({
         {selectedConversation ? (
           <MessageThread 
             conversation={selectedConversation}
-            messages={messages}
             newMessage={newMessage}
             setNewMessage={setNewMessage}
             sendMessage={sendMessage}
