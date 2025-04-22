@@ -28,4 +28,7 @@ export interface VehicleSearchParams {
   seriesChassis?: string;
   engine?: string;
   isRegoSearch?: boolean;
+  quoteUrl?: string;
+  returnUrl?: string;
 }
+
