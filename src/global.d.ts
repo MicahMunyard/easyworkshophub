@@ -30,3 +30,6 @@ declare global {
     fbAsyncInit: () => void;
   }
 }
+
+// This exports an empty object to make this file a module
+export {};
