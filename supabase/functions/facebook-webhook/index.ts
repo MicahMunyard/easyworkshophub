@@ -1,3 +1,4 @@
+
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.23.0';
 
@@ -21,10 +22,31 @@ serve(async (req) => {
     
     // Handle GET requests (webhook verification)
     if (req.method === 'GET') {
+      // Check if we're receiving a request from our proxy component
+      let requestData;
+      try {
+        requestData = await req.json();
+      } catch (e) {
+        // If parsing fails, use URL parameters directly (direct access)
+        requestData = null;
+      }
+
       // Facebook sends these query parameters for verification
-      const mode = url.searchParams.get('hub.mode');
-      const token = url.searchParams.get('hub.verify_token');
-      const challenge = url.searchParams.get('hub.challenge');
+      // Check both URL params and body params (from our proxy)
+      let mode, token, challenge;
+      
+      if (requestData && requestData.queryParams) {
+        // Parse the query parameters from the body
+        const queryParams = new URLSearchParams(requestData.queryParams);
+        mode = queryParams.get('hub.mode');
+        token = queryParams.get('hub.verify_token');
+        challenge = queryParams.get('hub.challenge');
+      } else {
+        // Get params directly from URL (direct verification)
+        mode = url.searchParams.get('hub.mode');
+        token = url.searchParams.get('hub.verify_token');
+        challenge = url.searchParams.get('hub.challenge');
+      }
       
       console.log('Webhook verification attempt:', { mode, token });
       

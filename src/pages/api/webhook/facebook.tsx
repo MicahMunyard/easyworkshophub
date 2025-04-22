@@ -9,10 +9,14 @@ const FacebookWebhook: React.FC = () => {
   useEffect(() => {
     const handleWebhook = async () => {
       try {
+        // Extract query parameters from the location
+        const queryParams = location.search.substring(1); // Remove the leading '?'
+        
         // Forward the request to the Supabase Edge Function
+        // We'll pass the query parameters in the body for GET requests
         const response = await supabase.functions.invoke('facebook-webhook', {
           method: 'GET',
-          query: location.search,
+          body: { queryParams }
         });
 
         // If it's a verification request, we need to return the challenge
