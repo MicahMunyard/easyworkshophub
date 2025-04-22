@@ -2,24 +2,14 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
-interface FacebookAuthResponse {
-  status: 'connected' | 'not_authorized' | 'unknown';
-  authResponse?: {
-    accessToken: string;
-    expiresIn: string;
-    signedRequest: string;
-    userID: string;
-  };
-}
-
 export const useFacebookAuth = () => {
-  const [fbStatus, setFbStatus] = useState<FacebookAuthResponse | null>(null);
+  const [fbStatus, setFbStatus] = useState<FacebookLoginStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
   const checkLoginStatus = () => {
-    if (typeof FB !== 'undefined') {
-      FB.getLoginStatus((response: FacebookAuthResponse) => {
+    if (typeof window.FB !== 'undefined') {
+      window.FB.getLoginStatus((response: FacebookLoginStatus) => {
         console.log('Facebook login status:', response);
         setFbStatus(response);
         setIsLoading(false);
@@ -29,7 +19,7 @@ export const useFacebookAuth = () => {
 
   useEffect(() => {
     // Wait for FB SDK to be ready
-    if (typeof FB !== 'undefined') {
+    if (typeof window.FB !== 'undefined') {
       checkLoginStatus();
     } else {
       window.fbAsyncInit = function() {
@@ -39,8 +29,8 @@ export const useFacebookAuth = () => {
   }, []);
 
   const handleFacebookLogin = () => {
-    if (typeof FB !== 'undefined') {
-      FB.login((response: FacebookAuthResponse) => {
+    if (typeof window.FB !== 'undefined') {
+      window.FB.login((response: FacebookLoginStatus) => {
         if (response.status === 'connected') {
           setFbStatus(response);
           toast({
@@ -59,8 +49,8 @@ export const useFacebookAuth = () => {
   };
 
   const handleFacebookLogout = () => {
-    if (typeof FB !== 'undefined') {
-      FB.logout((response) => {
+    if (typeof window.FB !== 'undefined') {
+      window.FB.logout((response) => {
         setFbStatus(null);
         toast({
           title: "Logged Out",
@@ -77,3 +67,4 @@ export const useFacebookAuth = () => {
     handleFacebookLogout
   };
 };
+
