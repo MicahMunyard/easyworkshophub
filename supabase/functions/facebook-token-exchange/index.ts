@@ -156,10 +156,7 @@ serve(async (req) => {
 // Function to subscribe to page webhooks
 async function subscribeToPageWebhooks(pageId, pageAccessToken) {
   try {
-    // Update this to your Supabase Edge Function URL
-    const webhookUrl = 'https://qyjjbpyqxwrluhymvshn.supabase.co/functions/v1/facebook-webhook';
-    
-    // Subscribe to webhooks for this page
+    // Subscribe to webhooks for this page - use the direct URL for webhook verification
     const response = await fetch(
       `https://graph.facebook.com/v17.0/${pageId}/subscribed_apps?access_token=${pageAccessToken}`,
       {

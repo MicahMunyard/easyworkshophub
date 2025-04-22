@@ -20,3 +20,10 @@ method = ["POST", "OPTIONS"]
 [[functions.email-integration.routes]]
 path = "/oauth-callback"
 method = ["POST", "OPTIONS"]
+
+[functions.facebook-webhook]
+verify_jwt = false
+
+[[functions.facebook-webhook.routes]]
+path = "/"
+method = ["GET", "POST", "OPTIONS"]

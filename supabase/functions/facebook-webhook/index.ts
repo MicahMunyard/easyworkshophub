@@ -2,9 +2,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.23.0';
 
-// Facebook verification token - this should match what you set in Facebook Developer Portal
-const FACEBOOK_VERIFY_TOKEN = 'wsb_fb_hook_a7d93bf52c14e9f8';
-
 // CORS headers for browser requests
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -18,62 +15,10 @@ serve(async (req) => {
   }
 
   try {
-    const url = new URL(req.url);
-    
-    // Handle GET requests (webhook verification)
-    if (req.method === 'GET') {
-      // Check if we're receiving a request from our proxy component
-      let requestData;
-      try {
-        requestData = await req.json();
-      } catch (e) {
-        // If parsing fails, use URL parameters directly (direct access)
-        requestData = null;
-      }
-
-      // Facebook sends these query parameters for verification
-      // Check both URL params and body params (from our proxy)
-      let mode, token, challenge;
-      
-      if (requestData && requestData.queryParams) {
-        // Parse the query parameters from the body
-        const queryParams = new URLSearchParams(requestData.queryParams);
-        mode = queryParams.get('hub.mode');
-        token = queryParams.get('hub.verify_token');
-        challenge = queryParams.get('hub.challenge');
-      } else {
-        // Get params directly from URL (direct verification)
-        mode = url.searchParams.get('hub.mode');
-        token = url.searchParams.get('hub.verify_token');
-        challenge = url.searchParams.get('hub.challenge');
-      }
-      
-      console.log('Webhook verification attempt:', { mode, token });
-      
-      // Check if the mode and token are correct
-      if (mode === 'subscribe' && token === FACEBOOK_VERIFY_TOKEN) {
-        console.log('Webhook verified successfully');
-        // For verification requests, return only the challenge value
-        return new Response(challenge, { 
-          status: 200,
-          headers: { ...corsHeaders } 
-        });
-      } else {
-        console.error('Webhook verification failed');
-        return new Response(JSON.stringify({ error: 'Verification failed' }), { 
-          status: 403,
-          headers: { 
-            ...corsHeaders,
-            'Content-Type': 'application/json'
-          } 
-        });
-      }
-    }
-    
     // Handle POST requests (incoming messages)
     if (req.method === 'POST') {
       const body = await req.json();
-      console.log('Received webhook data:', JSON.stringify(body));
+      console.log('Processing webhook data:', JSON.stringify(body));
       
       // Initialize Supabase client
       const supabaseUrl = Deno.env.get('SUPABASE_URL') as string;
