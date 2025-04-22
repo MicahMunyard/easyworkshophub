@@ -20,6 +20,7 @@ const SupplierList: React.FC<SupplierListProps> = ({
   onDeleteSupplier,
   onAddSupplier,
 }) => {
+  // Filter the suppliers directly from the filtered suppliers prop
   const apiSuppliers = filteredSuppliers.filter(s => s.connectionType === 'api');
   const manualSuppliers = filteredSuppliers.filter(s => s.connectionType === 'manual');
 
