@@ -1,3 +1,4 @@
+
 export interface Supplier {
   id: string;
   name: string;
@@ -8,8 +9,10 @@ export interface Supplier {
   address?: string;
   status: 'active' | 'inactive';
   notes?: string;
-  isDefault?: boolean; // Indicates if this is a default supplier available to all users
-  logoUrl?: string;    // URL to the supplier's logo image
+  isDefault?: boolean;
+  logoUrl?: string;
+  connectionType: 'manual' | 'api';
+  apiConfig?: ApiSupplierConfig;
 }
 
 export interface InventoryItem {
@@ -56,20 +59,4 @@ export interface ApiSupplierConfig {
   type: SupplierApiType;
   connectionUrl?: string;
   isConnected: boolean;
-}
-
-export interface Supplier {
-  id: string;
-  name: string;
-  category: string;
-  contactPerson: string;
-  email: string;
-  phone: string;
-  address?: string;
-  status: 'active' | 'inactive';
-  notes?: string;
-  isDefault?: boolean;
-  logoUrl?: string;
-  connectionType: SupplierConnectionType;
-  apiConfig?: ApiSupplierConfig;
 }

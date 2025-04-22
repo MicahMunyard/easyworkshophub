@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Supplier } from '@/types/inventory';
 import { v4 as uuidv4 } from 'uuid';
@@ -78,7 +79,8 @@ export const useSuppliers = () => {
     const newSupplier = {
       ...supplier,
       id: uuidv4(),
-      isDefault: false // User-created suppliers are never default
+      isDefault: false, // User-created suppliers are never default
+      connectionType: supplier.connectionType || 'manual' // Default to manual if not specified
     };
     
     const updatedSuppliers = [...suppliers, newSupplier];

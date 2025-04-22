@@ -48,7 +48,7 @@ const SupplierManagement: React.FC = () => {
       <SupplierHeader 
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
-        // Remove the Add Supplier button from header
+        onAddSupplier={() => handleOpenDialog()} // Fix the build error by adding the missing prop
       />
 
       <SupplierList 
@@ -56,7 +56,7 @@ const SupplierManagement: React.FC = () => {
         filteredSuppliers={filteredSuppliers}
         onEditSupplier={handleOpenDialog}
         onDeleteSupplier={handleDeleteSupplier}
-        onAddSupplier={() => handleOpenDialog()} // Add this prop to fix the error
+        onAddSupplier={() => handleOpenDialog()}
       />
 
       <SupplierDialog
