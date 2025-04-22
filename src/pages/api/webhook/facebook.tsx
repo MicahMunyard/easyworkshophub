@@ -1,4 +1,6 @@
 
+import { supabase } from '@/integrations/supabase/client';
+
 // Facebook verification token
 const FACEBOOK_VERIFY_TOKEN = 'wsb_fb_hook_a7d93bf52c14e9f8';
 
