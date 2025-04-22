@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from "react";
+import { EzyPartsProvider } from "@/contexts/EzyPartsContext";
 import AddBrakeCleanerProduct from "@/components/inventory/AddBrakeCleanerProduct";
 import InventoryPageHeader from "@/components/inventory/InventoryPageHeader";
 import InventoryTabs from "@/components/inventory/InventoryTabs";
@@ -36,21 +37,23 @@ const Inventory = () => {
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn">
-      {!productAdded && <AddBrakeCleanerProduct />}
-      
-      <InventoryPageHeader />
+    <EzyPartsProvider>
+      <div className="space-y-6 animate-fadeIn">
+        {!productAdded && <AddBrakeCleanerProduct />}
+        
+        <InventoryPageHeader />
 
-      <InventoryTabs 
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        isOrderMode={isOrderMode}
-        selectedSupplier={selectedSupplier}
-        onStartOrder={handleStartOrder}
-        onBackToSuppliers={handleBackToSuppliers}
-        onOrderComplete={handleOrderComplete}
-      />
-    </div>
+        <InventoryTabs 
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          isOrderMode={isOrderMode}
+          selectedSupplier={selectedSupplier}
+          onStartOrder={handleStartOrder}
+          onBackToSuppliers={handleBackToSuppliers}
+          onOrderComplete={handleOrderComplete}
+        />
+      </div>
+    </EzyPartsProvider>
   );
 };
 

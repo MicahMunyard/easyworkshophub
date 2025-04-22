@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { EzyPartsClient } from '@/integrations/ezyparts/client';
@@ -43,6 +44,10 @@ interface EzyPartsContextType {
   isLoading: boolean;
 }
 
+// Create context with default values
+const EzyPartsContext = createContext<EzyPartsContextType>({} as EzyPartsContextType);
+
+// Context provider component
 export const EzyPartsProvider: React.FC<{children: ReactNode}> = ({ children }) => {
   const { toast } = useToast();
   const [isProduction, setIsProduction] = useState<boolean>(false);
@@ -239,7 +244,7 @@ export const EzyPartsProvider: React.FC<{children: ReactNode}> = ({ children }) 
 export const useEzyParts = (): EzyPartsContextType => {
   const context = useContext(EzyPartsContext);
   
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useEzyParts must be used within an EzyPartsProvider');
   }
   
