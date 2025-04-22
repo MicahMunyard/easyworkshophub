@@ -2,7 +2,17 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
-// Since FacebookLoginStatus is defined in global.d.ts, we don't need to redefine it here
+// Define the type locally since we're having issues with the global declaration
+interface FacebookLoginStatus {
+  status: 'connected' | 'not_authorized' | 'unknown';
+  authResponse?: {
+    accessToken: string;
+    expiresIn: string;
+    signedRequest: string;
+    userID: string;
+  };
+}
+
 export const useFacebookAuth = () => {
   const [fbStatus, setFbStatus] = useState<FacebookLoginStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
