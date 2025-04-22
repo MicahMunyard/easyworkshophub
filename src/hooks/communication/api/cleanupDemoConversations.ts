@@ -5,7 +5,6 @@ import { toast } from "@/hooks/use-toast";
 export const cleanupDemoConversations = async (userId: string): Promise<void> => {
   try {
     // Find all conversations that have "Demo Contact" in the name
-    // Using a raw query to avoid type issues
     const { data, error } = await supabase.rpc('find_demo_conversations', {
       user_id_param: userId
     });

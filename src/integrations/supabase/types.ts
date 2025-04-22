@@ -1388,6 +1388,37 @@ export type Database = {
         Args: { tech_id: string; tech_email: string; tech_password: string }
         Returns: undefined
       }
+      check_facebook_connection: {
+        Args: { user_id_param: string }
+        Returns: Json
+      }
+      delete_conversations_by_ids: {
+        Args: { conversation_ids: string[] }
+        Returns: undefined
+      }
+      delete_messages_by_conversation_ids: {
+        Args: { conversation_ids: string[] }
+        Returns: undefined
+      }
+      find_demo_conversations: {
+        Args: { user_id_param: string }
+        Returns: {
+          id: string
+          user_id: string
+          platform: string
+          contact_name: string
+          contact_handle: string
+          profile_picture_url: string
+          last_message_at: string
+          unread: boolean
+          created_at: string
+          external_id: string
+        }[]
+      }
+      update_social_connection_status: {
+        Args: { platform_name: string; new_status: string }
+        Returns: undefined
+      }
       update_technician_email: {
         Args: { tech_id: string; new_email: string }
         Returns: undefined

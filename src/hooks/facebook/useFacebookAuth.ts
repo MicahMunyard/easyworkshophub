@@ -109,7 +109,7 @@ export const useFacebookAuth = () => {
         setFbStatus(null);
         
         try {
-          // Use a custom query to work around the type issues
+          // Use the custom RPC to update social connection status
           const { error } = await supabase.rpc('update_social_connection_status', {
             platform_name: 'facebook',
             new_status: 'disconnected'
