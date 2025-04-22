@@ -50,6 +50,17 @@ export const useEmailBookings = () => {
         throw error;
       }
       
+      // Convert ExtractedDetails to a plain object that's compatible with JSON
+      // to resolve the type error with Supabase's expected Json type
+      const extractedDataForDb = details ? {
+        name: details.name,
+        phone: details.phone,
+        date: details.date,
+        time: details.time,
+        service: details.service,
+        vehicle: details.vehicle
+      } : null;
+      
       await supabase
         .from('processed_emails')
         .upsert({
@@ -58,7 +69,7 @@ export const useEmailBookings = () => {
           booking_created: true,
           processing_status: 'completed' as const,
           processing_notes: `Booking created with ID: ${data.id}`,
-          extracted_data: details,
+          extracted_data: extractedDataForDb,
           updated_at: new Date().toISOString()
         }, {
           onConflict: 'email_id,user_id'
@@ -85,6 +96,16 @@ export const useEmailBookings = () => {
     } catch (error: any) {
       console.error("Error creating booking from email data:", error);
       
+      // Also use a plain object for this error case
+      const extractedDataForError = email.extracted_details ? {
+        name: email.extracted_details.name,
+        phone: email.extracted_details.phone,
+        date: email.extracted_details.date,
+        time: email.extracted_details.time,
+        service: email.extracted_details.service,
+        vehicle: email.extracted_details.vehicle
+      } : null;
+      
       await supabase
         .from('processed_emails')
         .upsert({
@@ -94,6 +115,7 @@ export const useEmailBookings = () => {
           processing_status: 'failed' as const,
           processing_notes: error.message || 'Error creating booking',
           retry_count: 0,
+          extracted_data: extractedDataForError,
           updated_at: new Date().toISOString()
         }, {
           onConflict: 'email_id,user_id'
