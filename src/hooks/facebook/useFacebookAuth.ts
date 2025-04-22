@@ -8,7 +8,7 @@ export const useFacebookAuth = () => {
   const { toast } = useToast();
 
   const checkLoginStatus = () => {
-    if (typeof window.FB !== 'undefined') {
+    if (typeof window !== 'undefined' && window.FB) {
       window.FB.getLoginStatus((response: FacebookLoginStatus) => {
         console.log('Facebook login status:', response);
         setFbStatus(response);
@@ -19,17 +19,19 @@ export const useFacebookAuth = () => {
 
   useEffect(() => {
     // Wait for FB SDK to be ready
-    if (typeof window.FB !== 'undefined') {
-      checkLoginStatus();
-    } else {
-      window.fbAsyncInit = function() {
+    if (typeof window !== 'undefined') {
+      if (window.FB) {
         checkLoginStatus();
-      };
+      } else {
+        window.fbAsyncInit = function() {
+          checkLoginStatus();
+        };
+      }
     }
   }, []);
 
   const handleFacebookLogin = () => {
-    if (typeof window.FB !== 'undefined') {
+    if (typeof window !== 'undefined' && window.FB) {
       window.FB.login((response: FacebookLoginStatus) => {
         if (response.status === 'connected') {
           setFbStatus(response);
@@ -49,7 +51,7 @@ export const useFacebookAuth = () => {
   };
 
   const handleFacebookLogout = () => {
-    if (typeof window.FB !== 'undefined') {
+    if (typeof window !== 'undefined' && window.FB) {
       window.FB.logout((response) => {
         setFbStatus(null);
         toast({
