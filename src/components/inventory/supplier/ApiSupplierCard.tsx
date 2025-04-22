@@ -20,15 +20,18 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({ supplier }) => {
     <Card className="flex flex-col">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4">
             {supplier.logoUrl && (
               <img 
                 src={supplier.logoUrl} 
                 alt={supplier.name} 
-                className="w-8 h-8 rounded-full"
+                className="w-12 h-8 object-contain"
               />
             )}
-            <CardTitle className="text-lg">{supplier.name}</CardTitle>
+            <div>
+              <CardTitle className="text-lg">{supplier.name}</CardTitle>
+              <CardDescription>{supplier.category}</CardDescription>
+            </div>
           </div>
           <Button 
             variant={supplier.apiConfig?.isConnected ? "outline" : "default"}
@@ -39,7 +42,6 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({ supplier }) => {
             {supplier.apiConfig?.isConnected ? 'Connected' : 'Connect'}
           </Button>
         </div>
-        <CardDescription>{supplier.category}</CardDescription>
       </CardHeader>
       
       <CardContent className="pb-2 pt-0">

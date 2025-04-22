@@ -11,10 +11,11 @@ const SupplierManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | undefined>(undefined);
+  const [activeTab, setActiveTab] = useState('manage');
 
   // Reset defaultSuppliers in localStorage to ensure correct data
   useEffect(() => {
-    localStorage.removeItem('defaultSuppliers'); // This will force the hook to recreate default suppliers
+    localStorage.removeItem('defaultSuppliers');
   }, []);
 
   const filteredSuppliers = suppliers.filter(supplier => 
@@ -53,16 +54,22 @@ const SupplierManagement: React.FC = () => {
       <SupplierHeader 
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
-        onAddSupplier={() => handleOpenDialog()}
+        onTabChange={setActiveTab}
       />
 
-      <SupplierList 
-        suppliers={suppliers}
-        filteredSuppliers={filteredSuppliers}
-        onEditSupplier={handleOpenDialog}
-        onDeleteSupplier={handleDeleteSupplier}
-        onAddSupplier={() => handleOpenDialog()}
-      />
+      {activeTab === 'manage' ? (
+        <SupplierList 
+          suppliers={suppliers}
+          filteredSuppliers={filteredSuppliers}
+          onEditSupplier={handleOpenDialog}
+          onDeleteSupplier={handleDeleteSupplier}
+          onAddSupplier={() => handleOpenDialog()}
+        />
+      ) : (
+        <div className="p-4 text-center text-muted-foreground">
+          Order creation interface will be implemented here
+        </div>
+      )}
 
       <SupplierDialog
         isOpen={isDialogOpen}

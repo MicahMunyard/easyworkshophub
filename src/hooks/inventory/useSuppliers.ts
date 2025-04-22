@@ -15,7 +15,7 @@ const defaultSuppliers: Supplier[] = [
     status: 'active',
     notes: 'Official Burson Auto Parts integration via EzyParts API',
     isDefault: true,
-    logoUrl: '/lovable-uploads/5405b628-baf5-45a2-a891-0b616dd0abb9.png',
+    logoUrl: '/lovable-uploads/39c602fd-07f5-443e-9bca-0862043aba85.png',
     connectionType: 'api',
     apiConfig: {
       type: 'bursons',
