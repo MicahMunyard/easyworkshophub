@@ -1,8 +1,7 @@
 
 import React from 'react';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 
 interface SupplierHeaderProps {
   searchTerm: string;
@@ -12,22 +11,16 @@ interface SupplierHeaderProps {
 
 const SupplierHeader: React.FC<SupplierHeaderProps> = ({ 
   searchTerm, 
-  onSearchChange, 
-  onAddSupplier 
+  onSearchChange
 }) => {
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h2 className="text-2xl font-bold">Supplier Management</h2>
-          <p className="text-muted-foreground">Manage your parts and service suppliers</p>
-        </div>
-        <Button onClick={onAddSupplier}>
-          <Plus className="h-4 w-4 mr-2" /> Add Supplier
-        </Button>
+      <div>
+        <h2 className="text-2xl font-bold">Supplier Management</h2>
+        <p className="text-muted-foreground">Manage your parts and service suppliers</p>
       </div>
 
-      <div className="relative w-full sm:w-auto">
+      <div className="relative w-full sm:w-[400px]">
         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
         <Input
           type="search"
