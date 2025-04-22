@@ -1,38 +1,66 @@
 
-import React, { useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 
-const FacebookWebhook: React.FC = () => {
-  const location = useLocation();
-
-  useEffect(() => {
-    const handleWebhook = async () => {
-      try {
-        // Extract query parameters from the location
-        const queryParams = location.search.substring(1); // Remove the leading '?'
-        
-        // Forward the request to the Supabase Edge Function
-        // We'll pass the query parameters in the body for GET requests
-        const response = await supabase.functions.invoke('facebook-webhook', {
-          method: 'GET',
-          body: { queryParams }
-        });
-
-        // If it's a verification request, we need to return the challenge
-        if (response.data && response.data.challenge) {
-          document.body.innerHTML = response.data.challenge;
+const FacebookWebhook = async (req: Request) => {
+  try {
+    // For GET requests (verification)
+    if (req.method === 'GET') {
+      const url = new URL(req.url);
+      const hubMode = url.searchParams.get('hub.mode');
+      const hubVerifyToken = url.searchParams.get('hub.verify_token');
+      const hubChallenge = url.searchParams.get('hub.challenge');
+      
+      // Forward the verification request to the Supabase Edge Function
+      const response = await supabase.functions.invoke('facebook-webhook', {
+        method: 'GET',
+        body: { 
+          mode: hubMode,
+          token: hubVerifyToken,
+          challenge: hubChallenge 
         }
-      } catch (error) {
-        console.error('Error handling webhook:', error);
+      });
+      
+      // If verification is successful, return the challenge
+      if (response.data && response.data.challenge) {
+        return new Response(response.data.challenge, {
+          status: 200,
+          headers: { 'Content-Type': 'text/plain' }
+        });
       }
-    };
-
-    handleWebhook();
-  }, [location]);
-
-  // Return an empty div - the response will be handled directly
-  return <div />;
+      
+      return new Response(JSON.stringify({ error: 'Verification failed' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
+    // For POST requests (actual webhook events)
+    if (req.method === 'POST') {
+      const body = await req.json();
+      
+      const response = await supabase.functions.invoke('facebook-webhook', {
+        method: 'POST',
+        body: body
+      });
+      
+      return new Response(JSON.stringify(response.data), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
+    // Handle other methods
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  } catch (error) {
+    console.error('Error forwarding webhook:', error);
+    return new Response(JSON.stringify({ error: 'Failed to process webhook' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
 };
 
 export default FacebookWebhook;
