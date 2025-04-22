@@ -1,9 +1,8 @@
-
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.23.0';
 
 // Facebook verification token - this should match what you set in Facebook Developer Portal
-const FACEBOOK_VERIFY_TOKEN = 'workshophub1234securetoken';
+const FACEBOOK_VERIFY_TOKEN = 'wsb_fb_hook_a7d93bf52c14e9f8';
 
 // CORS headers for browser requests
 const corsHeaders = {
