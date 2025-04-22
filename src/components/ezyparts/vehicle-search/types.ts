@@ -10,7 +10,7 @@ export interface RegistrationSearch {
 }
 
 export interface DetailsSearch {
-  vehicleId: string;
+  vehicleId?: string | number;  // Updated to allow both string and number
   make: string;
   model: string;
   year: string;
@@ -18,3 +18,14 @@ export interface DetailsSearch {
   engine: string;
 }
 
+export interface VehicleSearchParams {
+  vehicleId?: string | number;  // Updated to allow both string and number
+  regoNumber?: string;
+  state?: string;
+  make?: string;
+  model?: string;
+  year?: string | number;
+  seriesChassis?: string;
+  engine?: string;
+  isRegoSearch?: boolean;
+}

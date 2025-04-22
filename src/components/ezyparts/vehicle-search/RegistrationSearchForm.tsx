@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,7 +39,7 @@ export const RegistrationSearchForm: React.FC<Props> = ({ values, onChange }) =>
       
       <div className="space-y-2">
         <Label htmlFor="state">State</Label>
-        <Select onValueChange={handleStateChange} value={values.state}>
+        <Select onValueChange={handleStateChange} value={values.state || ''}>
           <SelectTrigger id="state">
             <SelectValue placeholder="Select state" />
           </SelectTrigger>
@@ -56,4 +55,3 @@ export const RegistrationSearchForm: React.FC<Props> = ({ values, onChange }) =>
     </div>
   );
 };
-
