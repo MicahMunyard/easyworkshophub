@@ -25,7 +25,7 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({ supplier }) => {
               <img 
                 src={supplier.logoUrl} 
                 alt={supplier.name} 
-                className="w-12 h-8 object-contain"
+                className="w-16 h-12 object-contain"
               />
             )}
             <div>
