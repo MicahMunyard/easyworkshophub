@@ -1,7 +1,7 @@
-
 import React from 'react';
 import { Routes, Route, Navigate } from "react-router-dom";
 import Layout from "./components/Layout";
+import EzyPartsRoutes from "./routes/EzyPartsRoutes";
 import Index from "./pages/Index";
 import BookingDiary from "./pages/BookingDiary";
 import Jobs from "./pages/Jobs";
@@ -48,6 +48,19 @@ const App: React.FC = () => {
           </ProtectedRoute>
         } 
       />
+      
+      {/* EzyParts routes */}
+      <Route
+        path="/ezyparts/*"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <EzyPartsRoutes />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      
       <Route 
         path="/workshop" 
         element={
