@@ -9,6 +9,51 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      accounting_integrations: {
+        Row: {
+          access_token: string | null
+          connected_at: string
+          expires_at: string | null
+          id: string
+          last_error: string | null
+          last_sync_at: string | null
+          provider: string
+          refresh_token: string | null
+          status: string
+          tenant_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token?: string | null
+          connected_at?: string
+          expires_at?: string | null
+          id?: string
+          last_error?: string | null
+          last_sync_at?: string | null
+          provider: string
+          refresh_token?: string | null
+          status: string
+          tenant_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string | null
+          connected_at?: string
+          expires_at?: string | null
+          id?: string
+          last_error?: string | null
+          last_sync_at?: string | null
+          provider?: string
+          refresh_token?: string | null
+          status?: string
+          tenant_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       bookings: {
         Row: {
           bay_id: string | null

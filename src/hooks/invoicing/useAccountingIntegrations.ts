@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { AccountingProvider, AccountingIntegration, SyncInvoiceResult } from '@/types/accounting';
 import { Invoice } from '@/types/invoice';
+import type { Database } from '@/integrations/supabase/types'; // import the type from generated types
 
 export const useAccountingIntegrations = () => {
   const [integrations, setIntegrations] = useState<AccountingIntegration[]>([]);
@@ -12,6 +13,9 @@ export const useAccountingIntegrations = () => {
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const { toast } = useToast();
   const { user } = useAuth();
+
+  // Use the correct Supabase generated type for accounting_integrations
+  type DBIntegration = Database['public']['Tables']['accounting_integrations']['Row'];
 
   const fetchIntegrations = async () => {
     if (!user) {
@@ -22,6 +26,7 @@ export const useAccountingIntegrations = () => {
 
     setIsLoading(true);
     try {
+      // Use the correct table import and casting
       const { data, error } = await supabase
         .from('accounting_integrations')
         .select('*')
@@ -32,15 +37,15 @@ export const useAccountingIntegrations = () => {
       }
 
       setIntegrations(
-        data?.map(integration => ({
+        (data as DBIntegration[] | null)?.map((integration) => ({
           id: integration.id,
           userId: integration.user_id,
-          provider: integration.provider,
-          status: integration.status,
+          provider: integration.provider as AccountingProvider,
+          status: integration.status as 'active' | 'disconnected' | 'error',
           connectedAt: integration.connected_at,
-          expiresAt: integration.expires_at,
-          lastSyncAt: integration.last_sync_at,
-          error: integration.last_error
+          expiresAt: integration.expires_at || undefined,
+          lastSyncAt: integration.last_sync_at || undefined,
+          error: integration.last_error || undefined,
         })) || []
       );
     } catch (error) {
@@ -74,9 +79,9 @@ export const useAccountingIntegrations = () => {
     const redirectUri = encodeURIComponent('https://app.workshopbase.com/integrations/xero/oauth');
     const scope = encodeURIComponent('accounting.transactions accounting.contacts');
     const state = encodeURIComponent(user.id);
-    
+
     const authUrl = `https://login.xero.com/identity/connect/authorize?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&state=${state}`;
-    
+
     // Open the Xero authorization window
     window.open(authUrl, '_blank', 'width=800,height=600');
   };
