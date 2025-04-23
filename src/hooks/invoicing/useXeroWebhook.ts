@@ -7,9 +7,12 @@ export const useXeroWebhook = () => {
       // Get the Supabase URL to use for the webhook
       const { data, error } = await supabase.functions.invoke('xero-integration/get-webhook-url');
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error getting webhook URL:', error);
+        throw error;
+      }
       
-      return data.webhookUrl || '';
+      return data?.webhookUrl || '';
     } catch (error) {
       console.error('Error getting webhook URL:', error);
       return '';

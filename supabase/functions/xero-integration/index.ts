@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import * as crypto from "https://deno.land/std@0.177.0/crypto/mod.ts";
@@ -123,86 +124,125 @@ serve(async (req) => {
       // Get the raw request body to verify the signature
       const rawBody = await req.text();
       
-      // Verify the signature using HMAC-SHA256
-      const hmac = await crypto.subtle.importKey(
-        "raw",
-        new TextEncoder().encode(XERO_WEBHOOK_KEY),
-        { name: "HMAC", hash: "SHA-256" },
-        false,
-        ["sign", "verify"]
-      );
+      console.log("Received webhook from Xero with signature:", xeroSignature);
+      console.log("Webhook payload (first 100 chars):", rawBody.substring(0, 100));
       
-      const signature = Array.from(
-        new Uint8Array(
-          await crypto.subtle.sign(
-            "HMAC",
-            hmac,
-            new TextEncoder().encode(rawBody)
+      if (!XERO_WEBHOOK_KEY) {
+        console.error("XERO_WEBHOOK_KEY environment variable is not set");
+        return new Response(
+          JSON.stringify({ error: "Webhook key not configured" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      // Verify the signature using HMAC-SHA256
+      try {
+        const hmac = await crypto.subtle.importKey(
+          "raw",
+          new TextEncoder().encode(XERO_WEBHOOK_KEY),
+          { name: "HMAC", hash: "SHA-256" },
+          false,
+          ["sign", "verify"]
+        );
+        
+        const signature = Array.from(
+          new Uint8Array(
+            await crypto.subtle.sign(
+              "HMAC",
+              hmac,
+              new TextEncoder().encode(rawBody)
+            )
           )
         )
-      )
-        .map((b) => b.toString(16).padStart(2, "0"))
-        .join("");
+          .map((b) => b.toString(16).padStart(2, "0"))
+          .join("");
 
-      // Compare signatures (case-insensitive)
-      if (signature.toLowerCase() !== xeroSignature.toLowerCase()) {
-        console.error("Webhook signature validation failed");
+        console.log("Calculated signature:", signature.toLowerCase());
+        console.log("Received signature:", xeroSignature.toLowerCase());
+
+        // Compare signatures (case-insensitive)
+        if (signature.toLowerCase() !== xeroSignature.toLowerCase()) {
+          console.error("Webhook signature validation failed");
+          return new Response(
+            JSON.stringify({ error: "Invalid webhook signature", calculated: signature.toLowerCase(), received: xeroSignature.toLowerCase() }),
+            { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        } else {
+          console.log("Webhook signature validation succeeded");
+        }
+      } catch (signError) {
+        console.error("Error during signature verification:", signError);
         return new Response(
-          JSON.stringify({ error: "Invalid webhook signature" }),
-          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ error: "Signature verification error" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
       
       // Parse the webhook payload
-      const webhookData = JSON.parse(rawBody);
-      console.log("Received webhook from Xero:", webhookData);
-      
-      // Process the webhook event
       try {
-        // Handle invoice payment status updates
-        if (webhookData.events && webhookData.events.length > 0) {
-          for (const event of webhookData.events) {
-            if (event.eventType === "INVOICE.UPDATED" || 
-                event.eventType === "PAYMENT.CREATED") {
-              // Get the resource details
-              const resourceId = event.resourceId;
-              const resourceUrl = event.resourceUrl;
+        const webhookData = JSON.parse(rawBody);
+        console.log("Parsed webhook data:", JSON.stringify(webhookData).substring(0, 200) + "...");
+        
+        // Process the webhook event
+        try {
+          // Handle invoice payment status updates
+          if (webhookData.events && webhookData.events.length > 0) {
+            for (const event of webhookData.events) {
+              console.log(`Processing event: ${event.eventType} for resource: ${event.resourceId}`);
               
-              // Find the corresponding internal invoice
-              const { data: invoice, error: findError } = await supabase
-                .from("user_invoices")
-                .select("*")
-                .eq("xero_invoice_id", resourceId)
-                .single();
-              
-              if (!findError && invoice) {
-                // If this is a payment and it would change the invoice to paid
-                if (event.eventType === "PAYMENT.CREATED" && 
-                    event.eventData && 
-                    event.eventData.status === "PAID") {
+              if (event.eventType === "INVOICE.UPDATED" || 
+                  event.eventType === "PAYMENT.CREATED") {
+                // Get the resource details
+                const resourceId = event.resourceId;
+                
+                // Find the corresponding internal invoice
+                const { data: invoice, error: findError } = await supabase
+                  .from("user_invoices")
+                  .select("*")
+                  .eq("xero_invoice_id", resourceId)
+                  .single();
+                
+                if (findError) {
+                  console.error("Error finding invoice:", findError);
+                } else if (invoice) {
+                  console.log(`Found matching invoice: ${invoice.id}`);
                   
-                  // Update the invoice status to paid
-                  const { error: updateError } = await supabase
-                    .from("user_invoices")
-                    .update({ 
-                      status: "paid", 
-                      updated_at: new Date().toISOString(),
-                      last_synced_at: new Date().toISOString()
-                    })
-                    .eq("id", invoice.id);
-                  
-                  if (updateError) {
-                    console.error("Failed to update invoice status:", updateError);
-                  } else {
-                    console.log(`Invoice ${invoice.id} marked as paid based on Xero webhook`);
+                  // If this is a payment and it would change the invoice to paid
+                  if (event.eventType === "PAYMENT.CREATED" && 
+                      event.eventData && 
+                      event.eventData.status === "PAID") {
+                    
+                    // Update the invoice status to paid
+                    const { error: updateError } = await supabase
+                      .from("user_invoices")
+                      .update({ 
+                        status: "paid", 
+                        updated_at: new Date().toISOString(),
+                        last_synced_at: new Date().toISOString()
+                      })
+                      .eq("id", invoice.id);
+                    
+                    if (updateError) {
+                      console.error("Failed to update invoice status:", updateError);
+                    } else {
+                      console.log(`Invoice ${invoice.id} marked as paid based on Xero webhook`);
+                    }
                   }
+                } else {
+                  console.log(`No matching invoice found for Xero invoice ID: ${resourceId}`);
                 }
               }
             }
           }
+        } catch (processError) {
+          console.error("Error processing webhook event:", processError);
         }
-      } catch (processError) {
-        console.error("Error processing webhook event:", processError);
+      } catch (parseError) {
+        console.error("Error parsing webhook payload:", parseError);
+        return new Response(
+          JSON.stringify({ error: "Invalid webhook payload" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
       
       // Always return 200 OK to Xero to acknowledge receipt
