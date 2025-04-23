@@ -1,13 +1,16 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Check, ExternalLink, RefreshCw, X } from "lucide-react";
+import { Check, ExternalLink, LinkIcon, RefreshCw, X } from "lucide-react";
 import { useAccountingIntegrations } from "@/hooks/invoicing/useAccountingIntegrations";
+import { useXeroWebhook } from "@/hooks/invoicing/useXeroWebhook";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AccountingProvider } from "@/types/accounting";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
+import { Input } from "@/components/ui/input";
+import { toast } from "@/components/ui/use-toast";
 
 const AccountingIntegrations: React.FC = () => {
   const {
@@ -18,6 +21,33 @@ const AccountingIntegrations: React.FC = () => {
     hasActiveIntegration,
     refreshIntegrations
   } = useAccountingIntegrations();
+
+  const { getWebhookUrl } = useXeroWebhook();
+  const [webhookUrl, setWebhookUrl] = useState<string>("");
+  const [isLoadingWebhook, setIsLoadingWebhook] = useState<boolean>(false);
+
+  useEffect(() => {
+    const fetchWebhookUrl = async () => {
+      if (hasActiveIntegration('xero')) {
+        setIsLoadingWebhook(true);
+        const url = await getWebhookUrl();
+        setWebhookUrl(url);
+        setIsLoadingWebhook(false);
+      }
+    };
+
+    fetchWebhookUrl();
+  }, [integrations]);
+
+  const copyWebhookUrl = () => {
+    if (webhookUrl) {
+      navigator.clipboard.writeText(webhookUrl);
+      toast({
+        title: "Copied!",
+        description: "Webhook URL copied to clipboard",
+      });
+    }
+  };
 
   const renderIntegrationStatus = (provider: AccountingProvider) => {
     const integration = integrations.find(i => i.provider === provider);
@@ -113,6 +143,36 @@ const AccountingIntegrations: React.FC = () => {
               </div>
               {renderIntegrationStatus('xero')}
             </div>
+            
+            {hasActiveIntegration('xero') && (
+              <div className="bg-gray-50 rounded-md p-4 mb-4">
+                <h4 className="font-medium text-sm mb-2 flex items-center">
+                  <LinkIcon size={14} className="mr-1" /> Webhook Configuration
+                </h4>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Configure this URL in your Xero Developer Dashboard to receive payment status updates:
+                </p>
+                <div className="flex items-center gap-2">
+                  {isLoadingWebhook ? (
+                    <Skeleton className="h-9 w-full" />
+                  ) : (
+                    <Input 
+                      value={webhookUrl} 
+                      readOnly 
+                      className="text-xs font-mono bg-gray-100"
+                    />
+                  )}
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={copyWebhookUrl} 
+                    disabled={isLoadingWebhook || !webhookUrl}
+                  >
+                    Copy
+                  </Button>
+                </div>
+              </div>
+            )}
             
             <div className="flex items-center justify-between py-2 border-b">
               <div className="flex items-center gap-3">
