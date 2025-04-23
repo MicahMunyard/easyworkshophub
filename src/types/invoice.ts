@@ -29,4 +29,8 @@ export interface Invoice {
   termsAndConditions?: string;
   createdAt: string;
   updatedAt: string;
+  // Accounting system fields
+  xeroInvoiceId?: string;
+  myobInvoiceId?: string;
+  lastSyncedAt?: string;
 }

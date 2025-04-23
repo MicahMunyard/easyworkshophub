@@ -9,6 +9,7 @@ import InvoiceForm from "@/components/invoicing/InvoiceForm";
 import InvoiceDetail from "@/components/invoicing/InvoiceDetail";
 import { Invoice, InvoiceStatus } from "@/types/invoice";
 import { useAuth } from "@/contexts/AuthContext";
+import AccountingIntegrations from "@/components/invoicing/AccountingIntegrations";
 
 const Invoicing = () => {
   const { user } = useAuth();
@@ -114,16 +115,56 @@ const Invoicing = () => {
           <TabsTrigger value="paid">Paid</TabsTrigger>
           <TabsTrigger value="pending">Pending</TabsTrigger>
           <TabsTrigger value="overdue">Overdue</TabsTrigger>
+          <TabsTrigger value="integrations">Integrations</TabsTrigger>
         </TabsList>
         
-        <Card className="p-6">
-          <InvoicesList 
-            invoices={filteredInvoices}
-            isLoading={isLoading}
-            onViewInvoice={handleViewInvoice}
-            onMarkAsPaid={handleMarkAsPaid}
-          />
-        </Card>
+        <TabsContent value="all" className="space-y-4">
+          <Card className="p-6">
+            <InvoicesList 
+              invoices={filteredInvoices}
+              isLoading={isLoading}
+              onViewInvoice={handleViewInvoice}
+              onMarkAsPaid={handleMarkAsPaid}
+            />
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="paid" className="space-y-4">
+          <Card className="p-6">
+            <InvoicesList 
+              invoices={filteredInvoices}
+              isLoading={isLoading}
+              onViewInvoice={handleViewInvoice}
+              onMarkAsPaid={handleMarkAsPaid}
+            />
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="pending" className="space-y-4">
+          <Card className="p-6">
+            <InvoicesList 
+              invoices={filteredInvoices}
+              isLoading={isLoading}
+              onViewInvoice={handleViewInvoice}
+              onMarkAsPaid={handleMarkAsPaid}
+            />
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="overdue" className="space-y-4">
+          <Card className="p-6">
+            <InvoicesList 
+              invoices={filteredInvoices}
+              isLoading={isLoading}
+              onViewInvoice={handleViewInvoice}
+              onMarkAsPaid={handleMarkAsPaid}
+            />
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="integrations" className="space-y-4">
+          <AccountingIntegrations />
+        </TabsContent>
       </Tabs>
     </div>
   );

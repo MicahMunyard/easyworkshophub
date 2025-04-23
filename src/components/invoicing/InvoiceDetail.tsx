@@ -1,10 +1,14 @@
 
-import React from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { Download, Printer, CreditCard, ArrowLeft } from 'lucide-react';
-import { Invoice, InvoiceStatus } from '@/types/invoice';
+import React from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ArrowLeft, Check, Clock, Printer, Save } from "lucide-react";
+import { Invoice, InvoiceStatus } from "@/types/invoice";
+import { format, parseISO } from "date-fns";
+import { Badge } from "@/components/ui/badge";
+import SyncInvoiceButton from "./SyncInvoiceButton";
+import { useAccountingIntegrations } from "@/hooks/invoicing/useAccountingIntegrations";
 
 interface InvoiceDetailProps {
   invoice: Invoice;
@@ -12,140 +16,190 @@ interface InvoiceDetailProps {
   onUpdateStatus: (invoiceId: string, status: InvoiceStatus) => void;
 }
 
+const statusVariants: Record<InvoiceStatus, { bg: string; text: string; icon: React.ReactNode }> = {
+  paid: { 
+    bg: "bg-green-100", 
+    text: "text-green-800", 
+    icon: <Check className="h-4 w-4" /> 
+  },
+  pending: { 
+    bg: "bg-orange-100", 
+    text: "text-orange-800",
+    icon: <Clock className="h-4 w-4" /> 
+  },
+  overdue: { 
+    bg: "bg-red-100", 
+    text: "text-red-800",
+    icon: <Clock className="h-4 w-4" /> 
+  },
+  draft: { 
+    bg: "bg-gray-100", 
+    text: "text-gray-800",
+    icon: <Save className="h-4 w-4" /> 
+  },
+  cancelled: { 
+    bg: "bg-gray-100", 
+    text: "text-gray-800",
+    icon: null 
+  },
+};
+
 const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, onBack, onUpdateStatus }) => {
+  const { hasActiveIntegration } = useAccountingIntegrations();
+  const showXeroSync = hasActiveIntegration('xero');
+  
+  const handleMarkAsPaid = () => {
+    onUpdateStatus(invoice.id, 'paid');
+  };
+  
+  const handleMarkAsOverdue = () => {
+    onUpdateStatus(invoice.id, 'overdue');
+  };
+  
+  const statusVariant = statusVariants[invoice.status];
+  
+  const formattedDate = (dateString: string) => {
+    try {
+      return format(parseISO(dateString), "MMMM d, yyyy");
+    } catch (e) {
+      return dateString;
+    }
+  };
+  
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <Button variant="ghost" onClick={onBack} className="flex items-center">
-          <ArrowLeft className="h-4 w-4 mr-2" />
+        <Button variant="outline" onClick={onBack} className="flex items-center gap-1">
+          <ArrowLeft className="h-4 w-4" />
           Back to Invoices
         </Button>
         
         <div className="flex gap-2">
+          {showXeroSync && (
+            <SyncInvoiceButton invoice={invoice} />
+          )}
+          <Button variant="outline" className="flex items-center gap-1">
+            <Printer className="h-4 w-4" />
+            Print
+          </Button>
           {invoice.status === 'pending' && (
-            <Button
+            <Button onClick={handleMarkAsPaid}>Mark as Paid</Button>
+          )}
+          {invoice.status === 'pending' && (
+            <Button 
               variant="outline" 
-              className="bg-green-50 text-green-700 border-green-200 hover:bg-green-100 hover:text-green-800"
-              onClick={() => onUpdateStatus(invoice.id, 'paid')}
+              onClick={handleMarkAsOverdue}
+              className="border-red-200 text-red-700 hover:bg-red-50"
             >
-              <CreditCard className="h-4 w-4 mr-2" /> Mark as Paid
+              Mark as Overdue
             </Button>
           )}
-          <Button variant="outline">
-            <Printer className="h-4 w-4 mr-2" /> Print
-          </Button>
-          <Button variant="outline">
-            <Download className="h-4 w-4 mr-2" /> Download
-          </Button>
         </div>
       </div>
       
       <Card>
-        <CardHeader className="border-b">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div>
-              <CardTitle className="text-2xl font-bold">Invoice #{invoice.invoiceNumber}</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
-                Status: <span className={`font-medium ${
-                  invoice.status === 'paid' ? 'text-green-600' : 
-                  invoice.status === 'pending' ? 'text-amber-600' :
-                  invoice.status === 'overdue' ? 'text-red-600' : 'text-gray-600'
-                }`}>
-                  {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
-                </span>
-              </p>
-            </div>
-            
-            <div className="text-right">
-              <p className="text-sm">Invoice Date: <span className="font-medium">{invoice.date}</span></p>
-              <p className="text-sm">Due Date: <span className="font-medium">{invoice.dueDate}</span></p>
-            </div>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <div>
+            <CardTitle className="text-2xl">Invoice #{invoice.invoiceNumber}</CardTitle>
+            <CardDescription>
+              Created on {formattedDate(invoice.createdAt)}
+            </CardDescription>
           </div>
+          <Badge 
+            className={`${statusVariant.bg} ${statusVariant.text} flex items-center gap-1 px-3 py-1`}
+          >
+            {statusVariant.icon}
+            {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
+          </Badge>
         </CardHeader>
         
-        <CardContent className="p-6 space-y-6">
+        <CardContent className="space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <h3 className="text-sm font-medium text-muted-foreground mb-1">From</h3>
-              <p className="font-medium">Your Workshop Name</p>
-              <p className="text-sm">123 Workshop Street</p>
-              <p className="text-sm">City, State 12345</p>
-              <p className="text-sm">Phone: (123) 456-7890</p>
-              <p className="text-sm">Email: info@yourworkshop.com</p>
+              <h3 className="text-sm font-medium mb-1">Bill To:</h3>
+              <div className="text-sm">
+                <p className="font-medium">{invoice.customerName}</p>
+                {invoice.customerEmail && <p>{invoice.customerEmail}</p>}
+                {invoice.customerPhone && <p>{invoice.customerPhone}</p>}
+              </div>
             </div>
             
-            <div>
-              <h3 className="text-sm font-medium text-muted-foreground mb-1">Bill To</h3>
-              <p className="font-medium">{invoice.customerName}</p>
-              {invoice.customerEmail && <p className="text-sm">Email: {invoice.customerEmail}</p>}
-              {invoice.customerPhone && <p className="text-sm">Phone: {invoice.customerPhone}</p>}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <h3 className="text-sm font-medium mb-1">Invoice Date:</h3>
+                <p className="text-sm">{formattedDate(invoice.date)}</p>
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-medium mb-1">Due Date:</h3>
+                <p className="text-sm">{formattedDate(invoice.dueDate)}</p>
+              </div>
+              
+              {invoice.xeroInvoiceId && (
+                <div>
+                  <h3 className="text-sm font-medium mb-1">Xero Invoice:</h3>
+                  <p className="text-sm flex items-center">
+                    <span className="flex h-2 w-2 rounded-full bg-green-600 mr-1.5"></span>
+                    Synced
+                  </p>
+                </div>
+              )}
             </div>
           </div>
           
-          <div className="pt-4">
-            <h3 className="font-medium mb-4">Invoice Items</h3>
-            <div className="border rounded-md overflow-hidden">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tax Rate</th>
-                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {invoice.items.map((item) => (
-                    <tr key={item.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.description}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.quantity}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${item.unitPrice.toFixed(2)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.taxRate ? `${item.taxRate}%` : '0%'}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">${item.total.toFixed(2)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          <div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Description</TableHead>
+                  <TableHead className="text-right">Qty</TableHead>
+                  <TableHead className="text-right">Unit Price</TableHead>
+                  <TableHead className="text-right">Amount</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {invoice.items.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell className="font-medium">{item.description}</TableCell>
+                    <TableCell className="text-right">{item.quantity}</TableCell>
+                    <TableCell className="text-right">${item.unitPrice.toFixed(2)}</TableCell>
+                    <TableCell className="text-right">${item.total.toFixed(2)}</TableCell>
+                  </TableRow>
+                ))}
+                <TableRow>
+                  <TableCell colSpan={3} className="text-right font-medium">Subtotal</TableCell>
+                  <TableCell className="text-right">${invoice.subtotal.toFixed(2)}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell colSpan={3} className="text-right font-medium">Tax</TableCell>
+                  <TableCell className="text-right">${invoice.taxTotal.toFixed(2)}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell colSpan={3} className="text-right font-medium">Total</TableCell>
+                  <TableCell className="text-right font-medium">${invoice.total.toFixed(2)}</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
           </div>
           
-          <div className="flex justify-end pt-4">
-            <div className="w-64">
-              <div className="flex justify-between py-1">
-                <span className="text-sm text-gray-600">Subtotal:</span>
-                <span className="text-sm font-medium">${invoice.subtotal.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between py-1">
-                <span className="text-sm text-gray-600">Tax Total:</span>
-                <span className="text-sm font-medium">${invoice.taxTotal.toFixed(2)}</span>
-              </div>
-              <Separator className="my-2" />
-              <div className="flex justify-between py-1">
-                <span className="font-semibold">Total:</span>
-                <span className="font-semibold">${invoice.total.toFixed(2)}</span>
-              </div>
-            </div>
-          </div>
-          
-          {invoice.notes && (
-            <div className="pt-4">
-              <h3 className="text-sm font-medium text-muted-foreground mb-1">Notes</h3>
-              <p className="text-sm">{invoice.notes}</p>
-            </div>
-          )}
-          
-          {invoice.termsAndConditions && (
-            <div className="pt-4">
-              <h3 className="text-sm font-medium text-muted-foreground mb-1">Terms & Conditions</h3>
-              <p className="text-sm">{invoice.termsAndConditions}</p>
+          {(invoice.notes || invoice.termsAndConditions) && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {invoice.notes && (
+                <div>
+                  <h3 className="text-sm font-medium mb-1">Notes:</h3>
+                  <p className="text-sm text-muted-foreground">{invoice.notes}</p>
+                </div>
+              )}
+              
+              {invoice.termsAndConditions && (
+                <div>
+                  <h3 className="text-sm font-medium mb-1">Terms and Conditions:</h3>
+                  <p className="text-sm text-muted-foreground">{invoice.termsAndConditions}</p>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
-        
-        <CardFooter className="border-t px-6 py-4">
-          <p className="text-sm text-muted-foreground">Thank you for your business!</p>
-        </CardFooter>
       </Card>
     </div>
   );
