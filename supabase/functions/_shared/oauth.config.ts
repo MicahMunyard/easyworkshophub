@@ -1,4 +1,4 @@
-// OAuth configuration for email providers
+
 export const oauthConfig = {
   google: {
     clientId: Deno.env.get('GOOGLE_CLIENT_ID') || '736177477108-a7cfbd4dcv3pqfk2jaolbm3j4fse0s9h.apps.googleusercontent.com',
@@ -14,8 +14,8 @@ export const oauthConfig = {
     ]
   },
   microsoft: {
-    clientId: Deno.env.get('MICROSOFT_CLIENT_ID') || '',
-    clientSecret: Deno.env.get('MICROSOFT_CLIENT_SECRET') || '',
+    clientId: Deno.env.get('MICROSOFT_CLIENT_ID') || '5193df69-f6d7-4bd7-8d6f-9442e03091f9',
+    clientSecret: Deno.env.get('MICROSOFT_CLIENT_SECRET') || '5a653420-58b1-4003-ad9c-c02dcdd55151',
     redirectUri: 'https://qyjjbpyqxwrluhymvshn.supabase.co/functions/v1/email-integration/oauth-callback',
     scopes: [
       'offline_access',
