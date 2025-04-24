@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { oauthConfig } from "../_shared/oauth.config.ts";
@@ -29,6 +30,8 @@ serve(async (req) => {
     console.log("Environment variables check:");
     console.log("- GOOGLE_CLIENT_ID:", Deno.env.get('GOOGLE_CLIENT_ID') ? 'Available' : 'Not available');
     console.log("- GOOGLE_CLIENT_SECRET:", Deno.env.get('GOOGLE_CLIENT_SECRET') ? 'Available' : 'Not available');
+    console.log("- MICROSOFT_CLIENT_ID:", Deno.env.get('MICROSOFT_CLIENT_ID') ? 'Available' : 'Not available');
+    console.log("- MICROSOFT_CLIENT_SECRET:", Deno.env.get('MICROSOFT_CLIENT_SECRET') ? 'Available' : 'Not available');
     console.log("- SUPABASE_URL:", Deno.env.get('SUPABASE_URL') ? 'Available' : 'Not available');
     console.log("- SUPABASE_SERVICE_ROLE_KEY:", Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ? 'Available' : 'Not available');
     
@@ -64,17 +67,13 @@ async function handleConnectEndpoint(req: Request) {
   console.log("Email integration connect endpoint called");
   
   try {
-    // Debug environment variables - detailed version for troubleshooting
-    const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID');
-    const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET');
-    
     // Create a debug object with more information
     const debugInfo = {
       environmentVariables: {
-        GOOGLE_CLIENT_ID: googleClientId ? 'Set' : 'Not set',
-        GOOGLE_CLIENT_ID_LENGTH: googleClientId ? googleClientId.length : 0,
-        GOOGLE_CLIENT_SECRET: googleClientSecret ? 'Set' : 'Not set',
-        GOOGLE_CLIENT_SECRET_LENGTH: googleClientSecret ? googleClientSecret.length : 0,
+        GOOGLE_CLIENT_ID: Deno.env.get('GOOGLE_CLIENT_ID') ? 'Set' : 'Not set',
+        GOOGLE_CLIENT_SECRET: Deno.env.get('GOOGLE_CLIENT_SECRET') ? 'Set' : 'Not set',
+        MICROSOFT_CLIENT_ID: Deno.env.get('MICROSOFT_CLIENT_ID') ? 'Set' : 'Not set',
+        MICROSOFT_CLIENT_SECRET: Deno.env.get('MICROSOFT_CLIENT_SECRET') ? 'Set' : 'Not set',
         SUPABASE_URL: Deno.env.get('SUPABASE_URL') ? 'Set' : 'Not set',
         SUPABASE_SERVICE_ROLE_KEY: Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ? 'Set' : 'Not set',
       },
@@ -115,26 +114,31 @@ async function handleConnectEndpoint(req: Request) {
       );
     }
     
-    // If the environment variables are missing, return a special debug response
-    if (!googleClientId || !googleClientSecret) {
-      console.error("Missing Google OAuth configuration");
-      return new Response(
-        JSON.stringify({ 
-          error: 'Server configuration error: Missing Google OAuth configuration',
-          details: 'The Google client ID or client secret is not configured in environment variables.',
-          debug: debugInfo,
-          manualConfig: {
-            GOOGLE_CLIENT_ID: '736177477108-a7cfbd4dcv3pqfk2jaolbm3j4fse0s9h.apps.googleusercontent.com',
-            GOOGLE_CLIENT_SECRET_LENGTH: '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'.length,
-          }
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-      );
-    }
-    
     // Generate OAuth URL for the specified provider
     let authUrl;
+    
     if (provider === 'gmail' || provider === 'google') {
+      // Check for Google OAuth configuration
+      const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID');
+      const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET');
+      
+      // If the Google environment variables are missing, return a specific error for Google
+      if (!googleClientId || !googleClientSecret) {
+        console.error("Missing Google OAuth configuration");
+        return new Response(
+          JSON.stringify({ 
+            error: 'Server configuration error: Missing Google OAuth configuration',
+            details: 'The Google client ID or client secret is not configured in environment variables.',
+            debug: debugInfo,
+            manualConfig: {
+              GOOGLE_CLIENT_ID: '736177477108-a7cfbd4dcv3pqfk2jaolbm3j4fse0s9h.apps.googleusercontent.com',
+              GOOGLE_CLIENT_SECRET_LENGTH: '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'.length,
+            }
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        );
+      }
+      
       // *** IMPORTANT: Update the redirectUri to match what's configured in Google Cloud Console ***
       const redirectUri = 'https://app.workshopbase.com.au/email/callback';
       
@@ -154,7 +158,8 @@ async function handleConnectEndpoint(req: Request) {
       ];
       
       authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(googleClientId)}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes.join(' '))}&access_type=offline&prompt=consent&state=${provider}`;
-      console.log("Generated auth URL:", authUrl.substring(0, 100) + '...');
+      console.log("Generated Google auth URL:", authUrl.substring(0, 100) + '...');
+      
     } else if (provider === 'microsoft' || provider === 'outlook') {
       const microsoftClientId = Deno.env.get('MICROSOFT_CLIENT_ID');
       const microsoftClientSecret = Deno.env.get('MICROSOFT_CLIENT_SECRET');
@@ -179,12 +184,13 @@ async function handleConnectEndpoint(req: Request) {
       const scopes = [
         'offline_access',
         'User.Read',
-        'Mail.Read',
+        'Mail.ReadWrite',
         'Mail.Send'
       ];
       
       authUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${microsoftClientId}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes.join(' '))}&response_mode=query&state=${provider}`;
-      console.log("Generated auth URL:", authUrl.substring(0, 100) + '...');
+      console.log("Generated Microsoft auth URL:", authUrl.substring(0, 100) + '...');
+      
     } else {
       return new Response(
         JSON.stringify({ error: 'Unsupported provider' }),
