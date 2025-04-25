@@ -1,4 +1,5 @@
 
+import React from "react";
 import {
   LayoutDashboard,
   Hammer,
@@ -15,7 +16,7 @@ import {
 export interface NavSection {
   name: string;
   path: string;
-  icon: JSX.Element;
+  icon: React.ReactNode;
 }
 
 export interface SubNavSection {
@@ -23,7 +24,7 @@ export interface SubNavSection {
   path: string;
 }
 
-export const mainNavSections = [
+export const mainNavSections: NavSection[] = [
   { name: "Dashboard", path: "/", icon: <LayoutDashboard className="h-5 w-5" /> },
   { name: "Workshop", path: "/workshop", icon: <Hammer className="h-5 w-5" /> },
   { name: "Invoicing", path: "/invoicing", icon: <Receipt className="h-5 w-5" /> },
