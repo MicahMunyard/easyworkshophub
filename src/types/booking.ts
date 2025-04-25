@@ -19,6 +19,7 @@ export type BookingType = {
   vehicleDetails?: {
     make?: string;
     model?: string;
+    modelDescription?: string;  // Added this field
     year?: string;
     vin?: string;
     color?: string;

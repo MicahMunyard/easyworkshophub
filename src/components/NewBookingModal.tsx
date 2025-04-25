@@ -48,12 +48,13 @@ const NewBookingModal: React.FC<NewBookingModalProps> = ({ isOpen, onClose, onSa
     // Map NEVDIS vehicle data to booking form fields with additional details
     const carMake = vehicle.extendedData?.makeDescription || "";
     const carModel = vehicle.extendedData?.model || "";
+    const carModelDesc = vehicle.extendedData?.modelDescription || "";
     const carYear = vehicle.vehicleAge?.yearOfManufacture ? `(${vehicle.vehicleAge.yearOfManufacture})` : "";
     const carColor = vehicle.extendedData?.colour ? `- ${vehicle.extendedData.colour}` : "";
     const carBodyType = vehicle.extendedData?.bodyType || "";
     
     // Create a comprehensive car description
-    const carInfo = [carMake, carModel, carYear, carColor].filter(Boolean).join(" ");
+    const carInfo = [carMake, carModel, carModelDesc, carYear, carColor].filter(Boolean).join(" ");
     
     // Store additional vehicle details in the booking
     setNewBooking(prev => ({
@@ -62,6 +63,7 @@ const NewBookingModal: React.FC<NewBookingModalProps> = ({ isOpen, onClose, onSa
       vehicleDetails: {
         make: carMake,
         model: carModel,
+        modelDescription: carModelDesc,
         year: vehicle.vehicleAge?.yearOfManufacture?.toString() || "",
         vin: vehicle.identification?.vin || "",
         color: vehicle.extendedData?.colour || "",
