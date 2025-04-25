@@ -23,6 +23,7 @@ import Auth from "./pages/Auth";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
 import TechnicianPortal from "./pages/TechnicianPortal";
+import Timesheets from "./pages/Timesheets";
 import { useAuth } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import EmailCallback from "./pages/email/callback";
@@ -88,6 +89,15 @@ const App: React.FC = () => {
       
       {/* Email OAuth callback route */}
       <Route path="/email/callback" element={<EmailCallback />} />
+      
+      {/* Timesheets route */}
+      <Route path="/timesheets" element={
+        <ProtectedRoute>
+          <Layout>
+            <Timesheets />
+          </Layout>
+        </ProtectedRoute>
+      } />
       
       {/* Catch all routes */}
       <Route path="*" element={<NotFound />} />

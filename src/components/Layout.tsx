@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import Navbar from "./navbar";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -11,7 +10,8 @@ import {
   Users,
   Megaphone,
   FileBarChart,
-  Receipt
+  Receipt,
+  Clock
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -28,10 +28,10 @@ const mainNavSections = [
   { name: "Inventory", path: "/inventory", icon: <Package className="h-5 w-5" /> },
   { name: "Customers", path: "/customers", icon: <Users className="h-5 w-5" /> },
   { name: "Marketing", path: "/marketing", icon: <Megaphone className="h-5 w-5" /> },
-  { name: "Reports", path: "/reports", icon: <FileBarChart className="h-5 w-5" /> }
+  { name: "Reports", path: "/reports", icon: <FileBarChart className="h-5 w-5" /> },
+  { name: "Timesheets", path: "/timesheets", icon: <Clock className="h-5 w-5" /> }
 ];
 
-// Define secondary navigation sections based on main sections
 const secondaryNavSections = {
   workshop: [
     { name: "Booking Diary", path: "/booking-diary" },
@@ -61,6 +61,10 @@ const secondaryNavSections = {
   ],
   reports: [
     { name: "Reports", path: "/reports" }
+  ],
+  timesheets: [
+    { name: "Timesheet Overview", path: "/timesheets" },
+    { name: "Time Entries", path: "/timesheets/entries" }
   ]
 };
 
@@ -70,7 +74,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Get current main section based on path
   const getCurrentMainSection = (path: string): string => {
     if (path === '/') return 'dashboard';
     if (path.includes('/workshop') || path.includes('/booking-diary') || path.includes('/jobs') || path.includes('/workshop-setup')) return 'workshop';
@@ -80,22 +83,20 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     if (path.includes('/customers')) return 'customers';
     if (path.includes('/marketing') || path.includes('/email-marketing') || path.includes('/reviews')) return 'marketing';
     if (path.includes('/reports')) return 'reports';
+    if (path.includes('/timesheets')) return 'timesheets';
     return 'dashboard';
   };
 
   const currentMainSection = getCurrentMainSection(location.pathname);
 
-  // Get secondary nav based on current main section
   const currentSecondaryNav = secondaryNavSections[currentMainSection as keyof typeof secondaryNavSections] || [];
 
-  // Auto-collapse sidebar on mobile
   useEffect(() => {
     if (isMobile) {
       setSidebarExpanded(false);
     }
   }, [isMobile, location.pathname]);
 
-  // Handle sidebar toggle for mobile
   const handleSidebarToggle = () => {
     if (isMobile) {
       setSidebarExpanded(!sidebarExpanded);
@@ -104,7 +105,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <div className="min-h-screen flex bg-background text-foreground">
-      {/* Collapsible Sidebar */}
       <aside 
         className={`fixed top-0 left-0 h-full bg-black z-40 transition-all duration-300 ease-in-out pt-16 ${
           sidebarExpanded ? (isMobile ? "w-full" : "w-64") : "w-16"
@@ -112,7 +112,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         onMouseEnter={() => !isMobile && setSidebarExpanded(true)}
         onMouseLeave={() => !isMobile && setSidebarExpanded(false)}
       >
-        {/* Overlay for mobile */}
         {isMobile && sidebarExpanded && (
           <div 
             className="fixed inset-0 bg-black bg-opacity-50 z-30"
@@ -121,7 +120,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         )}
 
         <div className="flex flex-col h-full">
-          {/* Main navigation icons */}
           <div className="flex-1 py-4 overflow-y-auto scrollbar-none">
             {mainNavSections.map((section) => {
               const isActive = section.name.toLowerCase() === currentMainSection;
@@ -156,7 +154,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               );
             })}
           </div>
-          {/* Mobile close button visible only when expanded on mobile */}
           {isMobile && sidebarExpanded && (
             <button 
               className="p-4 text-white border-t border-white/10 mt-auto"
@@ -168,7 +165,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </div>
       </aside>
 
-      {/* Main content area */}
       <div className={`flex-1 transition-all duration-300 ${sidebarExpanded && !isMobile ? "ml-64" : "ml-16"}`}>
         <Navbar 
           secondaryNavSections={currentSecondaryNav}
