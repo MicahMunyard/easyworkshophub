@@ -25,16 +25,16 @@ export interface SubNavSection {
 }
 
 export const mainNavSections: NavSection[] = [
-  { name: "Dashboard", path: "/", icon: <LayoutDashboard className="h-5 w-5" /> },
-  { name: "Workshop", path: "/workshop", icon: <Hammer className="h-5 w-5" /> },
-  { name: "Invoicing", path: "/invoicing", icon: <Receipt className="h-5 w-5" /> },
-  { name: "Email", path: "/email-integration", icon: <Mail className="h-5 w-5" /> },
-  { name: "Communication", path: "/communication", icon: <MessageCircle className="h-5 w-5" /> },
-  { name: "Inventory", path: "/inventory", icon: <Package className="h-5 w-5" /> },
-  { name: "Customers", path: "/customers", icon: <Users className="h-5 w-5" /> },
-  { name: "Marketing", path: "/marketing", icon: <Megaphone className="h-5 w-5" /> },
-  { name: "Reports", path: "/reports", icon: <FileBarChart className="h-5 w-5" /> },
-  { name: "Timesheets", path: "/timesheets", icon: <Clock className="h-5 w-5" /> }
+  { name: "Dashboard", path: "/", icon: React.createElement(LayoutDashboard, { className: "h-5 w-5" }) },
+  { name: "Workshop", path: "/workshop", icon: React.createElement(Hammer, { className: "h-5 w-5" }) },
+  { name: "Invoicing", path: "/invoicing", icon: React.createElement(Receipt, { className: "h-5 w-5" }) },
+  { name: "Email", path: "/email-integration", icon: React.createElement(Mail, { className: "h-5 w-5" }) },
+  { name: "Communication", path: "/communication", icon: React.createElement(MessageCircle, { className: "h-5 w-5" }) },
+  { name: "Inventory", path: "/inventory", icon: React.createElement(Package, { className: "h-5 w-5" }) },
+  { name: "Customers", path: "/customers", icon: React.createElement(Users, { className: "h-5 w-5" }) },
+  { name: "Marketing", path: "/marketing", icon: React.createElement(Megaphone, { className: "h-5 w-5" }) },
+  { name: "Reports", path: "/reports", icon: React.createElement(FileBarChart, { className: "h-5 w-5" }) },
+  { name: "Timesheets", path: "/timesheets", icon: React.createElement(Clock, { className: "h-5 w-5" }) }
 ];
 
 export const secondaryNavSections: Record<string, SubNavSection[]> = {
