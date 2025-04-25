@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { TimeEntry } from '@/types/timeEntry';
@@ -72,9 +73,20 @@ export const useTimesheets = () => {
 
   const { mutate: addTimeEntry } = useMutation({
     mutationFn: async (entry: Partial<TimeEntry>) => {
+      // Get the current user to add the user_id
+      const { data: userData } = await supabase.auth.getUser();
+      
+      // Add the user_id to the entry
+      const completeEntry = {
+        ...entry,
+        user_id: userData.user?.id,
+        start_time: entry.start_time || new Date().toISOString(),  // Ensure required fields are present
+        approval_status: entry.approval_status || 'pending',
+      };
+
       const { error } = await supabase
         .from('time_entries')
-        .insert([entry]);
+        .insert([completeEntry]);
 
       if (error) throw error;
     },

@@ -37,11 +37,12 @@ import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { TimeEntry } from "@/types/timeEntry";
 
 interface AddTimeEntryModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAdd: (entry: any) => void;
+  onAdd: (entry: Partial<TimeEntry>) => void;
 }
 
 interface FormData {
@@ -79,10 +80,12 @@ export function AddTimeEntryModal({ isOpen, onClose, onAdd }: AddTimeEntryModalP
 
   const onSubmit = (data: FormData) => {
     onAdd({
-      ...data,
+      job_id: data.job_id,
+      technician_id: data.technician_id,
       date: format(data.date, "yyyy-MM-dd"),
       start_time: new Date().toISOString(),
       duration: Number(data.duration) * 60, // Convert to seconds
+      notes: data.notes,
       approval_status: "pending"
     });
     form.reset();
