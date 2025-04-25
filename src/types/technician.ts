@@ -1,4 +1,3 @@
-
 export type JobStatus = 'pending' | 'accepted' | 'inProgress' | 'working' | 'completed' | 'declined' | 'cancelled';
 
 export interface TechnicianProfile {
@@ -51,7 +50,7 @@ export interface TechnicianJob {
   customer: string;
   vehicle: string;
   status: JobStatus;
-  assignedAt: string;
+  assignedTo: string; // Changed from assignedAt to assignedTo to match usage
   scheduledFor?: string;
   estimatedTime?: string;
   priority: string;
