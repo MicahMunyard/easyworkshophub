@@ -1,72 +1,12 @@
 import React, { useState, useEffect } from "react";
 import Navbar from "./navbar";
 import { useLocation, useNavigate } from "react-router-dom";
-import {
-  LayoutDashboard,
-  Hammer,
-  Mail,
-  MessageCircle,
-  Package,
-  Users,
-  Megaphone,
-  FileBarChart,
-  Receipt,
-  Clock
-} from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { mainNavSections, secondaryNavSections } from "@/config/navigation";
 
 interface LayoutProps {
   children: React.ReactNode;
 }
-
-const mainNavSections = [
-  { name: "Dashboard", path: "/", icon: <LayoutDashboard className="h-5 w-5" /> },
-  { name: "Workshop", path: "/workshop", icon: <Hammer className="h-5 w-5" /> },
-  { name: "Invoicing", path: "/invoicing", icon: <Receipt className="h-5 w-5" /> },
-  { name: "Email", path: "/email-integration", icon: <Mail className="h-5 w-5" /> },
-  { name: "Communication", path: "/communication", icon: <MessageCircle className="h-5 w-5" /> },
-  { name: "Inventory", path: "/inventory", icon: <Package className="h-5 w-5" /> },
-  { name: "Customers", path: "/customers", icon: <Users className="h-5 w-5" /> },
-  { name: "Marketing", path: "/marketing", icon: <Megaphone className="h-5 w-5" /> },
-  { name: "Reports", path: "/reports", icon: <FileBarChart className="h-5 w-5" /> },
-  { name: "Timesheets", path: "/timesheets", icon: <Clock className="h-5 w-5" /> }
-];
-
-const secondaryNavSections = {
-  workshop: [
-    { name: "Booking Diary", path: "/booking-diary" },
-    { name: "Jobs", path: "/jobs" },
-    { name: "Workshop Setup", path: "/workshop-setup" }
-  ],
-  invoicing: [
-    { name: "Invoicing", path: "/invoicing" }
-  ],
-  email: [
-    { name: "Email Integration", path: "/email-integration" }
-  ],
-  communication: [
-    { name: "Communication", path: "/communication" }
-  ],
-  inventory: [
-    { name: "Inventory", path: "/inventory" },
-    { name: "Suppliers", path: "/suppliers" }
-  ],
-  customers: [
-    { name: "Customers", path: "/customers" }
-  ],
-  marketing: [
-    { name: "Marketing", path: "/marketing" },
-    { name: "Email Marketing", path: "/email-marketing" },
-    { name: "Reviews", path: "/reviews" }
-  ],
-  reports: [
-    { name: "Reports", path: "/reports" }
-  ],
-  timesheets: [
-    { name: "Timesheet Overview", path: "/timesheets" },
-    { name: "Time Entries", path: "/timesheets/entries" }
-  ]
-};
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const isMobile = useIsMobile();
@@ -88,8 +28,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   };
 
   const currentMainSection = getCurrentMainSection(location.pathname);
-
-  const currentSecondaryNav = secondaryNavSections[currentMainSection as keyof typeof secondaryNavSections] || [];
+  const currentSecondaryNav = secondaryNavSections[currentMainSection] || [];
 
   useEffect(() => {
     if (isMobile) {
