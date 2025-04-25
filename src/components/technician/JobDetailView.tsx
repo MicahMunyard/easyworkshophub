@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import JobHeader from "./job-detail/JobHeader";
 import JobInfoCard from "./job-detail/JobInfoCard";
 import JobTabs from "./job-detail/JobTabs";
+import TimeTracker from "./TimeTracker";
 import CompleteJobDialog from "./job-detail/CompleteJobDialog";
 
 interface JobDetailViewProps {
@@ -79,16 +80,21 @@ const JobDetailView: React.FC<JobDetailViewProps> = ({
           onToggleTimer={onToggleTimer} 
         />
         
-        <JobInfoCard 
-          job={job} 
-          onUpdateStatus={(jobId, status) => {
-            if (status === 'completed') {
-              setIsCompleteDialogOpen(true);
-            } else {
-              onUpdateStatus(jobId, status);
-            }
-          }} 
-        />
+        <div className="flex items-center justify-between">
+          <JobInfoCard 
+            job={job} 
+            onUpdateStatus={(jobId, status) => {
+              if (status === 'completed') {
+                setIsCompleteDialogOpen(true);
+              } else {
+                onUpdateStatus(jobId, status);
+              }
+            }} 
+          />
+          {(job.status === 'inProgress' || job.status === 'working') && (
+            <TimeTracker jobId={job.id} technicianId={job.assignedTo} />
+          )}
+        </div>
         
         <JobTabs 
           jobId={job.id}

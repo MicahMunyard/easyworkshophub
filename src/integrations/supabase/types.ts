@@ -503,6 +503,7 @@ export type Database = {
           status: string
           time: string | null
           time_estimate: string
+          total_time: number | null
           updated_at: string
           user_id: string | null
           vehicle: string
@@ -518,6 +519,7 @@ export type Database = {
           status: string
           time?: string | null
           time_estimate: string
+          total_time?: number | null
           updated_at?: string
           user_id?: string | null
           vehicle: string
@@ -533,6 +535,7 @@ export type Database = {
           status?: string
           time?: string | null
           time_estimate?: string
+          total_time?: number | null
           updated_at?: string
           user_id?: string | null
           vehicle?: string
@@ -857,6 +860,57 @@ export type Database = {
           name?: string
           specialty?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      time_entries: {
+        Row: {
+          approval_status: string
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string | null
+          date: string
+          duration: number | null
+          end_time: string | null
+          id: string
+          job_id: string
+          notes: string | null
+          start_time: string
+          technician_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          date: string
+          duration?: number | null
+          end_time?: string | null
+          id?: string
+          job_id: string
+          notes?: string | null
+          start_time: string
+          technician_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          date?: string
+          duration?: number | null
+          end_time?: string | null
+          id?: string
+          job_id?: string
+          notes?: string | null
+          start_time?: string
+          technician_id?: string
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }
