@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { TechnicianJob, JobStatus } from "@/types/technician";
 import { useToast } from "@/hooks/use-toast";

@@ -29,7 +29,7 @@ export const useTimeTracking = (jobId: string, technicianId: string) => {
 
       if (error) throw error;
 
-      setCurrentEntry(data);
+      setCurrentEntry(data as TimeEntry);
       setIsTimerRunning(true);
       
       toast({
