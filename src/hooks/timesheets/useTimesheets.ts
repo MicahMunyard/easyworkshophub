@@ -76,11 +76,22 @@ export const useTimesheets = () => {
       // Get the current user to add the user_id
       const { data: userData } = await supabase.auth.getUser();
       
-      // Add the user_id to the entry
+      if (!userData.user?.id) {
+        throw new Error("User not authenticated");
+      }
+
+      if (!entry.date || !entry.job_id || !entry.technician_id) {
+        throw new Error("Missing required fields");
+      }
+      
+      // Add the required fields to the entry
       const completeEntry = {
         ...entry,
-        user_id: userData.user?.id,
-        start_time: entry.start_time || new Date().toISOString(),  // Ensure required fields are present
+        user_id: userData.user.id,
+        date: entry.date,
+        job_id: entry.job_id,
+        technician_id: entry.technician_id,
+        start_time: entry.start_time || new Date().toISOString(),
         approval_status: entry.approval_status || 'pending',
       };
 
