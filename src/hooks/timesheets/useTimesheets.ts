@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { TimeEntry } from '@/types/timeEntry';
@@ -71,6 +70,30 @@ export const useTimesheets = () => {
     }
   });
 
+  const { mutate: addTimeEntry } = useMutation({
+    mutationFn: async (entry: Partial<TimeEntry>) => {
+      const { error } = await supabase
+        .from('time_entries')
+        .insert([entry]);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['timeEntries'] });
+      toast({
+        title: "Time entry added",
+        description: "The time entry has been successfully added."
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to add time entry",
+        variant: "destructive"
+      });
+    }
+  });
+
   return {
     timeEntries,
     isLoading,
@@ -79,5 +102,6 @@ export const useTimesheets = () => {
     approveEntry,
     selectedEntry,
     setSelectedEntry,
+    addTimeEntry,
   };
 };
