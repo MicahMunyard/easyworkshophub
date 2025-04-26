@@ -2,6 +2,7 @@
 import React from "react";
 import { Loader2 } from "lucide-react";
 import { EmailType } from "@/types/email";
+import DOMPurify from "dompurify";
 
 interface ConversationThreadProps {
   conversation: EmailType[];
@@ -33,7 +34,12 @@ const ConversationThread: React.FC<ConversationThreadProps> = ({
                 </div>
                 <div 
                   className="prose prose-sm max-w-none" 
-                  dangerouslySetInnerHTML={{ __html: msg.content }} 
+                  dangerouslySetInnerHTML={{ 
+                    __html: DOMPurify.sanitize(msg.content, { 
+                      ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'ul', 'ol', 'li'],
+                      ALLOWED_ATTR: ['href', 'target']
+                    })
+                  }} 
                 />
               </div>
             ))}
