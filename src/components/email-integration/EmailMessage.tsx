@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +9,7 @@ import EmailStatusBadge from "./email-message/EmailStatusBadge";
 import BookingDetails from "./email-message/BookingDetails";
 import ConversationThread from "./email-message/ConversationThread";
 import DOMPurify from "dompurify";
+import { useToast } from "@/hooks/use-toast";
 
 interface EmailMessageProps {
   email: EmailType;
@@ -32,6 +32,7 @@ const EmailMessage: React.FC<EmailMessageProps> = ({
   const [conversation, setConversation] = useState<EmailType[]>([]);
   const [isLoadingConversation, setIsLoadingConversation] = useState(false);
   const { fetchConversationThread } = useEmailIntegration();
+  const { toast } = useToast();
 
   useEffect(() => {
     const loadConversation = async () => {
@@ -60,11 +61,28 @@ const EmailMessage: React.FC<EmailMessageProps> = ({
     vehicle: null
   };
 
-  // Sanitize HTML content with limited allowed tags and attributes
   const sanitizedEmailContent = DOMPurify.sanitize(email.content, {
     ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'ul', 'ol', 'li'],
     ALLOWED_ATTR: ['href', 'target']
   });
+
+  const handleManualBookingCreate = async (details: ExtractedDetails) => {
+    try {
+      const success = await onCreateBooking();
+      if (success) {
+        toast({
+          title: "Booking Created",
+          description: "The booking has been created successfully.",
+        });
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to create booking. Please try again.",
+      });
+    }
+  };
 
   return (
     <>
@@ -89,20 +107,25 @@ const EmailMessage: React.FC<EmailMessageProps> = ({
       </CardHeader>
       
       <CardContent className="pt-4">
+        {showReplyForm && (
+          <div className="mb-6 border-b pb-6">
+            <EmailReplyForm 
+              email={email} 
+              onSendReply={onReply}
+              onCancel={() => setShowReplyForm(false)}
+            />
+          </div>
+        )}
+
         <div 
           className="prose prose-sm max-w-none" 
           dangerouslySetInnerHTML={{ __html: sanitizedEmailContent }}
         />
         
         {isPotentialBooking && !bookingCreated && (
-          <BookingDetails extractedDetails={extractedDetails} />
-        )}
-        
-        {showReplyForm && (
-          <EmailReplyForm 
-            email={email} 
-            onSendReply={onReply}
-            onCancel={() => setShowReplyForm(false)}
+          <BookingDetails 
+            extractedDetails={extractedDetails} 
+            onCreateBooking={handleManualBookingCreate}
           />
         )}
       </CardContent>
