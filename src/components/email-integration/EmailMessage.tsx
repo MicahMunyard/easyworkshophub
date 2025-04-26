@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect } from "react";
 import { CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Mail, Loader2 } from "lucide-react";
-import { EmailType } from "@/types/email";
+import { EmailType, ExtractedDetails } from "@/types/email";
 import EmailReplyForm from "./EmailReplyForm";
 import { useEmailIntegration } from "@/hooks/email/useEmailIntegration";
 import EmailStatusBadge from "./email-message/EmailStatusBadge";
