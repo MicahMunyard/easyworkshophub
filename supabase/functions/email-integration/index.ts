@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { oauthConfig } from "../_shared/oauth.config.ts";
@@ -161,36 +160,7 @@ async function handleConnectEndpoint(req: Request) {
       console.log("Generated Google auth URL:", authUrl.substring(0, 100) + '...');
       
     } else if (provider === 'microsoft' || provider === 'outlook') {
-      const microsoftClientId = Deno.env.get('MICROSOFT_CLIENT_ID');
-      const microsoftClientSecret = Deno.env.get('MICROSOFT_CLIENT_SECRET');
-      const redirectUri = 'https://qyjjbpyqxwrluhymvshn.supabase.co/functions/v1/email-integration/oauth-callback';
-      
-      console.log("Microsoft OAuth configuration:");
-      console.log("- Client ID:", microsoftClientId ? 'Available' : 'Missing');
-      console.log("- Client Secret:", microsoftClientSecret ? 'Available' : 'Missing');
-      console.log("- Redirect URI:", redirectUri);
-      
-      if (!microsoftClientId || !microsoftClientSecret) {
-        console.error("Missing Microsoft OAuth configuration");
-        return new Response(
-          JSON.stringify({ 
-            error: 'Server configuration error: Missing Microsoft OAuth configuration',
-            details: 'The Microsoft client ID or client secret is not configured in environment variables.'
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-        );
-      }
-      
-      const scopes = [
-        'offline_access',
-        'User.Read',
-        'Mail.ReadWrite',
-        'Mail.Send'
-      ];
-      
-      authUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${microsoftClientId}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes.join(' '))}&response_mode=query&state=${provider}`;
-      console.log("Generated Microsoft auth URL:", authUrl.substring(0, 100) + '...');
-      
+      // ... keep existing code (Microsoft OAuth configuration)
     } else {
       return new Response(
         JSON.stringify({ error: 'Unsupported provider' }),
@@ -496,7 +466,7 @@ async function handleOAuthCallbackEndpoint(req: Request) {
   }
 }
 
-// Handle main endpoint
+// Handle main endpoint - Updated to fetch actual Gmail emails instead of mock data
 async function handleMainEndpoint(req: Request) {
   console.log("Email integration main endpoint called");
   
@@ -553,42 +523,156 @@ async function handleMainEndpoint(req: Request) {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
       );
     }
+
+    // Parse request body to get folder (inbox, sent, etc)
+    let folder = "inbox";
+    try {
+      const body = await req.json();
+      folder = body.folder || "inbox";
+      console.log("Requested folder:", folder);
+    } catch (error) {
+      console.log("No folder specified in request body, defaulting to inbox");
+    }
     
-    // Default: Handle fetching emails or other actions
-    // For demo purposes, return mock emails
+    // Get user's email connection
+    const { data: emailConnection, error: connectionError } = await supabaseClient
+      .from('email_connections')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('status', 'connected')
+      .single();
+      
+    if (connectionError || !emailConnection) {
+      console.log("No email connection found or user not connected. Returning mock data.");
+      // Return mock emails for demo purposes if no connection exists
+      return new Response(
+        JSON.stringify({
+          success: true,
+          emails: [
+            {
+              id: '1',
+              subject: 'Booking Request (Demo)',
+              from: 'John Smith',
+              sender_email: 'john@example.com',
+              date: new Date().toISOString(),
+              content: 'Hello, I would like to book a service for my car.',
+              is_booking_email: true,
+              booking_created: false,
+              extracted_details: {
+                name: 'John Smith',
+                phone: '555-1234',
+                date: new Date().toISOString().split('T')[0],
+                time: '10:00 AM',
+                service: 'Oil Change',
+                vehicle: 'Toyota Camry'
+              }
+            },
+            {
+              id: '2',
+              subject: 'Question about services (Demo)',
+              from: 'Jane Doe',
+              sender_email: 'jane@example.com',
+              date: new Date(Date.now() - 86400000).toISOString(),
+              content: 'Do you offer brake repairs?',
+              is_booking_email: false,
+              booking_created: false
+            }
+          ],
+          message: 'Using demo emails because no email connection was found'
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    console.log("Found email connection:", emailConnection.provider, "for email:", emailConnection.email_address);
+    
+    // Check if token is expired and needs refresh
+    if (emailConnection.token_expires_at && new Date(emailConnection.token_expires_at) <= new Date()) {
+      console.log("Access token expired, refreshing...");
+      const newTokens = await refreshAccessToken(emailConnection);
+      
+      if (!newTokens) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Failed to refresh access token',
+            details: 'The refresh token may have expired or be invalid'
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+        );
+      }
+      
+      // Update connection with new tokens
+      const { error: updateError } = await supabaseClient
+        .from('email_connections')
+        .update({
+          access_token: newTokens.access_token,
+          refresh_token: newTokens.refresh_token || emailConnection.refresh_token,
+          token_expires_at: new Date(Date.now() + (newTokens.expires_in * 1000)).toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', user.id);
+        
+      if (updateError) {
+        console.error("Error updating tokens:", updateError);
+        return new Response(
+          JSON.stringify({ 
+            error: 'Failed to update access tokens',
+            details: updateError.message
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        );
+      }
+      
+      // Use updated access token
+      emailConnection.access_token = newTokens.access_token;
+    }
+    
+    // Fetch emails based on provider
+    let emails = [];
+    if (emailConnection.provider === 'google' || emailConnection.provider === 'gmail') {
+      emails = await fetchGmailEmails(emailConnection.access_token, folder);
+    } else if (emailConnection.provider === 'microsoft' || emailConnection.provider === 'outlook') {
+      // Implementation for Microsoft/Outlook would go here
+      return new Response(
+        JSON.stringify({ 
+          error: 'Microsoft/Outlook integration not implemented yet'
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 501 }
+      );
+    } else {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Unsupported email provider',
+          provider: emailConnection.provider
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+    
+    // Get processed email statuses
+    const { data: processed, error: processedError } = await supabaseClient
+      .from('processed_emails')
+      .select('email_id, booking_created, processing_status')
+      .eq('user_id', user.id);
+      
+    if (processedError) {
+      console.error("Error fetching processed emails:", processedError);
+    }
+    
+    // Merge processing status with emails
+    const emailsWithStatus = emails.map(email => {
+      const processedEmail = processed?.find(p => p.email_id === email.id);
+      return {
+        ...email,
+        booking_created: processedEmail ? processedEmail.booking_created : false,
+        processing_status: processedEmail ? processedEmail.processing_status : 'pending'
+      };
+    });
+    
     return new Response(
       JSON.stringify({
         success: true,
-        emails: [
-          {
-            id: '1',
-            subject: 'Booking Request',
-            from: 'John Smith',
-            sender_email: 'john@example.com',
-            date: new Date().toISOString(),
-            content: 'Hello, I would like to book a service for my car.',
-            is_booking_email: true,
-            booking_created: false,
-            extracted_details: {
-              name: 'John Smith',
-              phone: '555-1234',
-              date: new Date().toISOString().split('T')[0],
-              time: '10:00 AM',
-              service: 'Oil Change',
-              vehicle: 'Toyota Camry'
-            }
-          },
-          {
-            id: '2',
-            subject: 'Question about services',
-            from: 'Jane Doe',
-            sender_email: 'jane@example.com',
-            date: new Date(Date.now() - 86400000).toISOString(),
-            content: 'Do you offer brake repairs?',
-            is_booking_email: false,
-            booking_created: false
-          }
-        ]
+        emails: emailsWithStatus
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
@@ -603,6 +687,309 @@ async function handleMainEndpoint(req: Request) {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }
+}
+
+// Fetch emails from Gmail API
+async function fetchGmailEmails(accessToken: string, folder: string = 'inbox'): Promise<any[]> {
+  console.log("Fetching Gmail emails from folder:", folder);
+  
+  try {
+    // First, get the message IDs of the most recent emails
+    const labelId = folder === 'sent' ? 'SENT' : folder === 'junk' ? 'SPAM' : 'INBOX';
+    const maxResults = 20; // Limit to 20 emails for performance
+    
+    const messagesResponse = await fetch(
+      `https://gmail.googleapis.com/gmail/v1/users/me/messages?labelIds=${labelId}&maxResults=${maxResults}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    if (!messagesResponse.ok) {
+      const errorData = await messagesResponse.text();
+      console.error("Gmail API error:", messagesResponse.status, errorData);
+      throw new Error(`Gmail API returned status ${messagesResponse.status}: ${errorData}`);
+    }
+    
+    const { messages } = await messagesResponse.json();
+    
+    if (!messages || messages.length === 0) {
+      console.log("No messages found in", folder);
+      return [];
+    }
+    
+    console.log(`Found ${messages.length} messages, fetching details...`);
+    
+    // Fetch the full details of each email message
+    const emails = await Promise.all(
+      messages.map(async (message: { id: string }) => {
+        const messageResponse = await fetch(
+          `https://gmail.googleapis.com/gmail/v1/users/me/messages/${message.id}?format=full`,
+          {
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+        
+        if (!messageResponse.ok) {
+          console.error(`Error fetching message ${message.id}:`, messageResponse.status);
+          return null;
+        }
+        
+        const messageData = await messageResponse.json();
+        
+        // Process message data into our email format
+        return processGmailMessage(messageData);
+      })
+    );
+    
+    // Filter out null values (failed message fetches)
+    return emails.filter(email => email !== null);
+    
+  } catch (error) {
+    console.error("Error fetching Gmail emails:", error);
+    throw error;
+  }
+}
+
+// Process Gmail message into our email format
+function processGmailMessage(message: any): any {
+  // Extract headers
+  const headers = message.payload.headers;
+  const subject = headers.find((h: any) => h.name === 'Subject')?.value || '(No subject)';
+  const from = headers.find((h: any) => h.name === 'From')?.value || '';
+  const date = headers.find((h: any) => h.name === 'Date')?.value || '';
+  
+  // Extract sender name and email
+  let fromName = from;
+  let senderEmail = '';
+  
+  const fromMatch = from.match(/(.+) <(.+)>/);
+  if (fromMatch) {
+    fromName = fromMatch[1];
+    senderEmail = fromMatch[2];
+  } else if (from.includes('@')) {
+    fromName = from.split('@')[0];
+    senderEmail = from;
+  }
+  
+  // Extract email content
+  const content = extractEmailContent(message.payload);
+  
+  // Analyze if this might be a booking request
+  // This is a simple heuristic - in a real system you might use NLP
+  const bookingKeywords = ['book', 'appointment', 'schedule', 'service', 'reservation'];
+  const lowerContent = content.toLowerCase();
+  const isBookingEmail = bookingKeywords.some(keyword => lowerContent.includes(keyword));
+  
+  // Simple extraction of potential booking details
+  // In a real system, this would use proper NLP
+  let extractedDetails = null;
+  if (isBookingEmail) {
+    extractedDetails = {
+      name: fromName,
+      phone: extractPhoneNumber(content),
+      date: extractDate(content),
+      time: extractTime(content),
+      service: extractService(content),
+      vehicle: extractVehicle(content)
+    };
+  }
+  
+  return {
+    id: message.id,
+    subject,
+    from: fromName,
+    sender_email: senderEmail,
+    date: new Date(date).toISOString(),
+    content,
+    is_booking_email: isBookingEmail,
+    booking_created: false,
+    extracted_details: extractedDetails
+  };
+}
+
+// Extract email content from message payload
+function extractEmailContent(payload: any): string {
+  // Check for plain parts
+  if (payload.mimeType === 'text/plain' && payload.body.data) {
+    return decodeBase64(payload.body.data);
+  }
+  
+  // Check for HTML parts
+  if (payload.mimeType === 'text/html' && payload.body.data) {
+    return decodeBase64(payload.body.data);
+  }
+  
+  // Handle multipart
+  if (payload.parts && payload.parts.length > 0) {
+    // Prefer HTML over plain text
+    const htmlPart = payload.parts.find((part: any) => part.mimeType === 'text/html');
+    if (htmlPart && htmlPart.body.data) {
+      return decodeBase64(htmlPart.body.data);
+    }
+    
+    // Fall back to plain text
+    const plainPart = payload.parts.find((part: any) => part.mimeType === 'text/plain');
+    if (plainPart && plainPart.body.data) {
+      return decodeBase64(plainPart.body.data);
+    }
+    
+    // Check for nested parts
+    for (const part of payload.parts) {
+      if (part.parts) {
+        const content = extractEmailContent(part);
+        if (content) return content;
+      }
+    }
+  }
+  
+  return '(No content)';
+}
+
+// Decode base64 URL-safe encoded string
+function decodeBase64(encoded: string): string {
+  try {
+    // Replace URL-safe characters and add padding if needed
+    const safe = encoded.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = safe.padEnd(safe.length + (4 - safe.length % 4) % 4, '=');
+    
+    // Decode base64
+    const decoded = atob(padded);
+    
+    // Convert to UTF-8
+    return decoded;
+  } catch (error) {
+    console.error("Error decoding base64:", error);
+    return '(Error decoding message)';
+  }
+}
+
+// Refresh access token using refresh token
+async function refreshAccessToken(connection: any): Promise<any | null> {
+  if (!connection.refresh_token) {
+    console.error("No refresh token available");
+    return null;
+  }
+  
+  try {
+    if (connection.provider === 'google' || connection.provider === 'gmail') {
+      const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID');
+      const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET');
+      
+      if (!googleClientId || !googleClientSecret) {
+        console.error("Missing Google OAuth credentials");
+        return null;
+      }
+      
+      const response = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          client_id: googleClientId,
+          client_secret: googleClientSecret,
+          refresh_token: connection.refresh_token,
+          grant_type: 'refresh_token',
+        }).toString(),
+      });
+      
+      if (!response.ok) {
+        console.error("Failed to refresh token:", response.status);
+        return null;
+      }
+      
+      return await response.json();
+    }
+    
+    // Add support for other providers here
+    return null;
+  } catch (error) {
+    console.error("Error refreshing access token:", error);
+    return null;
+  }
+}
+
+// Simple helper functions for extracting booking information
+// In a real system, these would use proper NLP
+function extractPhoneNumber(text: string): string | null {
+  const phoneRegex = /(\+?[0-9]{1,4}[ .-]?)?(\(?\d{3,4}\)?[ .-]?)?\d{3}[ .-]?\d{4}/;
+  const match = text.match(phoneRegex);
+  return match ? match[0] : null;
+}
+
+function extractDate(text: string): string | null {
+  // Look for dates in format MM/DD/YYYY or DD/MM/YYYY
+  const dateRegex = /\b(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})\b/;
+  const match = text.match(dateRegex);
+  if (match) return match[0];
+  
+  // Look for dates like "January 15th" or "15th of January"
+  const months = ['january', 'february', 'march', 'april', 'may', 'june', 
+                 'july', 'august', 'september', 'october', 'november', 'december'];
+  const monthRegex = new RegExp(`\\b(${months.join('|')})\\s+(\\d{1,2})(st|nd|rd|th)?\\b`, 'i');
+  const monthMatch = text.toLowerCase().match(monthRegex);
+  
+  if (monthMatch) {
+    const month = months.indexOf(monthMatch[1].toLowerCase()) + 1;
+    const day = parseInt(monthMatch[2]);
+    // Use current year
+    const year = new Date().getFullYear();
+    return `${month.toString().padStart(2, '0')}/${day.toString().padStart(2, '0')}/${year}`;
+  }
+  
+  return null;
+}
+
+function extractTime(text: string): string | null {
+  // Look for times like "3:30 PM" or "15:30"
+  const timeRegex = /\b(\d{1,2}):(\d{2})(\s*(am|pm))?\b/i;
+  const match = text.match(timeRegex);
+  return match ? match[0] : null;
+}
+
+function extractService(text: string): string | null {
+  const serviceKeywords = [
+    'oil change', 'tire rotation', 'brake', 'inspection', 
+    'tune-up', 'service', 'repair', 'maintenance'
+  ];
+  
+  const lowerText = text.toLowerCase();
+  for (const service of serviceKeywords) {
+    if (lowerText.includes(service)) {
+      // Try to get the full phrase around the service
+      const serviceRegex = new RegExp(`[\\w\\s]{0,20}${service}[\\w\\s]{0,20}`, 'i');
+      const match = text.match(serviceRegex);
+      return match ? match[0].trim() : service;
+    }
+  }
+  
+  return null;
+}
+
+function extractVehicle(text: string): string | null {
+  const carBrands = [
+    'toyota', 'honda', 'ford', 'chevrolet', 'bmw', 'audi', 'mercedes', 
+    'hyundai', 'kia', 'subaru', 'nissan', 'lexus', 'mazda', 'volkswagen'
+  ];
+  
+  const lowerText = text.toLowerCase();
+  for (const brand of carBrands) {
+    if (lowerText.includes(brand)) {
+      // Try to get the full phrase around the brand
+      const brandRegex = new RegExp(`${brand}[\\w\\s-]{1,15}`, 'i');
+      const match = text.match(brandRegex);
+      return match ? match[0].trim() : brand;
+    }
+  }
+  
+  return null;
 }
 
 // Handle sending email replies
@@ -668,7 +1055,7 @@ async function handleSendReplyEndpoint(req: Request) {
       .eq('user_id', user.id)
       .eq('status', 'connected')
       .single();
-    
+      
     if (connectionError || !emailConnection) {
       console.error("Error fetching email connection:", connectionError);
       return new Response(
