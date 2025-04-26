@@ -9,6 +9,7 @@ import { useEmailIntegration } from "@/hooks/email/useEmailIntegration";
 import EmailStatusBadge from "./email-message/EmailStatusBadge";
 import BookingDetails from "./email-message/BookingDetails";
 import ConversationThread from "./email-message/ConversationThread";
+import DOMPurify from "dompurify";
 
 interface EmailMessageProps {
   email: EmailType;
@@ -59,6 +60,12 @@ const EmailMessage: React.FC<EmailMessageProps> = ({
     vehicle: null
   };
 
+  // Sanitize HTML content with limited allowed tags and attributes
+  const sanitizedEmailContent = DOMPurify.sanitize(email.content, {
+    ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'ul', 'ol', 'li'],
+    ALLOWED_ATTR: ['href', 'target']
+  });
+
   return (
     <>
       <CardHeader className="border-b pb-3">
@@ -84,7 +91,7 @@ const EmailMessage: React.FC<EmailMessageProps> = ({
       <CardContent className="pt-4">
         <div 
           className="prose prose-sm max-w-none" 
-          dangerouslySetInnerHTML={{ __html: email.content }}
+          dangerouslySetInnerHTML={{ __html: sanitizedEmailContent }}
         />
         
         {isPotentialBooking && !bookingCreated && (
