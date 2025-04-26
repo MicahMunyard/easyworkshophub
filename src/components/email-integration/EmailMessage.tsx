@@ -108,6 +108,15 @@ const EmailMessage: React.FC<EmailMessageProps> = ({
       </CardHeader>
       
       <CardContent className="pt-4">
+        {isPotentialBooking && !bookingCreated && (
+          <div className="mb-6 border-b pb-6">
+            <BookingDetails 
+              extractedDetails={extractedDetails} 
+              onCreateBooking={handleManualBookingCreate}
+            />
+          </div>
+        )}
+
         {showReplyForm && (
           <div className="mb-6 border-b pb-6">
             <EmailReplyForm 
@@ -122,13 +131,6 @@ const EmailMessage: React.FC<EmailMessageProps> = ({
           className="prose prose-sm max-w-none" 
           dangerouslySetInnerHTML={{ __html: sanitizedEmailContent }}
         />
-        
-        {isPotentialBooking && !bookingCreated && (
-          <BookingDetails 
-            extractedDetails={extractedDetails} 
-            onCreateBooking={handleManualBookingCreate}
-          />
-        )}
       </CardContent>
       
       {!showReplyForm && (
