@@ -45,23 +45,23 @@ const QuoteHandler: React.FC = () => {
     if (quoteId && !currentQuote) {
       const fetchQuote = async () => {
         try {
-          // Use a type assertion to tell TypeScript that 'ezyparts_quotes' is a valid table
-          const { data, error } = await supabase
+          // Cast the table name to any to bypass TypeScript's type checking
+          const response = await supabase
             .from('ezyparts_quotes' as any)
             .select('quote_data')
             .eq('id', quoteId)
             .single();
           
-          if (error) {
-            throw error;
+          if (response.error) {
+            throw response.error;
           }
           
-          if (data && data.quote_data) {
+          if (response.data && response.data.quote_data) {
             // Set the quote data in the context
-            setCurrentQuote(data.quote_data);
+            setCurrentQuote(response.data.quote_data);
             
             // Store in localStorage for persistence
-            localStorage.setItem('ezyparts-current-quote', JSON.stringify(data.quote_data));
+            localStorage.setItem('ezyparts-current-quote', JSON.stringify(response.data.quote_data));
           }
         } catch (error) {
           console.error('Error fetching quote:', error);
@@ -201,7 +201,7 @@ const QuoteHandler: React.FC = () => {
     } catch (error) {
       console.error('Error submitting order:', error);
     }
-  }, [cartItems, checkInventory, currentQuote, navigate, orderFormValues, submitOrder]);
+  }, [cartItems, currentQuote, orderFormValues, submitOrder]);
 
   const totalItemCount = calculateTotalItems(cartItems);
   const totalQuantity = calculateTotalQuantity(cartItems);
@@ -245,6 +245,7 @@ const QuoteHandler: React.FC = () => {
                 <div className="mt-4">
                   <Button 
                     variant="outline" 
+                    className="bg-white hover:bg-gray-50 text-amber-700 border-amber-500 hover:text-amber-800"
                     onClick={() => {
                       setOrderFormValues(prev => ({ ...prev, forceOrder: true }));
                       setOrderResponse(null);
@@ -276,31 +277,30 @@ const QuoteHandler: React.FC = () => {
                   onUpdateQuantity={updateItemQuantity}
                 />
                 
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-right font-medium">
-                        Subtotal (ex. GST):
-                      </TableCell>
-                      <TableCell className="text-right font-bold">
-                        {formatCurrency(calculateSubtotal(cartItems))}
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-right font-medium">
-                        GST:
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatCurrency(calculateSubtotal(cartItems) * 0.1)}
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-right font-medium">
-                        Total (inc. GST):
-                      </TableCell>
-                      <TableCell className="text-right font-bold">
-                        {formatCurrency(calculateSubtotal(cartItems) * 1.1)}
-                      </TableCell>
-                    </TableRow>
-                  
+                <TableRow>
+                  <TableCell colSpan={5} className="text-right font-medium">
+                    Subtotal (ex. GST):
+                  </TableCell>
+                  <TableCell className="text-right font-bold">
+                    {formatCurrency(calculateSubtotal(cartItems))}
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell colSpan={5} className="text-right font-medium">
+                    GST:
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {formatCurrency(calculateSubtotal(cartItems) * 0.1)}
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell colSpan={5} className="text-right font-medium">
+                    Total (inc. GST):
+                  </TableCell>
+                  <TableCell className="text-right font-bold">
+                    {formatCurrency(calculateSubtotal(cartItems) * 1.1)}
+                  </TableCell>
+                </TableRow>
               </div>
               
               <div className="flex justify-between items-center mt-4">
@@ -310,6 +310,7 @@ const QuoteHandler: React.FC = () => {
                 </div>
                 <Button
                   variant="outline"
+                  className="bg-white hover:bg-blue-50 text-blue-600 border-blue-300"
                   onClick={handleCheckInventory}
                   disabled={isLoading || cartItems.filter(item => item.isSelected).length === 0}
                 >
