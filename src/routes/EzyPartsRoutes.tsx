@@ -14,7 +14,7 @@ const EzyPartsRoutes: React.FC = () => {
         <Route path="dashboard" element={<EzyPartsDashboard />} />
         <Route path="search" element={<VehicleSearch />} />
         <Route path="quote" element={<QuoteHandler />} />
-        <Route path="config" element={<EzyPartsDashboard />} /> {/* Using the dashboard for config too */}
+        <Route path="config" element={<EzyPartsDashboard />} /> {/* Dashboard handles configuration */}
       </Routes>
     </EzyPartsProvider>
   );

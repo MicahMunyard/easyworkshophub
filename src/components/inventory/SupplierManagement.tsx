@@ -8,6 +8,7 @@ import SupplierDialog from './supplier/SupplierDialog';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
 import { useEzyParts } from '@/contexts/EzyPartsContext';
+import ApiSupplierCard from './supplier/ApiSupplierCard';
 
 const SupplierManagement: React.FC = () => {
   const { suppliers, addSupplier, updateSupplier, deleteSupplier } = useSuppliers();
@@ -100,27 +101,31 @@ const SupplierManagement: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredSuppliers.map((supplier) => (
-            <div 
-              key={supplier.id} 
-              className="cursor-pointer"
-              onClick={() => handleSupplierOrder(supplier)}
-            >
-              <div className="p-4 rounded-lg border border-border hover:border-primary transition-colors">
-                <div className="flex items-center gap-4">
-                  {supplier.logoUrl && (
-                    <img 
-                      src={supplier.logoUrl} 
-                      alt={supplier.name} 
-                      className="w-16 h-12 object-contain"
-                    />
-                  )}
-                  <div>
-                    <h3 className="font-medium">{supplier.name}</h3>
-                    <p className="text-sm text-muted-foreground">{supplier.category}</p>
+            supplier.connectionType === 'api' ? (
+              <ApiSupplierCard key={supplier.id} supplier={supplier} />
+            ) : (
+              <div 
+                key={supplier.id} 
+                className="cursor-pointer"
+                onClick={() => handleSupplierOrder(supplier)}
+              >
+                <div className="p-4 rounded-lg border border-border hover:border-primary transition-colors">
+                  <div className="flex items-center gap-4">
+                    {supplier.logoUrl && (
+                      <img 
+                        src={supplier.logoUrl} 
+                        alt={supplier.name} 
+                        className="w-16 h-12 object-contain"
+                      />
+                    )}
+                    <div>
+                      <h3 className="font-medium">{supplier.name}</h3>
+                      <p className="text-sm text-muted-foreground">{supplier.category}</p>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )
           ))}
         </div>
       )}

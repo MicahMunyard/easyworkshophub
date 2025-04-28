@@ -26,12 +26,19 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({ supplier }) => {
       }
 
       try {
+        // Get environment-appropriate URL base
+        const baseUrl = isProduction ? 
+          'https://ezyparts.burson.com.au/burson/auth' : 
+          'https://ezypartsqa.burson.com.au/burson/auth';
+        
+        // Current origin for return URL
+        const origin = window.location.origin;
+        const returnUrl = `${origin}/ezyparts/quote`;
+        
         // Create a form to submit directly to EzyParts authentication endpoint
         const ezyPartsForm = document.createElement('form');
         ezyPartsForm.method = 'POST';
-        ezyPartsForm.action = isProduction ? 
-          'https://ezyparts.burson.com.au/burson/auth' : 
-          'https://ezypartsqa.burson.com.au/burson/auth';
+        ezyPartsForm.action = baseUrl;
         ezyPartsForm.target = '_self'; // Open in the same window
 
         // Add required fields
@@ -39,7 +46,7 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({ supplier }) => {
           accountId: credentials.accountId,
           username: credentials.username,
           password: credentials.password,
-          returnUrl: window.location.origin + '/inventory',
+          returnUrl: returnUrl,
           userAgent: 'Mozilla/5.0'
         };
 
