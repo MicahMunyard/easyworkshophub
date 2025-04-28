@@ -78,13 +78,15 @@ export const EzyPartsProvider: React.FC<{children: ReactNode}> = ({ children }) 
           { data: clientSecret },
           { data: accountId },
           { data: username },
-          { data: password }
+          { data: password },
+          { data: environment }
         ] = await Promise.all([
           supabase.functions.invoke('get-secret', { body: { name: 'EZYPARTS_CLIENT_ID' } }),
           supabase.functions.invoke('get-secret', { body: { name: 'EZYPARTS_CLIENT_SECRET' } }),
           supabase.functions.invoke('get-secret', { body: { name: 'EZYPARTS_ACCOUNT_ID' } }),
           supabase.functions.invoke('get-secret', { body: { name: 'EZYPARTS_USERNAME' } }),
-          supabase.functions.invoke('get-secret', { body: { name: 'EZYPARTS_PASSWORD' } })
+          supabase.functions.invoke('get-secret', { body: { name: 'EZYPARTS_PASSWORD' } }),
+          supabase.functions.invoke('get-secret', { body: { name: 'EZYPARTS_ENVIRONMENT' } })
         ]);
 
         if (clientId && clientSecret && accountId && username && password) {
@@ -101,6 +103,11 @@ export const EzyPartsProvider: React.FC<{children: ReactNode}> = ({ children }) 
             description: "Please configure your EzyParts credentials in the settings.",
             variant: "destructive"
           });
+        }
+
+        // Set the production flag based on the environment setting
+        if (environment) {
+          setIsProduction(environment === 'production');
         }
       } catch (error) {
         console.error('Error loading EzyParts credentials:', error);
@@ -119,6 +126,7 @@ export const EzyPartsProvider: React.FC<{children: ReactNode}> = ({ children }) 
   React.useEffect(() => {
     if (credentials.clientId && credentials.clientSecret) {
       try {
+        // Only pass isProduction
         const newClient = new EzyPartsClient(isProduction);
         setClient(newClient);
         setLastError(null);
@@ -137,13 +145,27 @@ export const EzyPartsProvider: React.FC<{children: ReactNode}> = ({ children }) 
     quoteUrl?: string;
     returnUrl?: string;
   }) => {
-    return EzyPartsClient.generateEzyPartsUrl({
+    const baseUrl = isProduction ? 
+      'https://ezyparts.burson.com.au/burson/auth' : 
+      'https://ezypartsqa.burson.com.au/burson/auth';
+      
+    return baseUrl + '?' + new URLSearchParams({
       accountId: credentials.accountId,
       username: credentials.username,
       password: credentials.password,
-      ...params,
-      isProduction
-    });
+      ...(params.regoNumber && { regoNumber: params.regoNumber }),
+      ...(params.state && { state: params.state }),
+      ...(params.isRegoSearch !== undefined && { isRegoSearch: params.isRegoSearch.toString() }),
+      ...(params.make && { make: params.make }),
+      ...(params.model && { model: params.model }),
+      ...(params.year && { year: params.year.toString() }),
+      ...(params.vehicleId && { vehicleId: params.vehicleId.toString() }),
+      ...(params.seriesChassis && { seriesChassis: params.seriesChassis }),
+      ...(params.engine && { engine: params.engine }),
+      ...(params.quoteUrl && { quoteUrl: params.quoteUrl }),
+      ...(params.returnUrl && { returnUrl: params.returnUrl }),
+      userAgent: 'Mozilla/5.0'
+    }).toString();
   }, [credentials, isProduction]);
 
   // Handle quote payload from HTML

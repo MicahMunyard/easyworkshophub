@@ -60,54 +60,64 @@ const VehicleSearch: React.FC = () => {
       }
     }
     
-    // Create a form to submit directly to EzyParts authentication endpoint
-    const ezyPartsForm = document.createElement('form');
-    ezyPartsForm.method = 'POST';
-    ezyPartsForm.action = isProduction ? 
+    // Create a proper form element that will be submitted
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = isProduction ? 
       'https://ezyparts.burson.com.au/burson/auth' : 
       'https://ezypartsqa.burson.com.au/burson/auth';
+    form.target = '_self'; // Open in same window
     
-    // Add all the necessary fields
-    const fields = {
-      accountId: credentials.accountId,
-      username: credentials.username,
-      password: credentials.password,
-      quoteUrl: `${baseUrl}/api/ezyparts/quote`,
-      returnUrl: returnUrl,
-      userAgent: 'Mozilla/5.0',
-      // Add the search-specific fields
-      ...(searchMethod === 'registration' ? {
-        regoNumber: registrationSearch.regoNumber,
-        state: registrationSearch.state,
-        isRegoSearch: 'true'
-      } : {
-        make: detailsSearch.make,
-        model: detailsSearch.model,
-        year: detailsSearch.year.toString(),
-        vehicleId: detailsSearch.vehicleId ? detailsSearch.vehicleId.toString() : '',
-        seriesChassis: detailsSearch.seriesChassis,
-        engine: detailsSearch.engine,
-        isRegoSearch: 'false'
-      })
-    };
-    
-    // Add all fields to the form
-    Object.entries(fields).forEach(([name, value]) => {
-      if (value) {
+    // Create and add the required fields
+    const createField = (name: string, value: string | number | boolean | undefined) => {
+      if (value !== undefined && value !== null && value !== '') {
         const input = document.createElement('input');
         input.type = 'hidden';
         input.name = name;
         input.value = value.toString();
-        ezyPartsForm.appendChild(input);
+        form.appendChild(input);
       }
+    };
+    
+    // Add mandatory authentication parameters
+    createField('accountId', credentials.accountId);
+    createField('username', credentials.username);
+    createField('password', credentials.password);
+    
+    // Add the quote URL and return URL
+    createField('quoteUrl', `${baseUrl}/api/ezyparts/quote`);
+    createField('returnUrl', returnUrl);
+    createField('userAgent', 'Mozilla/5.0');
+    
+    // Add search specific fields
+    if (searchMethod === 'registration') {
+      createField('regoNumber', registrationSearch.regoNumber);
+      createField('state', registrationSearch.state);
+      createField('isRegoSearch', true);
+    } else {
+      createField('make', detailsSearch.make);
+      createField('model', detailsSearch.model);
+      createField('year', detailsSearch.year);
+      createField('vehicleId', detailsSearch.vehicleId || undefined);
+      createField('seriesChassis', detailsSearch.seriesChassis);
+      createField('engine', detailsSearch.engine);
+      createField('isRegoSearch', false);
+    }
+    
+    console.log('Submitting EzyParts search form with parameters:', {
+      accountId: credentials.accountId,
+      searchType: searchMethod,
+      returnUrl
     });
     
-    console.log('Submitting form to EzyParts:', fields);
+    // Add to DOM, submit, and then remove
+    document.body.appendChild(form);
+    form.submit();
     
-    // Add the form to the body, submit it
-    document.body.appendChild(ezyPartsForm);
-    ezyPartsForm.submit();
-    
+    // Remove the form after submission
+    setTimeout(() => {
+      document.body.removeChild(form);
+    }, 100);
   }, [
     searchMethod, 
     registrationSearch, 

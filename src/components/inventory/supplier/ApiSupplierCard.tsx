@@ -6,6 +6,7 @@ import { Supplier } from '@/types/inventory';
 import { Link } from 'lucide-react';
 import { useEzyParts } from '@/contexts/EzyPartsContext';
 import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 interface ApiSupplierCardProps {
   supplier: Supplier;
@@ -14,12 +15,13 @@ interface ApiSupplierCardProps {
 const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({ supplier }) => {
   const { credentials, isProduction } = useEzyParts();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleConnect = () => {
     if (supplier.apiConfig?.type === 'bursons') {
       if (!credentials.accountId || !credentials.username || !credentials.password) {
         // If credentials aren't set, redirect to config page
-        window.location.href = '/ezyparts/config';
+        navigate('/ezyparts/config');
         return;
       }
 
@@ -30,6 +32,7 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({ supplier }) => {
         ezyPartsForm.action = isProduction ? 
           'https://ezyparts.burson.com.au/burson/auth' : 
           'https://ezypartsqa.burson.com.au/burson/auth';
+        ezyPartsForm.target = '_self'; // Open in the same window
 
         // Add required fields
         const fields = {
@@ -55,7 +58,11 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({ supplier }) => {
         document.body.appendChild(ezyPartsForm);
         ezyPartsForm.submit();
         
-        // Log for debugging
+        // Remove the form after submission
+        setTimeout(() => {
+          document.body.removeChild(ezyPartsForm);
+        }, 100);
+        
         console.log('Submitting form to EzyParts with credentials:', credentials.accountId);
         
       } catch (error) {
