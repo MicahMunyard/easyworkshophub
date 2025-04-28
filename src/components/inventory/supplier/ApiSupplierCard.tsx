@@ -12,7 +12,7 @@ interface ApiSupplierCardProps {
 }
 
 const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({ supplier }) => {
-  const { generateEzyPartsUrl, credentials } = useEzyParts();
+  const { credentials, isProduction } = useEzyParts();
   const { toast } = useToast();
 
   const handleConnect = () => {
@@ -24,23 +24,40 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({ supplier }) => {
       }
 
       try {
-        // Generate EzyParts URL for direct connection
-        const authUrl = generateEzyPartsUrl({
-          returnUrl: window.location.origin + '/inventory'
+        // Create a form to submit directly to EzyParts authentication endpoint
+        const ezyPartsForm = document.createElement('form');
+        ezyPartsForm.method = 'POST';
+        ezyPartsForm.action = isProduction ? 
+          'https://ezyparts.burson.com.au/burson/auth' : 
+          'https://ezypartsqa.burson.com.au/burson/auth';
+
+        // Add required fields
+        const fields = {
+          accountId: credentials.accountId,
+          username: credentials.username,
+          password: credentials.password,
+          returnUrl: window.location.origin + '/inventory',
+          userAgent: 'Mozilla/5.0'
+        };
+
+        // Add all fields to the form
+        Object.entries(fields).forEach(([name, value]) => {
+          if (value) {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = name;
+            input.value = value.toString();
+            ezyPartsForm.appendChild(input);
+          }
         });
+
+        // Add the form to the body, submit it
+        document.body.appendChild(ezyPartsForm);
+        ezyPartsForm.submit();
         
-        // Create a temporary DOM element to render the form
-        const container = document.createElement('div');
-        container.innerHTML = authUrl;
-        document.body.appendChild(container);
+        // Log for debugging
+        console.log('Submitting form to EzyParts with credentials:', credentials.accountId);
         
-        // Find and submit the form
-        const form = container.querySelector('form');
-        if (form) {
-          form.submit();
-        } else {
-          throw new Error('Failed to generate auth form');
-        }
       } catch (error) {
         console.error('Failed to connect to EzyParts:', error);
         toast({

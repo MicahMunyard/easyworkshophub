@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useEzyParts } from '@/contexts/EzyPartsContext';
@@ -13,7 +14,7 @@ import type { RegistrationSearch, DetailsSearch } from './types';
 
 const VehicleSearch: React.FC = () => {
   const navigate = useNavigate();
-  const { generateEzyPartsUrl, credentials } = useEzyParts();
+  const { credentials, isProduction } = useEzyParts();
   
   const isConfigured = credentials.clientId && 
                       credentials.clientSecret && 
@@ -39,62 +40,83 @@ const VehicleSearch: React.FC = () => {
   
   const handleSearch = useCallback(() => {
     if (!isConfigured) {
-      navigate('/config');
+      navigate('/ezyparts/config');
       return;
     }
     
     const baseUrl = window.location.origin;
     const returnUrl = returnToApp ? `${baseUrl}/ezyparts/quote` : '';
     
-    let url = '';
+    // Validate inputs
     if (searchMethod === 'registration') {
       if (!registrationSearch.regoNumber || !registrationSearch.state) {
         alert('Please enter both registration number and state.');
         return;
       }
-      
-      url = generateEzyPartsUrl({
-        ...registrationSearch,
-        quoteUrl: `${baseUrl}/api/ezyparts/quote`,
-        returnUrl
-      });
     } else {
       if (!detailsSearch.make || !detailsSearch.model) {
         alert('Please enter at least make and model.');
         return;
       }
-      
-      url = generateEzyPartsUrl({
-        ...detailsSearch,
-        quoteUrl: `${baseUrl}/api/ezyparts/quote`,
-        returnUrl
-      });
     }
     
-    const iframe = document.createElement('iframe');
-    iframe.style.display = 'none';
-    document.body.appendChild(iframe);
+    // Create a form to submit directly to EzyParts authentication endpoint
+    const ezyPartsForm = document.createElement('form');
+    ezyPartsForm.method = 'POST';
+    ezyPartsForm.action = isProduction ? 
+      'https://ezyparts.burson.com.au/burson/auth' : 
+      'https://ezypartsqa.burson.com.au/burson/auth';
     
-    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-    if (iframeDoc) {
-      iframeDoc.open();
-      iframeDoc.write(url);
-      iframeDoc.close();
-    }
+    // Add all the necessary fields
+    const fields = {
+      accountId: credentials.accountId,
+      username: credentials.username,
+      password: credentials.password,
+      quoteUrl: `${baseUrl}/api/ezyparts/quote`,
+      returnUrl: returnUrl,
+      userAgent: 'Mozilla/5.0',
+      // Add the search-specific fields
+      ...(searchMethod === 'registration' ? {
+        regoNumber: registrationSearch.regoNumber,
+        state: registrationSearch.state,
+        isRegoSearch: 'true'
+      } : {
+        make: detailsSearch.make,
+        model: detailsSearch.model,
+        year: detailsSearch.year.toString(),
+        vehicleId: detailsSearch.vehicleId ? detailsSearch.vehicleId.toString() : '',
+        seriesChassis: detailsSearch.seriesChassis,
+        engine: detailsSearch.engine,
+        isRegoSearch: 'false'
+      })
+    };
     
-    setTimeout(() => {
-      if (iframe && iframe.parentNode) {
-        iframe.parentNode.removeChild(iframe);
+    // Add all fields to the form
+    Object.entries(fields).forEach(([name, value]) => {
+      if (value) {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = name;
+        input.value = value.toString();
+        ezyPartsForm.appendChild(input);
       }
-    }, 5000);
+    });
+    
+    console.log('Submitting form to EzyParts:', fields);
+    
+    // Add the form to the body, submit it
+    document.body.appendChild(ezyPartsForm);
+    ezyPartsForm.submit();
+    
   }, [
     searchMethod, 
     registrationSearch, 
     detailsSearch, 
-    generateEzyPartsUrl, 
     navigate, 
     isConfigured,
-    returnToApp
+    returnToApp,
+    credentials,
+    isProduction
   ]);
 
   if (!isConfigured) {

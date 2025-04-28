@@ -119,7 +119,6 @@ export const EzyPartsProvider: React.FC<{children: ReactNode}> = ({ children }) 
   React.useEffect(() => {
     if (credentials.clientId && credentials.clientSecret) {
       try {
-        // Update to match EzyPartsClient constructor which takes isProduction as the only parameter
         const newClient = new EzyPartsClient(isProduction);
         setClient(newClient);
         setLastError(null);

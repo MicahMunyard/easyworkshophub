@@ -21,7 +21,7 @@ export const useEzyPartsApi = () => {
         console.warn('Failed to retrieve EzyParts environment setting, defaulting to staging');
       }
 
-      // Update to match constructor - pass only isProduction boolean
+      // Pass only isProduction boolean
       return new EzyPartsClient(isProduction === 'production');
     } catch (error) {
       console.error('Error initializing EzyParts client:', error);
