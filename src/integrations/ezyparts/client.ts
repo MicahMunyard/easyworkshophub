@@ -5,7 +5,8 @@ import {
   ProductInventoryResponse,
   OrderSubmissionRequest,
   OrderSubmissionResponse,
-  QuoteResponse
+  QuoteResponse,
+  VehicleSearchParams
 } from '@/types/ezyparts';
 import { getEzyPartsConfig } from './config';
 import { supabase } from '@/integrations/supabase/client';
@@ -180,82 +181,6 @@ export class EzyPartsClient {
   }
 
   /**
-   * Generate URL for invoking EzyParts in a browser
-   * 
-   * @param accountId The EzyParts account number
-   * @param username The EzyParts account username
-   * @param password The EzyParts account password
-   * @param vehicleId Optional: The EzyParts vehicle ID
-   * @param quoteUrl URL for sending of JSON payload (if empty, payload will be in webhook HTML page)
-   * @param returnUrl URL to return to after EzyParts session
-   * @param isProduction Whether to use production or staging environment
-   */
-  public static generateEzyPartsUrl({
-    accountId,
-    username,
-    password,
-    vehicleId = '',
-    regoNumber = '',
-    state = '',
-    make = '',
-    model = '',
-    year = '',
-    seriesChassis = '',
-    engine = '',
-    isRegoSearch = false,
-    quoteUrl = '',
-    returnUrl = '',
-    isProduction = false
-  }: {
-    accountId: string;
-    username: string;
-    password: string;
-    vehicleId?: string | number;
-    regoNumber?: string;
-    state?: string;
-    make?: string;
-    model?: string;
-    year?: string | number;
-    seriesChassis?: string;
-    engine?: string;
-    isRegoSearch?: boolean;
-    quoteUrl?: string;
-    returnUrl?: string;
-    isProduction?: boolean;
-  }): string {
-    const env = isProduction ? EzyPartsClient.PRODUCTION : EzyPartsClient.STAGING;
-    const baseUrl = `${env.WEB}/auth`;
-    
-    // Create a form that will be submitted automatically via JavaScript
-    return `
-      <html>
-        <body>
-          <form id="ezypartsForm" method="POST" action="${baseUrl}">
-            <input type="hidden" name="accountId" value="${accountId}" />
-            <input type="hidden" name="username" value="${username}" />
-            <input type="hidden" name="password" value="${password}" />
-            ${vehicleId ? `<input type="hidden" name="vehicleId" value="${vehicleId}" />` : ''}
-            ${regoNumber ? `<input type="hidden" name="regoNumber" value="${regoNumber}" />` : ''}
-            ${state ? `<input type="hidden" name="state" value="${state}" />` : ''}
-            ${make ? `<input type="hidden" name="make" value="${make}" />` : ''}
-            ${model ? `<input type="hidden" name="model" value="${model}" />` : ''}
-            ${year ? `<input type="hidden" name="year" value="${year}" />` : ''}
-            ${seriesChassis ? `<input type="hidden" name="seriesChassis" value="${seriesChassis}" />` : ''}
-            ${engine ? `<input type="hidden" name="engine" value="${engine}" />` : ''}
-            <input type="hidden" name="isRegoSearch" value="${isRegoSearch}" />
-            <input type="hidden" name="quoteUrl" value="${quoteUrl}" />
-            <input type="hidden" name="returnUrl" value="${returnUrl}" />
-            <input type="hidden" name="userAgent" value="Mozilla/5.0" />
-          </form>
-          <script>
-            document.getElementById('ezypartsForm').submit();
-          </script>
-        </body>
-      </html>
-    `;
-  }
-
-  /**
    * Parse the JSON payload from EzyParts webhook HTML page
    * For fat-client applications, this extracts the quote data from the HTML
    * 
@@ -263,18 +188,124 @@ export class EzyPartsClient {
    */
   public static parseQuotePayloadFromHtml(htmlContent: string): QuoteResponse | null {
     try {
-      // Find the hidden div with id "quotePayload"
-      const match = htmlContent.match(/<div[^>]*id=["']quotePayload["'][^>]*>(.*?)<\/div>/s);
-      if (!match || !match[1]) {
+      // Sanitize the input HTML to prevent XSS
+      const sanitizedHtml = htmlContent.replace(/[<>]/g, '');
+      
+      // Find the hidden div with id "quote-payload" as specified in documentation
+      const payloadMatch = sanitizedHtml.match(/id=["']quote-payload["'][^>]*>(.*?)\/div/);
+      
+      if (!payloadMatch || !payloadMatch[1]) {
+        console.error('Could not find quote-payload div in HTML content');
         return null;
       }
       
-      // Parse the JSON content
-      const jsonContent = match[1].trim();
-      return JSON.parse(jsonContent) as QuoteResponse;
+      // Parse and validate the JSON content
+      try {
+        const jsonContent = payloadMatch[1].trim();
+        const quoteResponse = JSON.parse(jsonContent) as QuoteResponse;
+        
+        // Validate required fields according to documentation
+        if (!this.validateQuoteResponse(quoteResponse)) {
+          console.error('Parsed quote payload is missing required fields');
+          return null;
+        }
+        
+        return quoteResponse;
+      } catch (parseError) {
+        console.error('Failed to parse quote JSON:', parseError);
+        return null;
+      }
     } catch (error) {
-      console.error('Error parsing quote payload from HTML:', error);
+      console.error('Error processing quote payload HTML:', error);
       return null;
     }
+  }
+
+  /**
+   * Validate the quote response has all required fields as per documentation
+   */
+  private static validateQuoteResponse(quote: any): quote is QuoteResponse {
+    return !!(
+      quote &&
+      quote.headers?.customerAccount &&
+      quote.headers?.customerName &&
+      quote.parts &&
+      Array.isArray(quote.parts)
+    );
+  }
+
+  /**
+   * Generate URL for invoking EzyParts in a browser
+   * This creates a form-based POST request as required by the documentation
+   */
+  public static generateEzyPartsUrl(params: VehicleSearchParams & {
+    accountId: string;
+    username: string;
+    password: string;
+    quoteUrl?: string;
+    returnUrl?: string;
+    isProduction?: boolean;
+  }): string {
+    const {
+      accountId,
+      username,
+      password,
+      vehicleId,
+      regoNumber,
+      state,
+      make,
+      model,
+      year,
+      seriesChassis,
+      engine,
+      isRegoSearch = false,
+      quoteUrl = '',
+      returnUrl = '',
+      isProduction = false
+    } = params;
+
+    const env = isProduction ? EzyPartsClient.PRODUCTION : EzyPartsClient.STAGING;
+    const baseUrl = `${env.WEB}/auth`;
+
+    // Create a strictly formatted form HTML that matches documentation requirements
+    const formHtml = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>EzyParts Redirect</title>
+        </head>
+        <body>
+          <form id="ezypartsForm" method="POST" action="${baseUrl}" style="display:none">
+            <input type="hidden" name="accountId" value="${encodeURIComponent(accountId)}" />
+            <input type="hidden" name="username" value="${encodeURIComponent(username)}" />
+            <input type="hidden" name="password" value="${encodeURIComponent(password)}" />
+            ${vehicleId ? `<input type="hidden" name="vehicleId" value="${encodeURIComponent(vehicleId.toString())}" />` : ''}
+            ${regoNumber ? `<input type="hidden" name="regoNumber" value="${encodeURIComponent(regoNumber)}" />` : ''}
+            ${state ? `<input type="hidden" name="state" value="${encodeURIComponent(state)}" />` : ''}
+            ${make ? `<input type="hidden" name="make" value="${encodeURIComponent(make)}" />` : ''}
+            ${model ? `<input type="hidden" name="model" value="${encodeURIComponent(model)}" />` : ''}
+            ${year ? `<input type="hidden" name="year" value="${encodeURIComponent(year.toString())}" />` : ''}
+            ${seriesChassis ? `<input type="hidden" name="seriesChassis" value="${encodeURIComponent(seriesChassis)}" />` : ''}
+            ${engine ? `<input type="hidden" name="engine" value="${encodeURIComponent(engine)}" />` : ''}
+            <input type="hidden" name="isRegoSearch" value="${isRegoSearch}" />
+            <input type="hidden" name="quoteUrl" value="${encodeURIComponent(quoteUrl)}" />
+            <input type="hidden" name="returnUrl" value="${encodeURIComponent(returnUrl)}" />
+            <input type="hidden" name="userAgent" value="Mozilla/5.0" />
+          </form>
+          <script>
+            window.onload = function() {
+              document.getElementById('ezypartsForm').submit();
+            }
+          </script>
+          <noscript>
+            <p>Please enable JavaScript to continue to EzyParts.</p>
+            <button type="submit" form="ezypartsForm">Continue to EzyParts</button>
+          </noscript>
+        </body>
+      </html>
+    `.trim();
+
+    return formHtml;
   }
 }
