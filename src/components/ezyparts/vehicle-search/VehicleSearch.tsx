@@ -66,7 +66,15 @@ const VehicleSearch: React.FC = () => {
     form.action = isProduction ? 
       'https://ezyparts.burson.com.au/burson/auth' : 
       'https://ezypartsqa.burson.com.au/burson/auth';
-    form.target = '_self'; // Open in same window
+    
+    // Use window.open to create a popup window for the EzyParts session
+    const ezyPartsWindow = window.open('', 'ezyPartsWindow', 'width=1024,height=768');
+    if (!ezyPartsWindow) {
+      alert('Popup blocked! Please allow popups for this site to use EzyParts.');
+      return;
+    }
+    
+    form.target = 'ezyPartsWindow'; // Target the popup window
     
     // Create and add the required fields
     const createField = (name: string, value: string | number | boolean | undefined) => {

@@ -35,11 +35,22 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({ supplier }) => {
         const origin = window.location.origin;
         const returnUrl = `${origin}/ezyparts/quote`;
         
+        // Open a popup window for EzyParts
+        const ezyPartsWindow = window.open('', 'ezyPartsWindow', 'width=1024,height=768');
+        if (!ezyPartsWindow) {
+          toast({
+            title: 'Popup Blocked',
+            description: 'Please allow popups for this site to connect to EzyParts.',
+            variant: 'destructive'
+          });
+          return;
+        }
+        
         // Create a form to submit directly to EzyParts authentication endpoint
         const ezyPartsForm = document.createElement('form');
         ezyPartsForm.method = 'POST';
         ezyPartsForm.action = baseUrl;
-        ezyPartsForm.target = '_self'; // Open in the same window
+        ezyPartsForm.target = 'ezyPartsWindow'; // Target the popup window
 
         // Add required fields
         const fields = {
@@ -71,6 +82,12 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({ supplier }) => {
         }, 100);
         
         console.log('Submitting form to EzyParts with credentials:', credentials.accountId);
+        
+        // Show a toast to inform the user
+        toast({
+          title: 'Connecting to EzyParts',
+          description: 'EzyParts will open in a new window. Please check your browser if it doesn\'t appear.'
+        });
         
       } catch (error) {
         console.error('Failed to connect to EzyParts:', error);
