@@ -18,9 +18,15 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({ supplier }) => {
   const handleConnect = () => {
     if (supplier.apiConfig?.type === 'bursons') {
       if (!credentials.accountId || !credentials.username || !credentials.password) {
+        console.log('Missing EzyParts credentials:', {
+          accountId: !!credentials.accountId,
+          username: !!credentials.username,
+          password: !!credentials.password
+        });
+        
         toast({
           title: 'Configuration Required',
-          description: 'Please configure your EzyParts credentials first.',
+          description: 'Please configure your BURSONS_OAUTH_NAME and BURSONS_OAUTH_SECRET first.',
           variant: 'destructive'
         });
         return;

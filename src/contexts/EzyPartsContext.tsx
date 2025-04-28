@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { EzyPartsClient } from '@/integrations/ezyparts/client';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import type { 
   ProductInventoryRequest, 
   ProductInventoryResponse,
@@ -73,34 +73,37 @@ export const EzyPartsProvider: React.FC<{children: ReactNode}> = ({ children }) 
   useEffect(() => {
     const loadCredentials = async () => {
       try {
+        // Get BURSONS_OAUTH_NAME and BURSONS_OAUTH_SECRET from Supabase secrets
         const [
-          { data: clientId },
-          { data: clientSecret },
-          { data: accountId },
-          { data: username },
-          { data: password },
+          { data: oauthName },
+          { data: oauthSecret },
           { data: environment }
         ] = await Promise.all([
-          supabase.functions.invoke('get-secret', { body: { name: 'EZYPARTS_CLIENT_ID' } }),
-          supabase.functions.invoke('get-secret', { body: { name: 'EZYPARTS_CLIENT_SECRET' } }),
-          supabase.functions.invoke('get-secret', { body: { name: 'EZYPARTS_ACCOUNT_ID' } }),
-          supabase.functions.invoke('get-secret', { body: { name: 'EZYPARTS_USERNAME' } }),
-          supabase.functions.invoke('get-secret', { body: { name: 'EZYPARTS_PASSWORD' } }),
+          supabase.functions.invoke('get-secret', { body: { name: 'BURSONS_OAUTH_NAME' } }),
+          supabase.functions.invoke('get-secret', { body: { name: 'BURSONS_OAUTH_SECRET' } }),
           supabase.functions.invoke('get-secret', { body: { name: 'EZYPARTS_ENVIRONMENT' } })
         ]);
 
-        if (clientId && clientSecret && accountId && username && password) {
+        console.log('Loaded EzyParts credentials:', { 
+          oauthName: oauthName ? 'set' : 'not set', 
+          oauthSecret: oauthSecret ? 'set' : 'not set', 
+          environment 
+        });
+
+        if (oauthName && oauthSecret) {
+          // Use the OAuth values as the required accountId, username, and password
+          // This mapping is necessary because the EzyParts integration expects these specific fields
           setCredentials({
-            clientId,
-            clientSecret,
-            accountId,
-            username,
-            password
+            accountId: oauthName,
+            username: oauthName,
+            password: oauthSecret,
+            clientId: oauthName,
+            clientSecret: oauthSecret
           });
         } else {
           toast({
             title: "EzyParts Setup Required",
-            description: "Please configure your EzyParts credentials in the settings.",
+            description: "Please configure your BURSONS_OAUTH_NAME and BURSONS_OAUTH_SECRET credentials.",
             variant: "destructive"
           });
         }
