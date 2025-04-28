@@ -26,6 +26,7 @@ const QuoteHandler: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { currentQuote, setCurrentQuote, checkInventory, submitOrder, lastError, isLoading } = useEzyParts();
+  const { credentials } = useEzyParts();
 
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [orderFormValues, setOrderFormValues] = useState<OrderFormValues>({
@@ -151,7 +152,7 @@ const QuoteHandler: React.FC = () => {
         headers: {
           customerAccount: currentQuote.headers.customerAccount,
           customerId: currentQuote.headers.customerId,
-          password: '',
+          password: credentials.password,
           locationId: currentQuote.headers.locationId,
           locationName: currentQuote.headers.locationName,
           customerName: currentQuote.headers.customerName,
@@ -192,7 +193,7 @@ const QuoteHandler: React.FC = () => {
     } catch (error) {
       console.error('Error submitting order:', error);
     }
-  }, [cartItems, currentQuote, orderFormValues, submitOrder]);
+  }, [cartItems, currentQuote, orderFormValues, credentials.password, submitOrder]);
 
   const totalItemCount = calculateTotalItems(cartItems);
   const totalQuantity = calculateTotalQuantity(cartItems);
