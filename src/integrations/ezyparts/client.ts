@@ -8,6 +8,7 @@ import {
   QuoteResponse
 } from '@/types/ezyparts';
 import { getEzyPartsConfig } from './config';
+import { supabase } from '@/integrations/supabase/client';
 
 /**
  * EzyParts API Client
@@ -21,10 +22,6 @@ export class EzyPartsClient {
   private authUrl: string;
   private token: string | null = null;
   private tokenExpiry: Date | null = null;
-  
-  // Credentials for the WMS
-  private clientId: string;
-  private clientSecret: string;
   
   // Production or Staging environment URLs
   public static PRODUCTION = {
@@ -42,14 +39,9 @@ export class EzyPartsClient {
   /**
    * Initialize the EzyParts API Client
    * 
-   * @param clientId The WMS username provided by Bapcor
-   * @param clientSecret The WMS password provided by Bapcor
    * @param isProduction Whether to use production or staging environment
    */
-  constructor(clientId: string, clientSecret: string, isProduction: boolean = false) {
-    this.clientId = clientId;
-    this.clientSecret = clientSecret;
-    
+  constructor(isProduction: boolean = false) {
     const env = isProduction ? EzyPartsClient.PRODUCTION : EzyPartsClient.STAGING;
     this.baseUrl = env.BASE;
     this.authUrl = env.AUTH;
@@ -72,13 +64,23 @@ export class EzyPartsClient {
       return this.token;
     }
     
-    // Request a new token
-    const params = new URLSearchParams();
-    params.append('grant_type', 'client_credentials');
-    params.append('client_id', this.clientId);
-    params.append('client_secret', this.clientSecret);
-    
     try {
+      // Get OAuth credentials from Supabase
+      const { data: { name: clientId }, error: clientIdError } = 
+        await supabase.functions.invoke('get-secret', { body: { name: 'BURSONS_OAUTH_NAME' } });
+      const { data: { secret: clientSecret }, error: clientSecretError } = 
+        await supabase.functions.invoke('get-secret', { body: { name: 'BURSONS_OAUTH_SECRET' } });
+
+      if (clientIdError || clientSecretError) {
+        throw new Error('Failed to retrieve Bursons OAuth credentials');
+      }
+
+      // Request a new token using OAuth credentials
+      const params = new URLSearchParams();
+      params.append('grant_type', 'client_credentials');
+      params.append('client_id', clientId);
+      params.append('client_secret', clientSecret);
+      
       const response = await axios.post<AuthResponse>(
         this.authUrl,
         params.toString(),
@@ -95,10 +97,11 @@ export class EzyPartsClient {
       const expiresInMs = (response.data.expires_in - 60) * 1000;
       this.tokenExpiry = new Date(Date.now() + expiresInMs);
       
+      console.log('Successfully obtained new Bursons OAuth token');
       return this.token;
     } catch (error) {
-      console.error('Error obtaining auth token:', error);
-      throw new Error('Failed to authenticate with EzyParts API');
+      console.error('Error obtaining Bursons auth token:', error);
+      throw new Error('Failed to authenticate with Bursons API');
     }
   }
 
