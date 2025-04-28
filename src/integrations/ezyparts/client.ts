@@ -1,4 +1,3 @@
-
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { 
   AuthResponse, 
@@ -114,24 +113,32 @@ export class EzyPartsClient {
     method: 'GET' | 'POST', 
     data?: any
   ): Promise<T> {
-    // Get auth token
-    const token = await this.getAuthToken();
-    
-    const config: AxiosRequestConfig = {
-      method,
-      url: `${this.baseUrl}${endpoint}`,
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      data: method === 'POST' ? data : undefined
-    };
-    
     try {
+      // Get auth token
+      const token = await this.getAuthToken();
+      
+      const config: AxiosRequestConfig = {
+        method,
+        url: `${this.baseUrl}${endpoint}`,
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        data: method === 'POST' ? data : undefined
+      };
+      
+      console.log('Making authenticated request:', {
+        endpoint,
+        method,
+        baseUrl: this.baseUrl,
+        hasData: !!data
+      });
+      
       const response = await this.axiosInstance.request<T>(config);
       return response.data;
-    } catch (error) {
-      console.error(`Error making ${method} request to ${endpoint}:`, error);
+    } catch (error: any) {
+      console.error(`Error making ${method} request to ${endpoint}:`, error?.response?.data || error);
       throw error;
     }
   }
@@ -142,7 +149,16 @@ export class EzyPartsClient {
    * @param request Product inventory request parameters
    */
   public async checkInventory(request: ProductInventoryRequest): Promise<ProductInventoryResponse> {
-    return this.makeAuthenticatedRequest<ProductInventoryResponse>('/inventory', 'POST', request);
+    try {
+      console.log('Checking inventory with request:', request);
+      const endpoint = '/v2/inventory';  // Updated endpoint as per documentation
+      const response = await this.makeAuthenticatedRequest<ProductInventoryResponse>(endpoint, 'POST', request);
+      console.log('Inventory check response:', response);
+      return response;
+    } catch (error) {
+      console.error('Failed to check inventory:', error);
+      throw new Error('Failed to check inventory. Please try again.');
+    }
   }
 
   /**
@@ -151,7 +167,16 @@ export class EzyPartsClient {
    * @param request Order submission request parameters
    */
   public async submitOrder(request: OrderSubmissionRequest): Promise<OrderSubmissionResponse> {
-    return this.makeAuthenticatedRequest<OrderSubmissionResponse>('', 'POST', request);
+    try {
+      console.log('Submitting order with request:', request);
+      const endpoint = '/v2/orders';  // Updated endpoint as per documentation
+      const response = await this.makeAuthenticatedRequest<OrderSubmissionResponse>(endpoint, 'POST', request);
+      console.log('Order submission response:', response);
+      return response;
+    } catch (error) {
+      console.error('Failed to submit order:', error);
+      throw new Error('Failed to submit order. Please try again.');
+    }
   }
 
   /**
