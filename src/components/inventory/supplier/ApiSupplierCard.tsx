@@ -17,10 +17,19 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({ supplier }) => {
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
 
-  // Check credentials when component mounts
+  // Check credentials when component mounts or when they change
   useEffect(() => {
     // Reset connection error state when credentials change
     setConnectionError(null);
+    
+    // Check credentials on mount and when they change
+    if (!credentials.accountId || !credentials.username || !credentials.password) {
+      console.warn('Credentials not fully configured:', {
+        accountId: credentials.accountId ? 'set' : 'not set',
+        username: credentials.username ? 'set' : 'not set',
+        password: credentials.password ? 'set' : 'not set'
+      });
+    }
   }, [credentials]);
 
   const handleConnect = () => {
@@ -41,12 +50,12 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({ supplier }) => {
         if (!credentials.username) missingFields.push('Username');
         if (!credentials.password) missingFields.push('Password');
         
-        const errorMessage = `Missing OAuth credentials in Supabase secrets: ${missingFields.join(', ')}. Please add BURSONS_OAUTH_NAME and BURSONS_OAUTH_SECRET secrets in your Supabase project.`;
+        const errorMessage = `Missing OAuth credentials: ${missingFields.join(', ')}. Please check that BURSONS_OAUTH_NAME and BURSONS_OAUTH_SECRET are correctly set in your Supabase secrets.`;
         console.error(errorMessage);
         
         toast({
           title: 'Configuration Required',
-          description: 'Missing OAuth credentials in Supabase secrets. Please check your configuration.',
+          description: 'Missing OAuth credentials. Please check that BURSONS_OAUTH_NAME and BURSONS_OAUTH_SECRET are set in Supabase secrets.',
           variant: 'destructive'
         });
         
@@ -157,7 +166,7 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({ supplier }) => {
           <Button 
             variant={supplier.apiConfig?.isConnected ? "outline" : "default"}
             onClick={handleConnect}
-            disabled={isConnecting}
+            disabled={isConnecting || !credentials.accountId || !credentials.password}
             className="flex items-center gap-2"
           >
             {isConnecting ? (
@@ -176,12 +185,17 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({ supplier }) => {
         
         <div className="text-sm space-y-2 mt-4">
           <p>{supplier.notes}</p>
-          {connectionError && (
+          {!credentials.accountId || !credentials.password ? (
+            <p className="text-amber-600 flex items-center gap-1 text-xs">
+              <AlertCircle className="h-3 w-3" />
+              OAuth credentials not configured. Check Supabase secrets: BURSONS_OAUTH_NAME and BURSONS_OAUTH_SECRET.
+            </p>
+          ) : connectionError ? (
             <p className="text-red-500 flex items-center gap-1 text-xs">
               <AlertCircle className="h-3 w-3" />
-              Connection error detected. Please check Supabase secrets.
+              {connectionError}
             </p>
-          )}
+          ) : null}
           {supplier.apiConfig?.isConnected && (
             <p className="text-green-600 font-medium">
               ✓ Integration active

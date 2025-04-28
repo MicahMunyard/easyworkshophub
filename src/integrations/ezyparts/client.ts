@@ -1,3 +1,4 @@
+
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { 
   AuthResponse, 
@@ -66,15 +67,21 @@ export class EzyPartsClient {
     }
     
     try {
-      // Get OAuth credentials from Supabase - Use standardized secret names
+      // Get OAuth credentials directly from the specified secret names
       const { data: clientId, error: clientIdError } = 
-        await supabase.functions.invoke('get-secret', { body: { name: 'EZYPARTS_CLIENT_ID' } });
+        await supabase.functions.invoke('get-secret', { body: { name: 'BURSONS_OAUTH_NAME' } });
       const { data: clientSecret, error: clientSecretError } = 
-        await supabase.functions.invoke('get-secret', { body: { name: 'EZYPARTS_CLIENT_SECRET' } });
+        await supabase.functions.invoke('get-secret', { body: { name: 'BURSONS_OAUTH_SECRET' } });
 
       if (clientIdError || clientSecretError || !clientId || !clientSecret) {
-        throw new Error('Failed to retrieve EzyParts OAuth credentials');
+        console.error('Failed to retrieve EzyParts OAuth credentials:', {
+          nameError: clientIdError,
+          secretError: clientSecretError
+        });
+        throw new Error('Failed to retrieve EzyParts OAuth credentials from BURSONS_OAUTH_NAME and BURSONS_OAUTH_SECRET');
       }
+
+      console.log('Successfully retrieved OAuth credentials from Supabase secrets');
 
       // Create form data with exact parameters as in spec
       const params = new URLSearchParams();
