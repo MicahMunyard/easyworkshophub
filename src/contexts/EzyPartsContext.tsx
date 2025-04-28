@@ -11,7 +11,6 @@ import type {
   VehicleSearchParams
 } from '@/types/ezyparts';
 
-// Define context type
 interface EzyPartsContextType {
   isProduction: boolean;
   setIsProduction: (value: boolean) => void;
@@ -43,10 +42,8 @@ interface EzyPartsContextType {
   isLoading: boolean;
 }
 
-// Create context with default values
 const EzyPartsContext = createContext<EzyPartsContextType>({} as EzyPartsContextType);
 
-// Context provider component
 export const EzyPartsProvider: React.FC<{children: ReactNode}> = ({ children }) => {
   const { toast } = useToast();
   const [isProduction, setIsProduction] = useState<boolean>(false);
@@ -68,11 +65,9 @@ export const EzyPartsProvider: React.FC<{children: ReactNode}> = ({ children }) 
   const [lastError, setLastError] = useState<Error | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  // Load credentials from Supabase secrets on mount
   useEffect(() => {
     const loadCredentials = async () => {
       try {
-        // Get OAuth credentials with consistent naming
         const { data: clientId, error: clientIdError } = 
           await supabase.functions.invoke('get-secret', { 
             body: { name: 'BURSONS_OAUTH_NAME' } 
@@ -83,15 +78,8 @@ export const EzyPartsProvider: React.FC<{children: ReactNode}> = ({ children }) 
             body: { name: 'BURSONS_OAUTH_SECRET' } 
           });
         
-        // Get the environment setting
         const { data: environment } = await supabase.functions.invoke('get-secret', { 
           body: { name: 'EZYPARTS_ENVIRONMENT' } 
-        });
-
-        console.log('Loaded EzyParts credentials:', { 
-          clientId: clientId ? 'set' : 'not set', 
-          clientSecret: clientSecret ? 'set' : 'not set', 
-          environment 
         });
 
         if (clientIdError || clientSecretError) {
@@ -112,11 +100,7 @@ export const EzyPartsProvider: React.FC<{children: ReactNode}> = ({ children }) 
           
           console.log('EzyParts credentials set successfully');
         } else {
-          console.error('Missing EzyParts OAuth credentials:', {
-            clientId: clientId ? 'set' : 'not set',
-            clientSecret: clientSecret ? 'set' : 'not set'
-          });
-          
+          console.error('Missing EzyParts OAuth credentials');
           toast({
             title: "EzyParts Setup Required",
             description: "Please configure your BURSONS_OAUTH_NAME and BURSONS_OAUTH_SECRET in Supabase secrets.",
@@ -140,12 +124,14 @@ export const EzyPartsProvider: React.FC<{children: ReactNode}> = ({ children }) 
     loadCredentials();
   }, [toast]);
 
-  // Initialize client when credentials change
   React.useEffect(() => {
     if (credentials.clientId && credentials.clientSecret) {
       try {
-        // Only pass isProduction
-        const newClient = new EzyPartsClient(isProduction);
+        const newClient = new EzyPartsClient(
+          isProduction,
+          credentials.clientId,
+          credentials.clientSecret
+        );
         setClient(newClient);
         setLastError(null);
       } catch (error) {
@@ -158,7 +144,6 @@ export const EzyPartsProvider: React.FC<{children: ReactNode}> = ({ children }) 
     }
   }, [credentials.clientId, credentials.clientSecret, isProduction]);
 
-  // Generate URL for invoking EzyParts
   const generateEzyPartsUrl = useCallback((params: VehicleSearchParams & { 
     quoteUrl?: string;
     returnUrl?: string;
@@ -186,12 +171,10 @@ export const EzyPartsProvider: React.FC<{children: ReactNode}> = ({ children }) 
     }).toString();
   }, [credentials, isProduction]);
 
-  // Handle quote payload from HTML
   const handleQuotePayload = useCallback((htmlContent: string): QuoteResponse | null => {
     return EzyPartsClient.parseQuotePayloadFromHtml(htmlContent);
   }, []);
 
-  // Check inventory
   const checkInventory = useCallback(async (
     request: Omit<ProductInventoryRequest, 'customerAccount' | 'customerId' | 'password'>
   ): Promise<ProductInventoryResponse> => {
@@ -221,7 +204,6 @@ export const EzyPartsProvider: React.FC<{children: ReactNode}> = ({ children }) 
     }
   }, [client, credentials]);
 
-  // Submit order
   const submitOrder = useCallback(async (
     request: Omit<OrderSubmissionRequest, 'headers.customerAccount' | 'headers.customerId' | 'headers.password'>
   ): Promise<OrderSubmissionResponse> => {
@@ -233,10 +215,8 @@ export const EzyPartsProvider: React.FC<{children: ReactNode}> = ({ children }) 
     setLastError(null);
 
     try {
-      // Deep copy to avoid mutating the original
       const fullRequest = JSON.parse(JSON.stringify(request)) as OrderSubmissionRequest;
       
-      // Set the credentials
       fullRequest.headers.customerAccount = credentials.accountId;
       fullRequest.headers.customerId = credentials.username;
       fullRequest.headers.password = credentials.password;
@@ -252,7 +232,6 @@ export const EzyPartsProvider: React.FC<{children: ReactNode}> = ({ children }) 
     }
   }, [client, credentials]);
 
-  // Context value
   const value: EzyPartsContextType = {
     isProduction,
     setIsProduction,
@@ -276,7 +255,6 @@ export const EzyPartsProvider: React.FC<{children: ReactNode}> = ({ children }) 
   );
 };
 
-// Custom hook to use the EzyParts context
 export const useEzyParts = (): EzyPartsContextType => {
   const context = useContext(EzyPartsContext);
   

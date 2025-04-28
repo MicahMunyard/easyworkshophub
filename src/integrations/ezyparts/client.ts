@@ -9,13 +9,9 @@ import {
   VehicleSearchParams
 } from '@/types/ezyparts';
 import { getEzyPartsConfig } from './config';
-import { supabase } from '@/integrations/supabase/client';
 
 /**
  * EzyParts API Client
- * 
- * Handles communication with the EzyParts API services according to the
- * EzyParts Integration with Workshop Management Systems Technical Specification v4.1
  */
 export class EzyPartsClient {
   private axiosInstance: AxiosInstance;
@@ -23,6 +19,8 @@ export class EzyPartsClient {
   private authUrl: string;
   private token: string | null = null;
   private tokenExpiry: Date | null = null;
+  private clientId: string;
+  private clientSecret: string;
   
   // Production or Staging environment URLs
   public static PRODUCTION = {
@@ -41,11 +39,19 @@ export class EzyPartsClient {
    * Initialize the EzyParts API Client
    * 
    * @param isProduction Whether to use production or staging environment
+   * @param clientId The OAuth client ID
+   * @param clientSecret The OAuth client secret
    */
-  constructor(isProduction: boolean = false) {
+  constructor(
+    isProduction: boolean = false,
+    clientId: string,
+    clientSecret: string
+  ) {
     const env = isProduction ? EzyPartsClient.PRODUCTION : EzyPartsClient.STAGING;
     this.baseUrl = env.BASE;
     this.authUrl = env.AUTH;
+    this.clientId = clientId;
+    this.clientSecret = clientSecret;
     
     this.axiosInstance = axios.create({
       timeout: 30000,
@@ -66,31 +72,11 @@ export class EzyPartsClient {
     }
     
     try {
-      // Get OAuth credentials with consistent naming
-      const { data: clientId, error: clientIdError } = 
-        await supabase.functions.invoke('get-secret', { 
-          body: { name: 'BURSONS_OAUTH_NAME' } 
-        });
-      const { data: clientSecret, error: clientSecretError } = 
-        await supabase.functions.invoke('get-secret', { 
-          body: { name: 'BURSONS_OAUTH_SECRET' } 
-        });
-
-      if (clientIdError || clientSecretError || !clientId || !clientSecret) {
-        console.error('Failed to retrieve EzyParts OAuth credentials:', {
-          clientIdError,
-          clientSecretError
-        });
-        throw new Error('Failed to retrieve EzyParts OAuth credentials from BURSONS_OAUTH_NAME and BURSONS_OAUTH_SECRET');
-      }
-
-      console.log('Successfully retrieved OAuth credentials from Supabase secrets');
-
       // Create form data with exact parameters as in spec
       const params = new URLSearchParams();
       params.append('grant_type', 'client_credentials');
-      params.append('client_id', clientId);
-      params.append('client_secret', clientSecret);
+      params.append('client_id', this.clientId);
+      params.append('client_secret', this.clientSecret);
       
       // Make the token request with form data as specified
       const response = await axios.post<AuthResponse>(
