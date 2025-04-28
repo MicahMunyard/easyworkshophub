@@ -1,12 +1,11 @@
 
 import React from 'react';
-import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Supplier } from '@/types/inventory';
 import { Link } from 'lucide-react';
 import { useEzyParts } from '@/contexts/EzyPartsContext';
 import { useToast } from '@/hooks/use-toast';
-import { useNavigate } from 'react-router-dom';
 
 interface ApiSupplierCardProps {
   supplier: Supplier;
@@ -15,13 +14,15 @@ interface ApiSupplierCardProps {
 const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({ supplier }) => {
   const { credentials, isProduction } = useEzyParts();
   const { toast } = useToast();
-  const navigate = useNavigate();
 
   const handleConnect = () => {
     if (supplier.apiConfig?.type === 'bursons') {
       if (!credentials.accountId || !credentials.username || !credentials.password) {
-        // If credentials aren't set, redirect to config page
-        navigate('/ezyparts/config');
+        toast({
+          title: 'Configuration Required',
+          description: 'Please configure your EzyParts credentials first.',
+          variant: 'destructive'
+        });
         return;
       }
 
@@ -104,7 +105,7 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({ supplier }) => {
 
   return (
     <Card className="flex flex-col">
-      <CardHeader className="pb-2">
+      <CardContent className="p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             {supplier.logoUrl && (
@@ -115,8 +116,8 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({ supplier }) => {
               />
             )}
             <div>
-              <CardTitle className="text-lg">{supplier.name}</CardTitle>
-              <CardDescription>{supplier.category}</CardDescription>
+              <h3 className="font-medium">{supplier.name}</h3>
+              <p className="text-sm text-muted-foreground">{supplier.category}</p>
             </div>
           </div>
           <Button 
@@ -128,10 +129,8 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({ supplier }) => {
             {supplier.apiConfig?.isConnected ? 'Connected' : 'Connect'}
           </Button>
         </div>
-      </CardHeader>
-      
-      <CardContent className="pb-2 pt-0">
-        <div className="text-sm space-y-2">
+        
+        <div className="text-sm space-y-2 mt-4">
           <p>{supplier.notes}</p>
           {supplier.apiConfig?.isConnected && (
             <p className="text-green-600 font-medium">
@@ -145,3 +144,4 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({ supplier }) => {
 };
 
 export default ApiSupplierCard;
+
