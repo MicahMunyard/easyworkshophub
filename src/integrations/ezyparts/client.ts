@@ -152,7 +152,7 @@ export class EzyPartsClient {
   public async checkInventory(request: ProductInventoryRequest): Promise<ProductInventoryResponse> {
     try {
       console.log('Checking inventory with request:', request);
-      const endpoint = '/v2/inventory';  // Updated endpoint as per documentation
+      const endpoint = '/inventory';  // Updated endpoint as per documentation
       const response = await this.makeAuthenticatedRequest<ProductInventoryResponse>(endpoint, 'POST', request);
       console.log('Inventory check response:', response);
       return response;
@@ -170,7 +170,7 @@ export class EzyPartsClient {
   public async submitOrder(request: OrderSubmissionRequest): Promise<OrderSubmissionResponse> {
     try {
       console.log('Submitting order with request:', request);
-      const endpoint = '/v2/orders';  // Updated endpoint as per documentation
+      const endpoint = '';  // Base endpoint for order submission as per documentation
       const response = await this.makeAuthenticatedRequest<OrderSubmissionResponse>(endpoint, 'POST', request);
       console.log('Order submission response:', response);
       return response;
@@ -191,11 +191,11 @@ export class EzyPartsClient {
       // Sanitize the input HTML to prevent XSS
       const sanitizedHtml = htmlContent.replace(/[<>]/g, '');
       
-      // Find the hidden div with id "quote-payload" as specified in documentation
-      const payloadMatch = sanitizedHtml.match(/id=["']quote-payload["'][^>]*>(.*?)\/div/);
+      // Find the hidden div with id "quotePayload" as specified in documentation
+      const payloadMatch = sanitizedHtml.match(/id=["']quotePayload["'][^>]*>(.*?)\/div/);
       
       if (!payloadMatch || !payloadMatch[1]) {
-        console.error('Could not find quote-payload div in HTML content');
+        console.error('Could not find quotePayload div in HTML content');
         return null;
       }
       
