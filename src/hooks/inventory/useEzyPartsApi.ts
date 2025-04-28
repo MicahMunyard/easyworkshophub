@@ -14,16 +14,15 @@ export const useEzyPartsApi = () => {
   
   const initializeClient = useCallback(async () => {
     try {
-      const { data: { clientId }, error: clientIdError } = 
-        await supabase.functions.invoke('get-secret', { body: { name: 'EZYPARTS_CLIENT_ID' } });
-      const { data: { clientSecret }, error: clientSecretError } = 
-        await supabase.functions.invoke('get-secret', { body: { name: 'EZYPARTS_CLIENT_SECRET' } });
-
-      if (clientIdError || clientSecretError) {
-        throw new Error('Failed to retrieve EzyParts credentials');
+      const { data: { isProduction }, error: envError } = 
+        await supabase.functions.invoke('get-secret', { body: { name: 'EZYPARTS_ENVIRONMENT' } });
+      
+      if (envError) {
+        console.warn('Failed to retrieve EzyParts environment setting, defaulting to staging');
       }
 
-      return new EzyPartsClient(clientId, clientSecret, process.env.NODE_ENV === 'production');
+      // Update to match constructor - pass only isProduction boolean
+      return new EzyPartsClient(isProduction === 'production');
     } catch (error) {
       console.error('Error initializing EzyParts client:', error);
       throw error;
