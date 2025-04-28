@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useEzyParts } from '../../../contexts/EzyPartsContext';
@@ -20,6 +21,7 @@ import { MinusCircle, PlusCircle, SendHorizontal } from 'lucide-react';
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { OrderSubmissionRequest } from '@/types/ezyparts';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
 const QuoteHandler: React.FC = () => {
   const navigate = useNavigate();
@@ -43,8 +45,9 @@ const QuoteHandler: React.FC = () => {
     if (quoteId && !currentQuote) {
       const fetchQuote = async () => {
         try {
+          // Use a type assertion to tell TypeScript that 'ezyparts_quotes' is a valid table
           const { data, error } = await supabase
-            .from('ezyparts_quotes')
+            .from('ezyparts_quotes' as any)
             .select('quote_data')
             .eq('id', quoteId)
             .single();
@@ -206,8 +209,8 @@ const QuoteHandler: React.FC = () => {
   return (
     <div className="container mx-auto py-6">
       <h1 className="text-2xl font-bold mb-6">
-        EzyParts Quote: {currentQuote.headers.make} {currentQuote.headers.model}
-        {currentQuote.headers.rego && ` (${currentQuote.headers.rego})`}
+        EzyParts Quote: {currentQuote?.headers.make} {currentQuote?.headers.model}
+        {currentQuote?.headers.rego && ` (${currentQuote.headers.rego})`}
       </h1>
 
       {lastError && (
@@ -262,7 +265,7 @@ const QuoteHandler: React.FC = () => {
             <CardHeader className="pb-3">
               <CardTitle>Selected Parts</CardTitle>
               <CardDescription>
-                Parts selected from EzyParts for {currentQuote.headers.make} {currentQuote.headers.model}
+                Parts selected from EzyParts for {currentQuote?.headers.make} {currentQuote?.headers.model}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -329,7 +332,7 @@ const QuoteHandler: React.FC = () => {
         </div>
       </div>
       
-      {currentQuote.jobSheet && currentQuote.jobSheet.serviceOperations && currentQuote.jobSheet.serviceOperations.length > 0 && (
+      {currentQuote?.jobSheet && currentQuote.jobSheet.serviceOperations && currentQuote.jobSheet.serviceOperations.length > 0 && (
         <Card className="mt-6">
           <CardHeader>
             <CardTitle>Vehicle Service Information</CardTitle>

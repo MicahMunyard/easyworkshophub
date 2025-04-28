@@ -66,14 +66,14 @@ export class EzyPartsClient {
     }
     
     try {
-      // Get OAuth credentials from Supabase
+      // Get OAuth credentials from Supabase - Use standardized secret names
       const { data: clientId, error: clientIdError } = 
-        await supabase.functions.invoke('get-secret', { body: { name: 'BURSONS_OAUTH_NAME' } });
+        await supabase.functions.invoke('get-secret', { body: { name: 'EZYPARTS_CLIENT_ID' } });
       const { data: clientSecret, error: clientSecretError } = 
-        await supabase.functions.invoke('get-secret', { body: { name: 'BURSONS_OAUTH_SECRET' } });
+        await supabase.functions.invoke('get-secret', { body: { name: 'EZYPARTS_CLIENT_SECRET' } });
 
       if (clientIdError || clientSecretError || !clientId || !clientSecret) {
-        throw new Error('Failed to retrieve Bursons OAuth credentials');
+        throw new Error('Failed to retrieve EzyParts OAuth credentials');
       }
 
       // Construct the form data for token request as specified in documentation
@@ -98,11 +98,11 @@ export class EzyPartsClient {
       const expiresInMs = (response.data.expires_in - 60) * 1000;
       this.tokenExpiry = new Date(Date.now() + expiresInMs);
       
-      console.log('Successfully obtained new Bursons OAuth token');
+      console.log('Successfully obtained new EzyParts OAuth token');
       return this.token;
     } catch (error) {
-      console.error('Error obtaining Bursons auth token:', error);
-      throw new Error('Failed to authenticate with Bursons API');
+      console.error('Error obtaining EzyParts auth token:', error);
+      throw new Error('Failed to authenticate with EzyParts API');
     }
   }
 
