@@ -491,6 +491,30 @@ export type Database = {
         }
         Relationships: []
       }
+      ezyparts_quotes: {
+        Row: {
+          created_at: string | null
+          id: string
+          quote_data: Json
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          quote_data: Json
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          quote_data?: Json
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       jobs: {
         Row: {
           assigned_to: string

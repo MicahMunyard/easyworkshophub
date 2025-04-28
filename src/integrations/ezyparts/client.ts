@@ -76,13 +76,13 @@ export class EzyPartsClient {
         throw new Error('Failed to retrieve EzyParts OAuth credentials');
       }
 
-      // Construct the form data for token request as specified in documentation
+      // Create form data with exact parameters as in spec
       const params = new URLSearchParams();
-      params.append('grant_type', 'client_credentials'); // As specified in docs
+      params.append('grant_type', 'client_credentials');
       params.append('client_id', clientId);
       params.append('client_secret', clientSecret);
       
-      // Make the token request
+      // Make the token request with form data as specified
       const response = await axios.post<AuthResponse>(
         this.authUrl,
         params.toString(),

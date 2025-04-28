@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useEzyParts } from '../../../contexts/EzyPartsContext';
@@ -45,23 +44,19 @@ const QuoteHandler: React.FC = () => {
     if (quoteId && !currentQuote) {
       const fetchQuote = async () => {
         try {
-          // Cast the table name to any to bypass TypeScript's type checking
-          const response = await supabase
-            .from('ezyparts_quotes' as any)
+          const { data, error } = await supabase
+            .from('ezyparts_quotes')
             .select('quote_data')
             .eq('id', quoteId)
             .single();
           
-          if (response.error) {
-            throw response.error;
+          if (error) {
+            throw error;
           }
           
-          if (response.data && response.data.quote_data) {
-            // Set the quote data in the context
-            setCurrentQuote(response.data.quote_data);
-            
-            // Store in localStorage for persistence
-            localStorage.setItem('ezyparts-current-quote', JSON.stringify(response.data.quote_data));
+          if (data && data.quote_data) {
+            setCurrentQuote(data.quote_data);
+            localStorage.setItem('ezyparts-current-quote', JSON.stringify(data.quote_data));
           }
         } catch (error) {
           console.error('Error fetching quote:', error);
