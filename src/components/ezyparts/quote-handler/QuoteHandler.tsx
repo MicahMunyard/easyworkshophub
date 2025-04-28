@@ -53,7 +53,7 @@ const QuoteHandler: React.FC = () => {
           }
           
           if (data && data.quote_data) {
-            const quoteData = data.quote_data as QuoteResponse;
+            const quoteData = data.quote_data as unknown as QuoteResponse;
             setCurrentQuote(quoteData);
             localStorage.setItem('ezyparts-current-quote', JSON.stringify(quoteData));
           }

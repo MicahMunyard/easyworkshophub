@@ -190,21 +190,21 @@ export class EzyPartsClient {
    */
   public static parseQuotePayloadFromHtml(htmlContent: string): QuoteResponse | null {
     try {
-      // Sanitize the input HTML to prevent XSS
-      const sanitizedHtml = htmlContent.replace(/[<>]/g, '');
+      // Create a virtual DOM to properly parse the HTML
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(htmlContent, 'text/html');
       
-      // Find the hidden div with id "quotePayload" as specified in documentation
-      const payloadMatch = sanitizedHtml.match(/id=["']quotePayload["'][^>]*>(.*?)\/div/);
+      // Find the hidden div with ID "quotePayload" as specified in the PDF
+      const payloadDiv = doc.getElementById('quotePayload');
       
-      if (!payloadMatch || !payloadMatch[1]) {
+      if (!payloadDiv) {
         console.error('Could not find quotePayload div in HTML content');
         return null;
       }
       
-      // Parse and validate the JSON content
       try {
-        const jsonContent = payloadMatch[1].trim();
-        const quoteResponse = JSON.parse(jsonContent) as QuoteResponse;
+        // Parse the JSON content from the div's text content
+        const quoteResponse = JSON.parse(payloadDiv.textContent || '') as QuoteResponse;
         
         // Validate required fields according to documentation
         if (!this.validateQuoteResponse(quoteResponse)) {
