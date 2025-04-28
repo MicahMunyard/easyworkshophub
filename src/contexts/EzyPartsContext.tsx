@@ -72,14 +72,13 @@ export const EzyPartsProvider: React.FC<{children: ReactNode}> = ({ children }) 
   useEffect(() => {
     const loadCredentials = async () => {
       try {
-        // Get OAuth name directly from the exact secret name specified
-        const { data: oauthName, error: nameError } = 
+        // Get OAuth credentials with consistent naming
+        const { data: clientId, error: clientIdError } = 
           await supabase.functions.invoke('get-secret', { 
             body: { name: 'BURSONS_OAUTH_NAME' } 
           });
         
-        // Get OAuth secret directly from the exact secret name specified  
-        const { data: oauthSecret, error: secretError } = 
+        const { data: clientSecret, error: clientSecretError } = 
           await supabase.functions.invoke('get-secret', { 
             body: { name: 'BURSONS_OAUTH_SECRET' } 
           });
@@ -90,43 +89,41 @@ export const EzyPartsProvider: React.FC<{children: ReactNode}> = ({ children }) 
         });
 
         console.log('Loaded EzyParts credentials:', { 
-          oauthName: oauthName ? 'set' : 'not set', 
-          oauthSecret: oauthSecret ? 'set' : 'not set', 
+          clientId: clientId ? 'set' : 'not set', 
+          clientSecret: clientSecret ? 'set' : 'not set', 
           environment 
         });
 
-        if (nameError || secretError) {
+        if (clientIdError || clientSecretError) {
           console.error('Errors retrieving credentials:', {
-            nameError,
-            secretError
+            clientIdError,
+            clientSecretError
           });
         }
 
-        if (oauthName && oauthSecret) {
-          // Use the OAuth values as the required accountId, username, and password
+        if (clientId && clientSecret) {
           setCredentials({
-            accountId: oauthName,
-            username: oauthName,
-            password: oauthSecret,
-            clientId: oauthName,
-            clientSecret: oauthSecret
+            accountId: clientId,
+            username: clientId,
+            password: clientSecret,
+            clientId: clientId,
+            clientSecret: clientSecret
           });
           
           console.log('EzyParts credentials set successfully');
         } else {
           console.error('Missing EzyParts OAuth credentials:', {
-            name: oauthName ? 'set' : 'not set',
-            secret: oauthSecret ? 'set' : 'not set'
+            clientId: clientId ? 'set' : 'not set',
+            clientSecret: clientSecret ? 'set' : 'not set'
           });
           
           toast({
             title: "EzyParts Setup Required",
-            description: `Please configure your BURSONS_OAUTH_NAME and BURSONS_OAUTH_SECRET in Supabase secrets.`,
+            description: "Please configure your BURSONS_OAUTH_NAME and BURSONS_OAUTH_SECRET in Supabase secrets.",
             variant: "destructive"
           });
         }
 
-        // Set the production flag based on the environment setting
         if (environment) {
           setIsProduction(environment === 'production');
         }

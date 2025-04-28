@@ -1,4 +1,3 @@
-
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { 
   AuthResponse, 
@@ -67,16 +66,20 @@ export class EzyPartsClient {
     }
     
     try {
-      // Get OAuth credentials directly from the specified secret names
+      // Get OAuth credentials with consistent naming
       const { data: clientId, error: clientIdError } = 
-        await supabase.functions.invoke('get-secret', { body: { name: 'BURSONS_OAUTH_NAME' } });
+        await supabase.functions.invoke('get-secret', { 
+          body: { name: 'BURSONS_OAUTH_NAME' } 
+        });
       const { data: clientSecret, error: clientSecretError } = 
-        await supabase.functions.invoke('get-secret', { body: { name: 'BURSONS_OAUTH_SECRET' } });
+        await supabase.functions.invoke('get-secret', { 
+          body: { name: 'BURSONS_OAUTH_SECRET' } 
+        });
 
       if (clientIdError || clientSecretError || !clientId || !clientSecret) {
         console.error('Failed to retrieve EzyParts OAuth credentials:', {
-          nameError: clientIdError,
-          secretError: clientSecretError
+          clientIdError,
+          clientSecretError
         });
         throw new Error('Failed to retrieve EzyParts OAuth credentials from BURSONS_OAUTH_NAME and BURSONS_OAUTH_SECRET');
       }
