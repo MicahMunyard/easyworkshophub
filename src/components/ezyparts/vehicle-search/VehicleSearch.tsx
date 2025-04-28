@@ -10,11 +10,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RegistrationSearchForm } from './RegistrationSearchForm';
 import { DetailsSearchForm } from './DetailsSearchForm';
 import { ConfigurationAlert } from './ConfigurationAlert';
+import { useToast } from '@/hooks/use-toast';
 import type { RegistrationSearch, DetailsSearch } from './types';
 
 const VehicleSearch: React.FC = () => {
   const navigate = useNavigate();
   const { credentials, isProduction } = useEzyParts();
+  const { toast } = useToast();
   
   const isConfigured = credentials.clientId && 
                       credentials.clientSecret && 
@@ -44,18 +46,28 @@ const VehicleSearch: React.FC = () => {
       return;
     }
     
+    // Get the full URL for the quote endpoint
     const baseUrl = window.location.origin;
+    const quoteUrl = `${baseUrl}/api/ezyparts-quote`;
     const returnUrl = returnToApp ? `${baseUrl}/ezyparts/quote` : '';
     
     // Validate inputs
     if (searchMethod === 'registration') {
       if (!registrationSearch.regoNumber || !registrationSearch.state) {
-        alert('Please enter both registration number and state.');
+        toast({
+          title: 'Missing Information',
+          description: 'Please enter both registration number and state.',
+          variant: 'destructive'
+        });
         return;
       }
     } else {
       if (!detailsSearch.make || !detailsSearch.model) {
-        alert('Please enter at least make and model.');
+        toast({
+          title: 'Missing Information',
+          description: 'Please enter at least make and model.',
+          variant: 'destructive' 
+        });
         return;
       }
     }
@@ -70,7 +82,11 @@ const VehicleSearch: React.FC = () => {
     // Use window.open to create a popup window for the EzyParts session
     const ezyPartsWindow = window.open('', 'ezyPartsWindow', 'width=1024,height=768');
     if (!ezyPartsWindow) {
-      alert('Popup blocked! Please allow popups for this site to use EzyParts.');
+      toast({
+        title: 'Popup Blocked',
+        description: 'Please allow popups for this site to use EzyParts.',
+        variant: 'destructive'
+      });
       return;
     }
     
@@ -93,7 +109,7 @@ const VehicleSearch: React.FC = () => {
     createField('password', credentials.password);
     
     // Add the quote URL and return URL
-    createField('quoteUrl', `${baseUrl}/api/ezyparts/quote`);
+    createField('quoteUrl', quoteUrl);
     createField('returnUrl', returnUrl);
     createField('userAgent', 'Mozilla/5.0');
     
@@ -115,6 +131,7 @@ const VehicleSearch: React.FC = () => {
     console.log('Submitting EzyParts search form with parameters:', {
       accountId: credentials.accountId,
       searchType: searchMethod,
+      quoteUrl,
       returnUrl
     });
     
@@ -126,6 +143,11 @@ const VehicleSearch: React.FC = () => {
     setTimeout(() => {
       document.body.removeChild(form);
     }, 100);
+    
+    toast({
+      title: 'Connecting to EzyParts',
+      description: 'EzyParts will open in a new window. Please check your browser if it doesn\'t appear.'
+    });
   }, [
     searchMethod, 
     registrationSearch, 
@@ -134,7 +156,8 @@ const VehicleSearch: React.FC = () => {
     isConfigured,
     returnToApp,
     credentials,
-    isProduction
+    isProduction,
+    toast
   ]);
 
   if (!isConfigured) {

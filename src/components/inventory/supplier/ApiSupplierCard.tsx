@@ -34,6 +34,7 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({ supplier }) => {
         // Current origin for return URL
         const origin = window.location.origin;
         const returnUrl = `${origin}/ezyparts/quote`;
+        const quoteUrl = `${origin}/api/ezyparts-quote`;
         
         // Open a popup window for EzyParts
         const ezyPartsWindow = window.open('', 'ezyPartsWindow', 'width=1024,height=768');
@@ -57,6 +58,7 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({ supplier }) => {
           accountId: credentials.accountId,
           username: credentials.username,
           password: credentials.password,
+          quoteUrl: quoteUrl,
           returnUrl: returnUrl,
           userAgent: 'Mozilla/5.0'
         };

@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useEzyParts } from '../../../contexts/EzyPartsContext';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { supabase } from '@/integrations/supabase/client';
 import { RefreshCw, AlertCircle } from 'lucide-react';
 import { CartTable } from './CartTable';
 import { OrderForm } from './OrderForm';
@@ -23,7 +23,8 @@ import { OrderSubmissionRequest } from '@/types/ezyparts';
 
 const QuoteHandler: React.FC = () => {
   const navigate = useNavigate();
-  const { currentQuote, checkInventory, submitOrder, lastError, isLoading } = useEzyParts();
+  const [searchParams] = useSearchParams();
+  const { currentQuote, setCurrentQuote, checkInventory, submitOrder, lastError, isLoading } = useEzyParts();
 
   // State management
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -35,25 +36,38 @@ const QuoteHandler: React.FC = () => {
   });
   const [orderResponse, setOrderResponse] = useState<OrderResponseState | null>(null);
 
-  // Initialize cart items from quote
+  // Check for quote_id in the URL and fetch the quote data
   useEffect(() => {
-    if (currentQuote?.parts) {
-      setCartItems(
-        currentQuote.parts.map(part => ({
-          ...part,
-          isSelected: true,
-          qtyChanged: false
-        }))
-      );
+    const quoteId = searchParams.get('quote_id');
+    
+    if (quoteId && !currentQuote) {
+      const fetchQuote = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('ezyparts_quotes')
+            .select('quote_data')
+            .eq('id', quoteId)
+            .single();
+          
+          if (error) {
+            throw error;
+          }
+          
+          if (data && data.quote_data) {
+            // Set the quote data in the context
+            setCurrentQuote(data.quote_data);
+            
+            // Store in localStorage for persistence
+            localStorage.setItem('ezyparts-current-quote', JSON.stringify(data.quote_data));
+          }
+        } catch (error) {
+          console.error('Error fetching quote:', error);
+        }
+      };
       
-      if (currentQuote.headers.purchaseOrderNumber) {
-        setOrderFormValues(prev => ({
-          ...prev,
-          purchaseOrder: currentQuote.headers.purchaseOrderNumber
-        }));
-      }
+      fetchQuote();
     }
-  }, [currentQuote]);
+  }, [searchParams, currentQuote, setCurrentQuote]);
 
   // If there's no quote, show the no quote available message
   if (!currentQuote) {
