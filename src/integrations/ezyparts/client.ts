@@ -19,10 +19,7 @@ export class EzyPartsClient {
   private authUrl: string;
   private token: string | null = null;
   private tokenExpiry: Date | null = null;
-  private clientId: string;
-  private clientSecret: string;
   
-  // Production or Staging environment URLs
   public static PRODUCTION = {
     BASE: 'https://api.ezyparts.burson.com.au/bapcorocc/v2/EzyParts/gms',
     AUTH: 'https://api.ezyparts.burson.com.au/authorizationserver/oauth/token',
@@ -35,23 +32,14 @@ export class EzyPartsClient {
     WEB: 'https://ezypartsqa.burson.com.au/burson'
   };
 
-  /**
-   * Initialize the EzyParts API Client
-   * 
-   * @param isProduction Whether to use production or staging environment
-   * @param clientId The OAuth client ID
-   * @param clientSecret The OAuth client secret
-   */
   constructor(
     isProduction: boolean = false,
-    clientId: string,
-    clientSecret: string
+    private clientId?: string,
+    private clientSecret?: string
   ) {
     const env = isProduction ? EzyPartsClient.PRODUCTION : EzyPartsClient.STAGING;
     this.baseUrl = env.BASE;
     this.authUrl = env.AUTH;
-    this.clientId = clientId;
-    this.clientSecret = clientSecret;
     
     this.axiosInstance = axios.create({
       timeout: 30000,
@@ -61,14 +49,14 @@ export class EzyPartsClient {
     });
   }
 
-  /**
-   * Get the OAuth authentication token
-   * Will fetch a new token if one doesn't exist or the current one is expired
-   */
   private async getAuthToken(): Promise<string> {
     // Check if we have a valid token
     if (this.token && this.tokenExpiry && new Date() < this.tokenExpiry) {
       return this.token;
+    }
+    
+    if (!this.clientId || !this.clientSecret) {
+      throw new Error('OAuth credentials not provided to EzyPartsClient');
     }
     
     try {
