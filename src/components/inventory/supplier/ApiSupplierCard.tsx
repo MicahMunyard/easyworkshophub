@@ -1,9 +1,9 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Supplier } from '@/types/inventory';
-import { Link, Loader2 } from 'lucide-react';
+import { Link, Loader2, AlertCircle } from 'lucide-react';
 import { useEzyParts } from '@/contexts/EzyPartsContext';
 import { useToast } from '@/hooks/use-toast';
 
@@ -15,23 +15,42 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({ supplier }) => {
   const { credentials, isProduction } = useEzyParts();
   const { toast } = useToast();
   const [isConnecting, setIsConnecting] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+
+  // Check credentials when component mounts
+  useEffect(() => {
+    // Reset connection error state when credentials change
+    setConnectionError(null);
+  }, [credentials]);
 
   const handleConnect = () => {
     if (supplier.apiConfig?.type === 'bursons') {
       setIsConnecting(true);
+      setConnectionError(null);
+      
+      // Debug credentials to console
+      console.log('EzyParts credentials check:', {
+        accountId: credentials.accountId ? 'set' : 'not set',
+        username: credentials.username ? 'set' : 'not set',
+        password: credentials.password ? 'set' : 'not set'
+      });
       
       if (!credentials.accountId || !credentials.username || !credentials.password) {
-        console.log('Missing EzyParts credentials:', {
-          accountId: !!credentials.accountId,
-          username: !!credentials.username,
-          password: !!credentials.password
-        });
+        const missingFields = [];
+        if (!credentials.accountId) missingFields.push('Account ID');
+        if (!credentials.username) missingFields.push('Username');
+        if (!credentials.password) missingFields.push('Password');
+        
+        const errorMessage = `Missing OAuth credentials in Supabase secrets: ${missingFields.join(', ')}. Please add BURSONS_OAUTH_NAME and BURSONS_OAUTH_SECRET secrets in your Supabase project.`;
+        console.error(errorMessage);
         
         toast({
           title: 'Configuration Required',
           description: 'Missing OAuth credentials in Supabase secrets. Please check your configuration.',
           variant: 'destructive'
         });
+        
+        setConnectionError(errorMessage);
         setIsConnecting(false);
         return;
       }
@@ -112,6 +131,7 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({ supplier }) => {
           description: 'Unable to connect to EzyParts. Please check your configuration.',
           variant: 'destructive'
         });
+        setConnectionError(`Connection error: ${error instanceof Error ? error.message : 'Unknown error'}`);
         setIsConnecting(false);
       }
     }
@@ -156,6 +176,12 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({ supplier }) => {
         
         <div className="text-sm space-y-2 mt-4">
           <p>{supplier.notes}</p>
+          {connectionError && (
+            <p className="text-red-500 flex items-center gap-1 text-xs">
+              <AlertCircle className="h-3 w-3" />
+              Connection error detected. Please check Supabase secrets.
+            </p>
+          )}
           {supplier.apiConfig?.isConnected && (
             <p className="text-green-600 font-medium">
               ✓ Integration active
