@@ -14,7 +14,7 @@ export const useEzyPartsApi = () => {
   
   const initializeClient = useCallback(async () => {
     try {
-      const { data, error: envError } = 
+      const { data: environment, error: envError } = 
         await supabase.functions.invoke('get-secret', { body: { name: 'EZYPARTS_ENVIRONMENT' } });
       
       if (envError) {
@@ -22,7 +22,7 @@ export const useEzyPartsApi = () => {
       }
 
       // Pass only isProduction boolean
-      const isProduction = data === 'production';
+      const isProduction = environment === 'production';
       return new EzyPartsClient(isProduction);
     } catch (error) {
       console.error('Error initializing EzyParts client:', error);

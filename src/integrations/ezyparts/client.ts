@@ -1,3 +1,4 @@
+
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { 
   AuthResponse, 
@@ -66,21 +67,22 @@ export class EzyPartsClient {
     
     try {
       // Get OAuth credentials from Supabase
-      const { data: { name: clientId }, error: clientIdError } = 
+      const { data: clientId, error: clientIdError } = 
         await supabase.functions.invoke('get-secret', { body: { name: 'BURSONS_OAUTH_NAME' } });
-      const { data: { secret: clientSecret }, error: clientSecretError } = 
+      const { data: clientSecret, error: clientSecretError } = 
         await supabase.functions.invoke('get-secret', { body: { name: 'BURSONS_OAUTH_SECRET' } });
 
-      if (clientIdError || clientSecretError) {
+      if (clientIdError || clientSecretError || !clientId || !clientSecret) {
         throw new Error('Failed to retrieve Bursons OAuth credentials');
       }
 
-      // Request a new token using OAuth credentials
+      // Construct the form data for token request as specified in documentation
       const params = new URLSearchParams();
-      params.append('grant_type', 'client_credentials');
+      params.append('grant_type', 'client_credentials'); // As specified in docs
       params.append('client_id', clientId);
       params.append('client_secret', clientSecret);
       
+      // Make the token request
       const response = await axios.post<AuthResponse>(
         this.authUrl,
         params.toString(),
@@ -91,9 +93,8 @@ export class EzyPartsClient {
         }
       );
       
+      // Extract token and set expiry time (subtracting 60 seconds for safety)
       this.token = response.data.access_token;
-      
-      // Set expiry time (subtracting 60 seconds for safety)
       const expiresInMs = (response.data.expires_in - 60) * 1000;
       this.tokenExpiry = new Date(Date.now() + expiresInMs);
       
