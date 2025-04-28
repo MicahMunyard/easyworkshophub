@@ -73,16 +73,44 @@ export const EzyPartsProvider: React.FC<{children: ReactNode}> = ({ children }) 
   useEffect(() => {
     const loadCredentials = async () => {
       try {
-        // Get BURSONS_OAUTH_NAME and BURSONS_OAUTH_SECRET from Supabase secrets
-        const [
-          { data: oauthName },
-          { data: oauthSecret },
-          { data: environment }
-        ] = await Promise.all([
-          supabase.functions.invoke('get-secret', { body: { name: 'BURSONS_OAUTH_NAME' } }),
-          supabase.functions.invoke('get-secret', { body: { name: 'BURSONS_OAUTH_SECRET' } }),
-          supabase.functions.invoke('get-secret', { body: { name: 'EZYPARTS_ENVIRONMENT' } })
-        ]);
+        // List of potential secret names to try (including possible variations)
+        const secretNames = {
+          name: ['BURSONS_OAUTH_NAME', 'Bursons_OAuth_Name', 'BURSONS_0AUTH_NAME', 'Bursons_0Auth_Name'],
+          secret: ['BURSONS_OAUTH_SECRET', 'Bursons_OAuth_Secret', 'BURSONS_0AUTH_SECRET', 'Bursons_0Auth_Secret']
+        };
+        
+        // Try each variation of the name secret
+        let oauthName = null;
+        for (const nameTry of secretNames.name) {
+          const { data, error } = await supabase.functions.invoke('get-secret', { 
+            body: { name: nameTry } 
+          });
+          
+          if (data && !error) {
+            console.log(`Successfully found OAuth name using key: ${nameTry}`);
+            oauthName = data;
+            break;
+          }
+        }
+        
+        // Try each variation of the secret
+        let oauthSecret = null;
+        for (const secretTry of secretNames.secret) {
+          const { data, error } = await supabase.functions.invoke('get-secret', { 
+            body: { name: secretTry } 
+          });
+          
+          if (data && !error) {
+            console.log(`Successfully found OAuth secret using key: ${secretTry}`);
+            oauthSecret = data;
+            break;
+          }
+        }
+        
+        // Get the environment setting
+        const { data: environment } = await supabase.functions.invoke('get-secret', { 
+          body: { name: 'EZYPARTS_ENVIRONMENT' } 
+        });
 
         console.log('Loaded EzyParts credentials:', { 
           oauthName: oauthName ? 'set' : 'not set', 
@@ -92,7 +120,6 @@ export const EzyPartsProvider: React.FC<{children: ReactNode}> = ({ children }) 
 
         if (oauthName && oauthSecret) {
           // Use the OAuth values as the required accountId, username, and password
-          // This mapping is necessary because the EzyParts integration expects these specific fields
           setCredentials({
             accountId: oauthName,
             username: oauthName,
@@ -100,10 +127,17 @@ export const EzyPartsProvider: React.FC<{children: ReactNode}> = ({ children }) 
             clientId: oauthName,
             clientSecret: oauthSecret
           });
+          
+          console.log('EzyParts credentials set successfully');
         } else {
+          console.error('Missing EzyParts OAuth credentials:', {
+            name: oauthName ? 'set' : 'not set',
+            secret: oauthSecret ? 'set' : 'not set'
+          });
+          
           toast({
             title: "EzyParts Setup Required",
-            description: "Please configure your BURSONS_OAUTH_NAME and BURSONS_OAUTH_SECRET credentials.",
+            description: "Please configure your Burson OAuth credentials in Supabase secrets.",
             variant: "destructive"
           });
         }

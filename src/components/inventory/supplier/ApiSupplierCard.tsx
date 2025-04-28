@@ -1,9 +1,9 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Supplier } from '@/types/inventory';
-import { Link } from 'lucide-react';
+import { Link, Loader2 } from 'lucide-react';
 import { useEzyParts } from '@/contexts/EzyPartsContext';
 import { useToast } from '@/hooks/use-toast';
 
@@ -14,9 +14,12 @@ interface ApiSupplierCardProps {
 const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({ supplier }) => {
   const { credentials, isProduction } = useEzyParts();
   const { toast } = useToast();
+  const [isConnecting, setIsConnecting] = useState(false);
 
   const handleConnect = () => {
     if (supplier.apiConfig?.type === 'bursons') {
+      setIsConnecting(true);
+      
       if (!credentials.accountId || !credentials.username || !credentials.password) {
         console.log('Missing EzyParts credentials:', {
           accountId: !!credentials.accountId,
@@ -26,9 +29,10 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({ supplier }) => {
         
         toast({
           title: 'Configuration Required',
-          description: 'Please configure your BURSONS_OAUTH_NAME and BURSONS_OAUTH_SECRET first.',
+          description: 'Missing OAuth credentials in Supabase secrets. Please check your configuration.',
           variant: 'destructive'
         });
+        setIsConnecting(false);
         return;
       }
 
@@ -51,6 +55,7 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({ supplier }) => {
             description: 'Please allow popups for this site to connect to EzyParts.',
             variant: 'destructive'
           });
+          setIsConnecting(false);
           return;
         }
         
@@ -88,9 +93,11 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({ supplier }) => {
         // Remove the form after submission
         setTimeout(() => {
           document.body.removeChild(ezyPartsForm);
+          setIsConnecting(false);
         }, 100);
         
-        console.log('Submitting form to EzyParts with credentials:', credentials.accountId);
+        console.log('Submitting form to EzyParts with credentials:', 
+          { accountId: credentials.accountId ? 'set' : 'not set' });
         
         // Show a toast to inform the user
         toast({
@@ -105,6 +112,7 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({ supplier }) => {
           description: 'Unable to connect to EzyParts. Please check your configuration.',
           variant: 'destructive'
         });
+        setIsConnecting(false);
       }
     }
   };
@@ -129,10 +137,20 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({ supplier }) => {
           <Button 
             variant={supplier.apiConfig?.isConnected ? "outline" : "default"}
             onClick={handleConnect}
+            disabled={isConnecting}
             className="flex items-center gap-2"
           >
-            <Link className="h-4 w-4" />
-            {supplier.apiConfig?.isConnected ? 'Connected' : 'Connect'}
+            {isConnecting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Connecting...
+              </>
+            ) : (
+              <>
+                <Link className="h-4 w-4" />
+                {supplier.apiConfig?.isConnected ? 'Connected' : 'Connect'}
+              </>
+            )}
           </Button>
         </div>
         
@@ -150,4 +168,3 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({ supplier }) => {
 };
 
 export default ApiSupplierCard;
-
