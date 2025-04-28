@@ -19,7 +19,7 @@ import { Label } from "@/components/ui/label";
 import { MinusCircle, PlusCircle, SendHorizontal } from 'lucide-react';
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { OrderSubmissionRequest } from '@/types/ezyparts';
+import { OrderSubmissionRequest, QuoteResponse } from '@/types/ezyparts';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
 const QuoteHandler: React.FC = () => {
@@ -27,7 +27,6 @@ const QuoteHandler: React.FC = () => {
   const [searchParams] = useSearchParams();
   const { currentQuote, setCurrentQuote, checkInventory, submitOrder, lastError, isLoading } = useEzyParts();
 
-  // State management
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [orderFormValues, setOrderFormValues] = useState<OrderFormValues>({
     purchaseOrder: '',
@@ -37,7 +36,6 @@ const QuoteHandler: React.FC = () => {
   });
   const [orderResponse, setOrderResponse] = useState<OrderResponseState | null>(null);
 
-  // Check for quote_id in the URL and fetch the quote data
   useEffect(() => {
     const quoteId = searchParams.get('quote_id');
     
@@ -55,8 +53,9 @@ const QuoteHandler: React.FC = () => {
           }
           
           if (data && data.quote_data) {
-            setCurrentQuote(data.quote_data);
-            localStorage.setItem('ezyparts-current-quote', JSON.stringify(data.quote_data));
+            const quoteData = data.quote_data as QuoteResponse;
+            setCurrentQuote(quoteData);
+            localStorage.setItem('ezyparts-current-quote', JSON.stringify(quoteData));
           }
         } catch (error) {
           console.error('Error fetching quote:', error);
@@ -67,7 +66,6 @@ const QuoteHandler: React.FC = () => {
     }
   }, [searchParams, currentQuote, setCurrentQuote]);
 
-  // If there's no quote, show the no quote available message
   if (!currentQuote) {
     return (
       <div className="flex flex-col items-center justify-center p-8">
@@ -118,7 +116,6 @@ const QuoteHandler: React.FC = () => {
         }))
       });
 
-      // Update cart items with inventory information
       setCartItems(prev => {
         return prev.map(item => {
           const inventoryItem = inventoryResponse.inventory.find(inv => inv.sku === item.sku);
@@ -149,12 +146,12 @@ const QuoteHandler: React.FC = () => {
     try {
       const orderRequest: OrderSubmissionRequest = {
         inputMetaData: {
-          checkCurrentPosition: !orderFormValues.forceOrder // If forceOrder is true, we don't check positions
+          checkCurrentPosition: !orderFormValues.forceOrder
         },
         headers: {
           customerAccount: currentQuote.headers.customerAccount,
           customerId: currentQuote.headers.customerId,
-          password: '', // Will be added by the context provider
+          password: '',
           locationId: currentQuote.headers.locationId,
           locationName: currentQuote.headers.locationName,
           customerName: currentQuote.headers.customerName,
@@ -182,7 +179,6 @@ const QuoteHandler: React.FC = () => {
 
       const response = await submitOrder(orderRequest);
 
-      // Process order response
       setOrderResponse({
         salesOrderNumber: response.salesOrderNumber,
         successItems: response.successOrderLines,

@@ -152,7 +152,8 @@ export class EzyPartsClient {
   public async checkInventory(request: ProductInventoryRequest): Promise<ProductInventoryResponse> {
     try {
       console.log('Checking inventory with request:', request);
-      const endpoint = '/inventory';  // Updated endpoint as per documentation
+      // The correct endpoint according to PDF (page 17)
+      const endpoint = '/inventory';
       const response = await this.makeAuthenticatedRequest<ProductInventoryResponse>(endpoint, 'POST', request);
       console.log('Inventory check response:', response);
       return response;
@@ -170,7 +171,8 @@ export class EzyPartsClient {
   public async submitOrder(request: OrderSubmissionRequest): Promise<OrderSubmissionResponse> {
     try {
       console.log('Submitting order with request:', request);
-      const endpoint = '';  // Base endpoint for order submission as per documentation
+      // The correct endpoint according to PDF (page 20) is indeed the base URL
+      const endpoint = '';
       const response = await this.makeAuthenticatedRequest<OrderSubmissionResponse>(endpoint, 'POST', request);
       console.log('Order submission response:', response);
       return response;
