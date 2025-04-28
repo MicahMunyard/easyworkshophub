@@ -7,9 +7,11 @@ import SupplierList from './supplier/SupplierList';
 import SupplierDialog from './supplier/SupplierDialog';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
+import { useEzyParts } from '@/contexts/EzyPartsContext';
 
 const SupplierManagement: React.FC = () => {
   const { suppliers, addSupplier, updateSupplier, deleteSupplier } = useSuppliers();
+  const { credentials } = useEzyParts();
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | undefined>(undefined);
@@ -56,8 +58,18 @@ const SupplierManagement: React.FC = () => {
   const handleSupplierOrder = (supplier: Supplier) => {
     if (supplier.connectionType === 'api') {
       if (supplier.apiConfig?.type === 'bursons') {
-        // Redirect to EzyParts configuration page
-        window.location.href = '/ezyparts/config';
+        // Check if EzyParts credentials exist
+        if (!credentials.accountId || !credentials.username || !credentials.password) {
+          // Redirect to EzyParts configuration page if credentials are missing
+          navigate('/ezyparts/config');
+          toast({
+            title: "Configuration Required",
+            description: "Please configure your EzyParts credentials first",
+          });
+        } else {
+          // Let the ApiSupplierCard handle the connection
+          // This supplier card will be clicked in the UI
+        }
       }
     } else {
       // Navigate to manual order form

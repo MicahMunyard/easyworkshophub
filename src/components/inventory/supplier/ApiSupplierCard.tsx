@@ -4,15 +4,51 @@ import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Supplier } from '@/types/inventory';
 import { Link } from 'lucide-react';
+import { useEzyParts } from '@/contexts/EzyPartsContext';
+import { useToast } from '@/hooks/use-toast';
 
 interface ApiSupplierCardProps {
   supplier: Supplier;
 }
 
 const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({ supplier }) => {
+  const { generateEzyPartsUrl, credentials } = useEzyParts();
+  const { toast } = useToast();
+
   const handleConnect = () => {
     if (supplier.apiConfig?.type === 'bursons') {
-      window.location.href = '/ezyparts/config';
+      if (!credentials.accountId || !credentials.username || !credentials.password) {
+        // If credentials aren't set, redirect to config page
+        window.location.href = '/ezyparts/config';
+        return;
+      }
+
+      try {
+        // Generate EzyParts URL for direct connection
+        const authUrl = generateEzyPartsUrl({
+          returnUrl: window.location.origin + '/inventory'
+        });
+        
+        // Create a temporary DOM element to render the form
+        const container = document.createElement('div');
+        container.innerHTML = authUrl;
+        document.body.appendChild(container);
+        
+        // Find and submit the form
+        const form = container.querySelector('form');
+        if (form) {
+          form.submit();
+        } else {
+          throw new Error('Failed to generate auth form');
+        }
+      } catch (error) {
+        console.error('Failed to connect to EzyParts:', error);
+        toast({
+          title: 'Connection Failed',
+          description: 'Unable to connect to EzyParts. Please check your configuration.',
+          variant: 'destructive'
+        });
+      }
     }
   };
 
