@@ -14,6 +14,7 @@ export const useEzyPartsApi = () => {
   
   const initializeClient = useCallback(async () => {
     try {
+      // Get the environment setting
       const { data: environment, error: envError } = 
         await supabase.functions.invoke('get-secret', { body: { name: 'EZYPARTS_ENVIRONMENT' } });
       
@@ -21,9 +22,21 @@ export const useEzyPartsApi = () => {
         console.warn('Failed to retrieve EzyParts environment setting, defaulting to staging');
       }
 
-      // Pass only isProduction boolean
+      // Get the OAuth credentials
+      const { data: clientId, error: clientIdError } = 
+        await supabase.functions.invoke('get-secret', { body: { name: 'BURSONS_OAUTH_NAME' } });
+      
+      const { data: clientSecret, error: clientSecretError } = 
+        await supabase.functions.invoke('get-secret', { body: { name: 'BURSONS_OAUTH_SECRET' } });
+      
+      if (clientIdError || clientSecretError) {
+        console.error('Error retrieving EzyParts credentials:', { clientIdError, clientSecretError });
+        throw new Error('Failed to retrieve OAuth credentials');
+      }
+
+      // Pass isProduction boolean and credentials
       const isProduction = environment === 'production';
-      return new EzyPartsClient(isProduction);
+      return new EzyPartsClient(isProduction, clientId, clientSecret);
     } catch (error) {
       console.error('Error initializing EzyParts client:', error);
       throw error;
