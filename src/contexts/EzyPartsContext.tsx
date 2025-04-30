@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { EzyPartsClient } from '@/integrations/ezyparts/client';
@@ -92,42 +93,22 @@ export const EzyPartsProvider: React.FC<{children: ReactNode}> = ({ children }) 
       const { data: userData } = await supabase.auth.getUser();
       
       try {
-        // Use direct insert to ezyparts_action_logs table
-        const { error } = await supabase
-          .from('ezyparts_action_logs')
+        // Log to diagnostic logs table
+        await supabase
+          .from('ezyparts_logs')
           .insert({
-            action: action,
-            data: logEntry.data,
-            environment: logEntry.environment,
-            user_id: userData.user?.id
+            level: 'info',
+            message: `Action: ${action}`,
+            data: data,
+            created_at: timestamp
           });
-        
-        if (error) {
-          console.error('Error logging to Supabase:', error);
-          
-          // Fallback to localStorage if Supabase logging fails
-          const logs = JSON.parse(localStorage.getItem('ezyparts_logs') || '[]');
-          logs.push(logEntry);
-          localStorage.setItem('ezyparts_logs', JSON.stringify(logs));
-        }
       } catch (e) {
-        // If direct insert fails, try alternative logging
-        try {
-          // Log to general diagnostics table as fallback
-          await supabase
-            .from('ezyparts_logs')
-            .insert({
-              level: 'info',
-              message: `Action: ${action}`,
-              data: data,
-              created_at: timestamp
-            });
-        } catch (insertError) {
-          // Final fallback to localStorage
-          const logs = JSON.parse(localStorage.getItem('ezyparts_logs') || '[]');
-          logs.push(logEntry);
-          localStorage.setItem('ezyparts_logs', JSON.stringify(logs));
-        }
+        console.error('Error logging to ezyparts_logs:', e);
+        
+        // Fallback to localStorage if Supabase logging fails
+        const logs = JSON.parse(localStorage.getItem('ezyparts_logs') || '[]');
+        logs.push(logEntry);
+        localStorage.setItem('ezyparts_logs', JSON.stringify(logs));
       }
     } catch (e) {
       console.error('Error during action logging:', e);
@@ -191,7 +172,7 @@ export const EzyPartsProvider: React.FC<{children: ReactNode}> = ({ children }) 
       
       if (userData.user) {
         try {
-          // Use direct query instead of RPC to avoid type issues
+          // Use direct query
           const { data, error } = await supabase
             .from('ezyparts_quotes')
             .select('*')
@@ -281,12 +262,12 @@ export const EzyPartsProvider: React.FC<{children: ReactNode}> = ({ children }) 
       
       if (userData.user) {
         try {
-          // Use direct insert instead of RPC to avoid type issues
+          // Use direct insert
           const { error } = await supabase
             .from('ezyparts_quotes')
             .insert({
               user_id: userData.user.id,
-              quote_data: currentQuote
+              quote_data: currentQuote as any
             });
             
           if (!error) {
