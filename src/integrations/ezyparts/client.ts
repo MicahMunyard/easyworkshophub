@@ -1,3 +1,4 @@
+
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { 
   AuthResponse, 
@@ -47,6 +48,20 @@ export class EzyPartsClient {
         'Content-Type': 'application/json'
       }
     });
+  }
+
+  /**
+   * Test the connection to the API by trying to get an auth token
+   * This is a simple way to validate credentials and connectivity
+   */
+  public async testConnection(): Promise<boolean> {
+    try {
+      await this.getAuthToken();
+      return true;
+    } catch (error) {
+      console.error('Connection test failed:', error);
+      throw error;
+    }
   }
 
   private async getAuthToken(): Promise<string> {
