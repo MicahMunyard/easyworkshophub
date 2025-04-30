@@ -491,6 +491,30 @@ export type Database = {
         }
         Relationships: []
       }
+      ezyparts_logs: {
+        Row: {
+          created_at: string | null
+          data: Json | null
+          id: string
+          level: string
+          message: string
+        }
+        Insert: {
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          level: string
+          message: string
+        }
+        Update: {
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          level?: string
+          message?: string
+        }
+        Relationships: []
+      }
       ezyparts_quotes: {
         Row: {
           created_at: string | null
@@ -512,6 +536,33 @@ export type Database = {
           quote_data?: Json
           updated_at?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      ezyparts_raw_payloads: {
+        Row: {
+          content_type: string | null
+          id: string
+          processed_status: string | null
+          raw_content: string | null
+          received_at: string | null
+          source: string
+        }
+        Insert: {
+          content_type?: string | null
+          id?: string
+          processed_status?: string | null
+          raw_content?: string | null
+          received_at?: string | null
+          source: string
+        }
+        Update: {
+          content_type?: string | null
+          id?: string
+          processed_status?: string | null
+          raw_content?: string | null
+          received_at?: string | null
+          source?: string
         }
         Relationships: []
       }
@@ -1515,9 +1566,17 @@ export type Database = {
         Args: { user_id_param: string }
         Returns: Json
       }
+      create_ezyparts_diagnostic_tables: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       delete_conversations_by_ids: {
         Args: { conversation_ids: string[] }
         Returns: undefined
+      }
+      delete_ezyparts_quote: {
+        Args: { p_quote_id: string; p_user_id: string }
+        Returns: boolean
       }
       delete_messages_by_conversation_ids: {
         Args: { conversation_ids: string[] }
@@ -1537,6 +1596,29 @@ export type Database = {
           created_at: string
           external_id: string
         }[]
+      }
+      get_user_ezyparts_quotes: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          user_id: string
+          quote_data: Json
+          created_at: string
+          updated_at: string
+        }[]
+      }
+      log_ezyparts_action: {
+        Args: {
+          p_action: string
+          p_data: Json
+          p_environment: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
+      save_ezyparts_quote: {
+        Args: { p_quote_data: Json; p_user_id: string }
+        Returns: string
       }
       update_social_connection_status: {
         Args: { platform_name: string; new_status: string }
