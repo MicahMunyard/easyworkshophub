@@ -92,20 +92,46 @@ export const EzyPartsProvider: React.FC<{children: ReactNode}> = ({ children }) 
       // Try to log to Supabase table
       const { data: userData } = await supabase.auth.getUser();
       
-      // Use custom query to handle the fact that the table might be new
-      const { error } = await supabase.from('ezyparts_action_logs')
-        .insert({
-          ...logEntry,
-          user_id: userData.user?.id
+      try {
+        // Use a direct RPC call to safely insert regardless of schema changes
+        const { error } = await supabase.rpc('log_ezyparts_action', {
+          p_action: action,
+          p_data: logEntry.data,
+          p_environment: logEntry.environment,
+          p_user_id: userData.user?.id
         });
-      
-      if (error) {
-        console.error('Error logging to Supabase:', error);
         
-        // Fallback to localStorage if Supabase logging fails
-        const logs = JSON.parse(localStorage.getItem('ezyparts_logs') || '[]');
-        logs.push(logEntry);
-        localStorage.setItem('ezyparts_logs', JSON.stringify(logs));
+        if (error) {
+          console.error('Error logging to Supabase:', error);
+          
+          // Fallback to localStorage if Supabase logging fails
+          const logs = JSON.parse(localStorage.getItem('ezyparts_logs') || '[]');
+          logs.push(logEntry);
+          localStorage.setItem('ezyparts_logs', JSON.stringify(logs));
+        }
+      } catch (e) {
+        // If RPC method doesn't exist yet, try direct insert
+        try {
+          // We need to cast the table name to any to avoid type errors
+          // since the table was recently added and might not be in the types
+          const { error } = await supabase.from('ezyparts_action_logs' as any)
+            .insert({
+              ...logEntry,
+              user_id: userData.user?.id
+            });
+            
+          if (error) {
+            // Fallback to localStorage
+            const logs = JSON.parse(localStorage.getItem('ezyparts_logs') || '[]');
+            logs.push(logEntry);
+            localStorage.setItem('ezyparts_logs', JSON.stringify(logs));
+          }
+        } catch (insertError) {
+          // Final fallback to localStorage
+          const logs = JSON.parse(localStorage.getItem('ezyparts_logs') || '[]');
+          logs.push(logEntry);
+          localStorage.setItem('ezyparts_logs', JSON.stringify(logs));
+        }
       }
     } catch (e) {
       console.error('Error during action logging:', e);
@@ -168,28 +194,66 @@ export const EzyPartsProvider: React.FC<{children: ReactNode}> = ({ children }) 
       const { data: userData } = await supabase.auth.getUser();
       
       if (userData.user) {
-        const { data, error } = await supabase
-          .from('ezyparts_quotes')
-          .select('*')
-          .eq('user_id', userData.user.id)
-          .order('created_at', { ascending: false });
+        try {
+          // Use RPC to safely fetch regardless of schema changes
+          const { data, error } = await supabase.rpc('get_user_ezyparts_quotes');
           
-        if (!error && data) {
-          const quotes: SavedQuote[] = data.map(item => ({
-            quote: item.quote_data as unknown as QuoteResponse, // Type assertion to help TypeScript
-            timestamp: item.created_at,
-            vehicle: {
-              make: item.quote_data?.headers?.make || '',
-              model: item.quote_data?.headers?.model || '',
-              rego: item.quote_data?.headers?.rego
+          if (!error && data) {
+            const quotes: SavedQuote[] = data.map((item: any) => {
+              // Safely handle the JSON stored in quote_data
+              const quoteData = typeof item.quote_data === 'string' 
+                ? JSON.parse(item.quote_data) 
+                : item.quote_data;
+              
+              return {
+                quote: quoteData as QuoteResponse,
+                timestamp: item.created_at,
+                vehicle: {
+                  make: quoteData?.headers?.make || '',
+                  model: quoteData?.headers?.model || '',
+                  rego: quoteData?.headers?.rego
+                }
+              };
+            });
+            
+            setSavedQuotes(quotes);
+            await logAction('get_saved_quotes_success', { count: quotes.length });
+            return quotes;
+          }
+        } catch (rpcError) {
+          // If RPC doesn't exist yet, try direct query
+          try {
+            const { data, error } = await supabase
+              .from('ezyparts_quotes' as any)
+              .select('*')
+              .eq('user_id', userData.user.id)
+              .order('created_at', { ascending: false });
+              
+            if (!error && data) {
+              const quotes: SavedQuote[] = data.map((item: any) => {
+                // Safely handle the JSON stored in quote_data
+                const quoteData = typeof item.quote_data === 'string' 
+                  ? JSON.parse(item.quote_data) 
+                  : item.quote_data;
+                  
+                return {
+                  quote: quoteData as QuoteResponse,
+                  timestamp: item.created_at,
+                  vehicle: {
+                    make: quoteData?.headers?.make || '',
+                    model: quoteData?.headers?.model || '',
+                    rego: quoteData?.headers?.rego
+                  }
+                };
+              });
+              
+              setSavedQuotes(quotes);
+              await logAction('get_saved_quotes_success', { count: quotes.length });
+              return quotes;
             }
-          }));
-          
-          setSavedQuotes(quotes);
-          await logAction('get_saved_quotes_success', { count: quotes.length });
-          return quotes;
-        } else {
-          console.error('Error fetching quotes from Supabase:', error);
+          } catch (queryError) {
+            console.error('Error with direct query:', queryError);
+          }
         }
       }
       
@@ -248,26 +312,51 @@ export const EzyPartsProvider: React.FC<{children: ReactNode}> = ({ children }) 
       const { data: userData } = await supabase.auth.getUser();
       
       if (userData.user) {
-        const { error } = await supabase
-          .from('ezyparts_quotes')
-          .insert({
-            user_id: userData.user.id,
-            quote_data: currentQuote as unknown as object // Type casting for Supabase JSON compatibility
+        try {
+          // Use RPC to safely insert regardless of schema changes
+          const { error } = await supabase.rpc('save_ezyparts_quote', {
+            p_quote_data: JSON.stringify(currentQuote),
+            p_user_id: userData.user.id
           });
           
-        if (!error) {
-          // Refresh the quotes list
-          await getSavedQuotes();
-          
-          toast({
-            title: 'Quote Saved',
-            description: `Quote for ${quoteToSave.vehicle.make} ${quoteToSave.vehicle.model} has been saved.`
-          });
-          
-          await logAction('save_quote_success_db');
-          return true;
-        } else {
-          console.error('Error saving quote to Supabase:', error);
+          if (!error) {
+            // Refresh the quotes list
+            await getSavedQuotes();
+            
+            toast({
+              title: 'Quote Saved',
+              description: `Quote for ${quoteToSave.vehicle.make} ${quoteToSave.vehicle.model} has been saved.`
+            });
+            
+            await logAction('save_quote_success_db');
+            return true;
+          }
+        } catch (rpcError) {
+          // If RPC doesn't exist, try direct insert
+          try {
+            // We need to use any type as the table might not be in the types yet
+            const { error } = await supabase
+              .from('ezyparts_quotes' as any)
+              .insert({
+                user_id: userData.user.id,
+                quote_data: JSON.stringify(currentQuote)
+              });
+              
+            if (!error) {
+              // Refresh the quotes list
+              await getSavedQuotes();
+              
+              toast({
+                title: 'Quote Saved',
+                description: `Quote for ${quoteToSave.vehicle.make} ${quoteToSave.vehicle.model} has been saved.`
+              });
+              
+              await logAction('save_quote_success_db');
+              return true;
+            }
+          } catch (insertError) {
+            console.error('Error saving quote with direct insert:', insertError);
+          }
         }
       }
       
