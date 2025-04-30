@@ -1,3 +1,4 @@
+
 // Authentication Types
 export interface AuthResponse {
   access_token: string;
@@ -199,4 +200,15 @@ export interface VehicleSearchParams {
   seriesChassis?: string;
   engine?: string;
   isRegoSearch?: boolean;
+}
+
+// Saved Quote Types for History
+export interface SavedQuote {
+  quote: QuoteResponse;
+  timestamp: string;
+  vehicle: {
+    make: string;
+    model: string;
+    rego?: string;
+  };
 }
