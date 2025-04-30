@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Supplier } from '@/types/inventory';
-import { Link, Loader2, AlertCircle } from 'lucide-react';
+import { Link, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 import { useEzyParts } from '@/contexts/EzyPartsContext';
 import { useToast } from '@/hooks/use-toast';
 
@@ -151,6 +151,13 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({ supplier }) => {
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
+            {supplier.apiConfig?.isConnected && (
+              <div className="absolute top-2 left-2">
+                <span className="text-green-600 text-xs font-medium flex items-center">
+                  <CheckCircle className="h-3 w-3 mr-1" /> Connected
+                </span>
+              </div>
+            )}
             {supplier.logoUrl && (
               <img 
                 src={supplier.logoUrl} 
@@ -177,7 +184,7 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({ supplier }) => {
             ) : (
               <>
                 <Link className="h-4 w-4" />
-                {supplier.apiConfig?.isConnected ? 'Connected' : 'Connect'}
+                {supplier.apiConfig?.isConnected ? 'Login' : 'Connect'}
               </>
             )}
           </Button>
