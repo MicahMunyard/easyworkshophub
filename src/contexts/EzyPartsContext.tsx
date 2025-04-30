@@ -91,12 +91,13 @@ export const EzyPartsProvider: React.FC<{children: ReactNode}> = ({ children }) 
     try {
       // Try to log to Supabase table
       const { data: userData } = await supabase.auth.getUser();
-      const { error } = await supabase
-        .from('ezyparts_action_logs')
-        .insert([{
+      
+      // Use custom query to handle the fact that the table might be new
+      const { error } = await supabase.from('ezyparts_action_logs')
+        .insert({
           ...logEntry,
           user_id: userData.user?.id
-        }]);
+        });
       
       if (error) {
         console.error('Error logging to Supabase:', error);
@@ -174,13 +175,13 @@ export const EzyPartsProvider: React.FC<{children: ReactNode}> = ({ children }) 
           .order('created_at', { ascending: false });
           
         if (!error && data) {
-          const quotes = data.map(item => ({
-            quote: item.quote_data as QuoteResponse,
+          const quotes: SavedQuote[] = data.map(item => ({
+            quote: item.quote_data as unknown as QuoteResponse, // Type assertion to help TypeScript
             timestamp: item.created_at,
             vehicle: {
-              make: item.quote_data.headers?.make || '',
-              model: item.quote_data.headers?.model || '',
-              rego: item.quote_data.headers?.rego
+              make: item.quote_data?.headers?.make || '',
+              model: item.quote_data?.headers?.model || '',
+              rego: item.quote_data?.headers?.rego
             }
           }));
           
@@ -249,10 +250,10 @@ export const EzyPartsProvider: React.FC<{children: ReactNode}> = ({ children }) 
       if (userData.user) {
         const { error } = await supabase
           .from('ezyparts_quotes')
-          .insert([{
+          .insert({
             user_id: userData.user.id,
-            quote_data: currentQuote
-          }]);
+            quote_data: currentQuote as unknown as object // Type casting for Supabase JSON compatibility
+          });
           
         if (!error) {
           // Refresh the quotes list
