@@ -63,10 +63,12 @@ const EzyPartsDiagnostic: React.FC = () => {
                                 credentials.password && 
                                 credentials.clientId && 
                                 credentials.clientSecret;
+      
+      // Fixed: Make sure success is a boolean value
       setTestResults(prev => ({
         ...prev,
         credentials: {
-          success: credentialsComplete,
+          success: Boolean(credentialsComplete),
           message: credentialsComplete ? 
             'OAuth credentials found' : 
             'Missing OAuth credentials'
@@ -79,7 +81,7 @@ const EzyPartsDiagnostic: React.FC = () => {
         setTestResults(prev => ({
           ...prev,
           connection: {
-            success: connectionSuccess,
+            success: Boolean(connectionSuccess),
             message: connectionSuccess ? 
               'Successfully connected to EzyParts API' : 
               'Failed to connect to EzyParts API'
@@ -106,7 +108,7 @@ const EzyPartsDiagnostic: React.FC = () => {
         setTestResults(prev => ({
           ...prev,
           edgeFunction: {
-            success: response.ok && data.success,
+            success: response.ok && Boolean(data.success),
             message: response.ok && data.success ? 
               'Edge function is accessible' : 
               `Edge function issue: ${data.message || response.statusText}`
@@ -133,7 +135,7 @@ const EzyPartsDiagnostic: React.FC = () => {
         setTestResults(prev => ({
           ...prev,
           webhook: {
-            success: response.ok && data.success,
+            success: response.ok && Boolean(data.success),
             message: response.ok && data.success ? 
               'Webhook test succeeded' : 
               `Webhook test failed: ${data.message || response.statusText}`
