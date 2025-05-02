@@ -8,11 +8,12 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useNotifications } from "@/contexts/NotificationContext";
+import { useNotifications, Notification } from "@/contexts/NotificationContext";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useJobs } from "@/hooks/jobs/useJobs";
+import { TechnicianJob } from "@/types/technician";
 
 const NotificationBell = () => {
   const { 
@@ -24,29 +25,37 @@ const NotificationBell = () => {
   const navigate = useNavigate();
   const { updateJob } = useJobs();
   const [isRebookDialogOpen, setIsRebookDialogOpen] = useState(false);
-  const [finishedJobData, setFinishedJobData] = useState<any>(null);
+  const [finishedJobData, setFinishedJobData] = useState<TechnicianJob | null>(null);
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
-  const handleNotificationClick = async (notification: any) => {
-    markAsRead(notification.id);
-    
-    if (notification.type === "job_completed" && notification.actionData?.jobId) {
-      // Handle completed job notification
-      const job = notification.actionData;
+  const handleNotificationClick = async (notification: Notification) => {
+    try {
+      // Mark notification as read first
+      markAsRead(notification.id);
       
-      if (job) {
-        // Mark the job as finished
-        const updatedJob = {
-          ...job,
-          status: "finished"
-        };
+      if (notification.type === "job_completed" && notification.actionData?.jobId) {
+        // Handle completed job notification
+        const job = notification.actionData;
         
-        const success = await updateJob(updatedJob);
-        if (success) {
-          // Show rebooking dialog
-          setFinishedJobData(job);
-          setIsRebookDialogOpen(true);
+        if (job) {
+          // Mark the job as finished
+          const updatedJob = {
+            ...job,
+            status: "finished" as const
+          };
+          
+          const success = await updateJob(updatedJob);
+          if (success) {
+            // Show rebooking dialog
+            setFinishedJobData(job);
+            setIsRebookDialogOpen(true);
+            // Close the popover when opening dialog
+            setIsPopoverOpen(false);
+          }
         }
       }
+    } catch (error) {
+      console.error("Error handling notification click:", error);
     }
   };
 
@@ -71,7 +80,7 @@ const NotificationBell = () => {
 
   return (
     <>
-      <Popover>
+      <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
         <PopoverTrigger asChild>
           <Button
             variant="ghost"
@@ -96,7 +105,7 @@ const NotificationBell = () => {
               <Button 
                 variant="ghost" 
                 size="sm"
-                onClick={markAllAsRead}
+                onClick={() => markAllAsRead()}
                 className="text-xs text-muted-foreground"
               >
                 Mark all as read
@@ -122,7 +131,7 @@ const NotificationBell = () => {
                     <div className="flex justify-between items-start">
                       <h5 className="font-medium text-sm">{notification.title}</h5>
                       <span className="text-xs text-muted-foreground">
-                        {format(notification.createdAt, "HH:mm")}
+                        {format(new Date(notification.createdAt), "HH:mm")}
                       </span>
                     </div>
                     <p className="text-sm text-muted-foreground mt-1">{notification.message}</p>
