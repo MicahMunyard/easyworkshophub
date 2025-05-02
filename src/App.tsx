@@ -28,6 +28,7 @@ import Reviews from "./pages/Reviews";
 import Suppliers from "./pages/Suppliers";
 import WorkshopSetup from "./pages/WorkshopSetup";
 import TechnicianPortal from "./pages/TechnicianPortal";
+import Settings from "./pages/Settings";
 
 const App = () => {
   const { user } = useAuth();
@@ -56,6 +57,8 @@ const App = () => {
           <Route path="/suppliers" element={<ProtectedRoute><Suppliers /></ProtectedRoute>} />
           <Route path="/workshop-setup" element={<ProtectedRoute><WorkshopSetup /></ProtectedRoute>} />
           <Route path="/technician-portal" element={<ProtectedRoute><TechnicianPortal /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="/help" element={<ProtectedRoute><div className="container py-8"><h1 className="text-3xl font-bold mb-4">Help & Support</h1><p>This page is under construction.</p></div></ProtectedRoute>} />
           
           {/* EzyParts Routes */}
           <Route path="/ezyparts/*" element={<ProtectedRoute><EzyPartsRoutes /></ProtectedRoute>} />

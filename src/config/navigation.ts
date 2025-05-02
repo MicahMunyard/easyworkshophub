@@ -1,4 +1,3 @@
-
 import React from "react";
 import {
   LayoutDashboard,
@@ -91,5 +90,6 @@ export const secondaryNavSections: Record<string, SubNavSection[]> = {
 
 // Add a new section for settings/setup pages that will appear at the bottom of the sidebar
 export const settingsNavSections: NavSection[] = [
-  { name: "Workshop Setup", path: "/workshop-setup", icon: React.createElement(Settings, { className: "h-5 w-5" }) }
+  { name: "Settings", path: "/settings", icon: React.createElement(Settings, { className: "h-5 w-5" }) },
+  { name: "Workshop Setup", path: "/workshop-setup", icon: React.createElement(Wrench, { className: "h-5 w-5" }) }
 ];

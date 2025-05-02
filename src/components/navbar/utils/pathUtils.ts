@@ -9,8 +9,7 @@ export const getCurrentTabFromPath = (currentPath: string): string => {
   if (currentPath.includes('/marketing') || currentPath.includes('/email-marketing') || currentPath.includes('/reviews')) return 'marketing';
   if (currentPath.includes('/reports')) return 'reports';
   if (currentPath.includes('/timesheets')) return 'timesheets';
-  if (currentPath.includes('/workshop')) return 'workshop';
-  if (currentPath.includes('/ezyparts')) return 'ezyparts';
-  if (currentPath.includes('/technician-portal')) return 'technician';
+  if (currentPath.includes('/settings')) return 'settings';
+  if (currentPath.includes('/workshop-setup')) return 'workshop';
   return 'dashboard';
 };
