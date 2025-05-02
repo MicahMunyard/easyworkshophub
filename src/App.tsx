@@ -6,7 +6,6 @@ import Index from "./pages/Index";
 import BookingDiary from "./pages/BookingDiary";
 import Jobs from "./pages/Jobs";
 import WorkshopSetup from "./pages/WorkshopSetup";
-import Workshop from "./pages/Workshop";
 import Inventory from "./pages/Inventory";
 import Customers from "./pages/Customers";
 import Invoicing from "./pages/Invoicing"; 
@@ -67,7 +66,6 @@ const App: React.FC = () => {
       />
       
       {/* Other protected routes */}
-      <Route path="/workshop" element={<ProtectedRoute><Layout><Workshop /></Layout></ProtectedRoute>} />
       <Route path="/booking-diary" element={<ProtectedRoute><Layout><BookingDiary /></Layout></ProtectedRoute>} />
       <Route path="/jobs" element={<ProtectedRoute><Layout><Jobs /></Layout></ProtectedRoute>} />
       <Route path="/workshop-setup" element={<ProtectedRoute><Layout><WorkshopSetup /></Layout></ProtectedRoute>} />

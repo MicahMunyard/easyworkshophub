@@ -3,7 +3,11 @@ import React, { useState, useEffect } from "react";
 import Navbar from "./navbar";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { mainNavSections, secondaryNavSections } from "@/config/navigation";
+import { 
+  mainNavSections, 
+  secondaryNavSections,
+  settingsNavSections 
+} from "@/config/navigation";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -17,7 +21,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const getCurrentMainSection = (path: string): string => {
     if (path === '/') return 'dashboard';
-    if (path.includes('/workshop') || path.includes('/booking-diary') || path.includes('/jobs') || path.includes('/workshop-setup')) return 'workshop';
+    if (path.includes('/booking-diary') || path.includes('/jobs')) return 'bookings';
     if (path.includes('/email')) return 'email';
     if (path.includes('/communication')) return 'communication';
     if (path.includes('/inventory') || path.includes('/suppliers')) return 'inventory';
@@ -61,8 +65,44 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
         <div className="flex flex-col h-full">
           <div className="flex-1 py-4 overflow-y-auto scrollbar-none">
+            {/* Main Navigation Items */}
             {mainNavSections.map((section) => {
               const isActive = section.name.toLowerCase() === currentMainSection;
+              return (
+                <button
+                  key={section.name}
+                  onClick={() => {
+                    navigate(section.path);
+                    if (isMobile) setSidebarExpanded(false);
+                  }}
+                  className={`flex items-center w-full py-3 px-4 text-white transition-colors hover:bg-white/10 relative ${
+                    isActive ? "bg-white/5" : ""
+                  }`}
+                >
+                  <span className="flex items-center justify-center">
+                    {section.icon}
+                  </span>
+                  <span 
+                    className={`ml-4 transition-opacity whitespace-nowrap ${
+                      sidebarExpanded ? "opacity-100" : "opacity-0"
+                    }`}
+                  >
+                    {section.name}
+                  </span>
+                  {isActive && (
+                    <span 
+                      className="absolute w-1 left-0 top-0 h-full bg-workshop-red rounded-r" 
+                      aria-hidden="true" 
+                    />
+                  )}
+                </button>
+              );
+            })}
+
+            {/* Settings Navigation Items */}
+            <div className="mt-auto pt-4 border-t border-white/10 mx-4 mb-4"></div>
+            {settingsNavSections.map((section) => {
+              const isActive = location.pathname === section.path;
               return (
                 <button
                   key={section.name}

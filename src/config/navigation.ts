@@ -10,7 +10,9 @@ import {
   Megaphone,
   FileBarChart,
   Receipt,
-  Clock
+  Clock,
+  Calendar,
+  Settings
 } from "lucide-react";
 
 export interface NavSection {
@@ -26,7 +28,7 @@ export interface SubNavSection {
 
 export const mainNavSections: NavSection[] = [
   { name: "Dashboard", path: "/", icon: React.createElement(LayoutDashboard, { className: "h-5 w-5" }) },
-  { name: "Workshop", path: "/workshop", icon: React.createElement(Hammer, { className: "h-5 w-5" }) },
+  { name: "Bookings", path: "/booking-diary", icon: React.createElement(Calendar, { className: "h-5 w-5" }) },
   { name: "Invoicing", path: "/invoicing", icon: React.createElement(Receipt, { className: "h-5 w-5" }) },
   { name: "Email", path: "/email-integration", icon: React.createElement(Mail, { className: "h-5 w-5" }) },
   { name: "Communication", path: "/communication", icon: React.createElement(MessageCircle, { className: "h-5 w-5" }) },
@@ -38,10 +40,9 @@ export const mainNavSections: NavSection[] = [
 ];
 
 export const secondaryNavSections: Record<string, SubNavSection[]> = {
-  workshop: [
+  bookings: [
     { name: "Booking Diary", path: "/booking-diary" },
-    { name: "Jobs", path: "/jobs" },
-    { name: "Workshop Setup", path: "/workshop-setup" }
+    { name: "Jobs", path: "/jobs" }
   ],
   invoicing: [
     { name: "Invoicing", path: "/invoicing" }
@@ -72,3 +73,8 @@ export const secondaryNavSections: Record<string, SubNavSection[]> = {
     { name: "Time Entries", path: "/timesheets/entries" }
   ]
 };
+
+// Add a new section for settings/setup pages that will appear at the bottom of the sidebar
+export const settingsNavSections: NavSection[] = [
+  { name: "Workshop Setup", path: "/workshop-setup", icon: React.createElement(Settings, { className: "h-5 w-5" }) }
+];
