@@ -16,7 +16,7 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({ supplier }) => {
   const { toast } = useToast();
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
-
+  
   // Check credentials when component mounts or when they change
   useEffect(() => {
     // Reset connection error state when credentials change
@@ -158,13 +158,21 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({ supplier }) => {
                 </span>
               </div>
             )}
-            {supplier.logoUrl && (
+            {supplier.name === "Burson Auto Parts" ? (
+              <div className="w-32 h-24 relative">
+                <img 
+                  src="/lovable-uploads/0ece5982-0f75-4154-ab1c-2d19e00f09a4.png" 
+                  alt="Burson Auto Parts"
+                  className="w-full h-full object-contain"
+                />
+              </div>
+            ) : supplier.logoUrl ? (
               <img 
                 src={supplier.logoUrl} 
                 alt={supplier.name} 
                 className="w-16 h-12 object-contain"
               />
-            )}
+            ) : null}
             <div>
               <h3 className="font-medium">{supplier.name}</h3>
               <p className="text-sm text-muted-foreground">{supplier.category}</p>
@@ -174,7 +182,7 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({ supplier }) => {
             variant={supplier.apiConfig?.isConnected ? "outline" : "default"}
             onClick={handleConnect}
             disabled={isConnecting || !credentials.accountId || !credentials.password}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white"
           >
             {isConnecting ? (
               <>

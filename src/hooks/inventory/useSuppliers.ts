@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Supplier } from '@/types/inventory';
 import { v4 as uuidv4 } from 'uuid';
@@ -15,7 +16,7 @@ const defaultSuppliers: Supplier[] = [
     status: 'active',
     notes: 'Official Burson Auto Parts integration via EzyParts API',
     isDefault: true,
-    logoUrl: '/lovable-uploads/39c602fd-07f5-443e-9bca-0862043aba85.png',
+    logoUrl: '/lovable-uploads/0ece5982-0f75-4154-ab1c-2d19e00f09a4.png',
     connectionType: 'api',
     apiConfig: {
       type: 'bursons',
