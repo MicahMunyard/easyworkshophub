@@ -12,7 +12,12 @@ import {
   Receipt,
   Clock,
   Calendar,
-  Settings
+  Settings,
+  Wrench,
+  Search,
+  Quote,
+  Stethoscope,
+  Cog
 } from "lucide-react";
 
 export interface NavSection {
@@ -36,7 +41,9 @@ export const mainNavSections: NavSection[] = [
   { name: "Customers", path: "/customers", icon: React.createElement(Users, { className: "h-5 w-5" }) },
   { name: "Marketing", path: "/marketing", icon: React.createElement(Megaphone, { className: "h-5 w-5" }) },
   { name: "Reports", path: "/reports", icon: React.createElement(FileBarChart, { className: "h-5 w-5" }) },
-  { name: "Timesheets", path: "/timesheets", icon: React.createElement(Clock, { className: "h-5 w-5" }) }
+  { name: "Timesheets", path: "/timesheets", icon: React.createElement(Clock, { className: "h-5 w-5" }) },
+  { name: "Workshop", path: "/workshop", icon: React.createElement(Wrench, { className: "h-5 w-5" }) },
+  { name: "EzyParts", path: "/ezyparts/dashboard", icon: React.createElement(Hammer, { className: "h-5 w-5" }) }
 ];
 
 export const secondaryNavSections: Record<string, SubNavSection[]> = {
@@ -71,6 +78,13 @@ export const secondaryNavSections: Record<string, SubNavSection[]> = {
   timesheets: [
     { name: "Timesheet Overview", path: "/timesheets" },
     { name: "Time Entries", path: "/timesheets/entries" }
+  ],
+  ezyparts: [
+    { name: "Dashboard", path: "/ezyparts/dashboard" },
+    { name: "Search", path: "/ezyparts/search" },
+    { name: "Quote", path: "/ezyparts/quote" },
+    { name: "Diagnostic", path: "/ezyparts/diagnostic" },
+    { name: "Config", path: "/ezyparts/config" }
   ]
 };
 

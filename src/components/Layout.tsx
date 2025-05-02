@@ -20,7 +20,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const navigate = useNavigate();
 
   const getCurrentMainSection = (path: string): string => {
-    if (path === '/') return 'dashboard';
+    if (path === '/' || path === '') return 'dashboard';
     if (path.includes('/booking-diary') || path.includes('/jobs')) return 'bookings';
     if (path.includes('/email')) return 'email';
     if (path.includes('/communication')) return 'communication';
@@ -29,6 +29,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     if (path.includes('/marketing') || path.includes('/email-marketing') || path.includes('/reviews')) return 'marketing';
     if (path.includes('/reports')) return 'reports';
     if (path.includes('/timesheets')) return 'timesheets';
+    if (path.includes('/workshop')) return 'workshop';
+    if (path.includes('/ezyparts')) return 'ezyparts';
     return 'dashboard';
   };
 
