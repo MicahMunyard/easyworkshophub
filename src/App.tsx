@@ -4,6 +4,7 @@ import {
   Routes,
   Route,
   Navigate,
+  Outlet
 } from "react-router-dom";
 import Layout from "./components/Layout";
 import { useAuth } from "./contexts/AuthContext";
@@ -19,7 +20,7 @@ const App = () => {
     <NotificationProvider>
       <Routes>
         {/* App Routes with Layout */}
-        <Route element={<Layout />}>
+        <Route element={<Layout><Outlet /></Layout>}>
           <Route path="/" element={<ProtectedRoute><Jobs /></ProtectedRoute>} />
           <Route path="/jobs" element={<ProtectedRoute><Jobs /></ProtectedRoute>} />
           <Route path="/invoicing" element={<ProtectedRoute><Invoicing /></ProtectedRoute>} />
