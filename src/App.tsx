@@ -27,6 +27,7 @@ import EmailMarketing from "./pages/EmailMarketing";
 import Reviews from "./pages/Reviews";
 import Suppliers from "./pages/Suppliers";
 import WorkshopSetup from "./pages/WorkshopSetup";
+import TechnicianPortal from "./pages/TechnicianPortal";
 
 const App = () => {
   const { user } = useAuth();
@@ -54,6 +55,7 @@ const App = () => {
           <Route path="/workshop" element={<ProtectedRoute><Workshop /></ProtectedRoute>} />
           <Route path="/suppliers" element={<ProtectedRoute><Suppliers /></ProtectedRoute>} />
           <Route path="/workshop-setup" element={<ProtectedRoute><WorkshopSetup /></ProtectedRoute>} />
+          <Route path="/technician-portal" element={<ProtectedRoute><TechnicianPortal /></ProtectedRoute>} />
           
           {/* EzyParts Routes */}
           <Route path="/ezyparts/*" element={<ProtectedRoute><EzyPartsRoutes /></ProtectedRoute>} />

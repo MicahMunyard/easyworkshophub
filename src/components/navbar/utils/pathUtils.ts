@@ -11,5 +11,6 @@ export const getCurrentTabFromPath = (currentPath: string): string => {
   if (currentPath.includes('/timesheets')) return 'timesheets';
   if (currentPath.includes('/workshop')) return 'workshop';
   if (currentPath.includes('/ezyparts')) return 'ezyparts';
+  if (currentPath.includes('/technician-portal')) return 'technician';
   return 'dashboard';
 };

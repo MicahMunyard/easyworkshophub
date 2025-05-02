@@ -31,6 +31,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     if (path.includes('/timesheets')) return 'timesheets';
     if (path.includes('/workshop')) return 'workshop';
     if (path.includes('/ezyparts')) return 'ezyparts';
+    if (path.includes('/technician-portal')) return 'technician';
     return 'dashboard';
   };
 
