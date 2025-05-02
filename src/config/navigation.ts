@@ -14,7 +14,7 @@ import {
   Settings,
   Wrench,
   Hammer,
-  Tool
+  Briefcase
 } from "lucide-react";
 
 export interface NavSection {
@@ -41,7 +41,7 @@ export const mainNavSections: NavSection[] = [
   { name: "Timesheets", path: "/timesheets", icon: React.createElement(Clock, { className: "h-5 w-5" }) },
   { name: "Workshop", path: "/workshop", icon: React.createElement(Wrench, { className: "h-5 w-5" }) },
   { name: "EzyParts", path: "/ezyparts/dashboard", icon: React.createElement(Hammer, { className: "h-5 w-5" }) },
-  { name: "Technician Portal", path: "/technician-portal", icon: React.createElement(Tool, { className: "h-5 w-5" }) }
+  { name: "Technician Portal", path: "/technician-portal", icon: React.createElement(Briefcase, { className: "h-5 w-5" }) }
 ];
 
 export const secondaryNavSections: Record<string, SubNavSection[]> = {
