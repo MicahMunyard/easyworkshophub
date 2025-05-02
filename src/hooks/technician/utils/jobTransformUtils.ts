@@ -19,6 +19,7 @@ export const transformJobsData = (jobsData: any[]): TechnicianJob[] => {
       description: `Customer: ${job.customer || 'Unknown'}, Vehicle: ${job.vehicle || 'Unknown'}`,
       customer: job.customer || 'Unknown',
       vehicle: job.vehicle || 'Unknown',
+      service: job.service || 'General Service',
       status: (job.status as JobStatus) || 'pending',
       assignedTo: job.created_at || new Date().toISOString(),
       scheduledFor: job.date || null,
@@ -28,7 +29,9 @@ export const transformJobsData = (jobsData: any[]): TechnicianJob[] => {
       photos: job.photos || [],
       notes: job.notes || [],
       isActive: false,
-      date: job.date || new Date().toISOString()
+      timeLogged: job.total_time || 0,
+      date: job.date || new Date().toISOString(),
+      technicianId: job.assigned_to || null
     };
     
     return transformedJob;
@@ -68,6 +71,7 @@ export const transformBookingsData = (bookingsData: any[]): TechnicianJob[] => {
       description: `Customer: ${booking.customer_name || 'Unknown'}, Vehicle: ${booking.car || 'Unknown'}`,
       customer: booking.customer_name || 'Unknown',
       vehicle: booking.car || 'Unknown',
+      service: booking.service || 'General Service',
       status: status,
       assignedTo: booking.created_at || new Date().toISOString(),
       scheduledFor: booking.booking_date || null,
@@ -77,7 +81,9 @@ export const transformBookingsData = (bookingsData: any[]): TechnicianJob[] => {
       photos: [],
       notes: notesArray,
       isActive: false,
-      date: booking.booking_date || new Date().toISOString()
+      timeLogged: 0,
+      date: booking.booking_date || new Date().toISOString(),
+      technicianId: booking.technician_id || null
     };
     
     return transformedJob;
