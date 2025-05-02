@@ -5,16 +5,12 @@ import { EzyPartsProvider } from "@/contexts/EzyPartsContext";
 import AddBrakeCleanerProduct from "@/components/inventory/AddBrakeCleanerProduct";
 import InventoryPageHeader from "@/components/inventory/InventoryPageHeader";
 import InventoryTabs from "@/components/inventory/InventoryTabs";
-import { useSuppliers } from "@/hooks/inventory/useSuppliers";
-import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { FileCheck, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const Inventory = () => {
-  const { suppliers } = useSuppliers();
   const [activeTab, setActiveTab] = useState("inventory");
-  const [selectedSupplier, setSelectedSupplier] = useState<any | null>(null);
-  const [isOrderMode, setIsOrderMode] = useState(false);
   const [productAdded, setProductAdded] = useState(false);
   const [showEzyPartsSuccess, setShowEzyPartsSuccess] = useState(false);
   
@@ -28,7 +24,7 @@ const Inventory = () => {
     const ezyPartsProducts = searchParams.get('ezyparts_products');
     
     // Set the active tab if provided in URL
-    if (tab && ['inventory', 'suppliers', 'orders'].includes(tab)) {
+    if (tab && ['inventory', 'orders'].includes(tab)) {
       setActiveTab(tab);
     }
     
@@ -56,22 +52,6 @@ const Inventory = () => {
       setProductAdded(true);
     }
   }, [productAdded]);
-
-  const handleStartOrder = (supplier: any) => {
-    setSelectedSupplier(supplier);
-    setIsOrderMode(true);
-  };
-
-  const handleBackToSuppliers = () => {
-    setIsOrderMode(false);
-    setSelectedSupplier(null);
-  };
-
-  const handleOrderComplete = () => {
-    setIsOrderMode(false);
-    setSelectedSupplier(null);
-    setActiveTab("orders");
-  };
 
   const handleDismissAlert = () => {
     setShowEzyPartsSuccess(false);
@@ -105,11 +85,6 @@ const Inventory = () => {
         <InventoryTabs 
           activeTab={activeTab}
           setActiveTab={setActiveTab}
-          isOrderMode={isOrderMode}
-          selectedSupplier={selectedSupplier}
-          onStartOrder={handleStartOrder}
-          onBackToSuppliers={handleBackToSuppliers}
-          onOrderComplete={handleOrderComplete}
         />
       </div>
     </EzyPartsProvider>
