@@ -23,9 +23,10 @@ const EmailInbox = () => {
   const [folder, setFolder] = useState<"inbox" | "sent" | "junk">("inbox");
   const [searchTerm, setSearchTerm] = useState("");
 
+  // Automatically fetch emails when component mounts or folder changes
   useEffect(() => {
-    fetchEmailsByFolder(folder);
-  }, [folder, fetchEmailsByFolder]);
+    refreshEmails();
+  }, [folder, refreshEmails]);
 
   const handleCreateBooking = async (email: EmailType) => {
     const success = await createBookingFromEmail(email);

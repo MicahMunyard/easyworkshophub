@@ -8,13 +8,16 @@ import EmailInbox from "@/components/email-integration/EmailInbox";
 import EmailSettings from "@/components/email-integration/EmailSettings";
 import EmailAutomation from "@/components/email-integration/EmailAutomation";
 import { useEmailConnection } from "@/hooks/email/useEmailConnection";
+import { useEmailFetch } from "@/hooks/email/useEmailFetch";
 
 const EmailIntegration = () => {
   const { user } = useAuth();
   const { isConnected, checkConnection, connectionStatus } = useEmailConnection();
   const [activeTab, setActiveTab] = useState("inbox");
   const [isCheckingConnection, setIsCheckingConnection] = useState(true);
+  const { fetchEmailsByFolder } = useEmailFetch();
   
+  // Check connection when component mounts
   useEffect(() => {
     if (user) {
       setIsCheckingConnection(true);
@@ -24,7 +27,7 @@ const EmailIntegration = () => {
     }
   }, [user, checkConnection]);
 
-  // If not connected, default to settings tab
+  // Go to settings tab if not connected
   useEffect(() => {
     if (!isCheckingConnection && !isConnected) {
       setActiveTab("settings");

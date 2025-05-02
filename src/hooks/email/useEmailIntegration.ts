@@ -19,6 +19,13 @@ export const useEmailIntegration = () => {
     const fetchedEmails = await fetchEmailsByFolder("inbox");
     setEmails(fetchedEmails);
   }, [fetchEmailsByFolder]);
+  
+  // Auto-load emails when the component mounts if connected
+  useEffect(() => {
+    if (isConnected) {
+      refreshEmails();
+    }
+  }, [isConnected, refreshEmails]);
 
   const replyToEmail = async (email: EmailType, replyContent: string): Promise<boolean> => {
     if (!email) return false;
