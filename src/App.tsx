@@ -16,7 +16,7 @@ const App = () => {
   return (
     <Routes>
       {/* App Routes with Layout */}
-      <Route element={<Layout />}>
+      <Route element={<Layout><React.Fragment /></Layout>}>
         <Route path="/" element={<ProtectedRoute><Jobs /></ProtectedRoute>} />
         <Route path="/jobs" element={<ProtectedRoute><Jobs /></ProtectedRoute>} />
       </Route>

@@ -23,11 +23,15 @@ export const useCompletedJobs = () => {
           let customerEmail = '';
           let customerPhone = '';
           
-          const { data: bookingData } = await fetchCustomerInfoForJob(job.customer, user.id);
-            
-          if (bookingData) {
-            customerEmail = bookingData.customer_email || '';
-            customerPhone = bookingData.customer_phone || '';
+          try {
+            const { data: bookingData, error: bookingError } = await fetchCustomerInfoForJob(job.customer, user.id);
+              
+            if (bookingData && !bookingError) {
+              customerEmail = bookingData.customer_email || '';
+              customerPhone = bookingData.customer_phone || '';
+            }
+          } catch (error) {
+            console.error('Error fetching customer info:', error);
           }
           
           return transformCompletedJob(job, customerEmail, customerPhone);

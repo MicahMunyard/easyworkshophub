@@ -21,7 +21,7 @@ const JobNotesSection: React.FC<JobNotesSectionProps> = ({ notes }) => {
             {notes.map(note => (
               <div key={note.id} className="border rounded-md p-3">
                 <div className="flex justify-between items-start">
-                  <p className="text-sm font-medium">{note.author}</p>
+                  <p className="text-sm font-medium">{note.author || note.created_by || 'Unknown'}</p>
                   <p className="text-xs text-muted-foreground">
                     {new Date(note.created_at).toLocaleString()}
                   </p>

@@ -6,6 +6,7 @@ export interface JobNote {
   content: string;
   created_at: string;
   created_by?: string;
+  author?: string;
 }
 
 export interface JobPhoto {
@@ -29,6 +30,8 @@ export interface TimeLog {
   technicianId: string;
   startTime: string;
   endTime?: string;
+  duration?: number;
+  notes?: string;
 }
 
 export interface TechnicianProfile {
@@ -57,4 +60,6 @@ export interface TechnicianJob {
   estimatedTime?: string;
   photos?: JobPhoto[];
   partsRequested?: PartRequest[];
+  timeLogged?: number;
+  isActive?: boolean;
 }

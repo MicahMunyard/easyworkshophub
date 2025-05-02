@@ -24,11 +24,11 @@ export const transformJobsData = (jobsData: any[]): TechnicianJob[] => {
       scheduledFor: job.date || null,
       estimatedTime: job.time_estimate || 'Not specified',
       priority: job.priority || 'Medium',
-      timeLogged: job.time_logged || 0,
       partsRequested: job.parts_requested || [],
       photos: job.photos || [],
       notes: job.notes || [],
-      isActive: false
+      isActive: false,
+      date: job.date || new Date().toISOString()
     };
     
     return transformedJob;
@@ -52,7 +52,7 @@ export const transformBookingsData = (bookingsData: any[]): TechnicianJob[] => {
           id: `note-${booking.id}`,
           content: booking.notes,
           created_at: booking.created_at || new Date().toISOString(),
-          author: 'System'
+          created_by: 'System'
         }] 
       : [];
       
@@ -73,11 +73,11 @@ export const transformBookingsData = (bookingsData: any[]): TechnicianJob[] => {
       scheduledFor: booking.booking_date || null,
       estimatedTime: booking.duration ? `${booking.duration} minutes` : 'Not specified',
       priority: 'Medium',
-      timeLogged: 0,
       partsRequested: [],
       photos: [],
       notes: notesArray,
-      isActive: false
+      isActive: false,
+      date: booking.booking_date || new Date().toISOString()
     };
     
     return transformedJob;

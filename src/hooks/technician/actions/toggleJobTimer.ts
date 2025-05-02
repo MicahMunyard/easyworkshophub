@@ -34,9 +34,9 @@ export const useToggleJobTimer = (
         const timeLog: TimeLog = {
           id: uuidv4(),
           jobId,
+          technicianId: "",
           startTime: new Date(Date.now() - 3600000).toISOString(), // Mock start time (1 hour ago)
           endTime: new Date().toISOString(),
-          duration: 3600, // seconds (1 hour)
           notes: "Time logged in offline mode"
         };
         
