@@ -38,6 +38,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const currentMainSection = getCurrentMainSection(location.pathname);
   const currentSecondaryNav = secondaryNavSections[currentMainSection] || [];
 
+  // Don't render the normal layout for technician portal
+  if (location.pathname.includes('/technician-portal')) {
+    return <>{children}</>;
+  }
+
   useEffect(() => {
     if (isMobile) {
       setSidebarExpanded(false);
