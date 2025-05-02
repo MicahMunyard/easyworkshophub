@@ -4,6 +4,7 @@ import { Bell, HelpCircle, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import NavProfile from "./NavProfile";
 import NotificationBell from "./NotificationBell";
+import { Link } from "react-router-dom";
 
 interface NavActionsProps {
   isMobile?: boolean;
@@ -20,15 +21,21 @@ const NavActions: React.FC<NavActionsProps> = ({ isMobile = false }) => {
         variant="ghost"
         size="icon"
         className="text-white hover:bg-white/10"
+        asChild
       >
-        <HelpCircle className="h-5 w-5" />
+        <Link to="/help">
+          <HelpCircle className="h-5 w-5" />
+        </Link>
       </Button>
       <Button
         variant="ghost"
         size="icon"
         className="text-white hover:bg-white/10"
+        asChild
       >
-        <Settings className="h-5 w-5" />
+        <Link to="/settings">
+          <Settings className="h-5 w-5" />
+        </Link>
       </Button>
       <NotificationBell />
       <NavProfile />

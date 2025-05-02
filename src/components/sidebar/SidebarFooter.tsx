@@ -1,19 +1,19 @@
 
 import React from "react";
 import { NavLink } from "react-router-dom";
-import { Settings, HelpCircle } from "lucide-react";
+import { HelpCircle, Wrench } from "lucide-react";
 
 const SidebarFooter: React.FC = () => {
   return (
     <div className="border-t border-sidebar-border pt-4 mt-4">
       <NavLink
-        to="/settings"
+        to="/workshop-setup"
         className={({ isActive }) => 
           `nav-item ${isActive ? "active" : ""}`
         }
       >
-        <Settings className="h-5 w-5" />
-        <span>Settings</span>
+        <Wrench className="h-5 w-5" />
+        <span>Workshop Setup</span>
       </NavLink>
       <NavLink
         to="/help"
