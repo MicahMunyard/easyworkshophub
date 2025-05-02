@@ -1,4 +1,43 @@
+
 export type JobStatus = "pending" | "accepted" | "working" | "inProgress" | "completed" | "finished" | "cancelled" | "declined";
+
+export interface JobNote {
+  id: string;
+  content: string;
+  created_at: string;
+  created_by?: string;
+}
+
+export interface JobPhoto {
+  id: string;
+  url: string;
+  uploaded_at: string;
+  caption?: string;
+}
+
+export interface PartRequest {
+  id: string;
+  name: string;
+  quantity: number;
+  status: "pending" | "approved" | "denied" | "delivered";
+  requested_at: string;
+}
+
+export interface TimeLog {
+  id: string;
+  jobId: string;
+  technicianId: string;
+  startTime: string;
+  endTime?: string;
+}
+
+export interface TechnicianProfile {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  role?: string;
+}
 
 export interface TechnicianJob {
   id: string;
@@ -9,7 +48,13 @@ export interface TechnicianJob {
   date: string;
   time?: string;
   priority: string;
-  notes?: string;
+  notes?: JobNote[];
   assignedTo?: string;
   technicianId?: string;
+  title?: string;
+  description?: string;
+  scheduledFor?: string;
+  estimatedTime?: string;
+  photos?: JobPhoto[];
+  partsRequested?: PartRequest[];
 }

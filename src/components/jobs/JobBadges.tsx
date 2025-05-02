@@ -16,7 +16,7 @@ const JobBadges: React.FC<JobBadgesProps> = ({ status, priority }) => {
   );
 };
 
-const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
+export const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
   switch (status) {
     case 'pending':
       return <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-200">Pending</Badge>;
@@ -34,7 +34,7 @@ const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
   }
 };
 
-const PriorityBadge: React.FC<{ priority: string }> = ({ priority }) => {
+export const PriorityBadge: React.FC<{ priority: string }> = ({ priority }) => {
   switch (priority.toLowerCase()) {
     case 'high':
       return <Badge variant="outline" className="bg-red-100 text-red-800 border-red-200">High Priority</Badge>;
