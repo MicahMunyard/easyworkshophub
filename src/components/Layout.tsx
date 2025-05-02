@@ -22,7 +22,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const getCurrentMainSection = (path: string): string => {
     if (path === '/' || path === '') return 'dashboard';
     if (path.includes('/booking-diary') || path.includes('/jobs')) return 'bookings';
-    if (path.includes('/email')) return 'email';
+    if (path.includes('/email-integration')) return 'email';
     if (path.includes('/communication')) return 'communication';
     if (path.includes('/inventory') || path.includes('/suppliers')) return 'inventory';
     if (path.includes('/customers')) return 'customers';
