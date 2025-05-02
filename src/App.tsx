@@ -9,6 +9,7 @@ import Layout from "./components/Layout";
 import { useAuth } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Jobs from "./pages/Jobs";
+import Invoicing from "./pages/Invoicing";
 import { NotificationProvider } from "./contexts/NotificationContext";
 
 const App = () => {
@@ -18,9 +19,10 @@ const App = () => {
     <NotificationProvider>
       <Routes>
         {/* App Routes with Layout */}
-        <Route element={<Layout><React.Fragment /></Layout>}>
+        <Route element={<Layout />}>
           <Route path="/" element={<ProtectedRoute><Jobs /></ProtectedRoute>} />
           <Route path="/jobs" element={<ProtectedRoute><Jobs /></ProtectedRoute>} />
+          <Route path="/invoicing" element={<ProtectedRoute><Invoicing /></ProtectedRoute>} />
         </Route>
       </Routes>
     </NotificationProvider>
