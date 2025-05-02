@@ -12,6 +12,7 @@ import { RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const TechnicianPortal = () => {
+  // Always declare all hooks at the top
   const { user } = useAuth();
   const { toast } = useToast();
   const [isRetrying, setIsRetrying] = useState(false);
@@ -56,7 +57,7 @@ const TechnicianPortal = () => {
     }
   };
   
-  // Show loading screen if auth is loading
+  // Only conditionally return after all hooks are defined
   if (!user) {
     return <Navigate to="/auth/signin" />;
   }

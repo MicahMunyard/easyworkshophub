@@ -19,6 +19,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Always declare ALL hooks before any conditional logic or returns
+  useEffect(() => {
+    if (isMobile) {
+      setSidebarExpanded(false);
+    }
+  }, [isMobile, location.pathname]);
+
   const getCurrentMainSection = (path: string): string => {
     if (path === '/' || path === '') return 'dashboard';
     if (path.includes('/booking-diary') || path.includes('/jobs')) return 'bookings';
@@ -38,22 +45,16 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const currentMainSection = getCurrentMainSection(location.pathname);
   const currentSecondaryNav = secondaryNavSections[currentMainSection] || [];
 
-  // Don't render the normal layout for technician portal
-  if (location.pathname.includes('/technician-portal')) {
-    return <>{children}</>;
-  }
-
-  useEffect(() => {
-    if (isMobile) {
-      setSidebarExpanded(false);
-    }
-  }, [isMobile, location.pathname]);
-
   const handleSidebarToggle = () => {
     if (isMobile) {
       setSidebarExpanded(!sidebarExpanded);
     }
   };
+
+  // After ALL hooks have been called, we can safely return conditionally
+  if (location.pathname.includes('/technician-portal')) {
+    return <>{children}</>;
+  }
 
   return (
     <div className="min-h-screen flex bg-background text-foreground">
