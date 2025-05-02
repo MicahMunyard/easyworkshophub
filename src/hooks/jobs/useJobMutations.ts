@@ -1,12 +1,13 @@
-
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { JobType } from "@/types/job";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNotifications } from "@/contexts/NotificationContext";
 
 export const useJobMutations = (fetchJobs: () => Promise<void>) => {
   const { toast } = useToast();
   const { user } = useAuth();
+  const { preferences, addNotification } = useNotifications();
 
   const addJob = async (newJob: JobType) => {
     try {
@@ -71,6 +72,14 @@ export const useJobMutations = (fetchJobs: () => Promise<void>) => {
         return false;
       }
 
+      // Get the current job to check if the status is being changed to "completed"
+      const { data: currentJob } = await supabase
+        .from('jobs')
+        .select('*')
+        .eq('id', updatedJob.id)
+        .eq('user_id', user.id)
+        .single();
+      
       // Update in Supabase
       const { error } = await supabase
         .from('jobs')
@@ -90,6 +99,22 @@ export const useJobMutations = (fetchJobs: () => Promise<void>) => {
       
       if (error) {
         throw error;
+      }
+      
+      // If the job status is being changed to "completed", create a notification for the admin
+      if (
+        currentJob && 
+        currentJob.status !== "completed" && 
+        updatedJob.status === "completed" && 
+        preferences.completedJobs
+      ) {
+        addNotification({
+          title: "Job Completed",
+          message: `Job ${updatedJob.id} (${updatedJob.service}) has been completed and needs to be finalized.`,
+          type: "job_completed",
+          priority: "medium",
+          actionData: updatedJob
+        });
       }
       
       toast({

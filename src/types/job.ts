@@ -4,7 +4,7 @@ export interface JobType {
   customer: string;
   vehicle: string;
   service: string;
-  status: "pending" | "inProgress" | "working" | "completed" | "cancelled";
+  status: "pending" | "inProgress" | "working" | "completed" | "finished" | "cancelled";
   assignedTo: string;
   date: string;
   time?: string; // Time field is optional

@@ -1,106 +1,120 @@
-import React from 'react';
-import { Routes, Route, Navigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+} from "react-router-dom";
 import Layout from "./components/Layout";
-import EzyPartsRoutes from "./routes/EzyPartsRoutes";
-import Index from "./pages/Index";
+import EzyPartsLayout from "./components/ezyparts/layout";
+import TechnicianLayout from "./components/technician/TechnicianLayout";
+import { ThemeProvider } from "./contexts/ThemeContext";
+import { AuthProvider } from "./contexts/AuthContext";
+import { BookingProvider } from "./contexts/BookingContext";
+import { TechnicianAuthProvider } from "./contexts/TechnicianAuthContext";
+import { SidebarProvider } from "./contexts/SidebarContext";
+import { NotificationProvider } from "./contexts/NotificationContext";
+import Dashboard from "./pages/Dashboard";
 import BookingDiary from "./pages/BookingDiary";
-import Jobs from "./pages/Jobs";
-import WorkshopSetup from "./pages/WorkshopSetup";
-import Inventory from "./pages/Inventory";
+import Settings from "./pages/Settings";
+import Communication from "./pages/Communication";
 import Customers from "./pages/Customers";
-import Invoicing from "./pages/Invoicing"; 
-import PointOfSale from "./pages/PointOfSale";
-import Suppliers from "./pages/Suppliers";
+import Invoicing from "./pages/Invoicing";
 import Reports from "./pages/Reports";
 import Marketing from "./pages/Marketing";
 import EmailMarketing from "./pages/EmailMarketing";
-import EmailIntegration from "./pages/EmailIntegration";
-import Communication from "./pages/Communication";
 import Reviews from "./pages/Reviews";
-import NotFound from "./pages/NotFound";
-import Auth from "./pages/Auth";
-import Profile from "./pages/Profile";
-import Settings from "./pages/Settings";
-import TechnicianPortal from "./pages/TechnicianPortal";
+import Vehicles from "./pages/Vehicles";
 import Timesheets from "./pages/Timesheets";
-import { useAuth } from "./contexts/AuthContext";
+import EmailIntegration from "./pages/EmailIntegration";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import ProtectedRoute from "./components/ProtectedRoute";
-import EmailCallback from "./pages/email/callback";
-import FacebookCallback from "./pages/facebook/callback";
+import TechnicianLogin from "./components/technician/TechnicianLogin";
+import TechnicianDashboard from "./components/technician/TechnicianDashboard";
+import TechnicianJobs from "./components/technician/TechnicianJobs";
+import TechJobDetail from "./components/technician/TechJobDetail";
+import Jobs from "./pages/Jobs";
+import Inventory from "./pages/Inventory";
+import Suppliers from "./pages/Suppliers";
+import { Toaster } from "./components/ui/toaster";
+import CustomerDetailPage from "./pages/CustomerDetailPage";
+import EzyPartsDashboard from "./pages/ezyparts/Dashboard";
+import EzyPartsVehicleSearch from "./pages/ezyparts/VehicleSearch";
+import EzyPartsQuote from "./pages/ezyparts/Quote";
+import EzyPartsConfiguration from "./pages/ezyparts/Configuration";
+import Invoices from "./pages/Invoices";
 
-const App: React.FC = () => {
+const AppContent = () => {
   const { user } = useAuth();
   
   return (
-    <Routes>
-      {/* Public routes */}
-      <Route path="/auth/signin" element={<Auth />} />
-      <Route path="/auth/signup" element={<Auth />} />
-      <Route path="/auth" element={<Navigate to="/auth/signin" replace />} />
-      
-      {/* Facebook OAuth callback route */}
-      <Route path="/facebook/callback" element={<FacebookCallback />} />
-      
-      {/* Protected routes */}
-      <Route 
-        path="/" 
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <Index />
-            </Layout>
-          </ProtectedRoute>
-        } 
-      />
-      
-      {/* EzyParts routes */}
-      <Route
-        path="/ezyparts/*"
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <EzyPartsRoutes />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-      
-      {/* Other protected routes */}
-      <Route path="/booking-diary" element={<ProtectedRoute><Layout><BookingDiary /></Layout></ProtectedRoute>} />
-      <Route path="/jobs" element={<ProtectedRoute><Layout><Jobs /></Layout></ProtectedRoute>} />
-      <Route path="/workshop-setup" element={<ProtectedRoute><Layout><WorkshopSetup /></Layout></ProtectedRoute>} />
-      <Route path="/technician-portal" element={<ProtectedRoute><TechnicianPortal /></ProtectedRoute>} />
-      <Route path="/inventory" element={<ProtectedRoute><Layout><Inventory /></Layout></ProtectedRoute>} />
-      <Route path="/customers" element={<ProtectedRoute><Layout><Customers /></Layout></ProtectedRoute>} />
-      <Route path="/invoicing" element={<ProtectedRoute><Layout><Invoicing /></Layout></ProtectedRoute>} />
-      <Route path="/invoices" element={<Navigate to="/invoicing" replace />} />
-      <Route path="/pos" element={<ProtectedRoute><Layout><PointOfSale /></Layout></ProtectedRoute>} />
-      <Route path="/suppliers" element={<ProtectedRoute><Layout><Suppliers /></Layout></ProtectedRoute>} />
-      <Route path="/reports" element={<ProtectedRoute><Layout><Reports /></Layout></ProtectedRoute>} />
-      <Route path="/marketing" element={<ProtectedRoute><Layout><Marketing /></Layout></ProtectedRoute>} />
-      <Route path="/email-marketing" element={<ProtectedRoute><Layout><EmailMarketing /></Layout></ProtectedRoute>} />
-      <Route path="/email-integration" element={<ProtectedRoute><Layout><EmailIntegration /></Layout></ProtectedRoute>} />
-      <Route path="/communication" element={<ProtectedRoute><Layout><Communication /></Layout></ProtectedRoute>} />
-      <Route path="/reviews" element={<ProtectedRoute><Layout><Reviews /></Layout></ProtectedRoute>} />
-      <Route path="/profile" element={<ProtectedRoute><Layout><Profile /></Layout></ProtectedRoute>} />
-      <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
-      
-      {/* Email OAuth callback route */}
-      <Route path="/email/callback" element={<EmailCallback />} />
-      
-      {/* Timesheets route */}
-      <Route path="/timesheets" element={
-        <ProtectedRoute>
-          <Layout>
-            <Timesheets />
-          </Layout>
-        </ProtectedRoute>
-      } />
-      
-      {/* Catch all routes */}
-      <Route path="*" element={<NotFound />} />
-    </Routes>
-  );
-}
+    <ThemeProvider>
+      <AuthProvider>
+        <BookingProvider>
+          <TechnicianAuthProvider>
+            <SidebarProvider>
+              <NotificationProvider>
+                <Router>
+                  <Routes>
+                    {/* Authentication Routes */}
+                    <Route path="/auth/signin" element={<Login />} />
+                    <Route path="/auth/signup" element={<Register />} />
+                    <Route path="/auth/forgot-password" element={<ForgotPassword />} />
+                    <Route path="/auth/reset-password" element={<ResetPassword />} />
 
-export default App;
+                    {/* Technician Routes */}
+                    <Route path="/technician" element={<TechnicianLayout />}>
+                      <Route index element={<TechnicianLogin />} />
+                      <Route path="dashboard" element={<TechnicianDashboard />} />
+                      <Route path="jobs" element={<TechnicianJobs />} />
+                      <Route path="jobs/:jobId" element={<TechJobDetail />} />
+                    </Route>
+
+                    {/* EzyParts Routes */}
+                    <Route path="/ezyparts" element={<EzyPartsLayout />}>
+                      <Route path="dashboard" element={<EzyPartsDashboard />} />
+                      <Route path="search" element={<EzyPartsVehicleSearch />} />
+                      <Route path="quote" element={<EzyPartsQuote />} />
+                      <Route path="config" element={<EzyPartsConfiguration />} />
+                    </Route>
+
+                    {/* App Routes with Layout */}
+                    <Route element={<Layout />}>
+                      <Route path="/" element={<ProtectedRoute element={<Dashboard />} />} />
+                      <Route path="/booking-diary" element={<ProtectedRoute element={<BookingDiary />} />} />
+                      <Route path="/jobs" element={<ProtectedRoute element={<Jobs />} />} />
+                      <Route path="/communication" element={<ProtectedRoute element={<Communication />} />} />
+                      <Route path="/customers" element={<ProtectedRoute element={<Customers />} />} />
+                      <Route path="/customers/:id" element={<ProtectedRoute element={<CustomerDetailPage />} />} />
+                      <Route path="/inventory" element={<ProtectedRoute element={<Inventory />} />} />
+                      <Route path="/suppliers" element={<ProtectedRoute element={<Suppliers />} />} />
+                      <Route path="/vehicles" element={<ProtectedRoute element={<Vehicles />} />} />
+                      <Route path="/invoicing" element={<ProtectedRoute element={<Invoicing />} />} />
+                      <Route path="/invoices" element={<ProtectedRoute element={<Invoices />} />} />
+                      <Route path="/timesheets" element={<ProtectedRoute element={<Timesheets />} />} />
+                      <Route path="/email-integration" element={<ProtectedRoute element={<EmailIntegration />} />} />
+                      <Route path="/reports" element={<ProtectedRoute element={<Reports />} />} />
+                      <Route path="/marketing" element={<ProtectedRoute element={<Marketing />} />} />
+                      <Route path="/email-marketing" element={<ProtectedRoute element={<EmailMarketing />} />} />
+                      <Route path="/reviews" element={<ProtectedRoute element={<Reviews />} />} />
+                      <Route path="/settings" element={<ProtectedRoute element={<Settings />} />} />
+                    </Route>
+                  </Routes>
+                </Router>
+                <Toaster />
+              </NotificationProvider>
+            </SidebarProvider>
+          </TechnicianAuthProvider>
+        </BookingProvider>
+      </AuthProvider>
+    </ThemeProvider>
+  );
+};
+
+export default function App() {
+  return <AppContent />;
+}

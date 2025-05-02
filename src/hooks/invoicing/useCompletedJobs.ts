@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { CompletedJobWithCustomer } from './types';
-import { fetchCompletedJobsData, fetchCustomerInfoForJob } from './api/invoiceApi';
+import { fetchFinishedJobsData, fetchCustomerInfoForJob } from './api/invoiceApi';
 import { transformCompletedJob } from './utils/transformUtils';
 
 export const useCompletedJobs = () => {
@@ -13,7 +13,8 @@ export const useCompletedJobs = () => {
     if (!user) return;
     
     try {
-      const { data, error } = await fetchCompletedJobsData(user.id);
+      // Changed to fetch only finished jobs, not completed ones
+      const { data, error } = await fetchFinishedJobsData(user.id);
         
       if (error) throw error;
       
@@ -35,7 +36,7 @@ export const useCompletedJobs = () => {
         setCompletedJobs(transformedJobs);
       }
     } catch (error) {
-      console.error('Error fetching completed jobs:', error);
+      console.error('Error fetching finished jobs:', error);
     }
   };
 

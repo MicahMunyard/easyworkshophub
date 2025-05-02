@@ -18,6 +18,8 @@ const StatusBadge = ({ status }: StatusBadgeProps) => {
       return <Badge variant="outline" className="bg-indigo-100 text-indigo-800">In Progress</Badge>;
     case 'completed':
       return <Badge variant="outline" className="bg-green-100 text-green-800">Completed</Badge>;
+    case 'finished':
+      return <Badge variant="outline" className="bg-emerald-100 text-emerald-800">Finished</Badge>;
     case 'cancelled':
       return <Badge variant="outline" className="bg-red-100 text-red-800">Cancelled</Badge>;
     case 'declined':

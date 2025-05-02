@@ -2,43 +2,49 @@
 import React from "react";
 import { Badge } from "@/components/ui/badge";
 
-export const getStatusColor = (status: string) => {
-  switch (status) {
-    case 'pending': return 'bg-yellow-200 text-yellow-800';
-    case 'inProgress':
-    case 'working': return 'bg-blue-200 text-blue-800';
-    case 'completed': return 'bg-green-200 text-green-800';
-    case 'cancelled': return 'bg-red-200 text-red-800';
-    default: return 'bg-gray-200 text-gray-800';
-  }
-};
-
-export const getPriorityColor = (priority: string) => {
-  switch (priority.toLowerCase()) {
-    case 'high': return 'bg-red-200 text-red-800';
-    case 'medium': return 'bg-yellow-200 text-yellow-800';
-    case 'low': return 'bg-green-200 text-green-800';
-    default: return 'bg-gray-200 text-gray-800';
-  }
-};
-
-interface StatusBadgeProps {
+interface JobBadgesProps {
   status: string;
-}
-
-export const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => (
-  <Badge className={getStatusColor(status)}>
-    {status === 'inProgress' ? 'In Progress' : 
-     status.charAt(0).toUpperCase() + status.slice(1)}
-  </Badge>
-);
-
-interface PriorityBadgeProps {
   priority: string;
 }
 
-export const PriorityBadge: React.FC<PriorityBadgeProps> = ({ priority }) => (
-  <Badge className={getPriorityColor(priority)}>
-    {priority}
-  </Badge>
-);
+const JobBadges: React.FC<JobBadgesProps> = ({ status, priority }) => {
+  return (
+    <div className="flex flex-wrap gap-2">
+      <StatusBadge status={status} />
+      <PriorityBadge priority={priority} />
+    </div>
+  );
+};
+
+const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
+  switch (status) {
+    case 'pending':
+      return <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-200">Pending</Badge>;
+    case 'inProgress':
+    case 'working':
+      return <Badge variant="outline" className="bg-indigo-100 text-indigo-800 border-indigo-200">In Progress</Badge>;
+    case 'completed':
+      return <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">Completed</Badge>;
+    case 'finished':
+      return <Badge variant="outline" className="bg-emerald-100 text-emerald-800 border-emerald-200">Finished</Badge>;
+    case 'cancelled':
+      return <Badge variant="outline" className="bg-red-100 text-red-800 border-red-200">Cancelled</Badge>;
+    default:
+      return <Badge variant="outline">{status}</Badge>;
+  }
+};
+
+const PriorityBadge: React.FC<{ priority: string }> = ({ priority }) => {
+  switch (priority.toLowerCase()) {
+    case 'high':
+      return <Badge variant="outline" className="bg-red-100 text-red-800 border-red-200">High Priority</Badge>;
+    case 'medium':
+      return <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-200">Medium Priority</Badge>;
+    case 'low':
+      return <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200">Low Priority</Badge>;
+    default:
+      return <Badge variant="outline">{priority}</Badge>;
+  }
+};
+
+export default JobBadges;
