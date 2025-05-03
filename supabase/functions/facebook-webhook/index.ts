@@ -1,18 +1,16 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.23.0';
-
-// CORS headers for browser requests
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import {
+  handleCors,
+  createJsonResponse,
+  createErrorResponse
+} from "../_shared/response-utils.ts";
 
 serve(async (req) => {
   // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const corsResponse = handleCors(req);
+  if (corsResponse) return corsResponse;
 
   try {
     // Handle POST requests (incoming messages)
@@ -124,38 +122,19 @@ serve(async (req) => {
       }
       
       // Always return a 200 OK to Facebook promptly
-      return new Response(JSON.stringify({ success: true }), { 
-        status: 200,
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json'
-        } 
-      });
+      return createJsonResponse({ success: true });
     }
     
     // Handle unsupported methods
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), { 
-      status: 405,
-      headers: { 
-        ...corsHeaders,
-        'Content-Type': 'application/json'
-      } 
-    });
+    return createJsonResponse({ error: 'Method not allowed' }, 405);
     
   } catch (error) {
-    console.error('Error processing webhook:', error);
-    return new Response(JSON.stringify({ error: error.message }), { 
-      status: 500,
-      headers: { 
-        ...corsHeaders,
-        'Content-Type': 'application/json'
-      } 
-    });
+    return createErrorResponse(error);
   }
 });
 
 // Helper function to get page access token
-async function getPageAccessToken(supabase, pageId) {
+async function getPageAccessToken(supabase: any, pageId: string) {
   const { data, error } = await supabase
     .from('facebook_page_tokens')
     .select('access_token')
@@ -170,7 +149,7 @@ async function getPageAccessToken(supabase, pageId) {
 }
 
 // Helper function to fetch sender profile from Facebook
-async function fetchSenderProfile(senderId, pageAccessToken) {
+async function fetchSenderProfile(senderId: string, pageAccessToken: string) {
   try {
     const response = await fetch(
       `https://graph.facebook.com/v17.0/${senderId}?fields=name,profile_pic&access_token=${pageAccessToken}`

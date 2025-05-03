@@ -1,21 +1,16 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { 
+  handleCors, 
+  createJsonResponse, 
+  createErrorResponse 
+} from "../_shared/response-utils.ts";
 
 serve(async (req) => {
   // Handle CORS preflight requests
-  if (req.method === "OPTIONS") {
-    return new Response(null, { 
-      status: 204,
-      headers: corsHeaders 
-    });
-  }
+  const corsResponse = handleCors(req);
+  if (corsResponse) return corsResponse;
 
   // Create Supabase client
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
@@ -28,41 +23,17 @@ serve(async (req) => {
 
     // Create test table if it doesn't exist
     if (action === "setup") {
-      // Create diagnostic tables if they don't exist
       try {
         // Attempt to create ezyparts_logs table
         await supabase.rpc('create_ezyparts_diagnostic_tables');
         
-        return new Response(
-          JSON.stringify({
-            success: true,
-            message: "Diagnostic tables set up successfully",
-            timestamp: new Date().toISOString()
-          }),
-          {
-            status: 200,
-            headers: {
-              ...corsHeaders,
-              "Content-Type": "application/json"
-            }
-          }
-        );
+        return createJsonResponse({
+          success: true,
+          message: "Diagnostic tables set up successfully",
+          timestamp: new Date().toISOString()
+        });
       } catch (error) {
-        return new Response(
-          JSON.stringify({
-            success: false,
-            message: "Error setting up diagnostic tables",
-            error: error instanceof Error ? error.message : "Unknown error",
-            timestamp: new Date().toISOString()
-          }),
-          {
-            status: 500,
-            headers: {
-              ...corsHeaders,
-              "Content-Type": "application/json"
-            }
-          }
-        );
+        return createErrorResponse(error);
       }
     }
 
@@ -78,22 +49,16 @@ serve(async (req) => {
           created_at: new Date().toISOString()
         });
 
-      return new Response(
-        JSON.stringify({
-          success: !error,
-          message: error ? "Test failed" : "Endpoint is accessible and working",
-          error: error?.message,
-          data,
-          timestamp: new Date().toISOString()
-        }),
-        {
-          status: error ? 500 : 200,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json"
-          }
-        }
-      );
+      if (error) {
+        throw error;
+      }
+
+      return createJsonResponse({
+        success: true,
+        message: "Endpoint is accessible and working",
+        data,
+        timestamp: new Date().toISOString()
+      });
     }
 
     // Check webhook functionality
@@ -145,41 +110,18 @@ serve(async (req) => {
           body: testQuotePayload
         });
         
-        const respText = await webhookResponse.text();
+        const responseText = await webhookResponse.text();
         
-        return new Response(
-          JSON.stringify({
-            success: webhookResponse.ok,
-            message: webhookResponse.ok ? "Webhook test successful" : "Webhook test failed",
-            statusCode: webhookResponse.status,
-            statusText: webhookResponse.statusText,
-            responsePreview: respText.substring(0, 500) + (respText.length > 500 ? "..." : ""),
-            timestamp: new Date().toISOString()
-          }),
-          {
-            status: 200,
-            headers: {
-              ...corsHeaders,
-              "Content-Type": "application/json"
-            }
-          }
-        );
+        return createJsonResponse({
+          success: webhookResponse.ok,
+          message: webhookResponse.ok ? "Webhook test successful" : "Webhook test failed",
+          statusCode: webhookResponse.status,
+          statusText: webhookResponse.statusText,
+          responsePreview: responseText.substring(0, 500) + (responseText.length > 500 ? "..." : ""),
+          timestamp: new Date().toISOString()
+        });
       } catch (error) {
-        return new Response(
-          JSON.stringify({
-            success: false,
-            message: "Webhook test failed with exception",
-            error: error instanceof Error ? error.message : "Unknown error",
-            timestamp: new Date().toISOString()
-          }),
-          {
-            status: 500,
-            headers: {
-              ...corsHeaders,
-              "Content-Type": "application/json"
-            }
-          }
-        );
+        return createErrorResponse(error);
       }
     }
 
@@ -191,22 +133,14 @@ serve(async (req) => {
         .order("created_at", { ascending: false })
         .limit(50);
       
-      return new Response(
-        JSON.stringify({
-          success: !error,
-          logs: data,
-          count: data?.length || 0,
-          error: error?.message,
-          timestamp: new Date().toISOString()
-        }),
-        {
-          status: error ? 500 : 200,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json"
-          }
-        }
-      );
+      if (error) throw error;
+      
+      return createJsonResponse({
+        success: true,
+        logs: data,
+        count: data?.length || 0,
+        timestamp: new Date().toISOString()
+      });
     }
 
     // Get recent payloads
@@ -217,84 +151,45 @@ serve(async (req) => {
         .order("received_at", { ascending: false })
         .limit(10);
       
-      return new Response(
-        JSON.stringify({
-          success: !error,
-          payloads: data?.map(p => ({
-            ...p,
-            raw_content: p.raw_content?.substring(0, 500) + (p.raw_content?.length > 500 ? "..." : "")
-          })),
-          count: data?.length || 0,
-          error: error?.message,
-          timestamp: new Date().toISOString()
-        }),
-        {
-          status: error ? 500 : 200,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json"
-          }
-        }
-      );
+      if (error) throw error;
+      
+      return createJsonResponse({
+        success: true,
+        payloads: data?.map(p => ({
+          ...p,
+          raw_content: p.raw_content?.substring(0, 500) + (p.raw_content?.length > 500 ? "..." : "")
+        })),
+        count: data?.length || 0,
+        timestamp: new Date().toISOString()
+      });
     }
 
     // Show environment variables (non-sensitive)
     if (action === "env") {
-      return new Response(
-        JSON.stringify({
-          supabaseUrl: supabaseUrl ? "Set" : "Not set",
-          supabaseKey: supabaseKey ? "Set (redacted)" : "Not set",
-          hasServiceRoleKey: !!Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"),
-          hasAnonymousKey: !!Deno.env.get("SUPABASE_ANON_KEY"),
-          region: Deno.env.get("SUPABASE_FUNCTIONS_REGION") || "Unknown",
-          timestamp: new Date().toISOString()
-        }),
-        {
-          status: 200,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json"
-          }
-        }
-      );
+      return createJsonResponse({
+        supabaseUrl: supabaseUrl ? "Set" : "Not set",
+        supabaseKey: supabaseKey ? "Set (redacted)" : "Not set",
+        hasServiceRoleKey: !!Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"),
+        hasAnonymousKey: !!Deno.env.get("SUPABASE_ANON_KEY"),
+        region: Deno.env.get("SUPABASE_FUNCTIONS_REGION") || "Unknown",
+        timestamp: new Date().toISOString()
+      });
     }
 
     // Default response with available actions
-    return new Response(
-      JSON.stringify({
-        message: "EzyParts Diagnostic API",
-        availableActions: [
-          { action: "setup", description: "Set up diagnostic tables" },
-          { action: "test", description: "Test endpoint accessibility" },
-          { action: "test-webhook", description: "Test ezyparts-quote webhook endpoint" },
-          { action: "logs", description: "View recent logs" },
-          { action: "payloads", description: "View recent raw payloads" },
-          { action: "env", description: "Show environment variables (non-sensitive)" }
-        ],
-        timestamp: new Date().toISOString()
-      }),
-      {
-        status: 200,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json"
-        }
-      }
-    );
+    return createJsonResponse({
+      message: "EzyParts Diagnostic API",
+      availableActions: [
+        { action: "setup", description: "Set up diagnostic tables" },
+        { action: "test", description: "Test endpoint accessibility" },
+        { action: "test-webhook", description: "Test ezyparts-quote webhook endpoint" },
+        { action: "logs", description: "View recent logs" },
+        { action: "payloads", description: "View recent raw payloads" },
+        { action: "env", description: "Show environment variables (non-sensitive)" }
+      ],
+      timestamp: new Date().toISOString()
+    });
   } catch (error) {
-    return new Response(
-      JSON.stringify({
-        error: "Internal server error",
-        message: error instanceof Error ? error.message : "Unknown error",
-        timestamp: new Date().toISOString()
-      }),
-      {
-        status: 500,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json"
-        }
-      }
-    );
+    return createErrorResponse(error);
   }
 });
