@@ -1,13 +1,15 @@
 
+import { v4 as uuidv4 } from 'uuid';
+
 /**
- * Custom API error class
- * Provides consistent error structure with HTTP status codes for API responses
+ * Custom API error class with additional metadata
+ * This allows for consistent error handling and response formatting
  */
 export class ApiError extends Error {
-  statusCode: number;
-  isOperational: boolean;
-  errorId: string;
-  timestamp: string;
+  public readonly statusCode: number;
+  public readonly isOperational: boolean;
+  public readonly errorId: string;
+  public readonly timestamp: string;
 
   constructor(
     statusCode: number,
@@ -17,70 +19,45 @@ export class ApiError extends Error {
     super(message);
     this.statusCode = statusCode;
     this.isOperational = isOperational;
-    this.errorId = generateErrorId();
+    this.errorId = uuidv4();
     this.timestamp = new Date().toISOString();
-
-    // Ensures proper stack trace for debugging (preserves proper error prototype chain)
+    
+    // Ensure instanceof works correctly
     Object.setPrototypeOf(this, ApiError.prototype);
-    Error.captureStackTrace(this, this.constructor);
   }
 
   /**
-   * Creates a validation-specific error
+   * Create a 400 Bad Request error
    */
-  static validation(message: string): ApiError {
+  static badRequest(message: string): ApiError {
     return new ApiError(400, message);
   }
 
   /**
-   * Creates an authentication-specific error
+   * Create a 401 Unauthorized error
    */
-  static authentication(message: string = 'Authentication failed'): ApiError {
+  static unauthorized(message: string): ApiError {
     return new ApiError(401, message);
   }
 
   /**
-   * Creates an authorization-specific error
+   * Create a 403 Forbidden error
    */
-  static authorization(message: string = 'Permission denied'): ApiError {
+  static forbidden(message: string): ApiError {
     return new ApiError(403, message);
   }
 
   /**
-   * Creates a not-found-specific error
+   * Create a 404 Not Found error
    */
-  static notFound(message: string = 'Resource not found'): ApiError {
+  static notFound(message: string): ApiError {
     return new ApiError(404, message);
   }
 
   /**
-   * Creates a conflict-specific error
+   * Create a 500 Internal Server Error
    */
-  static conflict(message: string): ApiError {
-    return new ApiError(409, message);
-  }
-
-  /**
-   * Creates a server-specific error
-   */
-  static internal(message: string = 'Internal server error'): ApiError {
+  static internal(message: string = "Internal Server Error"): ApiError {
     return new ApiError(500, message, false);
   }
-}
-
-/**
- * Extends ValidationError to specifically handle validation errors
- */
-export class ValidationError extends ApiError {
-  constructor(message: string) {
-    super(400, message);
-    Object.setPrototypeOf(this, ValidationError.prototype);
-  }
-}
-
-/**
- * Generates a unique error ID for tracing
- */
-function generateErrorId(): string {
-  return Math.random().toString(36).substring(2, 15);
 }
