@@ -1,79 +1,67 @@
 
 import { Request, Response, NextFunction } from 'express';
-import { 
-  ApiError, 
-  ValidationError, 
-  AuthenticationError,
-  AuthorizationError,
-  NotFoundError,
-  ConflictError,
-  ExternalServiceError
-} from '../utils/api-error';
-
-/**
- * Generates a simple unique ID for tracking errors
- */
-function generateErrorId(): string {
-  return `err-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-}
-
-/**
- * Async handler to eliminate try/catch boilerplate
- */
-export const asyncHandler = (fn: Function) => {
-  return (req: Request, res: Response, next: NextFunction) => {
-    Promise.resolve(fn(req, res, next)).catch(next);
-  };
-};
+import { ApiError } from '../utils/api-error';
+import { logger } from '../utils/logger';
 
 /**
  * Global error handling middleware
+ * This middleware handles all errors thrown in the application
  */
-export const errorHandler = (
-  err: Error | ApiError,
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  // Log detailed error information for server-side debugging
-  console.error('Error in request:', {
-    path: req.path,
-    method: req.method,
-    errorMessage: err.message,
-    errorType: err.name,
+export const errorHandler = (err: Error, req: Request, res: Response, next: NextFunction) => {
+  // Log the error with appropriate details
+  const errorDetails = {
+    path: `${req.method} ${req.path}`,
+    requestId: req.headers['x-request-id'] || 'unknown',
+    errorId: (err as ApiError).errorId || 'system-error',
+    timestamp: (err as ApiError).timestamp || new Date().toISOString(),
+  };
+
+  if (err instanceof ApiError) {
+    logger.error(`API Error: ${err.message}`, { 
+      ...errorDetails,
+      statusCode: err.statusCode,
+      isOperational: err.isOperational,
+      stack: err.stack
+    });
+    
+    return res.status(err.statusCode).json({
+      error: {
+        message: err.message,
+        errorId: err.errorId,
+        timestamp: err.timestamp
+      }
+    });
+  }
+  
+  // Unhandled errors (not ApiError instances)
+  logger.error(`Unhandled Error: ${err.message}`, {
+    ...errorDetails,
     stack: err.stack
   });
   
-  // Default values
-  let statusCode = 500;
-  let errorMessage = 'Internal Server Error';
-  let errorId = generateErrorId();
-  let isOperational = false;
-  
-  // Handle specific error types
-  if (err instanceof ApiError) {
-    statusCode = err.statusCode;
-    errorMessage = err.message;
-    errorId = err.errorId || errorId;
-    isOperational = err.isOperational;
-  } else if (err.name === 'SyntaxError') {
-    // Handle JSON parsing errors
-    statusCode = 400;
-    errorMessage = 'Invalid JSON format';
-  } else if (err.name === 'ValidationError') {
-    // Handle generic validation errors
-    statusCode = 400;
-    errorMessage = err.message;
-  }
-  
-  // Send appropriate response based on environment
-  const isDev = process.env.NODE_ENV !== 'production';
-  
-  res.status(statusCode).json({
-    error: errorMessage,
-    errorId,
-    timestamp: new Date().toISOString(),
-    // Only include additional details in development
-    ...(isDev && !isOperational ? { stack: err.stack } : {})
+  // Don't expose error details in production for non-operational errors
+  return res.status(500).json({
+    error: {
+      message: process.env.NODE_ENV === 'production' 
+        ? 'Internal server error' 
+        : err.message,
+      errorId: errorDetails.errorId,
+      timestamp: errorDetails.timestamp
+    }
   });
+};
+
+/**
+ * Fallback middleware to handle 404 errors
+ */
+export const notFoundHandler = (req: Request, res: Response, next: NextFunction) => {
+  const error = ApiError.notFound(`Route not found: ${req.method} ${req.originalUrl}`);
+  
+  logger.warn('Route not found', {
+    path: `${req.method} ${req.originalUrl}`,
+    requestId: req.headers['x-request-id'] || 'unknown',
+    ip: req.ip
+  });
+  
+  next(error);
 };
