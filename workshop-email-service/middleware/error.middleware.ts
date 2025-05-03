@@ -1,22 +1,14 @@
 
 import { Request, Response, NextFunction } from 'express';
-
-/**
- * Custom API Error class
- */
-export class ApiError extends Error {
-  constructor(
-    public statusCode: number,
-    message: string,
-    public isOperational = true,
-    public errorId?: string
-  ) {
-    super(message);
-    this.name = this.constructor.name;
-    this.errorId = this.errorId || generateErrorId();
-    Error.captureStackTrace(this, this.constructor);
-  }
-}
+import { 
+  ApiError, 
+  ValidationError, 
+  AuthenticationError,
+  AuthorizationError,
+  NotFoundError,
+  ConflictError,
+  ExternalServiceError
+} from '../utils/api-error';
 
 /**
  * Generates a simple unique ID for tracking errors
@@ -48,6 +40,7 @@ export const errorHandler = (
     path: req.path,
     method: req.method,
     errorMessage: err.message,
+    errorType: err.name,
     stack: err.stack
   });
   
@@ -55,24 +48,32 @@ export const errorHandler = (
   let statusCode = 500;
   let errorMessage = 'Internal Server Error';
   let errorId = generateErrorId();
+  let isOperational = false;
   
-  // Handle ApiError instances
+  // Handle specific error types
   if (err instanceof ApiError) {
     statusCode = err.statusCode;
     errorMessage = err.message;
     errorId = err.errorId || errorId;
+    isOperational = err.isOperational;
+  } else if (err.name === 'SyntaxError') {
+    // Handle JSON parsing errors
+    statusCode = 400;
+    errorMessage = 'Invalid JSON format';
   } else if (err.name === 'ValidationError') {
-    // Handle validation errors (e.g., from Joi, Zod, etc.)
+    // Handle generic validation errors
     statusCode = 400;
     errorMessage = err.message;
   }
   
   // Send appropriate response based on environment
+  const isDev = process.env.NODE_ENV !== 'production';
+  
   res.status(statusCode).json({
     error: errorMessage,
     errorId,
     timestamp: new Date().toISOString(),
-    // Only include stack trace in development
-    stack: process.env.NODE_ENV === 'production' ? undefined : err.stack
+    // Only include additional details in development
+    ...(isDev && !isOperational ? { stack: err.stack } : {})
   });
 };
