@@ -2,6 +2,23 @@
 import { Request, Response, NextFunction } from 'express';
 
 /**
+ * Custom API Error class
+ */
+export class ApiError extends Error {
+  constructor(
+    public statusCode: number,
+    message: string,
+    public isOperational = true,
+    public errorId?: string
+  ) {
+    super(message);
+    this.name = this.constructor.name;
+    this.errorId = this.errorId || generateErrorId();
+    Error.captureStackTrace(this, this.constructor);
+  }
+}
+
+/**
  * Generates a simple unique ID for tracking errors
  */
 function generateErrorId(): string {
@@ -9,10 +26,19 @@ function generateErrorId(): string {
 }
 
 /**
+ * Async handler to eliminate try/catch boilerplate
+ */
+export const asyncHandler = (fn: Function) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    Promise.resolve(fn(req, res, next)).catch(next);
+  };
+};
+
+/**
  * Global error handling middleware
  */
 export const errorHandler = (
-  err: Error,
+  err: Error | ApiError,
   req: Request,
   res: Response,
   next: NextFunction
@@ -25,15 +51,25 @@ export const errorHandler = (
     stack: err.stack
   });
   
-  // Determine status code
-  const statusCode = res.statusCode !== 200 ? res.statusCode : 500;
+  // Default values
+  let statusCode = 500;
+  let errorMessage = 'Internal Server Error';
+  let errorId = generateErrorId();
   
-  // Generate tracking ID for this error
-  const errorId = generateErrorId();
+  // Handle ApiError instances
+  if (err instanceof ApiError) {
+    statusCode = err.statusCode;
+    errorMessage = err.message;
+    errorId = err.errorId || errorId;
+  } else if (err.name === 'ValidationError') {
+    // Handle validation errors (e.g., from Joi, Zod, etc.)
+    statusCode = 400;
+    errorMessage = err.message;
+  }
   
   // Send appropriate response based on environment
   res.status(statusCode).json({
-    error: err.message,
+    error: errorMessage,
     errorId,
     timestamp: new Date().toISOString(),
     // Only include stack trace in development
