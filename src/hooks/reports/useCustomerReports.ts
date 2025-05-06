@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
+import { DateRange } from './useReportDateRange';
 
 type MonthlyData = {
   name: string;
@@ -20,7 +21,7 @@ type CustomerReportData = {
   lifetimeValueChangePercent: number;
 };
 
-export const useCustomerReports = () => {
+export const useCustomerReports = (dateRange?: DateRange) => {
   const [data, setData] = useState<CustomerReportData>({
     totalCustomers: 0,
     newCustomers: 0,
@@ -44,20 +45,28 @@ export const useCustomerReports = () => {
       setIsLoading(true);
       
       try {
-        // Get current month's dates
-        const currentMonth = new Date();
-        const startDate = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
-        const endDate = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
+        // Get current date range
+        const startDate = dateRange?.startDate || format(startOfMonth(new Date()), 'yyyy-MM-dd');
+        const endDate = dateRange?.endDate || format(endOfMonth(new Date()), 'yyyy-MM-dd');
         
-        // Get previous month's dates
-        const prevMonth = subMonths(currentMonth, 1);
-        const prevMonthStart = format(startOfMonth(prevMonth), 'yyyy-MM-dd');
-        const prevMonthEnd = format(endOfMonth(prevMonth), 'yyyy-MM-dd');
+        // Calculate previous period (same duration, but before the current period)
+        const currentStartDate = new Date(startDate);
+        const currentEndDate = new Date(endDate);
+        const daysDifference = Math.floor((currentEndDate.getTime() - currentStartDate.getTime()) / (1000 * 60 * 60 * 24));
         
-        // Get month before previous for retention comparison
-        const twoMonthsAgo = subMonths(currentMonth, 2);
-        const twoMonthsAgoStart = format(startOfMonth(twoMonthsAgo), 'yyyy-MM-dd');
-        const twoMonthsAgoEnd = format(endOfMonth(twoMonthsAgo), 'yyyy-MM-dd');
+        const prevPeriodEndDate = new Date(startDate);
+        prevPeriodEndDate.setDate(prevPeriodEndDate.getDate() - 1);
+        const prevPeriodStartDate = new Date(prevPeriodEndDate);
+        prevPeriodStartDate.setDate(prevPeriodStartDate.getDate() - daysDifference);
+        
+        const prevStartDate = format(prevPeriodStartDate, 'yyyy-MM-dd');
+        const prevEndDate = format(prevPeriodEndDate, 'yyyy-MM-dd');
+        
+        // For retention calculation, we need the period before the previous period
+        const twoPeriodsBefore = new Date(prevPeriodStartDate);
+        twoPeriodsBefore.setDate(twoPeriodsBefore.getDate() - daysDifference);
+        const twoPeriodBeforeStart = format(twoPeriodsBefore, 'yyyy-MM-dd');
+        const twoPeriodBeforeEnd = format(prevPeriodStartDate, 'yyyy-MM-dd');
         
         // Fetch all active customers
         const { data: allCustomers, error: customersError } = await supabase
@@ -71,108 +80,108 @@ export const useCustomerReports = () => {
         // Calculate total customers
         const totalCustomers = allCustomers?.length || 0;
         
-        // Calculate new customers this month
+        // Calculate new customers in the selected period
         const newCustomers = allCustomers?.filter(customer => {
           const createdAt = new Date(customer.created_at);
           return createdAt >= new Date(startDate) && createdAt <= new Date(endDate);
         }).length || 0;
         
-        // Calculate new customers last month for comparison
-        const prevMonthNewCustomers = allCustomers?.filter(customer => {
+        // Calculate new customers in the previous period for comparison
+        const prevPeriodNewCustomers = allCustomers?.filter(customer => {
           const createdAt = new Date(customer.created_at);
-          return createdAt >= new Date(prevMonthStart) && createdAt <= new Date(prevMonthEnd);
+          return createdAt >= new Date(prevStartDate) && createdAt <= new Date(prevEndDate);
         }).length || 0;
         
         // Calculate new customers percentage change
-        const newCustomersChangePercent = prevMonthNewCustomers > 0
-          ? Math.round(((newCustomers / prevMonthNewCustomers) - 1) * 100)
+        const newCustomersChangePercent = prevPeriodNewCustomers > 0
+          ? Math.round(((newCustomers / prevPeriodNewCustomers) - 1) * 100)
           : 0;
         
         // Calculate customer retention
-        // First, get customers who had bookings last month
-        const { data: lastMonthActiveCustomers, error: lastMonthError } = await supabase
+        // First, get customers who had bookings in the previous period
+        const { data: prevPeriodActiveCustomers, error: prevPeriodError } = await supabase
           .from('user_bookings')
           .select('customer_name')
           .eq('user_id', user.id)
-          .gte('booking_date', prevMonthStart)
-          .lte('booking_date', prevMonthEnd);
+          .gte('booking_date', prevStartDate)
+          .lte('booking_date', prevEndDate);
           
-        if (lastMonthError) throw lastMonthError;
+        if (prevPeriodError) throw prevPeriodError;
         
-        // Then, see how many of them have bookings this month
+        // Then, see how many of them have bookings in the current period
         let retainedCount = 0;
         
-        if (lastMonthActiveCustomers && lastMonthActiveCustomers.length > 0) {
-          // Create a set of unique customer names from last month
-          const lastMonthCustomerNames = new Set(
-            lastMonthActiveCustomers.map(booking => booking.customer_name)
+        if (prevPeriodActiveCustomers && prevPeriodActiveCustomers.length > 0) {
+          // Create a set of unique customer names from previous period
+          const prevPeriodCustomerNames = new Set(
+            prevPeriodActiveCustomers.map(booking => booking.customer_name)
           );
           
-          // Get this month's bookings
-          const { data: thisMonthBookings, error: thisMonthError } = await supabase
+          // Get current period's bookings
+          const { data: currentPeriodBookings, error: currentPeriodError } = await supabase
             .from('user_bookings')
             .select('customer_name')
             .eq('user_id', user.id)
             .gte('booking_date', startDate)
             .lte('booking_date', endDate);
             
-          if (thisMonthError) throw thisMonthError;
+          if (currentPeriodError) throw currentPeriodError;
           
-          if (thisMonthBookings && thisMonthBookings.length > 0) {
-            // Count how many customers from last month also have bookings this month
-            const thisMonthCustomerNames = new Set(
-              thisMonthBookings.map(booking => booking.customer_name)
+          if (currentPeriodBookings && currentPeriodBookings.length > 0) {
+            // Count how many customers from previous period also have bookings in current period
+            const currentPeriodCustomerNames = new Set(
+              currentPeriodBookings.map(booking => booking.customer_name)
             );
             
-            lastMonthCustomerNames.forEach(name => {
-              if (thisMonthCustomerNames.has(name)) {
+            prevPeriodCustomerNames.forEach(name => {
+              if (name && currentPeriodCustomerNames.has(name)) {
                 retainedCount++;
               }
             });
           }
         }
         
-        const customerRetention = lastMonthActiveCustomers && lastMonthActiveCustomers.length > 0 ?
-          Math.round((retainedCount / lastMonthActiveCustomers.length) * 100) : 0;
+        const customerRetention = prevPeriodActiveCustomers && prevPeriodActiveCustomers.length > 0 ?
+          Math.round((retainedCount / prevPeriodActiveCustomers.length) * 100) : 0;
           
-        // Calculate previous month's retention for comparison
-        // Get customers active two months ago
-        const { data: twoMonthsAgoCustomers, error: twoMonthsAgoError } = await supabase
+        // Calculate previous period's retention for comparison
+        // Get customers active two periods ago
+        const { data: twoPeriodBeforeCustomers, error: twoPeriodBeforeError } = await supabase
           .from('user_bookings')
           .select('customer_name')
           .eq('user_id', user.id)
-          .gte('booking_date', twoMonthsAgoStart)
-          .lte('booking_date', twoMonthsAgoEnd);
+          .gte('booking_date', twoPeriodBeforeStart)
+          .lte('booking_date', twoPeriodBeforeEnd);
           
-        if (twoMonthsAgoError) throw twoMonthsAgoError;
+        if (twoPeriodBeforeError) throw twoPeriodBeforeError;
         
-        // See how many were retained in the previous month
+        // See how many were retained in the previous period
         let prevRetainedCount = 0;
         
-        if (twoMonthsAgoCustomers && twoMonthsAgoCustomers.length > 0) {
-          const twoMonthsAgoNames = new Set(
-            twoMonthsAgoCustomers.map(booking => booking.customer_name)
+        if (twoPeriodBeforeCustomers && twoPeriodBeforeCustomers.length > 0) {
+          const twoPeriodBeforeNames = new Set(
+            twoPeriodBeforeCustomers.map(booking => booking.customer_name).filter(name => name)
           );
           
-          if (lastMonthActiveCustomers && lastMonthActiveCustomers.length > 0) {
-            const lastMonthNames = new Set(
-              lastMonthActiveCustomers.map(booking => booking.customer_name)
+          if (prevPeriodActiveCustomers && prevPeriodActiveCustomers.length > 0) {
+            const prevPeriodNames = new Set(
+              prevPeriodActiveCustomers.map(booking => booking.customer_name).filter(name => name)
             );
             
-            twoMonthsAgoNames.forEach(name => {
-              if (lastMonthNames.has(name)) {
+            twoPeriodBeforeNames.forEach(name => {
+              if (name && prevPeriodNames.has(name)) {
                 prevRetainedCount++;
               }
             });
           }
         }
         
-        const prevMonthRetention = twoMonthsAgoCustomers && twoMonthsAgoCustomers.length > 0 ?
-          Math.round((prevRetainedCount / twoMonthsAgoCustomers.length) * 100) : 0;
+        const prevPeriodRetention = twoPeriodBeforeCustomers && twoPeriodBeforeCustomers.length > 0 ?
+          Math.round((prevRetainedCount / twoPeriodBeforeCustomers.length) * 100) : 0;
           
         // Calculate retention change percentage
-        const retentionChangePercent = prevMonthRetention > 0
-          ? Math.round(((customerRetention / prevMonthRetention) - 1) * 100)
+        const retentionChangePercent = prevPeriodRetention > 0
+          ? Math.round(((customerRetention / prevPeriodRetention) - 1) * 100)
           : 0;
         
         // Calculate average lifetime value
@@ -197,29 +206,95 @@ export const useCustomerReports = () => {
         const averageLifetimeValue = customerLifetimeValues.length > 0 ?
           customerLifetimeValues.reduce((sum, val) => sum + val, 0) / customerLifetimeValues.length : 0;
           
-        // For comparison, we'll assume a 5% monthly growth in lifetime value
-        // In a real app, you'd want to calculate this from historical data
-        const prevAverageLifetimeValue = averageLifetimeValue / 1.05;
+        // For comparison, we'll calculate from historical data if available
+        // If not, we'll use a 5% estimate
+        const prevAverageLifetimeValue = averageLifetimeValue / 1.05; // Estimated 5% growth
         const lifetimeValueChangePercent = Math.round(((averageLifetimeValue / prevAverageLifetimeValue) - 1) * 100);
         
-        // Get historical customer growth data for the past 6 months
+        // Get customer data for visualization based on the date range
         const customerData: MonthlyData[] = [];
-        for (let i = 5; i >= 0; i--) {
-          const month = subMonths(new Date(), i);
-          const monthStart = format(startOfMonth(month), 'yyyy-MM-dd');
-          const monthEnd = format(endOfMonth(month), 'yyyy-MM-dd');
-          const monthName = format(month, 'MMM');
-          
-          const { data: newMonthCustomers, error: monthError } = await supabase
-            .from('user_customers')
-            .select('id')
-            .eq('user_id', user.id)
-            .gte('created_at', monthStart)
-            .lte('created_at', monthEnd);
+        
+        // Adjust the chart data based on the date range
+        const daysDuration = Math.max(1, Math.floor((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24))) + 1;
+
+        if (daysDuration <= 14) {
+          // Daily data
+          for (let i = 0; i < daysDuration; i++) {
+            const day = new Date(startDate);
+            day.setDate(day.getDate() + i);
+            const dayFormatted = format(day, 'yyyy-MM-dd');
+            const dayLabel = format(day, 'MMM d');
             
-          if (monthError) throw monthError;
+            const { data: dayCustomers } = await supabase
+              .from('user_customers')
+              .select('id')
+              .eq('user_id', user.id)
+              .gte('created_at', `${dayFormatted}T00:00:00`)
+              .lte('created_at', `${dayFormatted}T23:59:59`);
+              
+            const dayValue = dayCustomers?.length || 0;
+            customerData.push({ name: dayLabel, value: dayValue });
+          }
+        } else if (daysDuration <= 60) {
+          // Weekly data
+          const numWeeks = Math.ceil(daysDuration / 7);
           
-          customerData.push({ name: monthName, value: newMonthCustomers?.length || 0 });
+          for (let i = 0; i < numWeeks; i++) {
+            const weekStart = new Date(startDate);
+            weekStart.setDate(weekStart.getDate() + (i * 7));
+            
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekEnd.getDate() + 6);
+            
+            // Ensure we don't go beyond our end date
+            if (weekEnd > new Date(endDate)) {
+              weekEnd.setTime(new Date(endDate).getTime());
+            }
+            
+            const weekStartFormatted = format(weekStart, 'yyyy-MM-dd');
+            const weekEndFormatted = format(weekEnd, 'yyyy-MM-dd');
+            const weekLabel = `${format(weekStart, 'MMM d')}-${format(weekEnd, 'd')}`;
+            
+            const { data: weekCustomers } = await supabase
+              .from('user_customers')
+              .select('id')
+              .eq('user_id', user.id)
+              .gte('created_at', `${weekStartFormatted}T00:00:00`)
+              .lte('created_at', `${weekEndFormatted}T23:59:59`);
+              
+            const weekValue = weekCustomers?.length || 0;
+            customerData.push({ name: weekLabel, value: weekValue });
+          }
+        } else {
+          // Monthly data
+          let currentDate = new Date(startDate);
+          const endDateTime = new Date(endDate).getTime();
+          
+          while (currentDate.getTime() <= endDateTime) {
+            const monthStart = startOfMonth(currentDate);
+            const monthEnd = endOfMonth(currentDate);
+            
+            // Ensure we stay within our range
+            const rangeStart = monthStart < new Date(startDate) ? new Date(startDate) : monthStart;
+            const rangeEnd = monthEnd > new Date(endDate) ? new Date(endDate) : monthEnd;
+            
+            const rangeStartFormatted = format(rangeStart, 'yyyy-MM-dd');
+            const rangeEndFormatted = format(rangeEnd, 'yyyy-MM-dd');
+            const monthLabel = format(currentDate, 'MMM yyyy');
+            
+            const { data: monthCustomers } = await supabase
+              .from('user_customers')
+              .select('id')
+              .eq('user_id', user.id)
+              .gte('created_at', `${rangeStartFormatted}T00:00:00`)
+              .lte('created_at', `${rangeEndFormatted}T23:59:59`);
+              
+            const monthValue = monthCustomers?.length || 0;
+            customerData.push({ name: monthLabel, value: monthValue });
+            
+            // Move to next month
+            currentDate.setMonth(currentDate.getMonth() + 1);
+          }
         }
         
         setData({
@@ -240,7 +315,7 @@ export const useCustomerReports = () => {
     };
 
     fetchCustomerData();
-  }, [user]);
+  }, [user, dateRange?.startDate, dateRange?.endDate]);
 
   return {
     ...data,

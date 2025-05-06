@@ -2,7 +2,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
+import { format, subMonths, startOfMonth, endOfMonth, subDays } from 'date-fns';
+import { DateRange } from './useReportDateRange';
 
 type MonthlyData = {
   name: string;
@@ -21,7 +22,7 @@ type RevenueReportData = {
   laborRevenueChangePercent: number;
 };
 
-export const useRevenueReports = () => {
+export const useRevenueReports = (dateRange?: DateRange) => {
   const [data, setData] = useState<RevenueReportData>({
     monthlyRevenue: 0,
     averageJobValue: 0,
@@ -46,16 +47,24 @@ export const useRevenueReports = () => {
       setIsLoading(true);
       
       try {
-        // Get current and previous month's dates
-        const currentMonth = new Date();
-        const startDate = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
-        const endDate = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
+        // Get current date range
+        const startDate = dateRange?.startDate || format(startOfMonth(new Date()), 'yyyy-MM-dd');
+        const endDate = dateRange?.endDate || format(endOfMonth(new Date()), 'yyyy-MM-dd');
         
-        const prevMonth = subMonths(currentMonth, 1);
-        const prevMonthStart = format(startOfMonth(prevMonth), 'yyyy-MM-dd');
-        const prevMonthEnd = format(endOfMonth(prevMonth), 'yyyy-MM-dd');
+        // Calculate previous period (same duration, but before the current period)
+        const currentStartDate = new Date(startDate);
+        const currentEndDate = new Date(endDate);
+        const daysDifference = Math.floor((currentEndDate.getTime() - currentStartDate.getTime()) / (1000 * 60 * 60 * 24));
         
-        // Fetch current month's invoice data
+        const prevPeriodEndDate = new Date(startDate);
+        prevPeriodEndDate.setDate(prevPeriodEndDate.getDate() - 1);
+        const prevPeriodStartDate = new Date(prevPeriodEndDate);
+        prevPeriodStartDate.setDate(prevPeriodStartDate.getDate() - daysDifference);
+        
+        const prevStartDate = format(prevPeriodStartDate, 'yyyy-MM-dd');
+        const prevEndDate = format(prevPeriodEndDate, 'yyyy-MM-dd');
+        
+        // Fetch current period's invoice data
         const { data: invoiceData, error: invoiceError } = await supabase
           .from('user_invoices')
           .select('total, subtotal, tax_total')
@@ -65,19 +74,19 @@ export const useRevenueReports = () => {
           
         if (invoiceError) throw invoiceError;
         
-        // Fetch previous month's invoice data for comparison
-        const { data: prevMonthInvoiceData, error: prevInvoiceError } = await supabase
+        // Fetch previous period's invoice data for comparison
+        const { data: prevInvoiceData, error: prevInvoiceError } = await supabase
           .from('user_invoices')
           .select('total, subtotal, tax_total')
           .eq('user_id', user.id)
-          .gte('date', prevMonthStart)
-          .lte('date', prevMonthEnd);
+          .gte('date', prevStartDate)
+          .lte('date', prevEndDate);
           
         if (prevInvoiceError) throw prevInvoiceError;
         
         // Calculate monthly revenue
         const monthlyRevenue = invoiceData?.reduce((sum, invoice) => sum + Number(invoice.total), 0) || 0;
-        const prevMonthlyRevenue = prevMonthInvoiceData?.reduce((sum, invoice) => sum + Number(invoice.total), 0) || 0;
+        const prevMonthlyRevenue = prevInvoiceData?.reduce((sum, invoice) => sum + Number(invoice.total), 0) || 0;
         
         // Calculate revenue change percentage
         const revenueChangePercent = prevMonthlyRevenue > 0 
@@ -95,14 +104,14 @@ export const useRevenueReports = () => {
           
         if (jobsError) throw jobsError;
         
-        // Fetch previous month's jobs
+        // Fetch previous period's jobs
         const { data: prevJobsData, error: prevJobsError } = await supabase
           .from('user_jobs')
           .select('cost')
           .eq('user_id', user.id)
           .eq('status', 'completed')
-          .gte('end_date', prevMonthStart)
-          .lte('end_date', prevMonthEnd);
+          .gte('end_date', prevStartDate)
+          .lte('end_date', prevEndDate);
           
         if (prevJobsError) throw prevJobsError;
         
@@ -111,7 +120,7 @@ export const useRevenueReports = () => {
         const totalJobCost = completedJobsWithCost.reduce((sum, job) => sum + Number(job.cost), 0);
         const averageJobValue = completedJobsWithCost.length > 0 ? totalJobCost / completedJobsWithCost.length : 0;
         
-        // Calculate previous month's average job value
+        // Calculate previous period's average job value
         const prevCompletedJobsWithCost = prevJobsData?.filter(job => job.cost !== null && job.cost > 0) || [];
         const prevTotalJobCost = prevCompletedJobsWithCost.reduce((sum, job) => sum + Number(job.cost), 0);
         const prevAverageJobValue = prevCompletedJobsWithCost.length > 0 ? prevTotalJobCost / prevCompletedJobsWithCost.length : 0;
@@ -137,25 +146,92 @@ export const useRevenueReports = () => {
           ? Math.round(((laborRevenue / prevLaborRevenue) - 1) * 100)
           : 0;
         
-        // Get historical revenue data for the past 6 months
+        // Get historical revenue data for chart visualization
+        // If using a custom date range, show appropriate data points based on the range
         const revenueData: MonthlyData[] = [];
-        for (let i = 5; i >= 0; i--) {
-          const month = subMonths(new Date(), i);
-          const monthStart = format(startOfMonth(month), 'yyyy-MM-dd');
-          const monthEnd = format(endOfMonth(month), 'yyyy-MM-dd');
-          const monthName = format(month, 'MMM');
-          
-          const { data: monthInvoices, error: monthError } = await supabase
-            .from('user_invoices')
-            .select('total')
-            .eq('user_id', user.id)
-            .gte('date', monthStart)
-            .lte('date', monthEnd);
+        
+        // For shorter ranges (1-14 days), show daily data
+        // For medium ranges (15-60 days), show weekly data
+        // For longer ranges (>60 days), show monthly data
+        const daysDuration = Math.max(1, Math.floor((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24))) + 1;
+
+        if (daysDuration <= 14) {
+          // Daily data
+          for (let i = 0; i < daysDuration; i++) {
+            const day = new Date(startDate);
+            day.setDate(day.getDate() + i);
+            const dayFormatted = format(day, 'yyyy-MM-dd');
+            const dayLabel = format(day, 'MMM d');
             
-          if (monthError) throw monthError;
+            const { data: dayInvoices } = await supabase
+              .from('user_invoices')
+              .select('total')
+              .eq('user_id', user.id)
+              .eq('date', dayFormatted);
+              
+            const dayValue = dayInvoices?.reduce((sum, invoice) => sum + Number(invoice.total), 0) || 0;
+            revenueData.push({ name: dayLabel, value: dayValue });
+          }
+        } else if (daysDuration <= 60) {
+          // Weekly data
+          const numWeeks = Math.ceil(daysDuration / 7);
           
-          const monthValue = monthInvoices?.reduce((sum, invoice) => sum + Number(invoice.total), 0) || 0;
-          revenueData.push({ name: monthName, value: monthValue });
+          for (let i = 0; i < numWeeks; i++) {
+            const weekStart = new Date(startDate);
+            weekStart.setDate(weekStart.getDate() + (i * 7));
+            
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekEnd.getDate() + 6);
+            
+            // Ensure we don't go beyond our end date
+            if (weekEnd > new Date(endDate)) {
+              weekEnd.setTime(new Date(endDate).getTime());
+            }
+            
+            const weekStartFormatted = format(weekStart, 'yyyy-MM-dd');
+            const weekEndFormatted = format(weekEnd, 'yyyy-MM-dd');
+            const weekLabel = `${format(weekStart, 'MMM d')}-${format(weekEnd, 'MMM d')}`;
+            
+            const { data: weekInvoices } = await supabase
+              .from('user_invoices')
+              .select('total')
+              .eq('user_id', user.id)
+              .gte('date', weekStartFormatted)
+              .lte('date', weekEndFormatted);
+              
+            const weekValue = weekInvoices?.reduce((sum, invoice) => sum + Number(invoice.total), 0) || 0;
+            revenueData.push({ name: weekLabel, value: weekValue });
+          }
+        } else {
+          // Monthly data
+          let currentDate = new Date(startDate);
+          const endDateTime = new Date(endDate).getTime();
+          
+          while (currentDate.getTime() <= endDateTime) {
+            const monthStart = startOfMonth(currentDate);
+            const monthEnd = endOfMonth(currentDate);
+            
+            // Ensure we stay within our range
+            const rangeStart = monthStart < new Date(startDate) ? new Date(startDate) : monthStart;
+            const rangeEnd = monthEnd > new Date(endDate) ? new Date(endDate) : monthEnd;
+            
+            const rangeStartFormatted = format(rangeStart, 'yyyy-MM-dd');
+            const rangeEndFormatted = format(rangeEnd, 'yyyy-MM-dd');
+            const monthLabel = format(currentDate, 'MMM yyyy');
+            
+            const { data: monthInvoices } = await supabase
+              .from('user_invoices')
+              .select('total')
+              .eq('user_id', user.id)
+              .gte('date', rangeStartFormatted)
+              .lte('date', rangeEndFormatted);
+              
+            const monthValue = monthInvoices?.reduce((sum, invoice) => sum + Number(invoice.total), 0) || 0;
+            revenueData.push({ name: monthLabel, value: monthValue });
+            
+            // Move to next month
+            currentDate.setMonth(currentDate.getMonth() + 1);
+          }
         }
         
         setData({
@@ -177,7 +253,7 @@ export const useRevenueReports = () => {
     };
 
     fetchRevenueData();
-  }, [user]);
+  }, [user, dateRange?.startDate, dateRange?.endDate]);
 
   return {
     ...data,

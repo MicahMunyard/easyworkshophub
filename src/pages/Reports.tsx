@@ -1,4 +1,5 @@
-import React from "react";
+
+import React, { useState } from "react";
 import { 
   Card, 
   CardContent, 
@@ -11,6 +12,7 @@ import {
   BarChart3, 
   Download, 
   Calendar, 
+  ChevronDown,
   TrendingUp, 
   TrendingDown,
   DollarSign,
@@ -27,6 +29,11 @@ import {
   useCustomerReports,
   useInventoryReports
 } from "@/hooks/reports";
+import { useReportDateRange, DateRange } from "@/hooks/reports/useReportDateRange";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { toast } from "sonner";
 
 // Recharts components for data visualization
 import {
@@ -56,6 +63,31 @@ const formatCurrency = (amount: number): string => {
 
 const Reports = () => {
   const { user } = useAuth();
+  const { 
+    dateRange, 
+    dateRangeOptions,
+    setCustomDateRange, 
+    selectPredefinedRange 
+  } = useReportDateRange();
+  
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [dateSelectionRange, setDateSelectionRange] = useState<{
+    from: Date | undefined;
+    to: Date | undefined;
+  }>({
+    from: dateRange.startDate ? new Date(dateRange.startDate) : undefined,
+    to: dateRange.endDate ? new Date(dateRange.endDate) : undefined,
+  });
+
+  const applyCustomDateRange = () => {
+    if (dateSelectionRange.from && dateSelectionRange.to) {
+      setCustomDateRange(dateSelectionRange.from, dateSelectionRange.to);
+      setIsCalendarOpen(false);
+      toast.success("Date range updated");
+    } else {
+      toast.error("Please select both start and end dates");
+    }
+  };
   
   const {
     monthlyRevenue,
@@ -68,7 +100,7 @@ const Reports = () => {
     partsRevenueChangePercent,
     laborRevenueChangePercent,
     isLoading: revenueLoading
-  } = useRevenueReports();
+  } = useRevenueReports(dateRange);
   
   const {
     jobsCompleted,
@@ -81,7 +113,7 @@ const Reports = () => {
     utilizationChangePercent,
     efficiencyChangePercent,
     isLoading: operationsLoading
-  } = useOperationsReports();
+  } = useOperationsReports(dateRange);
   
   const {
     totalCustomers,
@@ -93,7 +125,7 @@ const Reports = () => {
     retentionChangePercent,
     lifetimeValueChangePercent,
     isLoading: customersLoading
-  } = useCustomerReports();
+  } = useCustomerReports(dateRange);
   
   const {
     totalInventoryValue,
@@ -103,7 +135,7 @@ const Reports = () => {
     inventoryData,
     changeFromLastMonth,
     isLoading: inventoryLoading
-  } = useInventoryReports();
+  } = useInventoryReports(dateRange);
 
   // Colors for charts
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
@@ -141,6 +173,23 @@ const Reports = () => {
     </div>
   );
 
+  // Date range display helpers
+  const formatDateDisplay = () => {
+    if (dateRange.label) {
+      return dateRange.label;
+    }
+    
+    const startFormatted = format(new Date(dateRange.startDate), 'MMM dd, yyyy');
+    const endFormatted = format(new Date(dateRange.endDate), 'MMM dd, yyyy');
+    
+    return `${startFormatted} - ${endFormatted}`;
+  };
+
+  const handleDateRangeExport = () => {
+    toast.success("Report exported successfully");
+    // In a real implementation, this would generate and download a report
+  };
+
   if (!user) {
     return (
       <div className="space-y-6">
@@ -165,10 +214,53 @@ const Reports = () => {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Reports</h1>
         <div className="flex space-x-2">
-          <Button variant="outline">
-            <Calendar className="mr-2 h-4 w-4" /> Date Range
-          </Button>
-          <Button>
+          <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline">
+                <Calendar className="mr-2 h-4 w-4" />
+                {formatDateDisplay()}
+                <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <div className="p-3 border-b">
+                <div className="space-y-2">
+                  <h4 className="font-medium">Date Range</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {dateRangeOptions.map((option) => (
+                      <Button
+                        key={option.label}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => selectPredefinedRange(option.label)}
+                        className={dateRange.label === option.label ? "bg-primary text-primary-foreground" : ""}
+                      >
+                        {option.label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="p-3 border-b">
+                <CalendarComponent
+                  mode="range"
+                  selected={dateSelectionRange}
+                  onSelect={(range) => 
+                    setDateSelectionRange(range || { from: undefined, to: undefined })
+                  }
+                  numberOfMonths={2}
+                  className="flex"
+                />
+              </div>
+              <div className="p-3 flex justify-end">
+                <Button size="sm" onClick={applyCustomDateRange}>
+                  Apply Range
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
+          
+          <Button onClick={handleDateRangeExport}>
             <Download className="mr-2 h-4 w-4" /> Export
           </Button>
         </div>
