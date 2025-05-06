@@ -67,7 +67,7 @@ export const useCustomerReports = () => {
         // First, get customers who had bookings last month
         const { data: lastMonthActiveCustomers, error: lastMonthError } = await supabase
           .from('user_bookings')
-          .select('distinct customer_name')
+          .select('customer_name')
           .eq('user_id', user.id)
           .gte('booking_date', prevMonthStart)
           .lte('booking_date', prevMonthEnd);
@@ -78,19 +78,32 @@ export const useCustomerReports = () => {
         let retainedCount = 0;
         
         if (lastMonthActiveCustomers && lastMonthActiveCustomers.length > 0) {
-          for (const customer of lastMonthActiveCustomers) {
-            const { data: thisMonthBooking, error: bookingError } = await supabase
-              .from('user_bookings')
-              .select('id')
-              .eq('user_id', user.id)
-              .eq('customer_name', customer.customer_name)
-              .gte('booking_date', startDate)
-              .lte('booking_date', endDate)
-              .limit(1);
-              
-            if (!bookingError && thisMonthBooking && thisMonthBooking.length > 0) {
-              retainedCount++;
-            }
+          // Create a set of unique customer names from last month
+          const lastMonthCustomerNames = new Set(
+            lastMonthActiveCustomers.map(booking => booking.customer_name)
+          );
+          
+          // Get this month's bookings
+          const { data: thisMonthBookings, error: thisMonthError } = await supabase
+            .from('user_bookings')
+            .select('customer_name')
+            .eq('user_id', user.id)
+            .gte('booking_date', startDate)
+            .lte('booking_date', endDate);
+            
+          if (thisMonthError) throw thisMonthError;
+          
+          if (thisMonthBookings && thisMonthBookings.length > 0) {
+            // Count how many customers from last month also have bookings this month
+            const thisMonthCustomerNames = new Set(
+              thisMonthBookings.map(booking => booking.customer_name)
+            );
+            
+            lastMonthCustomerNames.forEach(name => {
+              if (thisMonthCustomerNames.has(name)) {
+                retainedCount++;
+              }
+            });
           }
         }
         
@@ -101,7 +114,8 @@ export const useCustomerReports = () => {
         // Get all invoices
         const { data: invoices, error: invoicesError } = await supabase
           .from('user_invoices')
-          .select('customer_name, total');
+          .select('customer_name, total')
+          .eq('user_id', user.id);
           
         if (invoicesError) throw invoicesError;
         
