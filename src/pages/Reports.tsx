@@ -244,9 +244,15 @@ const Reports = () => {
               <div className="p-3 border-b">
                 <CalendarComponent
                   mode="range"
-                  selected={dateSelectionRange}
+                  selected={{
+                    from: dateSelectionRange.from,
+                    to: dateSelectionRange.to
+                  }}
                   onSelect={(range) => 
-                    setDateSelectionRange(range || { from: undefined, to: undefined })
+                    setDateSelectionRange({
+                      from: range?.from,
+                      to: range?.to
+                    })
                   }
                   numberOfMonths={2}
                   className="flex"
