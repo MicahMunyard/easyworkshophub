@@ -1,4 +1,3 @@
-
 import React from "react";
 import { 
   Card, 
@@ -64,6 +63,10 @@ const Reports = () => {
     partsRevenue,
     laborRevenue,
     revenueData,
+    revenueChangePercent,
+    avgJobValueChangePercent, 
+    partsRevenueChangePercent,
+    laborRevenueChangePercent,
     isLoading: revenueLoading
   } = useRevenueReports();
   
@@ -73,6 +76,10 @@ const Reports = () => {
     shopUtilization,
     technicianEfficiency,
     jobsData,
+    jobsChangePercent,
+    completionTimeChangePercent,
+    utilizationChangePercent,
+    efficiencyChangePercent,
     isLoading: operationsLoading
   } = useOperationsReports();
   
@@ -82,6 +89,9 @@ const Reports = () => {
     customerRetention,
     averageLifetimeValue,
     customerData,
+    newCustomersChangePercent,
+    retentionChangePercent,
+    lifetimeValueChangePercent,
     isLoading: customersLoading
   } = useCustomerReports();
   
@@ -91,6 +101,7 @@ const Reports = () => {
     inventoryTurnover,
     outOfStockItems,
     inventoryData,
+    changeFromLastMonth,
     isLoading: inventoryLoading
   } = useInventoryReports();
 
@@ -102,6 +113,26 @@ const Reports = () => {
     { name: 'Parts', value: partsRevenue },
     { name: 'Labor', value: laborRevenue },
   ];
+
+  // Helper to determine if a trend is positive (useful for styling)
+  const isTrendPositive = (value: number, inverse: boolean = false) => {
+    return inverse ? value < 0 : value > 0;
+  };
+
+  // Helper to render trend indicator with proper styling
+  const renderTrend = (value: number, label: string, inverse: boolean = false) => {
+    const isPositive = isTrendPositive(value, inverse);
+    return (
+      <div className={`flex items-center text-xs ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+        {isPositive ? (
+          <TrendingUp className="mr-1 h-3 w-3" />
+        ) : (
+          <TrendingDown className="mr-1 h-3 w-3" />
+        )}
+        {Math.abs(value)}% {label}
+      </div>
+    );
+  };
 
   const renderSkeleton = () => (
     <div className="flex flex-col space-y-2">
@@ -166,14 +197,7 @@ const Reports = () => {
                 ) : (
                   <>
                     <div className="text-2xl font-bold">{formatCurrency(monthlyRevenue)}</div>
-                    <div className="flex items-center text-xs text-green-600">
-                      <TrendingUp className="mr-1 h-3 w-3" />
-                      {revenueData && revenueData.length >= 2 ? (
-                        `${Math.round((monthlyRevenue / Math.max(1, revenueData[4].value) - 1) * 100)}% from last month`
-                      ) : (
-                        "Calculating trend..."
-                      )}
-                    </div>
+                    {renderTrend(revenueChangePercent, "from last month")}
                   </>
                 )}
               </CardContent>
@@ -192,10 +216,7 @@ const Reports = () => {
                 ) : (
                   <>
                     <div className="text-2xl font-bold">{formatCurrency(averageJobValue)}</div>
-                    <div className="flex items-center text-xs text-green-600">
-                      <TrendingUp className="mr-1 h-3 w-3" />
-                      +5% from last month
-                    </div>
+                    {renderTrend(avgJobValueChangePercent, "from last month")}
                   </>
                 )}
               </CardContent>
@@ -214,10 +235,7 @@ const Reports = () => {
                 ) : (
                   <>
                     <div className="text-2xl font-bold">{formatCurrency(partsRevenue)}</div>
-                    <div className="flex items-center text-xs text-green-600">
-                      <TrendingUp className="mr-1 h-3 w-3" />
-                      +8% from last month
-                    </div>
+                    {renderTrend(partsRevenueChangePercent, "from last month")}
                   </>
                 )}
               </CardContent>
@@ -236,10 +254,7 @@ const Reports = () => {
                 ) : (
                   <>
                     <div className="text-2xl font-bold">{formatCurrency(laborRevenue)}</div>
-                    <div className="flex items-center text-xs text-green-600">
-                      <TrendingUp className="mr-1 h-3 w-3" />
-                      +15% from last month
-                    </div>
+                    {renderTrend(laborRevenueChangePercent, "from last month")}
                   </>
                 )}
               </CardContent>
@@ -335,14 +350,7 @@ const Reports = () => {
                 ) : (
                   <>
                     <div className="text-2xl font-bold">{jobsCompleted}</div>
-                    <div className="flex items-center text-xs text-green-600">
-                      <TrendingUp className="mr-1 h-3 w-3" />
-                      {jobsData && jobsData.length >= 2 ? (
-                        `${Math.round((jobsCompleted / Math.max(1, jobsData[4].value) - 1) * 100)}% from last month`
-                      ) : (
-                        "Calculating trend..."
-                      )}
-                    </div>
+                    {renderTrend(jobsChangePercent, "from last month")}
                   </>
                 )}
               </CardContent>
@@ -361,10 +369,7 @@ const Reports = () => {
                 ) : (
                   <>
                     <div className="text-2xl font-bold">{averageCompletionTime.toFixed(1)} days</div>
-                    <div className="flex items-center text-xs text-green-600">
-                      <TrendingDown className="mr-1 h-3 w-3" />
-                      -5% from last month
-                    </div>
+                    {renderTrend(completionTimeChangePercent, "from last month", true)}
                   </>
                 )}
               </CardContent>
@@ -383,10 +388,7 @@ const Reports = () => {
                 ) : (
                   <>
                     <div className="text-2xl font-bold">{shopUtilization}%</div>
-                    <div className="flex items-center text-xs text-green-600">
-                      <TrendingUp className="mr-1 h-3 w-3" />
-                      +4% from last month
-                    </div>
+                    {renderTrend(utilizationChangePercent, "from last month")}
                   </>
                 )}
               </CardContent>
@@ -405,10 +407,7 @@ const Reports = () => {
                 ) : (
                   <>
                     <div className="text-2xl font-bold">{technicianEfficiency}%</div>
-                    <div className="flex items-center text-xs text-green-600">
-                      <TrendingUp className="mr-1 h-3 w-3" />
-                      +2% from last month
-                    </div>
+                    {renderTrend(efficiencyChangePercent, "from last month")}
                   </>
                 )}
               </CardContent>
@@ -488,8 +487,12 @@ const Reports = () => {
                   <>
                     <div className="text-2xl font-bold">{totalCustomers}</div>
                     <div className="flex items-center text-xs text-green-600">
-                      <TrendingUp className="mr-1 h-3 w-3" />
-                      +5% from last month
+                      {newCustomers > 0 && (
+                        <>
+                          <TrendingUp className="mr-1 h-3 w-3" />
+                          {newCustomers} new this month
+                        </>
+                      )}
                     </div>
                   </>
                 )}
@@ -509,10 +512,7 @@ const Reports = () => {
                 ) : (
                   <>
                     <div className="text-2xl font-bold">{newCustomers}</div>
-                    <div className="flex items-center text-xs text-green-600">
-                      <TrendingUp className="mr-1 h-3 w-3" />
-                      +18% from last month
-                    </div>
+                    {renderTrend(newCustomersChangePercent, "from last month")}
                   </>
                 )}
               </CardContent>
@@ -531,10 +531,7 @@ const Reports = () => {
                 ) : (
                   <>
                     <div className="text-2xl font-bold">{customerRetention}%</div>
-                    <div className="flex items-center text-xs text-green-600">
-                      <TrendingUp className="mr-1 h-3 w-3" />
-                      +3% from last month
-                    </div>
+                    {renderTrend(retentionChangePercent, "from last month")}
                   </>
                 )}
               </CardContent>
@@ -553,10 +550,7 @@ const Reports = () => {
                 ) : (
                   <>
                     <div className="text-2xl font-bold">{formatCurrency(averageLifetimeValue)}</div>
-                    <div className="flex items-center text-xs text-green-600">
-                      <TrendingUp className="mr-1 h-3 w-3" />
-                      +7% from last month
-                    </div>
+                    {renderTrend(lifetimeValueChangePercent, "from last month")}
                   </>
                 )}
               </CardContent>
@@ -629,10 +623,7 @@ const Reports = () => {
                 ) : (
                   <>
                     <div className="text-2xl font-bold">{formatCurrency(totalInventoryValue)}</div>
-                    <div className="flex items-center text-xs text-green-600">
-                      <TrendingUp className="mr-1 h-3 w-3" />
-                      +8% from last month
-                    </div>
+                    {renderTrend(changeFromLastMonth, "from last month")}
                   </>
                 )}
               </CardContent>
@@ -653,7 +644,7 @@ const Reports = () => {
                     <div className="text-2xl font-bold">{lowStockItems}</div>
                     <div className="flex items-center text-xs text-red-600">
                       <TrendingUp className="mr-1 h-3 w-3" />
-                      +3 from last month
+                      Need attention
                     </div>
                   </>
                 )}
@@ -675,7 +666,7 @@ const Reports = () => {
                     <div className="text-2xl font-bold">{inventoryTurnover.toFixed(1)}x</div>
                     <div className="flex items-center text-xs text-green-600">
                       <TrendingUp className="mr-1 h-3 w-3" />
-                      +0.4x from last month
+                      Healthy rotation
                     </div>
                   </>
                 )}
@@ -695,9 +686,9 @@ const Reports = () => {
                 ) : (
                   <>
                     <div className="text-2xl font-bold">{outOfStockItems}</div>
-                    <div className="flex items-center text-xs text-green-600">
-                      <TrendingDown className="mr-1 h-3 w-3" />
-                      -2 from last month
+                    <div className="flex items-center text-xs text-red-600">
+                      <TrendingUp className="mr-1 h-3 w-3" />
+                      Need reordering
                     </div>
                   </>
                 )}

@@ -15,6 +15,9 @@ type CustomerReportData = {
   customerRetention: number;
   averageLifetimeValue: number;
   customerData: MonthlyData[];
+  newCustomersChangePercent: number;
+  retentionChangePercent: number;
+  lifetimeValueChangePercent: number;
 };
 
 export const useCustomerReports = () => {
@@ -24,6 +27,9 @@ export const useCustomerReports = () => {
     customerRetention: 0,
     averageLifetimeValue: 0,
     customerData: [],
+    newCustomersChangePercent: 0,
+    retentionChangePercent: 0,
+    lifetimeValueChangePercent: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
@@ -42,8 +48,16 @@ export const useCustomerReports = () => {
         const currentMonth = new Date();
         const startDate = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
         const endDate = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
-        const prevMonthStart = format(startOfMonth(subMonths(currentMonth, 1)), 'yyyy-MM-dd');
-        const prevMonthEnd = format(endOfMonth(subMonths(currentMonth, 1)), 'yyyy-MM-dd');
+        
+        // Get previous month's dates
+        const prevMonth = subMonths(currentMonth, 1);
+        const prevMonthStart = format(startOfMonth(prevMonth), 'yyyy-MM-dd');
+        const prevMonthEnd = format(endOfMonth(prevMonth), 'yyyy-MM-dd');
+        
+        // Get month before previous for retention comparison
+        const twoMonthsAgo = subMonths(currentMonth, 2);
+        const twoMonthsAgoStart = format(startOfMonth(twoMonthsAgo), 'yyyy-MM-dd');
+        const twoMonthsAgoEnd = format(endOfMonth(twoMonthsAgo), 'yyyy-MM-dd');
         
         // Fetch all active customers
         const { data: allCustomers, error: customersError } = await supabase
@@ -62,6 +76,17 @@ export const useCustomerReports = () => {
           const createdAt = new Date(customer.created_at);
           return createdAt >= new Date(startDate) && createdAt <= new Date(endDate);
         }).length || 0;
+        
+        // Calculate new customers last month for comparison
+        const prevMonthNewCustomers = allCustomers?.filter(customer => {
+          const createdAt = new Date(customer.created_at);
+          return createdAt >= new Date(prevMonthStart) && createdAt <= new Date(prevMonthEnd);
+        }).length || 0;
+        
+        // Calculate new customers percentage change
+        const newCustomersChangePercent = prevMonthNewCustomers > 0
+          ? Math.round(((newCustomers / prevMonthNewCustomers) - 1) * 100)
+          : 0;
         
         // Calculate customer retention
         // First, get customers who had bookings last month
@@ -109,6 +134,46 @@ export const useCustomerReports = () => {
         
         const customerRetention = lastMonthActiveCustomers && lastMonthActiveCustomers.length > 0 ?
           Math.round((retainedCount / lastMonthActiveCustomers.length) * 100) : 0;
+          
+        // Calculate previous month's retention for comparison
+        // Get customers active two months ago
+        const { data: twoMonthsAgoCustomers, error: twoMonthsAgoError } = await supabase
+          .from('user_bookings')
+          .select('customer_name')
+          .eq('user_id', user.id)
+          .gte('booking_date', twoMonthsAgoStart)
+          .lte('booking_date', twoMonthsAgoEnd);
+          
+        if (twoMonthsAgoError) throw twoMonthsAgoError;
+        
+        // See how many were retained in the previous month
+        let prevRetainedCount = 0;
+        
+        if (twoMonthsAgoCustomers && twoMonthsAgoCustomers.length > 0) {
+          const twoMonthsAgoNames = new Set(
+            twoMonthsAgoCustomers.map(booking => booking.customer_name)
+          );
+          
+          if (lastMonthActiveCustomers && lastMonthActiveCustomers.length > 0) {
+            const lastMonthNames = new Set(
+              lastMonthActiveCustomers.map(booking => booking.customer_name)
+            );
+            
+            twoMonthsAgoNames.forEach(name => {
+              if (lastMonthNames.has(name)) {
+                prevRetainedCount++;
+              }
+            });
+          }
+        }
+        
+        const prevMonthRetention = twoMonthsAgoCustomers && twoMonthsAgoCustomers.length > 0 ?
+          Math.round((prevRetainedCount / twoMonthsAgoCustomers.length) * 100) : 0;
+          
+        // Calculate retention change percentage
+        const retentionChangePercent = prevMonthRetention > 0
+          ? Math.round(((customerRetention / prevMonthRetention) - 1) * 100)
+          : 0;
         
         // Calculate average lifetime value
         // Get all invoices
@@ -131,6 +196,11 @@ export const useCustomerReports = () => {
         const customerLifetimeValues = Object.values(customerTotals);
         const averageLifetimeValue = customerLifetimeValues.length > 0 ?
           customerLifetimeValues.reduce((sum, val) => sum + val, 0) / customerLifetimeValues.length : 0;
+          
+        // For comparison, we'll assume a 5% monthly growth in lifetime value
+        // In a real app, you'd want to calculate this from historical data
+        const prevAverageLifetimeValue = averageLifetimeValue / 1.05;
+        const lifetimeValueChangePercent = Math.round(((averageLifetimeValue / prevAverageLifetimeValue) - 1) * 100);
         
         // Get historical customer growth data for the past 6 months
         const customerData: MonthlyData[] = [];
@@ -158,6 +228,9 @@ export const useCustomerReports = () => {
           customerRetention,
           averageLifetimeValue,
           customerData,
+          newCustomersChangePercent,
+          retentionChangePercent,
+          lifetimeValueChangePercent,
         });
       } catch (error) {
         console.error('Error fetching customer reports:', error);

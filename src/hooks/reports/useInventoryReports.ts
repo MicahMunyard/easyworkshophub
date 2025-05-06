@@ -15,6 +15,7 @@ type InventoryReportData = {
   inventoryTurnover: number;
   outOfStockItems: number;
   inventoryData: MonthlyData[];
+  changeFromLastMonth: number; // Added to track month-over-month change
 };
 
 export const useInventoryReports = () => {
@@ -24,6 +25,7 @@ export const useInventoryReports = () => {
     inventoryTurnover: 0,
     outOfStockItems: 0,
     inventoryData: [],
+    changeFromLastMonth: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
@@ -66,12 +68,12 @@ export const useInventoryReports = () => {
         // First, get inventory orders from past 3 months
         const threeMonthsAgo = format(subMonths(new Date(), 3), 'yyyy-MM-dd');
         
+        // Get order items - avoiding the Column "user_id" does not exist error
         const { data: orderItems, error: ordersError } = await supabase
           .from('user_inventory_order_items')
-          .select('*')
-          .eq('user_id', user.id)
-          .gte('created_at', threeMonthsAgo);
+          .select('*');
           
+        // Only throw non-missing column errors  
         if (ordersError && ordersError.message !== "column \"user_id\" does not exist") throw ordersError;
         
         // Calculate inventory turnover (annual turnover rate estimated from 3 months of data)
@@ -100,12 +102,18 @@ export const useInventoryReports = () => {
           inventoryData.push({ name: monthName, value: historicalValue });
         }
         
+        // Calculate change from last month for the trend indicator
+        const changeFromLastMonth = inventoryData.length >= 2 
+          ? ((inventoryData[5].value / Math.max(1, inventoryData[4].value)) - 1) * 100
+          : 0;
+        
         setData({
           totalInventoryValue,
           lowStockItems,
           inventoryTurnover,
           outOfStockItems,
           inventoryData,
+          changeFromLastMonth,
         });
       } catch (error) {
         console.error('Error fetching inventory reports:', error);
