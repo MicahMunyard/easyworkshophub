@@ -76,7 +76,15 @@ export default {
                     red: '#ea384c',
                     orange: '#F97316',
                     carbon: '#222222',
-                    silver: '#C8C8C9'
+                    silver: '#C8C8C9',
+                    // New colors for the refreshed UI
+                    slate: '#3C4048',
+                    charcoal: '#2D3436',
+                    mint: '#00B894',
+                    success: '#00C853',
+                    warning: '#FFB74D',
+                    info: '#29B6F6',
+                    error: '#F44336'
 				}
 			},
 			borderRadius: {
@@ -125,6 +133,15 @@ export default {
                     '40%': { transform: 'translateX(1px)' },
                     '50%': { transform: 'translateX(0)' },
                     '100%': { transform: 'translateX(0)' }
+                },
+                floatUp: {
+                    '0%': { transform: 'translateY(0)' },
+                    '50%': { transform: 'translateY(-5px)' },
+                    '100%': { transform: 'translateY(0)' }
+                },
+                wiggle: {
+                    '0%, 100%': { transform: 'rotate(-1deg)' },
+                    '50%': { transform: 'rotate(1deg)' }
                 }
 			},
 			animation: {
@@ -134,8 +151,15 @@ export default {
 				slideUp: 'slideUp 0.5s ease-out',
 				slideRight: 'slideRight 0.5s ease-out',
                 pulse: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                revEngine: 'revEngine 0.5s ease-in-out'
-			}
+                revEngine: 'revEngine 0.5s ease-in-out',
+                floatUp: 'floatUp 3s ease-in-out infinite',
+                wiggle: 'wiggle 1s ease-in-out infinite'
+			},
+            backgroundImage: {
+                'gradient-card': 'linear-gradient(109.6deg, rgba(223,234,247,1) 11.2%, rgba(244,248,252,1) 91.1%)',
+                'gradient-sidebar': 'linear-gradient(180deg, rgba(29,29,31,1) 0%, rgba(44,44,46,1) 100%)',
+                'gradient-primary': 'linear-gradient(90deg, rgba(234,56,76,1) 0%, rgba(249,115,22,1) 100%)'
+            }
 		}
 	},
 	plugins: [require("tailwindcss-animate")],

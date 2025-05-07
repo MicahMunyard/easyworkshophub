@@ -6,7 +6,7 @@
 @layer base {
   :root {
     /* Light mode variables */
-    --background: 0 0% 100%;
+    --background: 210 40% 98%;
     --foreground: 240 10% 3.9%;
 
     --card: 0 0% 100%;
@@ -18,14 +18,14 @@
     --primary: 0 80% 50%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 240 4.8% 95.9%;
+    --secondary: 210 40% 96.1%;
     --secondary-foreground: 240 5.9% 10%;
 
     --muted: 240 4.8% 95.9%;
     --muted-foreground: 240 3.8% 46.1%;
 
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
+    --accent: 24 100% 60%;
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
@@ -34,7 +34,7 @@
     --input: 240 5.9% 90%;
     --ring: 0 80% 50%;
 
-    --radius: 0.25rem;
+    --radius: 0.5rem;
 
     --sidebar-background: 0 0% 96%;
     --sidebar-foreground: 0 0% 20%;
@@ -48,13 +48,13 @@
 
   .dark {
     /* Dark mode variables */
-    --background: 240 10% 3.9%;
+    --background: 224 71% 4%;
     --foreground: 0 0% 98%;
 
-    --card: 240 10% 3.9%;
+    --card: 224 71% 4%;
     --card-foreground: 0 0% 98%;
 
-    --popover: 240 10% 3.9%;
+    --popover: 224 71% 4%;
     --popover-foreground: 0 0% 98%;
 
     --primary: 0 80% 50%;
@@ -66,7 +66,7 @@
     --muted: 240 3.7% 15.9%;
     --muted-foreground: 240 5% 64.9%;
 
-    --accent: 240 3.7% 15.9%;
+    --accent: 24 100% 60%;
     --accent-foreground: 0 0% 98%;
 
     --destructive: 0 84% 60%;
@@ -182,7 +182,7 @@
 
 @layer components {
   .glass-card {
-    @apply dark:bg-black/60 bg-white/60 backdrop-blur-md border border-white/10 shadow-sm;
+    @apply dark:bg-black/60 bg-white/70 backdrop-blur-md border border-white/20 shadow-sm rounded-xl;
   }
   
   .nav-item {
@@ -194,7 +194,11 @@
   }
 
   .performance-card {
-    @apply border-0 bg-gradient-to-br from-card to-secondary/80 shadow-md hover:shadow-lg transition-all duration-300;
+    @apply border border-white/10 bg-white dark:bg-black/40 backdrop-blur-sm shadow-md hover:shadow-lg transition-all duration-300 rounded-xl;
+  }
+
+  .stats-card {
+    @apply rounded-xl border-0 overflow-hidden bg-gradient-to-b from-white/80 to-white/60 dark:from-black/60 dark:to-black/50 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300;
   }
 
   .carbon-texture {
@@ -236,5 +240,22 @@
     .mobile-full-width {
       @apply w-full;
     }
+  }
+  
+  /* New components for the refreshed UI */
+  .stat-value {
+    @apply text-3xl font-bold;
+  }
+  
+  .trend-indicator-up {
+    @apply inline-flex items-center text-xs text-workshop-success font-medium;
+  }
+  
+  .trend-indicator-down {
+    @apply inline-flex items-center text-xs text-workshop-error font-medium;
+  }
+  
+  .shadow-soft {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
   }
 }
