@@ -160,7 +160,42 @@ async function handleConnectEndpoint(req: Request) {
       console.log("Generated Google auth URL:", authUrl.substring(0, 100) + '...');
       
     } else if (provider === 'microsoft' || provider === 'outlook') {
-      // ... keep existing code (Microsoft OAuth configuration)
+      // Check for Microsoft OAuth configuration
+      const microsoftClientId = Deno.env.get('MICROSOFT_CLIENT_ID');
+      const microsoftClientSecret = Deno.env.get('MICROSOFT_CLIENT_SECRET');
+      
+      // If the Microsoft environment variables are missing, return a specific error
+      if (!microsoftClientId || !microsoftClientSecret) {
+        console.error("Missing Microsoft OAuth configuration");
+        return new Response(
+          JSON.stringify({ 
+            error: 'Server configuration error: Missing Microsoft OAuth configuration',
+            details: 'The Microsoft client ID or client secret is not configured in environment variables.',
+            debug: debugInfo
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        );
+      }
+      
+      // Update to use the same redirect URI pattern as Google
+      const redirectUri = 'https://app.workshopbase.com.au/email/callback';
+      
+      console.log("Microsoft OAuth configuration:");
+      console.log("- Client ID:", microsoftClientId ? 'Available' : 'Missing');
+      console.log("- Client Secret:", microsoftClientSecret ? 'Available' : 'Missing');
+      console.log("- Redirect URI:", redirectUri);
+      
+      // Create Microsoft OAuth URL with the configured redirect URI
+      const scopes = [
+        'offline_access',
+        'User.Read',
+        'Mail.ReadWrite',
+        'Mail.Send'
+      ];
+      
+      // Microsoft OAuth URL with state parameter to identify the provider
+      authUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${encodeURIComponent(microsoftClientId)}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes.join(' '))}&response_mode=query&state=outlook`;
+      console.log("Generated Microsoft auth URL:", authUrl.substring(0, 100) + '...');
     } else {
       return new Response(
         JSON.stringify({ error: 'Unsupported provider' }),
@@ -405,7 +440,56 @@ async function handleOAuthCallbackEndpoint(req: Request) {
         console.log(`Retrieved email: ${userEmail}`);
         
       } else if (provider === 'microsoft' || provider === 'outlook') {
-        // Similar implementation for Microsoft (not changing here)
+        const microsoftClientId = Deno.env.get('MICROSOFT_CLIENT_ID');
+        const microsoftClientSecret = Deno.env.get('MICROSOFT_CLIENT_SECRET');
+        const redirectUri = 'https://app.workshopbase.com.au/email/callback';
+        
+        if (!microsoftClientId || !microsoftClientSecret) {
+          throw new Error("Missing Microsoft OAuth credentials");
+        }
+        
+        console.log("Exchanging code for token with Microsoft OAuth...");
+        
+        const tokenUrl = 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
+        const response = await fetch(tokenUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            code,
+            client_id: microsoftClientId,
+            client_secret: microsoftClientSecret,
+            redirect_uri: redirectUri,
+            grant_type: 'authorization_code',
+          }).toString(),
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("Token exchange failed:", response.status, errorText);
+          throw new Error(`Failed to exchange authorization code: ${errorText}`);
+        }
+        
+        tokenResponse = await response.json();
+        console.log("Token exchange successful");
+        
+        // Get user info to get email
+        const userInfoResponse = await fetch('https://graph.microsoft.com/v1.0/me', {
+          headers: {
+            'Authorization': `Bearer ${tokenResponse.access_token}`
+          }
+        });
+        
+        if (!userInfoResponse.ok) {
+          const errorText = await userInfoResponse.text();
+          console.error("Failed to fetch user info:", errorText);
+          throw new Error(`Failed to get user info: ${errorText}`);
+        }
+        
+        const userInfo = await userInfoResponse.json();
+        userEmail = userInfo.mail || userInfo.userPrincipalName;
+        console.log(`Retrieved email: ${userEmail}`);
       } else {
         throw new Error("Unsupported provider");
       }

@@ -15,7 +15,7 @@ export const oauthConfig = {
   microsoft: {
     clientId: process.env.MICROSOFT_CLIENT_ID || '',
     clientSecret: process.env.MICROSOFT_CLIENT_SECRET || '',
-    redirectUri: 'https://qyjjbpyqxwrluhymvshn.supabase.co/functions/v1/email-integration/oauth-callback',
+    redirectUri: 'https://app.workshopbase.com.au/email/callback',
     scopes: [
       'offline_access',
       'User.Read',

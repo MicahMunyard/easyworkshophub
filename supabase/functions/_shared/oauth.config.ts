@@ -1,3 +1,4 @@
+
 export const oauthConfig = {
   google: {
     clientId: Deno.env.get('GOOGLE_CLIENT_ID') || '736177477108-a7cfbd4dcv3pqfk2jaolbm3j4fse0s9h.apps.googleusercontent.com',
@@ -15,7 +16,7 @@ export const oauthConfig = {
   microsoft: {
     clientId: Deno.env.get('MICROSOFT_CLIENT_ID') || '',
     clientSecret: Deno.env.get('MICROSOFT_CLIENT_SECRET') || '',
-    redirectUri: 'https://qyjjbpyqxwrluhymvshn.supabase.co/functions/v1/email-integration/oauth-callback',
+    redirectUri: 'https://app.workshopbase.com.au/email/callback',
     scopes: [
       'offline_access',
       'User.Read',

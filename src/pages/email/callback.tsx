@@ -29,7 +29,7 @@ const EmailCallback: React.FC = () => {
         // Get the auth code from URL parameters
         const urlParams = new URLSearchParams(window.location.search);
         const code = urlParams.get("code");
-        const provider = urlParams.get("state") || "gmail"; // Get the provider from state or default to gmail
+        const provider = urlParams.get("state") || "gmail"; // Get the provider from state parameter
 
         if (!code) {
           throw new Error("No authorization code found in the callback URL");
