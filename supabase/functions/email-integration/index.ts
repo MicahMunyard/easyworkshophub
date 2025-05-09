@@ -549,7 +549,395 @@ async function handleOAuthCallbackEndpoint(req: Request) {
   }
 }
 
-// Handle main endpoint - Updated to fetch actual Gmail emails instead of mock data
+// Handle send reply endpoint
+async function handleSendReplyEndpoint(req: Request) {
+  console.log("Email integration send-reply endpoint called");
+  
+  // Implementation for sending email replies
+  return new Response(
+    JSON.stringify({ 
+      error: 'Not implemented',
+      details: 'The send-reply endpoint is not yet implemented'
+    }),
+    { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 501 }
+  );
+}
+
+// Updated refreshAccessToken function that handles both Google and Microsoft tokens
+async function refreshAccessToken(connection: any): Promise<any | null> {
+  if (!connection.refresh_token) {
+    console.error("No refresh token available");
+    return null;
+  }
+  
+  try {
+    if (connection.provider === 'google' || connection.provider === 'gmail') {
+      // Existing Google implementation
+      const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID');
+      const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET');
+      
+      if (!googleClientId || !googleClientSecret) {
+        console.error("Missing Google OAuth credentials");
+        return null;
+      }
+      
+      const response = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          client_id: googleClientId,
+          client_secret: googleClientSecret,
+          refresh_token: connection.refresh_token,
+          grant_type: 'refresh_token',
+        }).toString(),
+      });
+      
+      if (!response.ok) {
+        console.error("Failed to refresh token:", response.status);
+        return null;
+      }
+      
+      return await response.json();
+    } else if (connection.provider === 'microsoft' || connection.provider === 'outlook') {
+      // Microsoft implementation
+      const microsoftClientId = Deno.env.get('MICROSOFT_CLIENT_ID');
+      const microsoftClientSecret = Deno.env.get('MICROSOFT_CLIENT_SECRET');
+      
+      if (!microsoftClientId || !microsoftClientSecret) {
+        console.error("Missing Microsoft OAuth credentials");
+        return null;
+      }
+      
+      const tokenUrl = 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
+      const response = await fetch(tokenUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          client_id: microsoftClientId,
+          client_secret: microsoftClientSecret,
+          refresh_token: connection.refresh_token,
+          grant_type: 'refresh_token',
+          scope: 'offline_access User.Read Mail.ReadWrite Mail.Send'
+        }).toString(),
+      });
+      
+      if (!response.ok) {
+        console.error("Failed to refresh Microsoft token:", response.status);
+        return null;
+      }
+      
+      return await response.json();
+    }
+    
+    // Unsupported provider
+    console.error("Unsupported provider for token refresh:", connection.provider);
+    return null;
+  } catch (error) {
+    console.error("Error refreshing access token:", error);
+    return null;
+  }
+}
+
+// Fetch emails from Gmail API
+async function fetchGmailEmails(accessToken: string, folder: string = 'inbox'): Promise<any[]> {
+  console.log("Fetching Gmail emails from folder:", folder);
+  
+  try {
+    // First, get the message IDs of the most recent emails
+    const labelId = folder === 'sent' ? 'SENT' : folder === 'junk' ? 'SPAM' : 'INBOX';
+    const maxResults = 20; // Limit to 20 emails for performance
+    
+    const messagesResponse = await fetch(
+      `https://gmail.googleapis.com/gmail/v1/users/me/messages?labelIds=${labelId}&maxResults=${maxResults}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    if (!messagesResponse.ok) {
+      const errorData = await messagesResponse.text();
+      console.error("Gmail API error:", messagesResponse.status, errorData);
+      throw new Error(`Gmail API returned status ${messagesResponse.status}: ${errorData}`);
+    }
+    
+    const { messages } = await messagesResponse.json();
+    
+    if (!messages || messages.length === 0) {
+      console.log("No messages found in", folder);
+      return [];
+    }
+    
+    console.log(`Found ${messages.length} messages, fetching details...`);
+    
+    // Fetch the full details of each email message
+    const emails = await Promise.all(
+      messages.map(async (message: { id: string }) => {
+        const messageResponse = await fetch(
+          `https://gmail.googleapis.com/gmail/v1/users/me/messages/${message.id}?format=full`,
+          {
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+        
+        if (!messageResponse.ok) {
+          console.error(`Error fetching message ${message.id}:`, messageResponse.status);
+          return null;
+        }
+        
+        const messageData = await messageResponse.json();
+        return processGmailMessage(messageData);
+      })
+    );
+    
+    // Filter out any null values from errors
+    return emails.filter(email => email !== null);
+    
+  } catch (error) {
+    console.error("Error fetching Gmail emails:", error);
+    throw error;
+  }
+}
+
+// Process Gmail message into our email format
+function processGmailMessage(message: any): any {
+  // Extract headers
+  const headers = message.payload.headers;
+  const subject = headers.find((h: any) => h.name === 'Subject')?.value || '(No subject)';
+  const from = headers.find((h: any) => h.name === 'From')?.value || '';
+  const date = headers.find((h: any) => h.name === 'Date')?.value || '';
+  
+  // Extract sender email from the From header
+  const emailRegex = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/;
+  const senderEmail = from.match(emailRegex)?.[1] || '';
+  
+  // Extract sender name from the From header
+  const nameMatch = from.match(/^"?([^"<]+)"?\s*(?:<.*>)?$/);
+  const senderName = nameMatch ? nameMatch[1].trim() : from.replace(/<.*>/, '').trim();
+  
+  // Extract message body
+  let content = '';
+  
+  // Try to get plain text part first
+  if (message.payload.parts) {
+    const textPart = message.payload.parts.find((part: any) => 
+      part.mimeType === 'text/plain' && part.body && part.body.data
+    );
+    
+    if (textPart && textPart.body.data) {
+      content = atob(textPart.body.data.replace(/-/g, '+').replace(/_/g, '/'));
+    } else {
+      // Try HTML part if no plain text
+      const htmlPart = message.payload.parts.find((part: any) => 
+        part.mimeType === 'text/html' && part.body && part.body.data
+      );
+      
+      if (htmlPart && htmlPart.body.data) {
+        const htmlContent = atob(htmlPart.body.data.replace(/-/g, '+').replace(/_/g, '/'));
+        // Simple HTML to text conversion
+        content = htmlContent.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+      }
+    }
+  } else if (message.payload.body && message.payload.body.data) {
+    // Handle single-part messages
+    content = atob(message.payload.body.data.replace(/-/g, '+').replace(/_/g, '/'));
+  }
+  
+  // Analyze if this might be a booking request
+  // This is a simple heuristic - in a real system you might use NLP
+  const bookingKeywords = ['book', 'appointment', 'schedule', 'service', 'reservation'];
+  const lowerContent = content.toLowerCase();
+  const isBookingEmail = bookingKeywords.some(keyword => lowerContent.includes(keyword));
+  
+  // Simple extraction of potential booking details
+  // In a real system, this would use proper NLP
+  let extractedDetails = null;
+  if (isBookingEmail) {
+    extractedDetails = {
+      name: senderName,
+      phone: extractPhoneNumber(content),
+      date: extractDate(content),
+      time: extractTime(content),
+      service: extractService(content),
+      vehicle: extractVehicle(content)
+    };
+  }
+  
+  return {
+    id: message.id,
+    subject,
+    from: senderName,
+    sender_email: senderEmail,
+    date: new Date(date).toISOString(),
+    content,
+    is_booking_email: isBookingEmail,
+    booking_created: false,
+    extracted_details: extractedDetails
+  };
+}
+
+// Fetch emails from Microsoft Graph API
+async function fetchOutlookEmails(accessToken: string, folder: string = 'inbox'): Promise<any[]> {
+  console.log("Fetching Outlook emails from folder:", folder);
+  
+  try {
+    // Map folder name to Microsoft Graph API folder name
+    const folderName = folder === 'sent' ? 'sentItems' : folder === 'junk' ? 'junkemail' : 'inbox';
+    const maxResults = 20; // Limit to 20 emails for performance
+    
+    // First, try to get the specified folder
+    const messagesUrl = `https://graph.microsoft.com/v1.0/me/mailFolders/${folderName}/messages?$top=${maxResults}&$orderby=receivedDateTime desc`;
+    
+    const messagesResponse = await fetch(messagesUrl, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!messagesResponse.ok) {
+      const errorData = await messagesResponse.text();
+      console.error("Microsoft Graph API error:", messagesResponse.status, errorData);
+      throw new Error(`Microsoft Graph API returned status ${messagesResponse.status}: ${errorData}`);
+    }
+    
+    const messagesData = await messagesResponse.json();
+    const messages = messagesData.value || [];
+    
+    if (!messages || messages.length === 0) {
+      console.log("No messages found in", folder);
+      return [];
+    }
+    
+    console.log(`Found ${messages.length} messages, processing...`);
+    
+    // Process message data into our email format
+    return messages.map((message: any) => processOutlookMessage(message));
+    
+  } catch (error) {
+    console.error("Error fetching Outlook emails:", error);
+    throw error;
+  }
+}
+
+// Process Outlook message into our email format
+function processOutlookMessage(message: any): any {
+  // Extract sender information
+  let fromName = message.from?.emailAddress?.name || '';
+  let senderEmail = message.from?.emailAddress?.address || '';
+  
+  // Clean up content and convert HTML if needed
+  const content = message.body?.content || '';
+  
+  // Analyze if this might be a booking request
+  // This is a simple heuristic - in a real system you might use NLP
+  const bookingKeywords = ['book', 'appointment', 'schedule', 'service', 'reservation'];
+  const lowerContent = content.toLowerCase();
+  const isBookingEmail = bookingKeywords.some(keyword => lowerContent.includes(keyword));
+  
+  // Simple extraction of potential booking details
+  // In a real system, this would use proper NLP
+  let extractedDetails = null;
+  if (isBookingEmail) {
+    extractedDetails = {
+      name: fromName,
+      phone: extractPhoneNumber(content),
+      date: extractDate(content),
+      time: extractTime(content),
+      service: extractService(content),
+      vehicle: extractVehicle(content)
+    };
+  }
+  
+  return {
+    id: message.id,
+    subject: message.subject || '(No subject)',
+    from: fromName,
+    sender_email: senderEmail,
+    date: message.receivedDateTime || new Date().toISOString(),
+    content: content,
+    is_booking_email: isBookingEmail,
+    booking_created: false,
+    extracted_details: extractedDetails
+  };
+}
+
+// Extract data from email content - simple implementations for demo purposes
+function extractPhoneNumber(content: string): string {
+  // Very simple regex for phone number extraction
+  const phonePattern = /(\+?[\d\s-]{10,15})/;
+  const matches = content.match(phonePattern);
+  return matches ? matches[1] : '';
+}
+
+function extractDate(content: string): string {
+  // Look for date patterns like 25/12/2025 or December 25, 2025
+  const datePatterns = [
+    /(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})/,  // dd/mm/yyyy
+    /(\d{1,2}(?:st|nd|rd|th)?\s+(?:of\s+)?(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*(?:\s+\d{2,4})?)/i  // 25th December 2025
+  ];
+  
+  for (const pattern of datePatterns) {
+    const matches = content.match(pattern);
+    if (matches) return matches[1];
+  }
+  
+  return '';
+}
+
+function extractTime(content: string): string {
+  // Look for time patterns like 14:30 or 2:30pm
+  const timePattern = /(\d{1,2}[:\.]\d{2}(?:\s*[aApP][mM])?|\d{1,2}\s*[aApP][mM])/;
+  const matches = content.match(timePattern);
+  return matches ? matches[1] : '';
+}
+
+function extractService(content: string): string {
+  // Look for common service types
+  const serviceTypes = ['oil change', 'brake', 'service', 'repair', 'maintenance', 'tire', 'tyre', 'battery'];
+  const lowerContent = content.toLowerCase();
+  
+  for (const service of serviceTypes) {
+    if (lowerContent.includes(service)) {
+      // Try to get the context around the service mention
+      const index = lowerContent.indexOf(service);
+      const start = Math.max(0, index - 20);
+      const end = Math.min(lowerContent.length, index + 30);
+      return content.substring(start, end).trim();
+    }
+  }
+  
+  return '';
+}
+
+function extractVehicle(content: string): string {
+  // Look for vehicle make/models
+  const vehicleBrands = ['toyota', 'honda', 'ford', 'bmw', 'audi', 'mercedes', 'mazda', 'subaru', 'nissan', 'hyundai', 'kia'];
+  const lowerContent = content.toLowerCase();
+  
+  for (const brand of vehicleBrands) {
+    if (lowerContent.includes(brand)) {
+      // Try to get the context around the brand mention
+      const index = lowerContent.indexOf(brand);
+      const start = Math.max(0, index - 10);
+      const end = Math.min(lowerContent.length, index + 30);
+      return content.substring(start, end).trim();
+    }
+  }
+  
+  return '';
+}
+
+// Handle main endpoint - Updated to fetch actual emails instead of mock data
 async function handleMainEndpoint(req: Request) {
   console.log("Email integration main endpoint called");
   
@@ -765,44 +1153,3 @@ async function handleMainEndpoint(req: Request) {
     );
   }
 }
-
-// Fetch emails from Gmail API
-async function fetchGmailEmails(accessToken: string, folder: string = 'inbox'): Promise<any[]> {
-  console.log("Fetching Gmail emails from folder:", folder);
-  
-  try {
-    // First, get the message IDs of the most recent emails
-    const labelId = folder === 'sent' ? 'SENT' : folder === 'junk' ? 'SPAM' : 'INBOX';
-    const maxResults = 20; // Limit to 20 emails for performance
-    
-    const messagesResponse = await fetch(
-      `https://gmail.googleapis.com/gmail/v1/users/me/messages?labelIds=${labelId}&maxResults=${maxResults}`,
-      {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-    
-    if (!messagesResponse.ok) {
-      const errorData = await messagesResponse.text();
-      console.error("Gmail API error:", messagesResponse.status, errorData);
-      throw new Error(`Gmail API returned status ${messagesResponse.status}: ${errorData}`);
-    }
-    
-    const { messages } = await messagesResponse.json();
-    
-    if (!messages || messages.length === 0) {
-      console.log("No messages found in", folder);
-      return [];
-    }
-    
-    console.log(`Found ${messages.length} messages, fetching details...`);
-    
-    // Fetch the full details of each email message
-    const emails = await Promise.all(
-      messages.map(async (message: { id: string }) => {
-        const messageResponse = await fetch(
-          `https://gmail.googleapis.com/gmail/v1/users/me/messages/${message.id}?format=full`,
-          {

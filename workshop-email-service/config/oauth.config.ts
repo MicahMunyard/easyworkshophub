@@ -5,11 +5,12 @@ export const oauthConfig = {
     clientSecret: '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',
     redirectUri: 'https://app.workshopbase.com.au/email/callback',
     scopes: [
-      'https://mail.google.com/',
-      'https://www.googleapis.com/auth/gmail.modify',
       'https://www.googleapis.com/auth/gmail.readonly',
-      'profile',
-      'email'
+      'https://www.googleapis.com/auth/gmail.send',
+      'https://www.googleapis.com/auth/gmail.labels',
+      'https://www.googleapis.com/auth/gmail.modify',
+      'https://www.googleapis.com/auth/userinfo.email',
+      'https://www.googleapis.com/auth/userinfo.profile'
     ]
   },
   microsoft: {
