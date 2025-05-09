@@ -1,8 +1,8 @@
 
 export const oauthConfig = {
   google: {
-    clientId: '736177477108-a7cfbd4dcv3pqfk2jaolbm3j4fse0s9h.apps.googleusercontent.com',
-    clientSecret: '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',
+    clientId: process.env.GOOGLE_CLIENT_ID || '736177477108-a7cfbd4dcv3pqfk2jaolbm3j4fse0s9h.apps.googleusercontent.com',
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET || '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',
     redirectUri: 'https://app.workshopbase.com.au/email/callback',
     scopes: [
       'https://www.googleapis.com/auth/gmail.readonly',
