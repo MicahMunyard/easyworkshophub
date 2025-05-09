@@ -1,6 +1,7 @@
 
 import { oauthConfig } from '../config/oauth.config';
 import { encryptData, decryptData } from '../utils/encryption.utils';
+import { logger } from '../utils/logger';
 
 export class OAuthService {
   // Generate Google OAuth URL for user authentication
@@ -29,6 +30,27 @@ export class OAuthService {
     }
 
     return response.json();
+  }
+
+  // Get Google user email using access token
+  static async getGoogleUserEmail(accessToken: string): Promise<string> {
+    try {
+      const response = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to get Google user info: ${response.status}`);
+      }
+
+      const userData = await response.json();
+      return userData.email || '';
+    } catch (error) {
+      logger.error('Error fetching Google user email:', error);
+      return '';
+    }
   }
 
   // Generate Microsoft OAuth URL
@@ -67,6 +89,27 @@ export class OAuthService {
     }
     
     return response.json();
+  }
+
+  // Get Microsoft user email using access token
+  static async getMicrosoftUserEmail(accessToken: string): Promise<string> {
+    try {
+      const response = await fetch('https://graph.microsoft.com/v1.0/me', {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to get Microsoft user info: ${response.status}`);
+      }
+
+      const userData = await response.json();
+      return userData.mail || userData.userPrincipalName || '';
+    } catch (error) {
+      logger.error('Error fetching Microsoft user email:', error);
+      return '';
+    }
   }
 
   // Store encrypted tokens

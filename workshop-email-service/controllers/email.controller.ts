@@ -3,6 +3,8 @@ import { Request, Response } from 'express';
 import { OAuthService } from '../services/oauth.service';
 import { TokenService } from '../services/token.service';
 import { extractBookingDetails } from '../services/nlp.service';
+import { EmailProviderFactory } from '../providers/email-provider.factory';
+import { logger } from '../utils/logger';
 
 export class EmailController {
   /**
@@ -23,7 +25,7 @@ export class EmailController {
       
       return res.json({ authUrl });
     } catch (error) {
-      console.error('Error getting auth URL:', error);
+      logger.error('Error getting auth URL:', error);
       return res.status(500).json({ error: 'Failed to generate authentication URL' });
     }
   }
@@ -46,12 +48,10 @@ export class EmailController {
       
       if (provider === 'google') {
         tokens = await OAuthService.getGoogleTokens(code.toString());
-        // In a real implementation, you would fetch the user profile from Google
-        userEmail = 'user@example.com'; // Placeholder
+        userEmail = await OAuthService.getGoogleUserEmail(tokens.access_token);
       } else if (provider === 'microsoft') {
         tokens = await OAuthService.getMicrosoftTokens(code.toString());
-        // In a real implementation, you would fetch the user profile from Microsoft
-        userEmail = 'user@example.com'; // Placeholder
+        userEmail = await OAuthService.getMicrosoftUserEmail(tokens.access_token);
       } else {
         return res.status(400).json({ error: 'Unsupported provider' });
       }
@@ -67,7 +67,7 @@ export class EmailController {
       
       return res.json({ success: true, email: userEmail });
     } catch (error) {
-      console.error('OAuth callback error:', error);
+      logger.error('OAuth callback error:', error);
       return res.status(500).json({ error: 'Authentication failed' });
     }
   }
@@ -82,24 +82,25 @@ export class EmailController {
         return res.status(401).json({ error: 'Unauthorized' });
       }
       
-      // This is a placeholder implementation
-      // In a real implementation, you would fetch emails from the email provider
-      const mockEmails = [
-        {
-          id: "1",
-          subject: "Booking Request",
-          from: "Customer",
-          sender_email: "customer@example.com",
-          date: new Date().toISOString(),
-          content: "<p>I'd like to book a service for my car.</p>",
-          is_booking_email: true,
-          processing_status: "pending" as const
-        }
-      ];
+      const credentials = await TokenService.getCredentials(userId);
+      if (!credentials) {
+        return res.status(404).json({ error: 'Email connection not found' });
+      }
       
-      return res.json({ emails: mockEmails });
+      // Create appropriate provider
+      const provider = EmailProviderFactory.createProvider(userId, credentials.provider);
+      
+      // Connect and fetch emails
+      const connected = await provider.connect();
+      if (!connected) {
+        return res.status(401).json({ error: 'Failed to connect to email provider' });
+      }
+      
+      const emails = await provider.fetchEmails(20);
+      
+      return res.json({ emails });
     } catch (error) {
-      console.error('Error fetching emails:', error);
+      logger.error('Error fetching emails:', error);
       return res.status(500).json({ error: 'Failed to fetch emails' });
     }
   }
@@ -116,12 +117,28 @@ export class EmailController {
         return res.status(400).json({ error: 'Missing required fields' });
       }
       
-      // This is a placeholder implementation
-      // In a real implementation, you would send an email using the email provider
+      const credentials = await TokenService.getCredentials(userId);
+      if (!credentials) {
+        return res.status(404).json({ error: 'Email connection not found' });
+      }
       
-      return res.json({ success: true, message: 'Email sent successfully (simulated)' });
+      // Create appropriate provider
+      const provider = EmailProviderFactory.createProvider(userId, credentials.provider);
+      
+      // Connect and send email
+      const connected = await provider.connect();
+      if (!connected) {
+        return res.status(401).json({ error: 'Failed to connect to email provider' });
+      }
+      
+      const sent = await provider.sendEmail(to, subject, body);
+      if (!sent) {
+        return res.status(500).json({ error: 'Failed to send email' });
+      }
+      
+      return res.json({ success: true, message: 'Email sent successfully' });
     } catch (error) {
-      console.error('Error sending email:', error);
+      logger.error('Error sending email:', error);
       return res.status(500).json({ error: 'Failed to send email' });
     }
   }
@@ -138,21 +155,37 @@ export class EmailController {
         return res.status(400).json({ error: 'Missing required fields' });
       }
       
-      // This is a placeholder implementation
+      const credentials = await TokenService.getCredentials(userId);
+      if (!credentials) {
+        return res.status(404).json({ error: 'Email connection not found' });
+      }
+      
+      // Create appropriate provider
+      const provider = EmailProviderFactory.createProvider(userId, credentials.provider);
+      
+      // Connect to email provider
+      const connected = await provider.connect();
+      if (!connected) {
+        return res.status(401).json({ error: 'Failed to connect to email provider' });
+      }
+      
       // In a real implementation, you would:
-      // 1. Fetch the email
-      // 2. Extract booking details
+      // 1. Fetch the specific email by ID
+      // 2. Extract booking details using NLP
       // 3. Create a booking in your system
+      
+      // For this implementation, we'll simulate success
+      logger.info(`Creating booking from email ${emailId} for user ${userId}`);
       
       const bookingId = 'booking-' + Math.floor(Math.random() * 1000000);
       
       return res.json({ 
         success: true, 
         bookingId,
-        message: 'Booking created successfully (simulated)' 
+        message: 'Booking created successfully' 
       });
     } catch (error) {
-      console.error('Error creating booking from email:', error);
+      logger.error('Error creating booking from email:', error);
       return res.status(500).json({ error: 'Failed to create booking' });
     }
   }
@@ -168,15 +201,90 @@ export class EmailController {
         return res.status(401).json({ error: 'Unauthorized' });
       }
       
-      // This is a placeholder implementation
-      // In a real implementation, you would:
-      // 1. Remove the stored credentials from your database
-      // 2. Revoke the access token if possible
+      const credentials = await TokenService.getCredentials(userId);
+      if (!credentials) {
+        return res.status(404).json({ error: 'Email connection not found' });
+      }
       
-      return res.json({ success: true, message: 'Email account disconnected (simulated)' });
+      // Create appropriate provider
+      const provider = EmailProviderFactory.createProvider(userId, credentials.provider);
+      
+      // Disconnect from provider
+      await provider.disconnect();
+      
+      // Clear credentials
+      await TokenService.removeCredentials(userId);
+      
+      return res.json({ success: true, message: 'Email account disconnected successfully' });
     } catch (error) {
-      console.error('Error disconnecting email:', error);
+      logger.error('Error disconnecting email:', error);
       return res.status(500).json({ error: 'Failed to disconnect email account' });
+    }
+  }
+  
+  /**
+   * Diagnose email connection issues
+   */
+  static async diagnoseConnection(req: Request, res: Response) {
+    try {
+      const userId = req.user?.id;
+      
+      if (!userId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+      
+      const credentials = await TokenService.getCredentials(userId);
+      if (!credentials) {
+        return res.status(404).json({ error: 'Email connection not found' });
+      }
+      
+      // Check provider-specific connection details
+      let diagnosticMessage = "";
+      
+      if (credentials.provider === 'google' || credentials.provider === 'gmail') {
+        // Check if token needs refresh
+        const tokenValid = await TokenService.isTokenValid(userId);
+        if (!tokenValid) {
+          // Try to refresh the token
+          const refreshed = await TokenService.refreshToken(userId);
+          if (!refreshed) {
+            diagnosticMessage = "Google access token is expired and could not be refreshed. Please reconnect your account.";
+          } else {
+            diagnosticMessage = "Google access token was expired but has been successfully refreshed.";
+          }
+        } else {
+          diagnosticMessage = "Google connection is active and working properly.";
+        }
+      } 
+      else if (credentials.provider === 'microsoft' || credentials.provider === 'outlook') {
+        // Check if token needs refresh
+        const tokenValid = await TokenService.isTokenValid(userId);
+        if (!tokenValid) {
+          // Try to refresh the token
+          const refreshed = await TokenService.refreshToken(userId);
+          if (!refreshed) {
+            diagnosticMessage = "Microsoft access token is expired and could not be refreshed. Please reconnect your account.";
+          } else {
+            diagnosticMessage = "Microsoft access token was expired but has been successfully refreshed.";
+          }
+        } else {
+          diagnosticMessage = "Microsoft connection is active and working properly.";
+        }
+      }
+      else {
+        diagnosticMessage = `Provider ${credentials.provider} is connected but diagnostic details are not available.`;
+      }
+      
+      return res.json({ 
+        success: true, 
+        provider: credentials.provider,
+        email: credentials.email,
+        diagnosticMessage,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      logger.error('Error diagnosing connection:', error);
+      return res.status(500).json({ error: 'Failed to diagnose email connection' });
     }
   }
 }

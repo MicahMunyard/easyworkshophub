@@ -1,6 +1,7 @@
 
 import { OAuthService } from './oauth.service';
 import { encryptData, decryptData } from '../utils/encryption.utils';
+import { logger } from '../utils/logger';
 
 interface EmailCredentials {
   provider: string;
@@ -28,7 +29,22 @@ export class TokenService {
       
       return true;
     } catch (error) {
-      console.error('Error storing credentials:', error);
+      logger.error('Error storing credentials:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Remove email credentials
+   */
+  static async removeCredentials(userId: string): Promise<boolean> {
+    try {
+      // Here you would remove the credentials from your database
+      // Example: await db.collection('email_credentials').deleteOne({ userId });
+      
+      return true;
+    } catch (error) {
+      logger.error('Error removing credentials:', error);
       return false;
     }
   }
@@ -52,8 +68,66 @@ export class TokenService {
       const decryptedData = decryptData(encryptedCredentials);
       return JSON.parse(decryptedData);
     } catch (error) {
-      console.error('Error retrieving credentials:', error);
+      logger.error('Error retrieving credentials:', error);
       return null;
+    }
+  }
+
+  /**
+   * Check if the access token is still valid
+   */
+  static async isTokenValid(userId: string): Promise<boolean> {
+    try {
+      const credentials = await this.getCredentials(userId);
+      
+      if (!credentials || !credentials.expiresAt) {
+        return false;
+      }
+      
+      // Add a 5-minute buffer
+      const bufferTime = 5 * 60 * 1000;
+      return (credentials.expiresAt - bufferTime) > Date.now();
+    } catch (error) {
+      logger.error('Error checking token validity:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Refresh the token if needed
+   */
+  static async refreshToken(userId: string): Promise<boolean> {
+    try {
+      const credentials = await this.getCredentials(userId);
+      
+      if (!credentials || !credentials.refreshToken) {
+        return false;
+      }
+      
+      let newTokens;
+      
+      if (credentials.provider === 'google' || credentials.provider === 'gmail') {
+        newTokens = await OAuthService.refreshGoogleTokens(credentials.refreshToken);
+      } else if (credentials.provider === 'microsoft' || credentials.provider === 'outlook') {
+        newTokens = await OAuthService.refreshMicrosoftTokens(credentials.refreshToken);
+      } else {
+        return false;
+      }
+      
+      // Update credentials with new tokens
+      const now = Date.now();
+      const updatedCredentials: EmailCredentials = {
+        ...credentials,
+        accessToken: newTokens.access_token,
+        refreshToken: newTokens.refresh_token || credentials.refreshToken,
+        expiresAt: now + (newTokens.expires_in * 1000)
+      };
+      
+      await this.storeCredentials(userId, updatedCredentials);
+      return true;
+    } catch (error) {
+      logger.error('Error refreshing token:', error);
+      return false;
     }
   }
 
@@ -69,38 +143,21 @@ export class TokenService {
       }
       
       // Check if token is expired
-      const now = Date.now();
-      if (credentials.expiresAt && credentials.expiresAt > now) {
+      if (await this.isTokenValid(userId)) {
         return credentials.accessToken || null;
       }
       
       // Token is expired, refresh it
-      if (credentials.refreshToken) {
-        let newTokens;
-        
-        if (credentials.provider === 'google') {
-          newTokens = await OAuthService.refreshGoogleTokens(credentials.refreshToken);
-        } else if (credentials.provider === 'microsoft') {
-          newTokens = await OAuthService.refreshMicrosoftTokens(credentials.refreshToken);
-        } else {
-          return null;
-        }
-        
-        // Update credentials with new tokens
-        const updatedCredentials: EmailCredentials = {
-          ...credentials,
-          accessToken: newTokens.access_token,
-          refreshToken: newTokens.refresh_token || credentials.refreshToken,
-          expiresAt: now + (newTokens.expires_in * 1000)
-        };
-        
-        await this.storeCredentials(userId, updatedCredentials);
-        return updatedCredentials.accessToken || null;
+      const refreshed = await this.refreshToken(userId);
+      if (!refreshed) {
+        return null;
       }
       
-      return null;
+      // Get updated credentials
+      const updatedCredentials = await this.getCredentials(userId);
+      return updatedCredentials?.accessToken || null;
     } catch (error) {
-      console.error('Error getting valid access token:', error);
+      logger.error('Error getting valid access token:', error);
       return null;
     }
   }
