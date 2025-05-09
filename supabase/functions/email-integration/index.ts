@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { oauthConfig } from "../_shared/oauth.config.ts";
@@ -170,14 +171,13 @@ async function handleConnectEndpoint(req: Request) {
         return new Response(
           JSON.stringify({ 
             error: 'Server configuration error: Missing Microsoft OAuth configuration',
-            details: 'The Microsoft client ID or client secret is not configured in environment variables.',
-            debug: debugInfo
+            details: 'The Microsoft client ID or client secret is not configured in environment variables.'
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
         );
       }
       
-      // Update to use the same redirect URI pattern as Google
+      // Update the redirectUri to match what's configured in Azure portal
       const redirectUri = 'https://app.workshopbase.com.au/email/callback';
       
       console.log("Microsoft OAuth configuration:");
@@ -193,8 +193,8 @@ async function handleConnectEndpoint(req: Request) {
         'Mail.Send'
       ];
       
-      // Microsoft OAuth URL with state parameter to identify the provider
-      authUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${encodeURIComponent(microsoftClientId)}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes.join(' '))}&response_mode=query&state=outlook`;
+      // Microsoft uses a different OAuth flow than Google
+      authUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${encodeURIComponent(microsoftClientId)}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes.join(' '))}&response_mode=query&state=${provider}`;
       console.log("Generated Microsoft auth URL:", authUrl.substring(0, 100) + '...');
     } else {
       return new Response(
