@@ -6,3 +6,6 @@ verify_jwt = false
 
 [functions.ezyparts-quote]
 verify_jwt = false
+
+[functions.sendgrid-email]
+verify_jwt = true

@@ -115,6 +115,21 @@ export function useSendgridEmail() {
     }
   };
   
+  const getAnalytics = async () => {
+    try {
+      const result = await sendgridService.getAnalytics();
+      return result.data || [];
+    } catch (error) {
+      console.error("Error fetching analytics:", error);
+      toast({
+        title: "Error fetching analytics",
+        description: error instanceof Error ? error.message : "An unexpected error occurred",
+        variant: "destructive",
+      });
+      return [];
+    }
+  };
+  
   const getWorkshopEmail = (defaultWorkshopName: string = 'Workshop'): string => {
     const workshopName = 
       (profile?.name) || 
@@ -127,6 +142,7 @@ export function useSendgridEmail() {
   return {
     sendEmail,
     sendMarketingCampaign,
+    getAnalytics,
     getWorkshopEmail,
     isConfigured: sendgridService.isConfigured(),
     isSending

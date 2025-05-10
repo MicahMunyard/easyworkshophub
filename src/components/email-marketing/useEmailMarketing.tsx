@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useSendgridEmail } from '@/hooks/email/useSendgridEmail';
 import { useCustomers } from '@/hooks/customers/useCustomers';
-import { CustomerType } from '@/types/customer';
 import { EmailTemplate, EmailCampaign, EmailAutomation, EmailAnalytic } from './types';
 
 export function useEmailMarketing() {
@@ -14,7 +13,7 @@ export function useEmailMarketing() {
   
   const { toast } = useToast();
   const { customers } = useCustomers();
-  const { sendMarketingCampaign, isConfigured, isSending } = useSendgridEmail();
+  const { sendMarketingCampaign, isConfigured, isSending, getAnalytics } = useSendgridEmail();
 
   useEffect(() => {
     // Fetch data from local storage or API
@@ -54,49 +53,59 @@ export function useEmailMarketing() {
           localStorage.setItem('emailTemplates', JSON.stringify(defaultTemplates));
         }
         
-        // Mock analytics data
-        setAnalytics([
-          { 
-            campaign_id: "camp-1", 
-            campaign_name: "Winter Special", 
-            date: "2025-01-15", 
-            sent_count: 120, 
-            open_count: 65, 
-            click_count: 28 
-          },
-          { 
-            campaign_id: "camp-2", 
-            campaign_name: "New Year Offer", 
-            date: "2025-02-01", 
-            sent_count: 85, 
-            open_count: 32, 
-            click_count: 15 
-          },
-          { 
-            campaign_id: "camp-3", 
-            campaign_name: "Service Reminder", 
-            date: "2025-03-01", 
-            sent_count: 43, 
-            open_count: 27, 
-            click_count: 12 
-          },
-          { 
-            campaign_id: "camp-4", 
-            campaign_name: "Spring Promotion", 
-            date: "2025-04-01", 
-            sent_count: 100, 
-            open_count: 55, 
-            click_count: 23 
-          },
-          { 
-            campaign_id: "camp-5", 
-            campaign_name: "Summer Service", 
-            date: "2025-05-01", 
-            sent_count: 80, 
-            open_count: 48, 
-            click_count: 18 
+        // Fetch analytics data from SendGrid if configured
+        if (isConfigured) {
+          try {
+            const analyticsData = await getAnalytics();
+            setAnalytics(analyticsData);
+          } catch (error) {
+            console.error('Error fetching analytics:', error);
+            
+            // Use mock data if API fails
+            setAnalytics([
+              { 
+                campaign_id: "camp-1", 
+                campaign_name: "Winter Special", 
+                date: "2025-01-15", 
+                sent_count: 120, 
+                open_count: 65, 
+                click_count: 28 
+              },
+              { 
+                campaign_id: "camp-2", 
+                campaign_name: "New Year Offer", 
+                date: "2025-02-01", 
+                sent_count: 85, 
+                open_count: 32, 
+                click_count: 15 
+              },
+              { 
+                campaign_id: "camp-3", 
+                campaign_name: "Service Reminder", 
+                date: "2025-03-01", 
+                sent_count: 43, 
+                open_count: 27, 
+                click_count: 12 
+              },
+              { 
+                campaign_id: "camp-4", 
+                campaign_name: "Spring Promotion", 
+                date: "2025-04-01", 
+                sent_count: 100, 
+                open_count: 55, 
+                click_count: 23 
+              },
+              { 
+                campaign_id: "camp-5", 
+                campaign_name: "Summer Service", 
+                date: "2025-05-01", 
+                sent_count: 80, 
+                open_count: 48, 
+                click_count: 18 
+              }
+            ]);
           }
-        ]);
+        }
       } catch (error) {
         console.error('Error loading email marketing data:', error);
         toast({
@@ -110,7 +119,7 @@ export function useEmailMarketing() {
     };
     
     fetchData();
-  }, [toast]);
+  }, [toast, isConfigured, getAnalytics]);
 
   /**
    * Create a new email campaign
@@ -212,7 +221,7 @@ export function useEmailMarketing() {
       const result = await sendMarketingCampaign(
         recipientList,
         {
-          to: recipientList, // SendGrid handles the multiple recipients
+          to: recipientList.map(r => r.email), // Convert to array of strings for SendgridEmailOptions
           subject: emailSubject,
           html: emailContent,
           categories: ['marketing', 'campaign']
