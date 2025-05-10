@@ -48,14 +48,14 @@ export function useEmailMarketing() {
               name: "Welcome Email",
               subject: "Welcome to our Workshop!",
               content: "<h1>Welcome!</h1><p>Thank you for choosing our workshop for your vehicle needs.</p>",
-              createdAt: new Date().toISOString()
+              created_at: new Date().toISOString()
             },
             {
               id: "template-2",
               name: "Service Reminder",
               subject: "Time for your vehicle service",
               content: "<h1>Service Reminder</h1><p>It's time to schedule your next service appointment.</p>",
-              createdAt: new Date().toISOString()
+              created_at: new Date().toISOString()
             }
           ];
           setTemplates(defaultTemplates);
@@ -99,14 +99,17 @@ export function useEmailMarketing() {
   /**
    * Create a new email campaign
    */
-  const createCampaign = async (campaign: Omit<EmailCampaign, 'id' | 'createdAt' | 'status'>): Promise<boolean> => {
+  const createCampaign = async (campaign: Omit<EmailCampaign, 'id' | 'created_at' | 'status' | 'recipient_count' | 'open_rate' | 'click_rate' | 'sent_at'>): Promise<boolean> => {
     try {
       // Create new campaign object
       const newCampaign: EmailCampaign = {
         ...campaign,
         id: `campaign-${Date.now()}`,
-        createdAt: new Date().toISOString(),
-        status: 'scheduled'
+        created_at: new Date().toISOString(),
+        status: 'scheduled',
+        recipient_count: 0, // Will be set when sending
+        audienceType: campaign.recipient_segments?.includes('all') ? 'all' : 'segment',
+        sendImmediately: !campaign.scheduled_for
       };
       
       // Save to local storage
@@ -115,13 +118,13 @@ export function useEmailMarketing() {
       localStorage.setItem('emailCampaigns', JSON.stringify(updatedCampaigns));
       
       // If campaign is set to send now, send it using SendGrid
-      if (campaign.sendImmediately) {
+      if (!campaign.scheduled_for) {
         await sendCampaignNow(newCampaign);
       }
       
       toast({
         title: "Campaign created",
-        description: campaign.sendImmediately 
+        description: !campaign.scheduled_for 
           ? "Your campaign has been sent" 
           : "Your campaign has been scheduled"
       });
@@ -156,7 +159,7 @@ export function useEmailMarketing() {
       // Get campaign recipients from selected audience
       let recipientList = [];
       
-      if (campaign.audienceType === 'all') {
+      if (campaign.audienceType === 'all' || (campaign.recipient_segments && campaign.recipient_segments.includes('all'))) {
         // Send to all customers with email
         recipientList = customers
           .filter(customer => customer.email)
@@ -164,7 +167,8 @@ export function useEmailMarketing() {
             email: customer.email as string,
             name: customer.name
           }));
-      } else if (campaign.audienceType === 'segment' && campaign.segmentIds) {
+      } else if ((campaign.audienceType === 'segment' && campaign.segmentIds) || 
+                (campaign.recipient_segments && campaign.recipient_segments.length > 0)) {
         // Filter by customer segments
         // This is simplified - in a real app, you'd have a proper segment system
         recipientList = customers
@@ -177,11 +181,11 @@ export function useEmailMarketing() {
       }
       
       // Get template content if using a template
-      let emailContent = campaign.content;
+      let emailContent = campaign.content || '';
       let emailSubject = campaign.subject;
       
-      if (campaign.templateId) {
-        const template = templates.find(t => t.id === campaign.templateId);
+      if (campaign.template_id) {
+        const template = templates.find(t => t.id === campaign.template_id);
         if (template) {
           emailContent = template.content;
           if (!emailSubject) emailSubject = template.subject;
@@ -202,7 +206,7 @@ export function useEmailMarketing() {
       if (result.success) {
         // Update campaign status
         const updatedCampaigns = campaigns.map(c => 
-          c.id === campaign.id ? { ...c, status: 'sent' } : c
+          c.id === campaign.id ? { ...c, status: 'sent' as const } : c
         );
         setCampaigns(updatedCampaigns);
         localStorage.setItem('emailCampaigns', JSON.stringify(updatedCampaigns));
@@ -221,13 +225,13 @@ export function useEmailMarketing() {
   /**
    * Create a new email template
    */
-  const createTemplate = (template: Omit<EmailTemplate, 'id' | 'createdAt'>): boolean => {
+  const createTemplate = async (template: Omit<EmailTemplate, 'id' | 'created_at' | 'updated_at'>): Promise<boolean> => {
     try {
       // Create new template object
       const newTemplate: EmailTemplate = {
         ...template,
         id: `template-${Date.now()}`,
-        createdAt: new Date().toISOString()
+        created_at: new Date().toISOString()
       };
       
       // Save to local storage
@@ -255,13 +259,13 @@ export function useEmailMarketing() {
   /**
    * Create a new email automation
    */
-  const createAutomation = (automation: Omit<EmailAutomation, 'id' | 'createdAt'>): boolean => {
+  const createAutomation = async (automation: Omit<EmailAutomation, 'id' | 'created_at'>): Promise<boolean> => {
     try {
       // Create new automation object
       const newAutomation: EmailAutomation = {
         ...automation,
         id: `automation-${Date.now()}`,
-        createdAt: new Date().toISOString()
+        created_at: new Date().toISOString()
       };
       
       // Save to local storage

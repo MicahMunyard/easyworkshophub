@@ -18,7 +18,7 @@ export function useSendgridEmail() {
     
     try {
       // Get workshop name from user profile or use a default
-      const workshopName = user?.workshop_name || 'Workshop';
+      const workshopName = user?.name || 'Workshop';
       
       const result = await sendgridService.sendEmail(
         workshopName,
@@ -68,7 +68,7 @@ export function useSendgridEmail() {
     
     try {
       // Get workshop name from user profile or use a default
-      const workshopName = user?.workshop_name || 'Workshop';
+      const workshopName = user?.name || 'Workshop';
       
       const result = await sendgridService.sendMarketingCampaign(
         workshopName,
