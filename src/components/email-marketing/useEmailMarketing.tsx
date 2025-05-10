@@ -1,277 +1,301 @@
 
-import { useState, useEffect } from "react";
-import { toast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { 
-  EmailCampaign, 
-  EmailTemplate, 
-  EmailAutomation, 
-  EmailAnalytic 
-} from "./types";
+import { useState, useEffect } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { useSendgridEmail } from '@/hooks/email/useSendgridEmail';
+import { useCustomers } from '@/hooks/customers/useCustomers';
+import { CustomerType } from '@/types/customer';
+import { EmailTemplate, EmailCampaign, EmailAutomation, EmailAnalytics } from './types';
 
 export function useEmailMarketing() {
   const [campaigns, setCampaigns] = useState<EmailCampaign[]>([]);
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [automations, setAutomations] = useState<EmailAutomation[]>([]);
-  const [analytics, setAnalytics] = useState<EmailAnalytic[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [analytics, setAnalytics] = useState<EmailAnalytics>({
+    totalSent: 0,
+    openRate: 0,
+    clickRate: 0,
+    bounceRate: 0,
+    campaignPerformance: [],
+    emailTimeline: []
+  });
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  
+  const { toast } = useToast();
+  const { customers } = useCustomers();
+  const { sendMarketingCampaign, isConfigured, isSending } = useSendgridEmail();
 
   useEffect(() => {
-    fetchEmailData();
-  }, []);
+    // Fetch data from local storage or API
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        
+        // In a real app, this would fetch from an API
+        // For now, we're loading from localStorage or using defaults
+        const storedTemplates = localStorage.getItem('emailTemplates');
+        const storedCampaigns = localStorage.getItem('emailCampaigns');
+        const storedAutomations = localStorage.getItem('emailAutomations');
+        
+        if (storedTemplates) setTemplates(JSON.parse(storedTemplates));
+        if (storedCampaigns) setCampaigns(JSON.parse(storedCampaigns));
+        if (storedAutomations) setAutomations(JSON.parse(storedAutomations));
+        
+        // Default templates if none exist
+        if (!storedTemplates) {
+          const defaultTemplates: EmailTemplate[] = [
+            {
+              id: "template-1",
+              name: "Welcome Email",
+              subject: "Welcome to our Workshop!",
+              content: "<h1>Welcome!</h1><p>Thank you for choosing our workshop for your vehicle needs.</p>",
+              createdAt: new Date().toISOString()
+            },
+            {
+              id: "template-2",
+              name: "Service Reminder",
+              subject: "Time for your vehicle service",
+              content: "<h1>Service Reminder</h1><p>It's time to schedule your next service appointment.</p>",
+              createdAt: new Date().toISOString()
+            }
+          ];
+          setTemplates(defaultTemplates);
+          localStorage.setItem('emailTemplates', JSON.stringify(defaultTemplates));
+        }
+        
+        // Mock analytics data
+        setAnalytics({
+          totalSent: 248,
+          openRate: 42.3,
+          clickRate: 12.8,
+          bounceRate: 2.1,
+          campaignPerformance: [
+            { name: 'Winter Special', sent: 120, opened: 65, clicked: 28 },
+            { name: 'New Year Offer', sent: 85, opened: 32, clicked: 15 },
+            { name: 'Service Reminder', sent: 43, opened: 27, clicked: 12 }
+          ],
+          emailTimeline: [
+            { date: '2025-01-01', sent: 18, opened: 12 },
+            { date: '2025-02-01', sent: 27, opened: 15 },
+            { date: '2025-03-01', sent: 32, opened: 20 },
+            { date: '2025-04-01', sent: 45, opened: 24 },
+            { date: '2025-05-01', sent: 58, opened: 31 }
+          ]
+        });
+      } catch (error) {
+        console.error('Error loading email marketing data:', error);
+        toast({
+          title: "Error loading data",
+          description: "Could not load email marketing data",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, [toast]);
 
-  async function fetchEmailData() {
-    setIsLoading(true);
+  /**
+   * Create a new email campaign
+   */
+  const createCampaign = async (campaign: Omit<EmailCampaign, 'id' | 'createdAt' | 'status'>): Promise<boolean> => {
     try {
-      // Mock data for templates
-      const mockTemplates: EmailTemplate[] = [
-        {
-          id: "1",
-          name: "Service Reminder",
-          description: "Reminder for upcoming vehicle service",
-          subject: "Your vehicle is due for service",
-          content: "<p>Dear {{customer_name}},</p><p>This is a reminder that your {{vehicle}} is due for service on {{service_date}}.</p><p>Please contact us to confirm your appointment.</p><p>Regards,<br>{{workshop_name}}</p>",
-          created_at: "2023-03-10T14:30:00Z",
-          updated_at: "2023-03-15T09:45:00Z",
-          category: "reminder"
-        },
-        {
-          id: "2",
-          name: "New Promotion",
-          description: "Template for seasonal promotions",
-          subject: "Special Offer Inside!",
-          content: "<p>Dear {{customer_name}},</p><p>We're excited to offer you a special discount on {{service_type}} this month!</p><p>Book now and save 15% on your next service.</p><p>Offer valid until {{expiry_date}}.</p><p>Regards,<br>{{workshop_name}}</p>",
-          created_at: "2023-02-28T11:20:00Z",
-          updated_at: "2023-03-05T16:45:00Z",
-          category: "promotion"
-        },
-        {
-          id: "3",
-          name: "Birthday Wishes",
-          description: "Birthday greetings for customers",
-          subject: "Happy Birthday from the team!",
-          content: "<p>Dear {{customer_name}},</p><p>Happy Birthday from all of us at {{workshop_name}}!</p><p>As a token of our appreciation, we're giving you a 20% discount on your next service.</p><p>Regards,<br>{{workshop_name}}</p>",
-          created_at: "2023-01-15T10:00:00Z",
-          updated_at: "2023-01-20T13:15:00Z",
-          category: "other"
-        }
-      ];
-      
-      // Mock data for campaigns
-      const mockCampaigns: EmailCampaign[] = [
-        {
-          id: "1",
-          name: "Spring Service Special",
-          subject: "Get Your Vehicle Ready for Spring!",
-          template_id: "2",
-          status: "sent",
-          recipient_count: 245,
-          open_rate: 0.68,
-          click_rate: 0.32,
-          created_at: "2023-03-01T09:00:00Z",
-          sent_at: "2023-03-02T10:30:00Z"
-        },
-        {
-          id: "2",
-          name: "Routine Maintenance Reminder",
-          subject: "Your vehicle is due for service",
-          template_id: "1",
-          status: "scheduled",
-          recipient_count: 180,
-          created_at: "2023-03-10T14:30:00Z",
-          scheduled_for: "2023-03-20T09:00:00Z"
-        },
-        {
-          id: "3",
-          name: "Customer Appreciation Month",
-          subject: "We appreciate your business!",
-          template_id: "2",
-          status: "draft",
-          recipient_count: 0,
-          created_at: "2023-03-15T11:45:00Z"
-        }
-      ];
-      
-      // Mock data for automations
-      const mockAutomations: EmailAutomation[] = [
-        {
-          id: "1",
-          name: "Service Reminder Automation",
-          description: "Sends service reminders 7 days before due date",
-          template_id: "1",
-          trigger: "service_reminder",
-          status: "active",
-          created_at: "2023-02-15T10:00:00Z",
-          frequency: "once"
-        },
-        {
-          id: "2",
-          name: "Birthday Wishes",
-          description: "Sends birthday wishes and special offers",
-          template_id: "3",
-          trigger: "birthday",
-          status: "active",
-          created_at: "2023-01-20T09:30:00Z",
-          frequency: "yearly"
-        },
-        {
-          id: "3",
-          name: "After Service Follow-up",
-          description: "Follows up after service completion",
-          template_id: "2",
-          trigger: "service_completed",
-          status: "inactive",
-          created_at: "2023-03-05T14:15:00Z",
-          frequency: "once"
-        }
-      ];
-      
-      // Mock data for analytics
-      const mockAnalytics: EmailAnalytic[] = [
-        {
-          campaign_id: "1",
-          campaign_name: "Spring Service Special",
-          sent_count: 245,
-          open_count: 167,
-          click_count: 78,
-          date: "2023-03-02T10:30:00Z"
-        },
-        {
-          campaign_id: "4",
-          campaign_name: "Winter Tire Promotion",
-          sent_count: 320,
-          open_count: 192,
-          click_count: 116,
-          date: "2023-02-15T09:45:00Z"
-        },
-        {
-          campaign_id: "5",
-          campaign_name: "Year-End Newsletter",
-          sent_count: 412,
-          open_count: 298,
-          click_count: 145,
-          date: "2023-01-10T11:30:00Z"
-        }
-      ];
-
-      setTemplates(mockTemplates);
-      setCampaigns(mockCampaigns);
-      setAutomations(mockAutomations);
-      setAnalytics(mockAnalytics);
-    } catch (error) {
-      console.error("Error fetching email data:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load email marketing data. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  async function createCampaign(campaignData: {
-    name: string;
-    subject: string;
-    template_id: string;
-    content: string;
-    recipient_segments: string[];
-    scheduled_for?: string;
-  }) {
-    try {
-      // This would normally make a database call
-      console.log("Creating campaign:", campaignData);
-      
+      // Create new campaign object
       const newCampaign: EmailCampaign = {
-        id: String(Date.now()),
-        name: campaignData.name,
-        subject: campaignData.subject,
-        template_id: campaignData.template_id,
-        status: campaignData.scheduled_for ? 'scheduled' : 'draft',
-        recipient_count: campaignData.recipient_segments.length * 50, // Mock count
-        created_at: new Date().toISOString(),
-        scheduled_for: campaignData.scheduled_for,
+        ...campaign,
+        id: `campaign-${Date.now()}`,
+        createdAt: new Date().toISOString(),
+        status: 'scheduled'
       };
       
-      setCampaigns(prev => [newCampaign, ...prev]);
+      // Save to local storage
+      const updatedCampaigns = [...campaigns, newCampaign];
+      setCampaigns(updatedCampaigns);
+      localStorage.setItem('emailCampaigns', JSON.stringify(updatedCampaigns));
+      
+      // If campaign is set to send now, send it using SendGrid
+      if (campaign.sendImmediately) {
+        await sendCampaignNow(newCampaign);
+      }
       
       toast({
-        title: "Success",
-        description: `Campaign "${campaignData.name}" has been ${campaignData.scheduled_for ? 'scheduled' : 'saved as draft'}.`,
+        title: "Campaign created",
+        description: campaign.sendImmediately 
+          ? "Your campaign has been sent" 
+          : "Your campaign has been scheduled"
       });
+      
+      return true;
     } catch (error) {
-      console.error("Error creating campaign:", error);
+      console.error('Error creating campaign:', error);
       toast({
-        title: "Error",
-        description: "Failed to create campaign. Please try again.",
+        title: "Error creating campaign",
+        description: "Failed to create email campaign",
         variant: "destructive"
       });
+      return false;
     }
-  }
+  };
 
-  async function createTemplate(templateData: Omit<EmailTemplate, 'id' | 'created_at' | 'updated_at'>) {
+  /**
+   * Send a campaign immediately using SendGrid
+   */
+  const sendCampaignNow = async (campaign: EmailCampaign): Promise<boolean> => {
+    // Check if SendGrid is configured
+    if (!isConfigured) {
+      toast({
+        title: "SendGrid not configured",
+        description: "Email sending is not available. Please configure SendGrid API key.",
+        variant: "destructive"
+      });
+      return false;
+    }
+    
     try {
-      // This would normally make a database call
-      console.log("Creating template:", templateData);
+      // Get campaign recipients from selected audience
+      let recipientList = [];
       
+      if (campaign.audienceType === 'all') {
+        // Send to all customers with email
+        recipientList = customers
+          .filter(customer => customer.email)
+          .map(customer => ({ 
+            email: customer.email as string,
+            name: customer.name
+          }));
+      } else if (campaign.audienceType === 'segment' && campaign.segmentIds) {
+        // Filter by customer segments
+        // This is simplified - in a real app, you'd have a proper segment system
+        recipientList = customers
+          .filter(customer => customer.email)
+          .slice(0, 10) // Just take first 10 as an example
+          .map(customer => ({
+            email: customer.email as string,
+            name: customer.name
+          }));
+      }
+      
+      // Get template content if using a template
+      let emailContent = campaign.content;
+      let emailSubject = campaign.subject;
+      
+      if (campaign.templateId) {
+        const template = templates.find(t => t.id === campaign.templateId);
+        if (template) {
+          emailContent = template.content;
+          if (!emailSubject) emailSubject = template.subject;
+        }
+      }
+      
+      // Send campaign via SendGrid
+      const result = await sendMarketingCampaign(
+        recipientList,
+        {
+          to: recipientList, // SendGrid handles the multiple recipients
+          subject: emailSubject,
+          html: emailContent,
+          categories: ['marketing', 'campaign']
+        }
+      );
+      
+      if (result.success) {
+        // Update campaign status
+        const updatedCampaigns = campaigns.map(c => 
+          c.id === campaign.id ? { ...c, status: 'sent' } : c
+        );
+        setCampaigns(updatedCampaigns);
+        localStorage.setItem('emailCampaigns', JSON.stringify(updatedCampaigns));
+        
+        return true;
+      } else {
+        console.error('Failed to send campaign:', result.error);
+        return false;
+      }
+    } catch (error) {
+      console.error('Error sending campaign:', error);
+      return false;
+    }
+  };
+
+  /**
+   * Create a new email template
+   */
+  const createTemplate = (template: Omit<EmailTemplate, 'id' | 'createdAt'>): boolean => {
+    try {
+      // Create new template object
       const newTemplate: EmailTemplate = {
-        id: String(Date.now()),
-        ...templateData,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        ...template,
+        id: `template-${Date.now()}`,
+        createdAt: new Date().toISOString()
       };
       
-      setTemplates(prev => [newTemplate, ...prev]);
+      // Save to local storage
+      const updatedTemplates = [...templates, newTemplate];
+      setTemplates(updatedTemplates);
+      localStorage.setItem('emailTemplates', JSON.stringify(updatedTemplates));
       
       toast({
-        title: "Success",
-        description: `Template "${templateData.name}" has been created.`,
+        title: "Template created",
+        description: "Your email template has been saved"
       });
+      
+      return true;
     } catch (error) {
-      console.error("Error creating template:", error);
+      console.error('Error creating template:', error);
       toast({
-        title: "Error",
-        description: "Failed to create template. Please try again.",
+        title: "Error creating template",
+        description: "Failed to create email template",
         variant: "destructive"
       });
+      return false;
     }
-  }
+  };
 
-  async function createAutomation(automationData: Omit<EmailAutomation, 'id' | 'created_at'>) {
+  /**
+   * Create a new email automation
+   */
+  const createAutomation = (automation: Omit<EmailAutomation, 'id' | 'createdAt'>): boolean => {
     try {
-      // This would normally make a database call
-      console.log("Creating automation:", automationData);
-      
+      // Create new automation object
       const newAutomation: EmailAutomation = {
-        id: String(Date.now()),
-        ...automationData,
-        created_at: new Date().toISOString(),
+        ...automation,
+        id: `automation-${Date.now()}`,
+        createdAt: new Date().toISOString()
       };
       
-      setAutomations(prev => [newAutomation, ...prev]);
+      // Save to local storage
+      const updatedAutomations = [...automations, newAutomation];
+      setAutomations(updatedAutomations);
+      localStorage.setItem('emailAutomations', JSON.stringify(updatedAutomations));
       
       toast({
-        title: "Success",
-        description: `Automation "${automationData.name}" has been created.`,
+        title: "Automation created",
+        description: "Your email automation has been set up"
       });
+      
+      return true;
     } catch (error) {
-      console.error("Error creating automation:", error);
+      console.error('Error creating automation:', error);
       toast({
-        title: "Error",
-        description: "Failed to create automation. Please try again.",
+        title: "Error creating automation",
+        description: "Failed to create email automation",
         variant: "destructive"
       });
+      return false;
     }
-  }
+  };
 
   return {
     campaigns,
     templates,
     automations,
     analytics,
-    isLoading,
+    isLoading: isLoading || isSending,
     createCampaign,
     createTemplate,
-    createAutomation
+    createAutomation,
+    sendCampaignNow,
+    isEmailConfigured: isConfigured
   };
 }
