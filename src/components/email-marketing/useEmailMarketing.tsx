@@ -1,23 +1,15 @@
-
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useSendgridEmail } from '@/hooks/email/useSendgridEmail';
 import { useCustomers } from '@/hooks/customers/useCustomers';
 import { CustomerType } from '@/types/customer';
-import { EmailTemplate, EmailCampaign, EmailAutomation, EmailAnalytics } from './types';
+import { EmailTemplate, EmailCampaign, EmailAutomation, EmailAnalytic } from './types';
 
 export function useEmailMarketing() {
   const [campaigns, setCampaigns] = useState<EmailCampaign[]>([]);
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [automations, setAutomations] = useState<EmailAutomation[]>([]);
-  const [analytics, setAnalytics] = useState<EmailAnalytics>({
-    totalSent: 0,
-    openRate: 0,
-    clickRate: 0,
-    bounceRate: 0,
-    campaignPerformance: [],
-    emailTimeline: []
-  });
+  const [analytics, setAnalytics] = useState<EmailAnalytic[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   
   const { toast } = useToast();
@@ -63,24 +55,48 @@ export function useEmailMarketing() {
         }
         
         // Mock analytics data
-        setAnalytics({
-          totalSent: 248,
-          openRate: 42.3,
-          clickRate: 12.8,
-          bounceRate: 2.1,
-          campaignPerformance: [
-            { name: 'Winter Special', sent: 120, opened: 65, clicked: 28 },
-            { name: 'New Year Offer', sent: 85, opened: 32, clicked: 15 },
-            { name: 'Service Reminder', sent: 43, opened: 27, clicked: 12 }
-          ],
-          emailTimeline: [
-            { date: '2025-01-01', sent: 18, opened: 12 },
-            { date: '2025-02-01', sent: 27, opened: 15 },
-            { date: '2025-03-01', sent: 32, opened: 20 },
-            { date: '2025-04-01', sent: 45, opened: 24 },
-            { date: '2025-05-01', sent: 58, opened: 31 }
-          ]
-        });
+        setAnalytics([
+          { 
+            campaign_id: "camp-1", 
+            campaign_name: "Winter Special", 
+            date: "2025-01-15", 
+            sent_count: 120, 
+            open_count: 65, 
+            click_count: 28 
+          },
+          { 
+            campaign_id: "camp-2", 
+            campaign_name: "New Year Offer", 
+            date: "2025-02-01", 
+            sent_count: 85, 
+            open_count: 32, 
+            click_count: 15 
+          },
+          { 
+            campaign_id: "camp-3", 
+            campaign_name: "Service Reminder", 
+            date: "2025-03-01", 
+            sent_count: 43, 
+            open_count: 27, 
+            click_count: 12 
+          },
+          { 
+            campaign_id: "camp-4", 
+            campaign_name: "Spring Promotion", 
+            date: "2025-04-01", 
+            sent_count: 100, 
+            open_count: 55, 
+            click_count: 23 
+          },
+          { 
+            campaign_id: "camp-5", 
+            campaign_name: "Summer Service", 
+            date: "2025-05-01", 
+            sent_count: 80, 
+            open_count: 48, 
+            click_count: 18 
+          }
+        ]);
       } catch (error) {
         console.error('Error loading email marketing data:', error);
         toast({

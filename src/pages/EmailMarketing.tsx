@@ -7,7 +7,7 @@ import {
   TabsTrigger 
 } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Mail, FileText, Clock, BarChart3, Users } from "lucide-react";
+import { Mail, FileText, Clock, BarChart3 } from "lucide-react";
 import EmailCampaignBuilder from "@/components/email-marketing/EmailCampaignBuilder";
 import EmailTemplateList from "@/components/email-marketing/EmailTemplateList";
 import EmailAutomations from "@/components/email-marketing/EmailAutomations";

@@ -31,7 +31,7 @@ const EmailAnalytics: React.FC<EmailAnalyticsProps> = ({ analytics, isLoading })
     );
   }
 
-  if (!analytics) {
+  if (!analytics || analytics.length === 0) {
     return (
       <Alert variant="default" className="mb-6">
         <AlertTriangle className="h-4 w-4" />
@@ -45,9 +45,9 @@ const EmailAnalytics: React.FC<EmailAnalyticsProps> = ({ analytics, isLoading })
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <CampaignCountCard analytics={analytics.campaignPerformance} />
-        <OpenRateCard analytics={analytics.campaignPerformance} />
-        <ClickRateCard analytics={analytics.campaignPerformance} />
+        <CampaignCountCard analytics={analytics} />
+        <OpenRateCard analytics={analytics} />
+        <ClickRateCard analytics={analytics} />
       </div>
 
       <Tabs defaultValue="performance" className="space-y-4">
@@ -63,7 +63,7 @@ const EmailAnalytics: React.FC<EmailAnalyticsProps> = ({ analytics, isLoading })
               <CardTitle>Campaign Performance</CardTitle>
             </CardHeader>
             <CardContent>
-              <CampaignPerformanceChart analytics={analytics.campaignPerformance} />
+              <CampaignPerformanceChart analytics={analytics} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -74,7 +74,7 @@ const EmailAnalytics: React.FC<EmailAnalyticsProps> = ({ analytics, isLoading })
               <CardTitle>Email Timeline</CardTitle>
             </CardHeader>
             <CardContent>
-              <CampaignTimelineChart analytics={analytics.emailTimeline} />
+              <CampaignTimelineChart analytics={analytics} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -85,7 +85,7 @@ const EmailAnalytics: React.FC<EmailAnalyticsProps> = ({ analytics, isLoading })
               <CardTitle>Email Engagement</CardTitle>
             </CardHeader>
             <CardContent>
-              <EmailEngagementChart analytics={analytics.campaignPerformance} />
+              <EmailEngagementChart analytics={analytics} />
             </CardContent>
           </Card>
         </TabsContent>
