@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { EmailCampaignBuilderProps } from "./types";
 import {
@@ -25,6 +26,7 @@ import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSendgridEmail } from "@/hooks/email/useSendgridEmail";
+import { useForm } from "react-hook-form";
 
 interface FormData {
   name: string;
@@ -38,69 +40,60 @@ interface FormData {
 }
 
 const EmailCampaignBuilder: React.FC<EmailCampaignBuilderProps> = ({ templates, onSave }) => {
-  const [formData, setFormData] = useState<FormData>({
-    name: "",
-    subject: "",
-    template_id: "",
-    content: "",
-    recipient_segments: ["all"],
-    scheduled_for: "",
-    schedule: false,
-    testEmail: ""
-  });
   const [date, setDate] = useState<Date>();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSendingTest, setIsSendingTest] = useState(false);
   const { toast } = useToast();
   const { sendEmail, getWorkshopEmail } = useSendgridEmail();
-  const workshopEmail = getWorkshopEmail();
+  const workshopEmail = getWorkshopEmail("Your Workshop");
+
+  const form = useForm<FormData>({
+    defaultValues: {
+      name: "",
+      subject: "",
+      template_id: "",
+      content: "",
+      recipient_segments: ["all"],
+      scheduled_for: "",
+      schedule: false,
+      testEmail: ""
+    }
+  });
+
+  const { watch, setValue } = form;
+  const formValues = watch();
 
   useEffect(() => {
     if (date) {
-      setFormData({
-        ...formData,
-        scheduled_for: format(date, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-      });
+      setValue("scheduled_for", format(date, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"));
     }
-  }, [date]);
+  }, [date, setValue]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
+    setValue(name as keyof FormData, value);
   };
 
   const handleSelectChange = (e: string) => {
-    setFormData({
-      ...formData,
-      template_id: e,
-    });
+    setValue("template_id", e);
   };
 
   const handleSegmentChange = (e: string[]) => {
-    setFormData({
-      ...formData,
-      recipient_segments: e,
-    });
+    setValue("recipient_segments", e);
   };
 
   const handleScheduleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      schedule: e.target.checked,
-    });
+    setValue("schedule", e.target.checked);
   };
 
   // Send a test email
   const sendTestEmail = async () => {
-    if (!formData.testEmail) return;
+    if (!formValues.testEmail) return;
     
     setIsSendingTest(true);
     try {
       // Get the content from the selected template
-      const selectedTemplate = templates.find(t => t.id === formData.template_id);
+      const selectedTemplate = templates.find(t => t.id === formValues.template_id);
       if (!selectedTemplate) throw new Error("Template not found");
       
       // Process template placeholders for preview
@@ -113,10 +106,11 @@ const EmailCampaignBuilder: React.FC<EmailCampaignBuilderProps> = ({ templates, 
         .replace(/{{expiry_date}}/g, format(new Date(new Date().setDate(new Date().getDate() + 30)), "MMMM d, yyyy"));
       
       // Send test email
-      const result = await sendEmail(formData.testEmail, {
-        subject: `${formData.subject} [TEST]`,
+      const result = await sendEmail(formValues.testEmail, {
+        subject: `${formValues.subject} [TEST]`,
         html: processedContent,
         text: processedContent.replace(/<[^>]*>/g, ' '), // Simple HTML to text conversion
+        to: formValues.testEmail // Added the required "to" property
       });
       
       if (!result.success) {
@@ -131,23 +125,23 @@ const EmailCampaignBuilder: React.FC<EmailCampaignBuilderProps> = ({ templates, 
 
   const handleSubmit = async (e: React.FormEvent, isDraft: boolean = false) => {
     e.preventDefault();
-    if (!formData.name || !formData.subject || !formData.template_id) return;
+    if (!formValues.name || !formValues.subject || !formValues.template_id) return;
     
     setIsSubmitting(true);
     try {
       await onSave({
-        name: formData.name,
-        subject: formData.subject,
-        template_id: formData.template_id,
-        content: formData.content,
-        recipient_segments: formData.recipient_segments,
-        scheduled_for: formData.schedule ? formData.scheduled_for : undefined,
+        name: formValues.name,
+        subject: formValues.subject,
+        template_id: formValues.template_id,
+        content: formValues.content,
+        recipient_segments: formValues.recipient_segments,
+        scheduled_for: formValues.schedule ? formValues.scheduled_for : undefined,
         from_email: workshopEmail, // Add the dynamic sender email
-        sendImmediately: !formData.schedule
+        sendImmediately: !formValues.schedule
       });
       
       // Reset form
-      setFormData({
+      form.reset({
         name: "",
         subject: "",
         template_id: "",
@@ -166,13 +160,10 @@ const EmailCampaignBuilder: React.FC<EmailCampaignBuilderProps> = ({ templates, 
   };
 
   return (
-    <Form>
+    <Form {...form}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <FormField
-          control={{
-            value: formData.name,
-            onChange: (e) => handleInputChange(e as any),
-          }}
+          control={form.control}
           name="name"
           render={({ field }) => (
             <FormItem>
@@ -186,10 +177,7 @@ const EmailCampaignBuilder: React.FC<EmailCampaignBuilderProps> = ({ templates, 
         />
 
         <FormField
-          control={{
-            value: formData.subject,
-            onChange: (e) => handleInputChange(e as any),
-          }}
+          control={form.control}
           name="subject"
           render={({ field }) => (
             <FormItem>
@@ -203,10 +191,7 @@ const EmailCampaignBuilder: React.FC<EmailCampaignBuilderProps> = ({ templates, 
         />
 
         <FormField
-          control={{
-            value: formData.template_id,
-            onChange: handleSelectChange,
-          }}
+          control={form.control}
           name="template_id"
           render={({ field }) => (
             <FormItem>
@@ -231,10 +216,7 @@ const EmailCampaignBuilder: React.FC<EmailCampaignBuilderProps> = ({ templates, 
         />
 
         <FormField
-          control={{
-            value: formData.content,
-            onChange: (e) => handleInputChange(e as any),
-          }}
+          control={form.control}
           name="content"
           render={({ field }) => (
             <FormItem>
@@ -248,10 +230,7 @@ const EmailCampaignBuilder: React.FC<EmailCampaignBuilderProps> = ({ templates, 
         />
 
         <FormField
-          control={{
-            value: formData.recipient_segments,
-            onChange: handleSegmentChange,
-          }}
+          control={form.control}
           name="recipient_segments"
           render={({ field }) => (
             <FormItem>
@@ -280,10 +259,7 @@ const EmailCampaignBuilder: React.FC<EmailCampaignBuilderProps> = ({ templates, 
 
         <div className="flex items-center space-x-2">
           <FormField
-            control={{
-              checked: formData.schedule,
-              onCheckedChange: (e) => handleScheduleChange(e as any),
-            }}
+            control={form.control}
             name="schedule"
             render={({ field }) => (
               <FormItem className="flex flex-row items-start space-x-3 space-y-0">
@@ -299,12 +275,9 @@ const EmailCampaignBuilder: React.FC<EmailCampaignBuilderProps> = ({ templates, 
             )}
           />
 
-          {formData.schedule && (
+          {formValues.schedule && (
             <FormField
-              control={{
-                value: date,
-                onChange: setDate,
-              }}
+              control={form.control}
               name="scheduled_for"
               render={({ field }) => (
                 <FormItem className="flex flex-col">
@@ -342,10 +315,7 @@ const EmailCampaignBuilder: React.FC<EmailCampaignBuilderProps> = ({ templates, 
         </div>
 
         <FormField
-          control={{
-            value: formData.testEmail,
-            onChange: (e) => handleInputChange(e as any),
-          }}
+          control={form.control}
           name="testEmail"
           render={({ field }) => (
             <FormItem>

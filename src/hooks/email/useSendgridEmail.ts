@@ -115,10 +115,19 @@ export function useSendgridEmail() {
     }
   };
   
+  const getWorkshopEmail = (defaultWorkshopName: string = 'Workshop'): string => {
+    const workshopName = 
+      (profile?.name) || 
+      (user?.user_metadata?.name) || 
+      defaultWorkshopName;
+      
+    return sendgridService.getWorkshopEmail(workshopName);
+  };
+  
   return {
     sendEmail,
     sendMarketingCampaign,
-    getWorkshopEmail: sendgridService.getWorkshopEmail,
+    getWorkshopEmail,
     isConfigured: sendgridService.isConfigured(),
     isSending
   };
