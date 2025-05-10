@@ -12,24 +12,30 @@ interface Workshop {
 }
 
 export function useWorkshop() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [workshop, setWorkshop] = useState<Workshop | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
     // In a real app, we would fetch the workshop details from the database
-    // For now, we'll simulate it based on the user information
+    // For now, we'll simulate it based on the user and profile information
     if (user) {
+      // Get name from profile or user metadata or default
+      const workshopName = 
+        (profile?.name) || 
+        (user.user_metadata?.name) || 
+        'Workshop';
+      
       setWorkshop({
         id: user.id,
-        name: user.name || 'Workshop',
+        name: workshopName,
         email: user.email,
       });
     } else {
       setWorkshop(null);
     }
     setIsLoading(false);
-  }, [user]);
+  }, [user, profile]);
   
   return {
     workshop,

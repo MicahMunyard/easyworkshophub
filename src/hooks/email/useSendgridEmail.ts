@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 export function useSendgridEmail() {
   const [isSending, setIsSending] = useState(false);
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   
   const sendEmail = async (
     to: string | EmailRecipient | Array<string | EmailRecipient>,
@@ -17,8 +17,11 @@ export function useSendgridEmail() {
     setIsSending(true);
     
     try {
-      // Get workshop name from user profile or use a default
-      const workshopName = user?.name || 'Workshop';
+      // Get workshop name from profile, user metadata or default
+      const workshopName = 
+        (profile?.name) ||
+        (user?.user_metadata?.name) || 
+        'Workshop';
       
       const result = await sendgridService.sendEmail(
         workshopName,
@@ -67,8 +70,11 @@ export function useSendgridEmail() {
     setIsSending(true);
     
     try {
-      // Get workshop name from user profile or use a default
-      const workshopName = user?.name || 'Workshop';
+      // Get workshop name from profile, user metadata or default
+      const workshopName = 
+        (profile?.name) || 
+        (user?.user_metadata?.name) || 
+        'Workshop';
       
       const result = await sendgridService.sendMarketingCampaign(
         workshopName,

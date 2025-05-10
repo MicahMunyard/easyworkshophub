@@ -1,141 +1,222 @@
+import React, { useState, useEffect } from "react";
+import { EmailCampaignBuilderProps } from "./types";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { CalendarIcon } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useSendgridEmail } from "@/hooks/email/useSendgridEmail";
 
-import React, { useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { EmailTemplate, EmailCampaign } from './types';
-import { AlertCircle } from 'lucide-react';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { useSendgridEmail } from '@/hooks/email/useSendgridEmail';
-
-interface EmailCampaignBuilderProps {
-  templates: EmailTemplate[];
-  onSave: (campaign: Omit<EmailCampaign, 'id' | 'createdAt' | 'status'>) => Promise<boolean>;
+interface FormData {
+  name: string;
+  subject: string;
+  template_id: string;
+  content: string;
+  recipient_segments: string[];
+  scheduled_for: string;
+  schedule: boolean;
+  testEmail: string;
 }
 
-const EmailCampaignBuilder: React.FC<EmailCampaignBuilderProps> = ({
-  templates,
-  onSave
-}) => {
-  const [subject, setSubject] = useState<string>('');
-  const [content, setContent] = useState<string>('');
-  const [templateId, setTemplateId] = useState<string>('');
-  const [audienceType, setAudienceType] = useState<'all' | 'segment'>('all');
-  const [segmentIds, setSegmentIds] = useState<string[]>([]);
-  const [sendImmediately, setSendImmediately] = useState<boolean>(true);
-  const [scheduledDate, setScheduledDate] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<string>('template');
-  
-  const { isConfigured } = useSendgridEmail();
+const EmailCampaignBuilder: React.FC<EmailCampaignBuilderProps> = ({ templates, onSave }) => {
+  const [formData, setFormData] = useState<FormData>({
+    name: "",
+    subject: "",
+    template_id: "",
+    content: "",
+    recipient_segments: ["all"],
+    scheduled_for: "",
+    schedule: false,
+    testEmail: ""
+  });
+  const [date, setDate] = useState<Date>();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSendingTest, setIsSendingTest] = useState(false);
+  const { toast } = useToast();
+  const { sendEmail, getWorkshopEmail } = useSendgridEmail();
+  const workshopEmail = getWorkshopEmail();
 
-  const handleTemplateChange = (id: string) => {
-    setTemplateId(id);
-    if (id) {
-      const selectedTemplate = templates.find(t => t.id === id);
-      if (selectedTemplate) {
-        setSubject(selectedTemplate.subject);
+  useEffect(() => {
+    if (date) {
+      setFormData({
+        ...formData,
+        scheduled_for: format(date, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+      });
+    }
+  }, [date]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      [name]: value,
+    });
+  };
+
+  const handleSelectChange = (e: string) => {
+    setFormData({
+      ...formData,
+      template_id: e,
+    });
+  };
+
+  const handleSegmentChange = (e: string[]) => {
+    setFormData({
+      ...formData,
+      recipient_segments: e,
+    });
+  };
+
+  const handleScheduleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({
+      ...formData,
+      schedule: e.target.checked,
+    });
+  };
+
+  // Send a test email
+  const sendTestEmail = async () => {
+    if (!formData.testEmail) return;
+    
+    setIsSendingTest(true);
+    try {
+      // Get the content from the selected template
+      const selectedTemplate = templates.find(t => t.id === formData.template_id);
+      if (!selectedTemplate) throw new Error("Template not found");
+      
+      // Process template placeholders for preview
+      const processedContent = selectedTemplate.content
+        .replace(/{{customer_name}}/g, "Test Recipient")
+        .replace(/{{vehicle}}/g, "Test Vehicle")
+        .replace(/{{service_date}}/g, format(new Date(), "MMMM d, yyyy"))
+        .replace(/{{workshop_name}}/g, "Your Workshop")
+        .replace(/{{service_type}}/g, "Test Service")
+        .replace(/{{expiry_date}}/g, format(new Date(new Date().setDate(new Date().getDate() + 30)), "MMMM d, yyyy"));
+      
+      // Send test email
+      const result = await sendEmail(formData.testEmail, {
+        subject: `${formData.subject} [TEST]`,
+        html: processedContent,
+        text: processedContent.replace(/<[^>]*>/g, ' '), // Simple HTML to text conversion
+      });
+      
+      if (!result.success) {
+        throw new Error(result.error?.message || "Failed to send test email");
       }
+    } catch (error) {
+      console.error("Error sending test email:", error);
+    } finally {
+      setIsSendingTest(false);
     }
   };
 
-  const handleTabChange = (value: string) => {
-    setActiveTab(value);
-    if (value === 'template') {
-      // Clear custom content when switching to template
-      if (templateId) {
-        const selectedTemplate = templates.find(t => t.id === templateId);
-        if (selectedTemplate) {
-          setContent('');
-        }
-      }
-    } else {
-      // Clear template selection when switching to custom
-      setTemplateId('');
-    }
-  };
-
-  const handleSave = async () => {
-    // Validate required fields
-    if (!subject) {
-      alert('Subject is required');
-      return;
-    }
+  const handleSubmit = async (e: React.FormEvent, isDraft: boolean = false) => {
+    e.preventDefault();
+    if (!formData.name || !formData.subject || !formData.template_id) return;
     
-    if (activeTab === 'custom' && !content) {
-      alert('Email content is required');
-      return;
-    }
-    
-    if (!sendImmediately && !scheduledDate) {
-      alert('Please select a scheduled date');
-      return;
-    }
-    
-    const campaignData: Omit<EmailCampaign, 'id' | 'createdAt' | 'status'> = {
-      subject,
-      content: activeTab === 'custom' ? content : '',
-      templateId: activeTab === 'template' ? templateId : undefined,
-      audienceType,
-      segmentIds: audienceType === 'segment' ? segmentIds : undefined,
-      sendImmediately,
-      scheduledDate: !sendImmediately ? scheduledDate : undefined
-    };
-    
-    const success = await onSave(campaignData);
-    
-    if (success) {
-      // Reset form after successful save
-      setSubject('');
-      setContent('');
-      setTemplateId('');
-      setAudienceType('all');
-      setSegmentIds([]);
-      setSendImmediately(true);
-      setScheduledDate('');
-      setActiveTab('template');
+    setIsSubmitting(true);
+    try {
+      await onSave({
+        name: formData.name,
+        subject: formData.subject,
+        template_id: formData.template_id,
+        content: formData.content,
+        recipient_segments: formData.recipient_segments,
+        scheduled_for: formData.schedule ? formData.scheduled_for : undefined,
+        from_email: workshopEmail, // Add the dynamic sender email
+        sendImmediately: !formData.schedule
+      });
+      
+      // Reset form
+      setFormData({
+        name: "",
+        subject: "",
+        template_id: "",
+        content: "",
+        recipient_segments: ["all"],
+        scheduled_for: "",
+        schedule: false,
+        testEmail: ""
+      });
+      setDate(undefined);
+    } catch (error) {
+      console.error("Error creating campaign:", error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="space-y-6">
-      {!isConfigured && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>SendGrid Not Configured</AlertTitle>
-          <AlertDescription>
-            Email sending is not available. Please add a valid SendGrid API key to your environment variables.
-          </AlertDescription>
-        </Alert>
-      )}
-    
-      <div className="grid gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="subject">Email Subject</Label>
-          <Input
-            id="subject"
-            placeholder="Enter email subject"
-            value={subject}
-            onChange={(e) => setSubject(e.target.value)}
-          />
-        </div>
+    <Form>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <FormField
+          control={{
+            value: formData.name,
+            onChange: (e) => handleInputChange(e as any),
+          }}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Campaign Name</FormLabel>
+              <FormControl>
+                <Input placeholder="My First Campaign" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-        <Tabs value={activeTab} onValueChange={handleTabChange}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="template">Use Template</TabsTrigger>
-            <TabsTrigger value="custom">Custom Content</TabsTrigger>
-          </TabsList>
-          <TabsContent value="template" className="space-y-4 pt-4">
-            <div className="space-y-2">
-              <Label htmlFor="template">Select Template</Label>
-              <Select value={templateId} onValueChange={handleTemplateChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a template" />
-                </SelectTrigger>
+        <FormField
+          control={{
+            value: formData.subject,
+            onChange: (e) => handleInputChange(e as any),
+          }}
+          name="subject"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Subject</FormLabel>
+              <FormControl>
+                <Input placeholder="Special offer inside!" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={{
+            value: formData.template_id,
+            onChange: handleSelectChange,
+          }}
+          name="template_id"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Template</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a template" />
+                  </SelectTrigger>
+                </FormControl>
                 <SelectContent>
                   {templates.map((template) => (
                     <SelectItem key={template.id} value={template.id}>
@@ -144,91 +225,159 @@ const EmailCampaignBuilder: React.FC<EmailCampaignBuilderProps> = ({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            
-            {templateId && templates.find(t => t.id === templateId) && (
-              <Card>
-                <CardContent className="p-4 bg-muted/50">
-                  <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ 
-                    __html: templates.find(t => t.id === templateId)?.content || '' 
-                  }} />
-                </CardContent>
-              </Card>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={{
+            value: formData.content,
+            onChange: (e) => handleInputChange(e as any),
+          }}
+          name="content"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Content</FormLabel>
+              <FormControl>
+                <Textarea placeholder="Write your email content here." {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={{
+            value: formData.recipient_segments,
+            onChange: handleSegmentChange,
+          }}
+          name="recipient_segments"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Recipients</FormLabel>
+              <Select
+                onValueChange={(value) => {
+                  field.onChange([value]);
+                }}
+                defaultValue={field.value[0]}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a recipient segment" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="all">All Customers</SelectItem>
+                  <SelectItem value="segment1">VIP Customers</SelectItem>
+                  <SelectItem value="segment2">New Customers</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <div className="flex items-center space-x-2">
+          <FormField
+            control={{
+              checked: formData.schedule,
+              onCheckedChange: (e) => handleScheduleChange(e as any),
+            }}
+            name="schedule"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                <FormControl>
+                  <Input
+                    type="checkbox"
+                    checked={field.value}
+                    onChange={field.onChange}
+                  />
+                </FormControl>
+                <FormLabel className="font-normal">Schedule Campaign</FormLabel>
+              </FormItem>
             )}
-          </TabsContent>
-          <TabsContent value="custom" className="space-y-4 pt-4">
-            <div className="space-y-2">
-              <Label htmlFor="content">Email Content</Label>
-              <Textarea
-                id="content"
-                placeholder="Enter email content (supports HTML)"
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                className="min-h-[200px]"
-              />
-            </div>
-          </TabsContent>
-        </Tabs>
-
-        <div className="space-y-2 pt-4">
-          <Label>Audience</Label>
-          <Select value={audienceType} onValueChange={(value: 'all' | 'segment') => setAudienceType(value)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select audience" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Customers</SelectItem>
-              <SelectItem value="segment">Customer Segment</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {audienceType === 'segment' && (
-          <div className="space-y-2">
-            <Label htmlFor="segment">Customer Segment</Label>
-            <Select>
-              <SelectTrigger>
-                <SelectValue placeholder="Select segment" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="recent">Recent Customers</SelectItem>
-                <SelectItem value="loyal">Loyal Customers</SelectItem>
-                <SelectItem value="inactive">Inactive Customers</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-
-        <div className="flex items-center justify-between space-y-0 pt-4">
-          <Label htmlFor="send-immediately">Send immediately</Label>
-          <Switch
-            id="send-immediately"
-            checked={sendImmediately}
-            onCheckedChange={setSendImmediately}
           />
+
+          {formData.schedule && (
+            <FormField
+              control={{
+                value: date,
+                onChange: setDate,
+              }}
+              name="scheduled_for"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Scheduled Date</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-[240px] pl-3 text-left font-normal",
+                          !date && "text-muted-foreground"
+                        )}
+                      >
+                        {date ? format(date, "PPP") : <span>Pick a date</span>}
+                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={date}
+                        onSelect={setDate}
+                        disabled={(date) =>
+                          date < new Date()
+                        }
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
         </div>
 
-        {!sendImmediately && (
-          <div className="space-y-2">
-            <Label htmlFor="scheduled-date">Schedule Date</Label>
-            <Input
-              id="scheduled-date"
-              type="datetime-local"
-              value={scheduledDate}
-              onChange={(e) => setScheduledDate(e.target.value)}
-            />
-          </div>
-        )}
+        <FormField
+          control={{
+            value: formData.testEmail,
+            onChange: (e) => handleInputChange(e as any),
+          }}
+          name="testEmail"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Send Test Email To</FormLabel>
+              <FormControl>
+                <Input placeholder="test@example.com" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-        <Button
-          onClick={handleSave}
-          className="w-full mt-4"
-          disabled={!isConfigured}
-        >
-          {sendImmediately ? 'Send Campaign Now' : 'Schedule Campaign'}
-        </Button>
-      </div>
-    </div>
+        <div className="flex justify-between">
+          <Button 
+            type="button" 
+            variant="secondary"
+            onClick={sendTestEmail}
+            disabled={isSendingTest}
+          >
+            {isSendingTest ? "Sending..." : "Send Test Email"}
+          </Button>
+          <div className="flex space-x-2">
+            <Button type="submit" variant="outline" disabled={isSubmitting}>
+              Save as Draft
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Submitting..." : "Create Campaign"}
+            </Button>
+          </div>
+        </div>
+      </form>
+    </Form>
   );
 };
 
