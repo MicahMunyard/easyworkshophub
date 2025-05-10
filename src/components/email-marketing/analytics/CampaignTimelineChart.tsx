@@ -11,14 +11,14 @@ import {
   Legend
 } from "recharts";
 import { EmailAnalytic } from "../types";
-import { prepareCampaignTimelineData } from "../utils/analyticsUtils";
+import { prepareCampaignTimelineData, ChartData } from "../utils/analyticsUtils";
 
 interface CampaignTimelineChartProps {
   analytics: EmailAnalytic[];
 }
 
 const CampaignTimelineChart: React.FC<CampaignTimelineChartProps> = ({ analytics }) => {
-  const campaignTimelineData = prepareCampaignTimelineData(analytics);
+  const campaignTimelineData: ChartData[] = prepareCampaignTimelineData(analytics);
 
   return (
     <div className="h-80">

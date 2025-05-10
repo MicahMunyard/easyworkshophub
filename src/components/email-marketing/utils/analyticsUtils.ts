@@ -32,8 +32,19 @@ export const calculateTotalClicks = (analytics: EmailAnalytic[]): number => {
   return analytics.reduce((sum, item) => sum + item.click_count, 0);
 };
 
+// Data structure for charts
+export interface ChartData {
+  name: string;
+  value?: number;
+  sent?: number;
+  opened?: number;
+  clicked?: number;
+  openRate?: string | number;
+  clickRate?: string | number;
+}
+
 // Prepare data for engagement funnel
-export const prepareEngagementData = (analytics: EmailAnalytic[]) => {
+export const prepareEngagementData = (analytics: EmailAnalytic[]): ChartData[] => {
   const totalSent = calculateTotalSent(analytics);
   const totalOpens = calculateTotalOpens(analytics);
   const totalClicks = calculateTotalClicks(analytics);
@@ -46,16 +57,16 @@ export const prepareEngagementData = (analytics: EmailAnalytic[]) => {
 };
 
 // Prepare data for campaign performance
-export const prepareCampaignPerformanceData = (analytics: EmailAnalytic[]) => {
+export const prepareCampaignPerformanceData = (analytics: EmailAnalytic[]): ChartData[] => {
   return analytics.map(item => ({
     name: item.campaign_name,
-    openRate: (item.open_count / item.sent_count * 100).toFixed(1),
-    clickRate: (item.click_count / item.open_count * 100).toFixed(1)
+    openRate: parseFloat((item.open_count / item.sent_count * 100).toFixed(1)),
+    clickRate: parseFloat((item.click_count / item.open_count * 100).toFixed(1))
   }));
 };
 
 // Prepare data for campaign timeline
-export const prepareCampaignTimelineData = (analytics: EmailAnalytic[]) => {
+export const prepareCampaignTimelineData = (analytics: EmailAnalytic[]): ChartData[] => {
   return analytics.map(item => ({
     name: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
     sent: item.sent_count,

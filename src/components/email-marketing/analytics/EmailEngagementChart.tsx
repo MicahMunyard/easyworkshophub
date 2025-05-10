@@ -10,14 +10,14 @@ import {
   ResponsiveContainer
 } from "recharts";
 import { EmailAnalytic } from "../types";
-import { prepareEngagementData } from "../utils/analyticsUtils";
+import { prepareEngagementData, ChartData } from "../utils/analyticsUtils";
 
 interface EmailEngagementChartProps {
   analytics: EmailAnalytic[];
 }
 
 const EmailEngagementChart: React.FC<EmailEngagementChartProps> = ({ analytics }) => {
-  const engagementData = prepareEngagementData(analytics);
+  const engagementData: ChartData[] = prepareEngagementData(analytics);
 
   return (
     <div className="h-72">

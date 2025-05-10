@@ -11,14 +11,14 @@ import {
   Legend
 } from "recharts";
 import { EmailAnalytic } from "../types";
-import { prepareCampaignPerformanceData } from "../utils/analyticsUtils";
+import { prepareCampaignPerformanceData, ChartData } from "../utils/analyticsUtils";
 
 interface CampaignPerformanceChartProps {
   analytics: EmailAnalytic[];
 }
 
 const CampaignPerformanceChart: React.FC<CampaignPerformanceChartProps> = ({ analytics }) => {
-  const campaignPerformanceData = prepareCampaignPerformanceData(analytics);
+  const campaignPerformanceData: ChartData[] = prepareCampaignPerformanceData(analytics);
 
   return (
     <div className="h-72">
