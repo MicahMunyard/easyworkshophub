@@ -10,9 +10,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { format, isValid, parseISO } from "date-fns";
 import { FileText, Edit, Copy, Plus, Calendar } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import EmailTemplateEditor from "./EmailTemplateEditor";
 
 const EmailTemplateList: React.FC<EmailTemplateListProps> = ({ templates, isLoading, onSave }) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -66,28 +69,34 @@ const EmailTemplateList: React.FC<EmailTemplateListProps> = ({ templates, isLoad
   const handleEditTemplate = (templateId: string) => {
     const template = templates.find(t => t.id === templateId);
     if (template) {
-      setFormData({
-        name: template.name,
-        description: template.description,
-        subject: template.subject,
-        content: template.content,
-        category: template.category
-      });
-      setIsDialogOpen(true);
+      setSelectedTemplate(template);
+      setIsEditorOpen(true);
     }
   };
 
   const handleDuplicateTemplate = (templateId: string) => {
     const template = templates.find(t => t.id === templateId);
     if (template) {
-      setFormData({
-        name: `Copy of ${template.name}`,
-        description: template.description,
-        subject: template.subject,
-        content: template.content,
-        category: template.category
-      });
-      setIsDialogOpen(true);
+      const duplicatedTemplate = {
+        ...template,
+        name: `Copy of ${template.name}`
+      };
+      setSelectedTemplate(duplicatedTemplate);
+      setIsEditorOpen(true);
+    }
+  };
+
+  const handleCreateNewTemplate = () => {
+    setSelectedTemplate(null);
+    setIsEditorOpen(true);
+  };
+
+  const handleSaveTemplate = async (template: any) => {
+    try {
+      return await onSave(template);
+    } catch (error) {
+      console.error("Error saving template:", error);
+      return false;
     }
   };
 
@@ -137,113 +146,20 @@ const EmailTemplateList: React.FC<EmailTemplateListProps> = ({ templates, isLoad
 
   return (
     <div className="space-y-4">
+      {/* Template editor modal */}
+      <EmailTemplateEditor
+        template={selectedTemplate}
+        onSave={handleSaveTemplate}
+        onCancel={() => setSelectedTemplate(null)}
+        isOpen={isEditorOpen}
+        onOpenChange={setIsEditorOpen}
+      />
+
       <div className="flex justify-end">
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="flex items-center gap-1">
-              <Plus className="h-4 w-4" />
-              New Template
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-3xl">
-            <DialogHeader>
-              <DialogTitle>Create Email Template</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Template Name</Label>
-                  <Input
-                    id="name"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    placeholder="Enter template name"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="category">Category</Label>
-                  <Select
-                    value={formData.category}
-                    onValueChange={(value) => handleSelectChange("category", value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="service">Service</SelectItem>
-                      <SelectItem value="promotion">Promotion</SelectItem>
-                      <SelectItem value="newsletter">Newsletter</SelectItem>
-                      <SelectItem value="reminder">Reminder</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Input
-                  id="description"
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  placeholder="Enter template description"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="subject">Email Subject</Label>
-                <Input
-                  id="subject"
-                  name="subject"
-                  value={formData.subject}
-                  onChange={handleInputChange}
-                  placeholder="Enter email subject"
-                  required
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="content">Email Content</Label>
-                <div className="text-xs text-muted-foreground mb-1">
-                  Use &#123;&#123;customer_name&#125;&#125;, &#123;&#123;vehicle&#125;&#125;, &#123;&#123;service_date&#125;&#125;, &#123;&#123;workshop_name&#125;&#125;, &#123;&#123;service_type&#125;&#125;, &#123;&#123;expiry_date&#125;&#125; as placeholders.
-                </div>
-                <Textarea
-                  id="content"
-                  name="content"
-                  value={formData.content}
-                  onChange={handleInputChange}
-                  placeholder="Enter email content (HTML supported)"
-                  className="min-h-[200px]"
-                  required
-                />
-              </div>
-              
-              <div className="flex justify-end space-x-2 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={
-                    isSubmitting ||
-                    !formData.name ||
-                    !formData.subject ||
-                    !formData.content
-                  }
-                >
-                  {isSubmitting ? "Saving..." : "Save Template"}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <Button className="flex items-center gap-1" onClick={handleCreateNewTemplate}>
+          <Plus className="h-4 w-4" />
+          New Template
+        </Button>
       </div>
 
       {templates.length === 0 ? (

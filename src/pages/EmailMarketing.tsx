@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   Tabs, 
   TabsContent, 
@@ -7,13 +7,16 @@ import {
   TabsTrigger 
 } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Mail, FileText, Clock, BarChart3 } from "lucide-react";
+import { Mail, FileText, Clock, BarChart3, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import EmailCampaignBuilder from "@/components/email-marketing/EmailCampaignBuilder";
 import EmailTemplateList from "@/components/email-marketing/EmailTemplateList";
 import EmailAutomations from "@/components/email-marketing/EmailAutomations";
 import EmailAnalytics from "@/components/email-marketing/EmailAnalytics";
 import EmailCampaignHistory from "@/components/email-marketing/EmailCampaignHistory";
 import { useEmailMarketing } from "@/components/email-marketing/useEmailMarketing";
+import { useSendgrid } from "@/hooks/email/useSendgrid";
 
 const EmailMarketing = () => {
   const [activeTab, setActiveTab] = useState("campaigns");
@@ -26,8 +29,11 @@ const EmailMarketing = () => {
     isLoading,
     createCampaign,
     createTemplate,
-    createAutomation
+    createAutomation,
+    isEmailConfigured
   } = useEmailMarketing();
+
+  const { isConfigured: isSendgridConfigured } = useSendgrid();
 
   return (
     <div className="space-y-6">
@@ -38,8 +44,17 @@ const EmailMarketing = () => {
         </p>
       </div>
 
+      {!isSendgridConfigured && (
+        <Alert variant="warning" className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Email sending through SendGrid is configured but not active. Your templates and campaigns will be saved, but you won't be able to send emails.
+          </AlertDescription>
+        </Alert>
+      )}
+
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList>
+        <TabsList className="flex overflow-x-auto">
           <TabsTrigger value="campaigns" className="flex items-center gap-2">
             <Mail className="h-4 w-4" />
             <span>Campaigns</span>
@@ -130,10 +145,17 @@ const EmailMarketing = () => {
         <TabsContent value="analytics" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Campaign Performance</CardTitle>
-              <CardDescription>
-                Track email opens, clicks, and conversion rates.
-              </CardDescription>
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle>Campaign Performance</CardTitle>
+                  <CardDescription>
+                    Track email opens, clicks, and conversion rates.
+                  </CardDescription>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+                  Refresh Data
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <EmailAnalytics 
