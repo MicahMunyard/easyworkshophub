@@ -11,6 +11,8 @@ import { format, isValid, parseISO } from "date-fns";
 import { FileText, Edit, Copy, Plus, Calendar } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import EmailTemplateEditor from "./EmailTemplateEditor";
+import { useEmailMarketing } from "./useEmailMarketing";
+import EmailTesting from "./EmailTesting";
 
 const EmailTemplateList: React.FC<EmailTemplateListProps> = ({ templates, isLoading, onSave }) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -24,6 +26,7 @@ const EmailTemplateList: React.FC<EmailTemplateListProps> = ({ templates, isLoad
     category: "service"
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { sendTestEmail } = useEmailMarketing();
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -100,6 +103,18 @@ const EmailTemplateList: React.FC<EmailTemplateListProps> = ({ templates, isLoad
     }
   };
 
+  const handleSendTest = async (recipients: string[], options: any) => {
+    if (!selectedTemplate) {
+      return { success: false, message: "No template selected for testing" };
+    }
+    
+    return await sendTestEmail(recipients, {
+      subject: selectedTemplate.subject,
+      content: selectedTemplate.content,
+      note: options.note
+    });
+  };
+
   const getCategoryLabel = (category: string) => {
     const categories = {
       service: "Service",
@@ -155,11 +170,20 @@ const EmailTemplateList: React.FC<EmailTemplateListProps> = ({ templates, isLoad
         onOpenChange={setIsEditorOpen}
       />
 
-      <div className="flex justify-end">
+      <div className="flex justify-between items-center">
         <Button className="flex items-center gap-1" onClick={handleCreateNewTemplate}>
           <Plus className="h-4 w-4" />
           New Template
         </Button>
+        
+        {selectedTemplate && (
+          <EmailTesting 
+            emailSubject={selectedTemplate.subject}
+            emailContent={selectedTemplate.content}
+            onSendTest={handleSendTest}
+            isSubmitting={isSubmitting}
+          />
+        )}
       </div>
 
       {templates.length === 0 ? (
@@ -180,7 +204,7 @@ const EmailTemplateList: React.FC<EmailTemplateListProps> = ({ templates, isLoad
             </TableHeader>
             <TableBody>
               {templates.map((template) => (
-                <TableRow key={template.id}>
+                <TableRow key={template.id} onClick={() => setSelectedTemplate(template)} className="cursor-pointer">
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
@@ -210,7 +234,10 @@ const EmailTemplateList: React.FC<EmailTemplateListProps> = ({ templates, isLoad
                         variant="outline"
                         size="sm"
                         className="h-8 w-8 p-0"
-                        onClick={() => handleEditTemplate(template.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditTemplate(template.id);
+                        }}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -218,7 +245,10 @@ const EmailTemplateList: React.FC<EmailTemplateListProps> = ({ templates, isLoad
                         variant="outline"
                         size="sm"
                         className="h-8 w-8 p-0"
-                        onClick={() => handleDuplicateTemplate(template.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDuplicateTemplate(template.id);
+                        }}
                       >
                         <Copy className="h-4 w-4" />
                       </Button>

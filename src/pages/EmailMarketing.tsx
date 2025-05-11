@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { 
   Tabs, 
   TabsContent, 
@@ -45,7 +45,7 @@ const EmailMarketing = () => {
       </div>
 
       {!isSendgridConfigured && (
-        <Alert variant="warning" className="mb-6">
+        <Alert variant="destructive" className="mb-6">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
             Email sending through SendGrid is configured but not active. Your templates and campaigns will be saved, but you won't be able to send emails.

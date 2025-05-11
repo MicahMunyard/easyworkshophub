@@ -29,6 +29,9 @@ export interface EmailCampaign {
   segmentIds?: string[];
   sendImmediately: boolean;
   created_at: string;
+  from_name?: string;
+  from_email?: string;
+  reply_to?: string;
 }
 
 // Email Automation types
@@ -47,6 +50,7 @@ export interface EmailAutomation {
   updated_at?: string;
   last_run?: string;
   next_run?: string;
+  frequency?: "daily" | "weekly" | "monthly" | "custom";
 }
 
 // Email Analytics types
@@ -86,4 +90,12 @@ export interface EmailAutomationsProps {
 export interface EmailAnalyticsProps {
   analytics: EmailAnalytic[];
   isLoading: boolean;
+}
+
+// Test Email Props
+export interface EmailTestingProps {
+  emailSubject: string;
+  emailContent: string;
+  onSendTest: (recipients: string[], options: any) => Promise<{ success: boolean; message?: string }>;
+  isSubmitting: boolean;
 }
