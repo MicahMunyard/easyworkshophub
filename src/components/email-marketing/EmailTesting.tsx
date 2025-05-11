@@ -15,20 +15,35 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, Check, Smartphone, Desktop, Tablet, Mail, Info } from "lucide-react";
+import { AlertCircle, Check, Smartphone, Mail, Clock, AlertTriangle, Info } from "lucide-react";
+import { EmailTemplate, EmailCampaign } from "./types";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { EmailTestingProps } from "./types";
+
+interface EmailTestingProps {
+  emailSubject: string;
+  emailContent: string;
+  onSendTest: (recipients: string[], options: any) => Promise<{ success: boolean; message?: string }>;
+  isSubmitting: boolean;
+}
 
 // Device preview frames
 const deviceFrames = {
@@ -139,7 +154,7 @@ const EmailTesting: React.FC<EmailTestingProps> = ({
     if (score <= 3) {
       return { color: "text-green-500", icon: <Check className="h-4 w-4" />, text: "Low" };
     } else if (score <= 6) {
-      return { color: "text-amber-500", icon: <AlertCircle className="h-4 w-4" />, text: "Medium" };
+      return { color: "text-amber-500", icon: <AlertTriangle className="h-4 w-4" />, text: "Medium" };
     } else {
       return { color: "text-red-500", icon: <AlertCircle className="h-4 w-4" />, text: "High" };
     }
@@ -202,7 +217,7 @@ const EmailTesting: React.FC<EmailTestingProps> = ({
                         size="sm"
                         onClick={() => setActiveDevice("desktop")}
                       >
-                        <Desktop className="h-4 w-4" />
+                        <span className="text-xs">Desktop</span>
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>Desktop Preview</TooltipContent>
@@ -232,7 +247,7 @@ const EmailTesting: React.FC<EmailTestingProps> = ({
                         size="sm"
                         onClick={() => setActiveDevice("tablet")}
                       >
-                        <Tablet className="h-4 w-4" />
+                        <span className="text-xs">Tablet</span>
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>Tablet Preview</TooltipContent>

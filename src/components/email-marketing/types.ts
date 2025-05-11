@@ -51,6 +51,7 @@ export interface EmailAutomation {
   last_run?: string;
   next_run?: string;
   frequency?: "daily" | "weekly" | "monthly" | "custom";
+  trigger?: string; // Added to fix the error
 }
 
 // Email Analytics types
@@ -98,4 +99,28 @@ export interface EmailTestingProps {
   emailContent: string;
   onSendTest: (recipients: string[], options: any) => Promise<{ success: boolean; message?: string }>;
   isSubmitting: boolean;
+}
+
+// SendGrid Config Types
+export interface SendgridFormValues {
+  apiKey: string;
+  senderName: string;
+  senderEmail: string;
+  replyToEmail?: string;
+  enableTracking: boolean;
+  enableUnsubscribeFooter: boolean;
+}
+
+export interface SendgridConfigProps {
+  onSaveConfig: (config: SendgridFormValues) => Promise<boolean>;
+  onTestConnection: () => Promise<{ success: boolean; message: string }>;
+  existingConfig?: {
+    apiKey: string;
+    senderName: string;
+    senderEmail: string;
+    replyToEmail?: string;
+    enableTracking: boolean;
+    enableUnsubscribeFooter: boolean;
+    isConfigured: boolean;
+  };
 }

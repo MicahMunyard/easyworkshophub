@@ -7,7 +7,7 @@ import {
   TabsTrigger 
 } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Mail, FileText, Clock, BarChart3, AlertCircle } from "lucide-react";
+import { Mail, FileText, Clock, BarChart3, AlertCircle, Settings } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import EmailCampaignBuilder from "@/components/email-marketing/EmailCampaignBuilder";
@@ -15,6 +15,7 @@ import EmailTemplateList from "@/components/email-marketing/EmailTemplateList";
 import EmailAutomations from "@/components/email-marketing/EmailAutomations";
 import EmailAnalytics from "@/components/email-marketing/EmailAnalytics";
 import EmailCampaignHistory from "@/components/email-marketing/EmailCampaignHistory";
+import SendgridConfig from "@/components/email-marketing/SendgridConfig";
 import { useEmailMarketing } from "@/components/email-marketing/useEmailMarketing";
 import { useSendgrid } from "@/hooks/email/useSendgrid";
 
@@ -30,7 +31,9 @@ const EmailMarketing = () => {
     createCampaign,
     createTemplate,
     createAutomation,
-    isEmailConfigured
+    isEmailConfigured,
+    saveSendgridConfig,
+    testSendgridConnection
   } = useEmailMarketing();
 
   const { isConfigured: isSendgridConfigured } = useSendgrid();
@@ -48,7 +51,7 @@ const EmailMarketing = () => {
         <Alert variant="destructive" className="mb-6">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Email sending through SendGrid is configured but not active. Your templates and campaigns will be saved, but you won't be able to send emails.
+            Email sending through SendGrid is not fully configured. Please set up your SendGrid integration in the Settings tab.
           </AlertDescription>
         </Alert>
       )}
@@ -70,6 +73,10 @@ const EmailMarketing = () => {
           <TabsTrigger value="analytics" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
             <span>Analytics</span>
+          </TabsTrigger>
+          <TabsTrigger value="settings" className="flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            <span>Settings</span>
           </TabsTrigger>
         </TabsList>
 
@@ -164,6 +171,22 @@ const EmailMarketing = () => {
               />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="settings" className="space-y-4">
+          <SendgridConfig 
+            onSaveConfig={saveSendgridConfig}
+            onTestConnection={testSendgridConnection}
+            existingConfig={{
+              apiKey: "********", // Use masked API key for security
+              senderName: "Your Workshop",
+              senderEmail: "noreply@yourworkshop.com",
+              replyToEmail: "info@yourworkshop.com",
+              enableTracking: true,
+              enableUnsubscribeFooter: true,
+              isConfigured: isSendgridConfigured
+            }}
+          />
         </TabsContent>
       </Tabs>
     </div>
