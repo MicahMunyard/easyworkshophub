@@ -51,7 +51,6 @@ export interface EmailAutomation {
   last_run?: string;
   next_run?: string;
   frequency?: "daily" | "weekly" | "monthly" | "custom";
-  trigger?: string; // Added to fix the error
 }
 
 // Email Analytics types
@@ -123,4 +122,21 @@ export interface SendgridConfigProps {
     enableUnsubscribeFooter: boolean;
     isConfigured: boolean;
   };
+}
+
+// SendGrid Email Options
+export interface SendgridEmailOptions {
+  to: string | string[];
+  subject: string;
+  html?: string;
+  text?: string;
+  from?: string;
+  replyTo?: string;
+}
+
+// Enhanced Email Analytics Props
+export interface EnhancedEmailAnalyticsProps {
+  analytics: EmailAnalytic[];
+  isLoading: boolean;
+  exportAnalytics?: (format: 'csv' | 'pdf') => Promise<void>;
 }

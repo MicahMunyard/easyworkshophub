@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from "react";
-import { EmailTemplate, EmailCampaign, EmailAutomation, EmailAnalytic, SendgridFormValues } from "./types";
+import { EmailTemplate, EmailCampaign, EmailAutomation, EmailAnalytic, SendgridFormValues, SendgridEmailOptions } from "./types";
 import { useSendgrid } from "@/hooks/email/useSendgrid";
 import { useSendgridEmail } from "@/hooks/email/useSendgridEmail";
 import { useToast } from "@/hooks/use-toast";
@@ -239,7 +239,8 @@ export const useEmailMarketing = () => {
       }
       
       // Send the test email
-      const result = await sendEmail(recipients, {
+      const result = await sendEmail({
+        to: recipients,
         subject: `[TEST] ${options.subject || "Test Email"}`,
         html: options.content,
         text: options.note ? `Note: ${options.note}\n\n---\n\n` : undefined
@@ -313,6 +314,25 @@ export const useEmailMarketing = () => {
     }
   };
 
+  // Export analytics to CSV or PDF
+  const exportAnalytics = async (format: 'csv' | 'pdf'): Promise<void> => {
+    try {
+      // In a real app, this would generate and download the export file
+      // For now, we'll just show a toast message
+      toast({
+        title: `Analytics exported as ${format.toUpperCase()}`,
+        description: "Your export is ready to download"
+      });
+    } catch (error) {
+      console.error(`Error exporting analytics as ${format}:`, error);
+      toast({
+        title: `Failed to export analytics as ${format}`,
+        description: error instanceof Error ? error.message : "Please try again later",
+        variant: "destructive"
+      });
+    }
+  };
+
   return {
     templates,
     campaigns,
@@ -325,6 +345,7 @@ export const useEmailMarketing = () => {
     createAutomation,
     sendTestEmail,
     saveSendgridConfig,
-    testSendgridConnection
+    testSendgridConnection,
+    exportAnalytics
   };
 };

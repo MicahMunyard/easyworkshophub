@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import EmailCampaignBuilder from "@/components/email-marketing/EmailCampaignBuilder";
 import EmailTemplateList from "@/components/email-marketing/EmailTemplateList";
 import EmailAutomations from "@/components/email-marketing/EmailAutomations";
-import EmailAnalytics from "@/components/email-marketing/EmailAnalytics";
+import EnhancedEmailAnalytics from "@/components/email-marketing/EnhancedEmailAnalytics";
 import EmailCampaignHistory from "@/components/email-marketing/EmailCampaignHistory";
 import SendgridConfig from "@/components/email-marketing/SendgridConfig";
 import { useEmailMarketing } from "@/components/email-marketing/useEmailMarketing";
@@ -33,7 +33,8 @@ const EmailMarketing = () => {
     createAutomation,
     isEmailConfigured,
     saveSendgridConfig,
-    testSendgridConnection
+    testSendgridConnection,
+    exportAnalytics
   } = useEmailMarketing();
 
   const { isConfigured: isSendgridConfigured } = useSendgrid();
@@ -165,9 +166,10 @@ const EmailMarketing = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <EmailAnalytics 
+              <EnhancedEmailAnalytics 
                 analytics={analytics}
-                isLoading={isLoading} 
+                isLoading={isLoading}
+                exportAnalytics={exportAnalytics}
               />
             </CardContent>
           </Card>
