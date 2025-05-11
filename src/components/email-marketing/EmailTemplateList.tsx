@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { format } from "date-fns";
+import { format, isValid, parseISO } from "date-fns";
 import { FileText, Edit, Copy, Plus, Calendar } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -111,6 +111,20 @@ const EmailTemplateList: React.FC<EmailTemplateListProps> = ({ templates, isLoad
       other: "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300"
     };
     return colors[category as keyof typeof colors] || colors.other;
+  };
+
+  // Format date safely with validation
+  const formatDate = (dateString: string) => {
+    try {
+      const date = parseISO(dateString);
+      if (!isValid(date)) {
+        return "Invalid date";
+      }
+      return format(date, "MMM d, yyyy");
+    } catch (error) {
+      console.error("Error formatting date:", error);
+      return "Invalid date";
+    }
   };
 
   if (isLoading) {
@@ -271,7 +285,7 @@ const EmailTemplateList: React.FC<EmailTemplateListProps> = ({ templates, isLoad
                   <TableCell>
                     <div className="flex items-center gap-1 text-sm text-muted-foreground">
                       <Calendar className="h-3 w-3" />
-                      {format(new Date(template.updated_at), "MMM d, yyyy")}
+                      {formatDate(template.updated_at)}
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
