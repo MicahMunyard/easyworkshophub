@@ -1,318 +1,433 @@
 
 import React, { useState } from "react";
-import { EmailAutomationsProps } from "./types";
+import { 
+  Card, 
+  CardContent, 
+  CardHeader, 
+  CardTitle, 
+  CardDescription,
+  CardFooter
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogFooter 
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clock, Plus, Check, RefreshCw, Calendar, Gift, Car, ShoppingBag } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon, Clock, Mail, Plus, RotateCw, Calendar as CalendarIcon2 } from "lucide-react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { EmailTemplate, EmailAutomation } from "./types";
+import { useToast } from "@/hooks/use-toast";
 
-const EmailAutomations: React.FC<EmailAutomationsProps> = ({ automations, templates, isLoading, onSave }) => {
+interface EmailAutomationsProps {
+  automations: EmailAutomation[];
+  templates: EmailTemplate[];
+  isLoading: boolean;
+  onSave: (automation: Omit<EmailAutomation, 'id' | 'created_at'>) => Promise<boolean>;
+}
+
+const EmailAutomations: React.FC<EmailAutomationsProps> = ({ 
+  automations, 
+  templates, 
+  isLoading, 
+  onSave 
+}) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-    template_id: "",
-    trigger: "service_reminder",
-    status: "active",
-    frequency: "once"
-  });
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [triggerType, setTriggerType] = useState<"event" | "schedule">("schedule");
+  const [selectedEvent, setSelectedEvent] = useState("");
+  const [selectedTemplate, setSelectedTemplate] = useState("");
+  const [frequency, setFrequency] = useState<"daily" | "weekly" | "monthly" | "custom">("weekly");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [date, setDate] = useState<Date | undefined>(new Date());
+  const { toast } = useToast();
 
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+  const resetForm = () => {
+    setName("");
+    setDescription("");
+    setTriggerType("schedule");
+    setSelectedEvent("");
+    setSelectedTemplate("");
+    setFrequency("weekly");
+    setDate(new Date());
   };
 
-  const handleSelectChange = (name: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [name]: value }));
+  const handleOpenDialog = () => {
+    resetForm();
+    setIsDialogOpen(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.name || !formData.template_id || !formData.trigger) return;
-    
+  const handleSave = async () => {
+    if (!name || !selectedTemplate) {
+      toast({
+        title: "Missing required fields",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
+
     try {
-      await onSave({
-        name: formData.name,
-        description: formData.description,
-        template_id: formData.template_id,
-        trigger: formData.trigger as any,
-        status: formData.status as any,
-        frequency: formData.frequency as any
-      });
-      
-      // Reset form and close dialog
-      setFormData({
-        name: "",
-        description: "",
-        template_id: "",
-        trigger: "service_reminder",
-        status: "active",
-        frequency: "once"
-      });
-      setIsDialogOpen(false);
+      const newAutomation: Omit<EmailAutomation, 'id' | 'created_at'> = {
+        name,
+        description,
+        trigger_type: triggerType,
+        trigger_details: {
+          event: triggerType === "event" ? selectedEvent : undefined,
+          schedule: triggerType === "schedule" ? frequency : undefined,
+        },
+        template_id: selectedTemplate,
+        status: "draft",
+        frequency: frequency,
+        updated_at: new Date().toISOString(),
+      };
+
+      const success = await onSave(newAutomation);
+      if (success) {
+        setIsDialogOpen(false);
+        resetForm();
+        toast({
+          title: "Automation created",
+          description: "Your email automation has been created successfully",
+        });
+      }
     } catch (error) {
-      console.error("Error creating automation:", error);
+      toast({
+        title: "Failed to create automation",
+        description: "There was an error creating your automation",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleToggleStatus = (automationId: string, currentStatus: string) => {
-    const newStatus = currentStatus === "active" ? "inactive" : "active";
-    console.log(`Toggling automation ${automationId} to ${newStatus}`);
-    
-    // Update local state
-    const updatedAutomations = automations.map(automation => 
-      automation.id === automationId 
-        ? { ...automation, status: newStatus as any } 
-        : automation
-    );
-    
-    // This would normally call an API to update the status
-  };
-
-  const getTriggerIcon = (trigger: string) => {
-    switch(trigger) {
-      case 'service_reminder':
-        return <Clock className="h-5 w-5 text-blue-500" />;
-      case 'birthday':
-        return <Gift className="h-5 w-5 text-purple-500" />;
-      case 'service_completed':
-        return <Car className="h-5 w-5 text-green-500" />;
-      case 'after_purchase':
-        return <ShoppingBag className="h-5 w-5 text-amber-500" />;
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "active":
+        return "bg-green-100 text-green-800 border-green-200";
+      case "inactive":
+        return "bg-amber-100 text-amber-800 border-amber-200";
+      case "draft":
+        return "bg-blue-100 text-blue-800 border-blue-200";
       default:
-        return <Calendar className="h-5 w-5 text-gray-500" />;
+        return "bg-gray-100 text-gray-800 border-gray-200";
     }
   };
 
-  const getTriggerLabel = (trigger: string) => {
-    const labels = {
-      service_reminder: "Service Reminder",
-      birthday: "Birthday",
-      service_completed: "Service Completed",
-      after_purchase: "After Purchase",
-      other: "Other Trigger"
-    };
-    return labels[trigger as keyof typeof labels] || trigger;
+  const formatNextRunDate = (date: string | undefined) => {
+    if (!date) return "Not scheduled";
+    
+    try {
+      return format(new Date(date), "PPP");
+    } catch (e) {
+      return "Invalid date";
+    }
   };
 
-  const getFrequencyLabel = (frequency?: string) => {
-    const labels = {
-      once: "Once",
-      daily: "Daily",
-      weekly: "Weekly",
-      monthly: "Monthly",
-      yearly: "Yearly"
-    };
-    return frequency ? (labels[frequency as keyof typeof labels] || frequency) : "N/A";
-  };
-
-  if (isLoading) {
-    return (
-      <div className="text-center py-8">
-        <p className="text-muted-foreground">Loading automations...</p>
-      </div>
-    );
-  }
+  // Event types (for demonstration purposes)
+  const eventTypes = [
+    { id: "new-customer", label: "New Customer Added" },
+    { id: "service-due", label: "Service Due" },
+    { id: "booking-confirmation", label: "Booking Confirmation" },
+    { id: "post-service", label: "Post-Service Follow-up" },
+    { id: "birthday", label: "Customer Birthday" },
+  ];
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-end">
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="flex items-center gap-1">
-              <Plus className="h-4 w-4" />
-              New Automation
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create Email Automation</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-lg font-semibold">Email Automations</h2>
+          <p className="text-sm text-muted-foreground">
+            Set up recurring emails and event-triggered messages
+          </p>
+        </div>
+        <Button 
+          onClick={handleOpenDialog}
+          disabled={isLoading}
+          className="flex items-center gap-2"
+        >
+          <Plus className="h-4 w-4" />
+          Add Automation
+        </Button>
+      </div>
+
+      {isLoading ? (
+        <div className="space-y-4">
+          {[1, 2].map((i) => (
+            <Card key={i} className="animate-pulse">
+              <CardHeader>
+                <div className="h-5 bg-muted rounded w-1/3"></div>
+                <div className="h-4 bg-muted rounded w-1/2 mt-2"></div>
+              </CardHeader>
+              <CardContent>
+                <div className="h-4 bg-muted rounded w-full mb-3"></div>
+                <div className="h-4 bg-muted rounded w-2/3"></div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <>
+          {automations.length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <div className="mx-auto bg-muted rounded-full w-12 h-12 flex items-center justify-center mb-4">
+                  <Clock className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <h3 className="font-medium text-lg mb-2">No automations yet</h3>
+                <p className="text-muted-foreground mb-4">
+                  Create your first email automation to start sending recurring or triggered emails
+                </p>
+                <Button onClick={handleOpenDialog}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Automation
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4">
+              {automations.map((automation) => (
+                <Card key={automation.id}>
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <CardTitle>{automation.name}</CardTitle>
+                        <CardDescription>
+                          {automation.description || 'No description'}
+                        </CardDescription>
+                      </div>
+                      <Badge className={getStatusColor(automation.status)}>
+                        {automation.status}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm font-medium">Trigger Type</p>
+                          <p className="text-sm text-muted-foreground">
+                            {automation.trigger_type === "event" ? (
+                              <span className="flex items-center gap-1.5">
+                                <Mail className="h-3.5 w-3.5" />
+                                {automation.trigger_details.event || "Custom Event"}
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-1.5">
+                                <CalendarIcon2 className="h-3.5 w-3.5" />
+                                {automation.frequency || "Custom Schedule"}
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">Template</p>
+                          <p className="text-sm text-muted-foreground">
+                            {templates.find(t => t.id === automation.template_id)?.name || 'Unknown template'}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <Separator />
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm font-medium">Last Run</p>
+                          <p className="text-sm text-muted-foreground">
+                            {automation.last_run 
+                              ? format(new Date(automation.last_run), "PPP") 
+                              : "Never run"}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">Next Run</p>
+                          <p className="text-sm text-muted-foreground">
+                            {formatNextRunDate(automation.next_run)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                  <CardFooter className="flex justify-end gap-2">
+                    <Button variant="outline" size="sm">
+                      Edit
+                    </Button>
+                    <Button 
+                      variant={automation.status === 'active' ? "destructive" : "default"} 
+                      size="sm"
+                    >
+                      {automation.status === 'active' ? 'Deactivate' : 'Activate'}
+                    </Button>
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create Email Automation</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Automation Name*</Label>
+              <Input 
+                id="name" 
+                value={name} 
+                onChange={(e) => setName(e.target.value)} 
+                placeholder="Monthly Newsletter" 
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="description">Description (optional)</Label>
+              <Textarea 
+                id="description" 
+                value={description} 
+                onChange={(e) => setDescription(e.target.value)} 
+                placeholder="Brief description of this automation..."
+                rows={2}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Trigger Type*</Label>
+              <RadioGroup value={triggerType} onValueChange={(value) => setTriggerType(value as "event" | "schedule")} className="flex flex-col space-y-1">
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="schedule" id="schedule" />
+                  <Label htmlFor="schedule" className="cursor-pointer">Schedule-based (recurring)</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="event" id="event" />
+                  <Label htmlFor="event" className="cursor-pointer">Event-triggered</Label>
+                </div>
+              </RadioGroup>
+            </div>
+            
+            {triggerType === "schedule" ? (
               <div className="space-y-2">
-                <Label htmlFor="name">Automation Name</Label>
-                <Input
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  placeholder="Enter automation name"
-                  required
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Input
-                  id="description"
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  placeholder="Enter automation description"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="template_id">Email Template</Label>
-                <Select
-                  value={formData.template_id}
-                  onValueChange={(value) => handleSelectChange("template_id", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select template" />
+                <Label htmlFor="frequency">Frequency*</Label>
+                <Select value={frequency} onValueChange={(value) => setFrequency(value as any)}>
+                  <SelectTrigger id="frequency">
+                    <SelectValue placeholder="Select frequency" />
                   </SelectTrigger>
                   <SelectContent>
-                    {templates.map((template) => (
-                      <SelectItem key={template.id} value={template.id}>
-                        {template.name}
+                    <SelectItem value="daily">Daily</SelectItem>
+                    <SelectItem value="weekly">Weekly</SelectItem>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                    <SelectItem value="custom">Custom</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                <div className="pt-2">
+                  <Label>First Run Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start text-left font-normal mt-1"
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {date ? format(date, "PPP") : "Select a date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={date}
+                        onSelect={setDate}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="event">Trigger Event*</Label>
+                <Select value={selectedEvent} onValueChange={setSelectedEvent}>
+                  <SelectTrigger id="event">
+                    <SelectValue placeholder="Select event" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {eventTypes.map((event) => (
+                      <SelectItem key={event.id} value={event.id}>
+                        {event.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="trigger">Trigger</Label>
-                <Select
-                  value={formData.trigger}
-                  onValueChange={(value) => handleSelectChange("trigger", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select trigger" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="service_reminder">Service Reminder</SelectItem>
-                    <SelectItem value="birthday">Birthday</SelectItem>
-                    <SelectItem value="service_completed">Service Completed</SelectItem>
-                    <SelectItem value="after_purchase">After Purchase</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="frequency">Frequency</Label>
-                <Select
-                  value={formData.frequency}
-                  onValueChange={(value) => handleSelectChange("frequency", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select frequency" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="once">Once</SelectItem>
-                    <SelectItem value="daily">Daily</SelectItem>
-                    <SelectItem value="weekly">Weekly</SelectItem>
-                    <SelectItem value="monthly">Monthly</SelectItem>
-                    <SelectItem value="yearly">Yearly</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <Switch
-                  checked={formData.status === "active"}
-                  onCheckedChange={(checked) =>
-                    setFormData({ ...formData, status: checked ? "active" : "inactive" })
-                  }
-                  id="active-status"
-                />
-                <Label htmlFor="active-status">Enable automation</Label>
-              </div>
-              
-              <div className="flex justify-end space-x-2 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={
-                    isSubmitting ||
-                    !formData.name ||
-                    !formData.template_id ||
-                    !formData.trigger
-                  }
-                >
-                  {isSubmitting ? "Creating..." : "Create Automation"}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      {automations.length === 0 ? (
-        <div className="text-center py-8">
-          <p className="text-muted-foreground">No automations available. Create your first automation.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {automations.map((automation) => (
-            <Card key={automation.id}>
-              <CardHeader className="pb-2">
-                <div className="flex justify-between items-start">
-                  <div className="space-y-1">
-                    <CardTitle className="flex items-center gap-2">
-                      {getTriggerIcon(automation.trigger)}
-                      {automation.name}
-                    </CardTitle>
-                    <CardDescription>{automation.description}</CardDescription>
-                  </div>
-                  <Switch
-                    checked={automation.status === "active"}
-                    onCheckedChange={() => handleToggleStatus(automation.id, automation.status)}
-                  />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Trigger:</span>
-                    <span className="font-medium">{getTriggerLabel(automation.trigger)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Frequency:</span>
-                    <span className="font-medium">{getFrequencyLabel(automation.frequency)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Template:</span>
-                    <span className="font-medium">
-                      {templates.find(t => t.id === automation.template_id)?.name || "Unknown Template"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Status:</span>
-                    <span className={`font-medium ${automation.status === "active" ? "text-green-500" : "text-muted-foreground"}`}>
-                      {automation.status === "active" ? (
-                        <span className="flex items-center">
-                          <Check className="h-3 w-3 mr-1" />
-                          Active
-                        </span>
-                      ) : (
-                        "Inactive"
-                      )}
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+            )}
+            
+            <div className="space-y-2">
+              <Label htmlFor="template">Email Template*</Label>
+              <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
+                <SelectTrigger id="template">
+                  <SelectValue placeholder="Select a template" />
+                </SelectTrigger>
+                <SelectContent>
+                  {templates.map((template) => (
+                    <SelectItem key={template.id} value={template.id}>
+                      {template.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsDialogOpen(false)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSave} 
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <RotateCw className="h-4 w-4 mr-2 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                'Create Automation'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

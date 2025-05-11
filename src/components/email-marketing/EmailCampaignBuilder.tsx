@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { EmailCampaignBuilderProps } from "./types";
 import {
@@ -123,13 +122,15 @@ const EmailCampaignBuilder: React.FC<EmailCampaignBuilderProps> = ({ templates, 
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent, isDraft: boolean = false) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     if (!formValues.name || !formValues.subject || !formValues.template_id) return;
     
     setIsSubmitting(true);
+    
     try {
-      await onSave({
+      const campaignData = {
         name: formValues.name,
         subject: formValues.subject,
         template_id: formValues.template_id,
@@ -138,20 +139,23 @@ const EmailCampaignBuilder: React.FC<EmailCampaignBuilderProps> = ({ templates, 
         scheduled_for: formValues.schedule ? formValues.scheduled_for : undefined,
         from_email: workshopEmail, // Add the dynamic sender email
         sendImmediately: !formValues.schedule
-      });
+      };
       
-      // Reset form
-      form.reset({
-        name: "",
-        subject: "",
-        template_id: "",
-        content: "",
-        recipient_segments: ["all"],
-        scheduled_for: "",
-        schedule: false,
-        testEmail: ""
-      });
-      setDate(undefined);
+      const success = await onSave(campaignData);
+      
+      if (success) {
+        form.reset({
+          name: "",
+          subject: "",
+          template_id: "",
+          content: "",
+          recipient_segments: ["all"],
+          scheduled_for: "",
+          schedule: false,
+          testEmail: ""
+        });
+        setDate(undefined);
+      }
     } catch (error) {
       console.error("Error creating campaign:", error);
     } finally {

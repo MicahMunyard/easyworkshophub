@@ -68,6 +68,7 @@ export interface EmailTemplateListProps {
   templates: EmailTemplate[];
   isLoading: boolean;
   onSave: (template: Omit<EmailTemplate, 'id' | 'created_at' | 'updated_at'>) => Promise<boolean>;
+  onTestEmail?: (recipients: string[], options: any) => Promise<{ success: boolean; message?: string }>;
 }
 
 export interface EmailCampaignBuilderProps {

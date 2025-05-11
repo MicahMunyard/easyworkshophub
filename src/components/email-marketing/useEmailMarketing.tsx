@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { EmailTemplate, EmailCampaign, EmailAutomation, EmailAnalytic, SendgridFormValues, SendgridEmailOptions } from "./types";
 import { useSendgrid } from "@/hooks/email/useSendgrid";
@@ -243,7 +242,8 @@ export const useEmailMarketing = () => {
         to: recipients,
         subject: `[TEST] ${options.subject || "Test Email"}`,
         html: options.content,
-        text: options.note ? `Note: ${options.note}\n\n---\n\n` : undefined
+        text: options.note ? `Note: ${options.note}\n\n---\n\n` : undefined,
+        from: options.from || undefined
       });
       
       if (result.success) {
@@ -256,6 +256,7 @@ export const useEmailMarketing = () => {
       }
     } catch (error) {
       console.error("Error sending test email:", error);
+      
       return {
         success: false,
         message: error instanceof Error ? error.message : "An unknown error occurred"

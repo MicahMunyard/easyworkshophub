@@ -1,264 +1,323 @@
-
 import React, { useState } from "react";
-import { EmailTemplateListProps } from "./types";
+import { 
+  Card, 
+  CardContent, 
+  CardHeader, 
+  CardTitle, 
+  CardDescription,
+  CardFooter
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { format, isValid, parseISO } from "date-fns";
-import { FileText, Edit, Copy, Plus, Calendar } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
-import EmailTemplateEditor from "./EmailTemplateEditor";
-import { useEmailMarketing } from "./useEmailMarketing";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import { Plus, Mail } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { EmailTemplate } from "./types";
+import { useEmailErrors, handleApiError } from "./EmailErrorProvider";
 import EmailTesting from "./EmailTesting";
 
-const EmailTemplateList: React.FC<EmailTemplateListProps> = ({ templates, isLoading, onSave }) => {
+interface EmailTemplateListProps {
+  templates: EmailTemplate[];
+  isLoading: boolean;
+  onSave: (template: Omit<EmailTemplate, 'id' | 'created_at' | 'updated_at'>) => Promise<boolean>;
+  onTestEmail?: (recipients: string[], options: any) => Promise<{ success: boolean; message?: string }>;
+}
+
+const EmailTemplateList: React.FC<EmailTemplateListProps> = ({ 
+  templates, 
+  isLoading, 
+  onSave,
+  onTestEmail 
+}) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isEditorOpen, setIsEditorOpen] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
-  const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-    subject: "",
-    content: "",
-    category: "service"
-  });
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [subject, setSubject] = useState("");
+  const [content, setContent] = useState("");
+  const [category, setCategory] = useState<"service" | "promotion" | "newsletter" | "reminder" | "other">("service");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { sendTestEmail } = useEmailMarketing();
+  const [isTestModalOpen, setIsTestModalOpen] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplate | null>(null);
+  const { addError } = useEmailErrors();
+  const { toast } = useToast();
 
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+  const resetForm = () => {
+    setName("");
+    setDescription("");
+    setSubject("");
+    setContent("");
+    setCategory("service");
   };
 
-  const handleSelectChange = (name: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [name]: value }));
+  const handleOpenDialog = () => {
+    resetForm();
+    setIsDialogOpen(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.name || !formData.subject || !formData.content) return;
-    
+  const handleSave = async () => {
+    if (!name || !subject || !content) {
+      toast({
+        title: "Missing required fields",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
+
     try {
-      await onSave({
-        name: formData.name,
-        description: formData.description,
-        subject: formData.subject,
-        content: formData.content,
-        category: formData.category as "service" | "promotion" | "newsletter" | "reminder" | "other"
-      });
-      
-      // Reset form and close dialog
-      setFormData({
-        name: "",
-        description: "",
-        subject: "",
-        content: "",
-        category: "service"
-      });
-      setIsDialogOpen(false);
+      const newTemplate: Omit<EmailTemplate, 'id' | 'created_at' | 'updated_at'> = {
+        name,
+        description,
+        subject,
+        content,
+        category,
+      };
+
+      const success = await onSave(newTemplate);
+      if (success) {
+        setIsDialogOpen(false);
+        resetForm();
+        toast({
+          title: "Template created",
+          description: "Your email template has been created successfully",
+        });
+      }
     } catch (error) {
-      console.error("Error creating template:", error);
+      toast({
+        title: "Failed to create template",
+        description: "There was an error creating your template",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleEditTemplate = (templateId: string) => {
-    const template = templates.find(t => t.id === templateId);
-    if (template) {
-      setSelectedTemplate(template);
-      setIsEditorOpen(true);
-    }
-  };
-
-  const handleDuplicateTemplate = (templateId: string) => {
-    const template = templates.find(t => t.id === templateId);
-    if (template) {
-      const duplicatedTemplate = {
-        ...template,
-        name: `Copy of ${template.name}`
-      };
-      setSelectedTemplate(duplicatedTemplate);
-      setIsEditorOpen(true);
-    }
-  };
-
-  const handleCreateNewTemplate = () => {
-    setSelectedTemplate(null);
-    setIsEditorOpen(true);
-  };
-
-  const handleSaveTemplate = async (template: any) => {
-    try {
-      return await onSave(template);
-    } catch (error) {
-      console.error("Error saving template:", error);
-      return false;
-    }
+  const handleOpenTestModal = (template: EmailTemplate) => {
+    setSelectedTemplate(template);
+    setIsTestModalOpen(true);
   };
 
   const handleSendTest = async (recipients: string[], options: any) => {
-    if (!selectedTemplate) {
-      return { success: false, message: "No template selected for testing" };
+    if (!selectedTemplate || !onTestEmail) {
+      return { 
+        success: false, 
+        message: "Unable to send test email. Template or test function not available." 
+      };
     }
-    
-    return await sendTestEmail(recipients, {
-      subject: selectedTemplate.subject,
-      content: selectedTemplate.content,
-      note: options.note
-    });
-  };
 
-  const getCategoryLabel = (category: string) => {
-    const categories = {
-      service: "Service",
-      promotion: "Promotion",
-      newsletter: "Newsletter",
-      reminder: "Reminder",
-      other: "Other"
-    };
-    return categories[category as keyof typeof categories] || category;
-  };
-
-  const getCategoryColor = (category: string) => {
-    const colors = {
-      service: "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300",
-      promotion: "bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-300",
-      newsletter: "bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300",
-      reminder: "bg-amber-100 text-amber-800 dark:bg-amber-900/20 dark:text-amber-300",
-      other: "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300"
-    };
-    return colors[category as keyof typeof colors] || colors.other;
-  };
-
-  // Format date safely with validation
-  const formatDate = (dateString: string) => {
     try {
-      const date = parseISO(dateString);
-      if (!isValid(date)) {
-        return "Invalid date";
-      }
-      return format(date, "MMM d, yyyy");
+      const result = await onTestEmail(recipients, {
+        subject: selectedTemplate.subject,
+        content: selectedTemplate.content,
+        note: options.note
+      });
+      
+      return result;
     } catch (error) {
-      console.error("Error formatting date:", error);
-      return "Invalid date";
+      handleApiError(error, addError, "EmailTemplateList", async () => {
+        return handleSendTest(recipients, options);
+      });
+      
+      return { 
+        success: false, 
+        message: error instanceof Error ? error.message : "Failed to send test email" 
+      };
     }
   };
-
-  if (isLoading) {
-    return (
-      <div className="text-center py-8">
-        <p className="text-muted-foreground">Loading templates...</p>
-      </div>
-    );
-  }
 
   return (
-    <div className="space-y-4">
-      {/* Template editor modal */}
-      <EmailTemplateEditor
-        template={selectedTemplate}
-        onSave={handleSaveTemplate}
-        onCancel={() => setSelectedTemplate(null)}
-        isOpen={isEditorOpen}
-        onOpenChange={setIsEditorOpen}
-      />
-
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <Button className="flex items-center gap-1" onClick={handleCreateNewTemplate}>
+        <div>
+          <h2 className="text-lg font-semibold">Email Templates</h2>
+          <p className="text-sm text-muted-foreground">
+            Manage and create email templates for your campaigns
+          </p>
+        </div>
+        <Button 
+          onClick={handleOpenDialog}
+          disabled={isLoading}
+          className="flex items-center gap-2"
+        >
           <Plus className="h-4 w-4" />
-          New Template
+          Add Template
         </Button>
-        
-        {selectedTemplate && (
-          <EmailTesting 
-            emailSubject={selectedTemplate.subject}
-            emailContent={selectedTemplate.content}
-            onSendTest={handleSendTest}
-            isSubmitting={isSubmitting}
-          />
-        )}
       </div>
 
-      {templates.length === 0 ? (
-        <div className="text-center py-8">
-          <p className="text-muted-foreground">No templates available. Create your first template.</p>
+      {isLoading ? (
+        <div className="space-y-4">
+          {[1, 2].map((i) => (
+            <Card key={i} className="animate-pulse">
+              <CardHeader>
+                <div className="h-5 bg-muted rounded w-1/3"></div>
+                <div className="h-4 bg-muted rounded w-1/2 mt-2"></div>
+              </CardHeader>
+              <CardContent>
+                <div className="h-4 bg-muted rounded w-full mb-3"></div>
+                <div className="h-4 bg-muted rounded w-2/3"></div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       ) : (
-        <div className="border rounded-md overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Template</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Subject</TableHead>
-                <TableHead>Last Updated</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+        <>
+          {templates.length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <div className="mx-auto bg-muted rounded-full w-12 h-12 flex items-center justify-center mb-4">
+                  <Mail className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <h3 className="font-medium text-lg mb-2">No templates yet</h3>
+                <p className="text-muted-foreground mb-4">
+                  Create your first email template to start designing your campaigns
+                </p>
+                <Button onClick={handleOpenDialog}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Template
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4">
               {templates.map((template) => (
-                <TableRow key={template.id} onClick={() => setSelectedTemplate(template)} className="cursor-pointer">
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                        <FileText className="h-4 w-4 text-primary" />
-                      </div>
+                <Card key={template.id}>
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
                       <div>
-                        <div className="font-medium">{template.name}</div>
-                        <div className="text-xs text-muted-foreground">{template.description}</div>
+                        <CardTitle>{template.name}</CardTitle>
+                        <CardDescription>
+                          {template.description || 'No description'}
+                        </CardDescription>
                       </div>
                     </div>
-                  </TableCell>
-                  <TableCell>
-                    <span className={`px-2 py-1 rounded-full text-xs ${getCategoryColor(template.category)}`}>
-                      {getCategoryLabel(template.category)}
-                    </span>
-                  </TableCell>
-                  <TableCell>{template.subject}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <Calendar className="h-3 w-3" />
-                      {formatDate(template.updated_at)}
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Subject</p>
+                      <p className="text-sm text-muted-foreground">{template.subject}</p>
                     </div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 w-8 p-0"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEditTemplate(template.id);
-                        }}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 w-8 p-0"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDuplicateTemplate(template.id);
-                        }}
-                      >
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
+                  </CardContent>
+                  <CardFooter className="flex justify-end gap-2">
+                    <Button variant="outline" size="sm">
+                      Edit
+                    </Button>
+                    <Button 
+                      variant="secondary" 
+                      size="sm"
+                      onClick={() => handleOpenTestModal(template)}
+                    >
+                      Test Email
+                    </Button>
+                  </CardFooter>
+                </Card>
               ))}
-            </TableBody>
-          </Table>
-        </div>
+            </div>
+          )}
+        </>
+      )}
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create Email Template</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Template Name*</Label>
+              <Input 
+                id="name" 
+                value={name} 
+                onChange={(e) => setName(e.target.value)} 
+                placeholder="Service Reminder" 
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="description">Description (optional)</Label>
+              <Textarea 
+                id="description" 
+                value={description} 
+                onChange={(e) => setDescription(e.target.value)} 
+                placeholder="Brief description of this template..."
+                rows={2}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="subject">Subject*</Label>
+              <Input 
+                id="subject" 
+                value={subject} 
+                onChange={(e) => setSubject(e.target.value)} 
+                placeholder="Your vehicle is due for service" 
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="content">Content*</Label>
+              <Textarea 
+                id="content" 
+                value={content} 
+                onChange={(e) => setContent(e.target.value)} 
+                placeholder="<p>Hello {{customer_name}},</p><p>Your {{vehicle}} is due for service on {{service_date}}.</p>"
+                rows={4}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="category">Category*</Label>
+              <Select value={category} onValueChange={(value) => setCategory(value as any)}>
+                <SelectTrigger id="category">
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="service">Service</SelectItem>
+                  <SelectItem value="promotion">Promotion</SelectItem>
+                  <SelectItem value="newsletter">Newsletter</SelectItem>
+                  <SelectItem value="reminder">Reminder</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsDialogOpen(false)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSave} 
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Creating...' : 'Create Template'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {selectedTemplate && onTestEmail && (
+        <EmailTesting 
+          emailSubject={selectedTemplate.subject}
+          emailContent={selectedTemplate.content}
+          onSendTest={handleSendTest}
+          isSubmitting={false}
+        />
       )}
     </div>
   );
