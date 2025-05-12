@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { 
   Tabs, 
   TabsContent, 
@@ -21,7 +21,6 @@ import { useNavigate } from "react-router-dom";
 
 const EmailMarketing = () => {
   const [activeTab, setActiveTab] = useState("campaigns");
-  const [showEmailDesigner, setShowEmailDesigner] = useState(false);
   const navigate = useNavigate();
   
   const { 
@@ -39,11 +38,8 @@ const EmailMarketing = () => {
   } = useEmailMarketing();
 
   const handleDesignEmail = () => {
-    // This would navigate to the email designer page
-    // For now we'll just set a state to show it would work
-    setShowEmailDesigner(true);
-    // In a real implementation, you would navigate to a route
-    // navigate("/email-marketing/design");
+    // Navigate to the email designer page for campaigns
+    navigate("/email-designer/campaign");
   };
   
   return (
@@ -123,10 +119,21 @@ const EmailMarketing = () => {
           <TabsContent value="templates" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Email Templates</CardTitle>
-                <CardDescription>
-                  Manage and create email templates for your campaigns.
-                </CardDescription>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle>Email Templates</CardTitle>
+                    <CardDescription>
+                      Manage and create email templates for your campaigns.
+                    </CardDescription>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => navigate("/email-designer/template")}
+                    className="flex items-center gap-2"
+                  >
+                    <Edit className="h-4 w-4" /> Design Template
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 <EmailTemplateList 

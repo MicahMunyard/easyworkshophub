@@ -1,4 +1,3 @@
-
 import React from "react";
 import {
   Routes,
@@ -29,6 +28,7 @@ import Suppliers from "./pages/Suppliers";
 import WorkshopSetup from "./pages/WorkshopSetup";
 import TechnicianPortal from "./pages/TechnicianPortal";
 import Settings from "./pages/Settings";
+import EmailDesignerPage from './pages/EmailDesignerPage';
 
 const App = () => {
   const { user } = useAuth();
@@ -62,6 +62,8 @@ const App = () => {
           
           {/* EzyParts Routes */}
           <Route path="/ezyparts/*" element={<ProtectedRoute><EzyPartsRoutes /></ProtectedRoute>} />
+          {/* Add the route for EmailDesignerPage */}
+          <Route path="/email-designer/:mode/:id?" element={<EmailDesignerPage />} />
         </Route>
       </Routes>
     </NotificationProvider>
