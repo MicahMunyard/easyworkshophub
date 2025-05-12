@@ -18,6 +18,14 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Plus, Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { EmailTemplate } from "./types";
@@ -108,6 +116,15 @@ const EmailTemplateList: React.FC<EmailTemplateListProps> = ({
     setIsTestModalOpen(true);
   };
 
+  // Fix the retry function type issue by wrapping it properly
+  const handleApiErrorWithWrapper = (error: any, component: string) => {
+    return handleApiError(error, addError, component, async () => {
+      // Converting the return value to void by ignoring it
+      await handleSendTest(recipients, options);
+      return;
+    });
+  };
+
   const handleSendTest = async (recipients: string[], options: any) => {
     if (!selectedTemplate || !onTestEmail) {
       return { 
@@ -125,9 +142,8 @@ const EmailTemplateList: React.FC<EmailTemplateListProps> = ({
       
       return result;
     } catch (error) {
-      handleApiError(error, addError, "EmailTemplateList", async () => {
-        return handleSendTest(recipients, options);
-      });
+      // Use the wrapper function that returns Promise<void>
+      handleApiErrorWithWrapper(error, "EmailTemplateList");
       
       return { 
         success: false, 

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { EmailCampaignBuilderProps } from "./types";
 import {
@@ -137,8 +138,9 @@ const EmailCampaignBuilder: React.FC<EmailCampaignBuilderProps> = ({ templates, 
         content: formValues.content,
         recipient_segments: formValues.recipient_segments,
         scheduled_for: formValues.schedule ? formValues.scheduled_for : undefined,
-        from_email: workshopEmail, // Add the dynamic sender email
-        sendImmediately: !formValues.schedule
+        from_email: workshopEmail, 
+        sendImmediately: !formValues.schedule,
+        audienceType: formValues.recipient_segments.includes("all") ? "all" : "segment" // Add audienceType here
       };
       
       const success = await onSave(campaignData);

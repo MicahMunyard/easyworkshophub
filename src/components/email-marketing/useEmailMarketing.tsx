@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { EmailTemplate, EmailCampaign, EmailAutomation, EmailAnalytic, SendgridFormValues, SendgridEmailOptions } from "./types";
+import { EmailTemplate, EmailCampaign, EmailAutomation, EmailAnalytic, SendgridFormValues } from "./types";
 import { useSendgrid } from "@/hooks/email/useSendgrid";
 import { useSendgridEmail } from "@/hooks/email/useSendgridEmail";
 import { useToast } from "@/hooks/use-toast";
@@ -237,7 +237,7 @@ export const useEmailMarketing = () => {
         };
       }
       
-      // Send the test email
+      // Send the email with the correct object format (including 'to' property)
       const result = await sendEmail({
         to: recipients,
         subject: `[TEST] ${options.subject || "Test Email"}`,
