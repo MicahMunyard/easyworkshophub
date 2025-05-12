@@ -34,9 +34,9 @@ const EmailDesignerPage = () => {
         const success = await createCampaign({
           name: template.name,
           subject: template.subject,
-          content: template.content
-          // Remove the recipients property as it doesn't exist on the expected type
-          // scheduled_for is optional so we can leave it out
+          content: template.content,
+          audienceType: 'all', // Default audience type
+          sendImmediately: false // Default to not sending immediately
         });
         
         return success;

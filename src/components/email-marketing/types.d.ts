@@ -1,5 +1,5 @@
 
-// If this file already exists, add these interfaces/types to it
+// Email marketing types
 
 export interface EmailTemplate {
   id: string;
@@ -24,6 +24,8 @@ export interface EmailCampaign {
   scheduled_for?: string | null;
   sent_at?: string | null;
   created_at: string;
+  audienceType?: string;
+  sendImmediately?: boolean;
 }
 
 export interface EmailAnalytic {
@@ -56,4 +58,29 @@ export interface EnhancedEmailAnalyticsProps {
   analytics: EmailAnalytic[];
   isLoading: boolean;
   exportAnalytics: () => void;
+}
+
+export interface SendgridEmailOptions {
+  to: string | string[];
+  subject: string;
+  text?: string;
+  html?: string;
+  from?: string;        // Keep this for backward compatibility
+  from_name?: string;   // Standardized to match Edge Function
+  from_email?: string;  // Standardized to match Edge Function
+  replyTo?: string; 
+  attachments?: Array<{
+    content: string;
+    filename: string;
+    type: string;
+    disposition: string;
+  }>;
+  templateId?: string;
+  dynamicTemplateData?: Record<string, any>;
+  categories?: string[];
+}
+
+export interface EmailRecipient {
+  email: string;
+  name?: string;
 }
