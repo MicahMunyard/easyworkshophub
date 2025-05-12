@@ -243,7 +243,7 @@ export const useEmailMarketing = () => {
         subject: `[TEST] ${options.subject || "Test Email"}`,
         html: options.content,
         text: options.note ? `Note: ${options.note}\n\n---\n\n` : undefined,
-        from: options.from || undefined
+        from_email: options.from || undefined  // Change 'from' to 'from_email' to match the type
       });
       
       if (result.success) {
