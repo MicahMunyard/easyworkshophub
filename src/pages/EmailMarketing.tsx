@@ -7,7 +7,7 @@ import {
   TabsTrigger 
 } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Mail, FileText, Clock, BarChart3 } from "lucide-react";
+import { Mail, FileText, Clock, BarChart3, Edit } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import EmailCampaignBuilder from "@/components/email-marketing/EmailCampaignBuilder";
@@ -17,9 +17,12 @@ import EnhancedEmailAnalytics from "@/components/email-marketing/EnhancedEmailAn
 import EmailCampaignHistory from "@/components/email-marketing/EmailCampaignHistory";
 import { useEmailMarketing } from "@/components/email-marketing/useEmailMarketing";
 import { EmailErrorProvider, EmailErrorDisplay } from "@/components/email-marketing/EmailErrorProvider";
+import { useNavigate } from "react-router-dom";
 
 const EmailMarketing = () => {
   const [activeTab, setActiveTab] = useState("campaigns");
+  const [showEmailDesigner, setShowEmailDesigner] = useState(false);
+  const navigate = useNavigate();
   
   const { 
     campaigns, 
@@ -35,11 +38,13 @@ const EmailMarketing = () => {
     sendTestEmail
   } = useEmailMarketing();
 
-  // Automatically check if SendGrid is configured when component mounts
-  useEffect(() => {
-    // If we detect SendGrid isn't configured, we would handle that
-    // For now, we'll assume it's already configured
-  }, []);
+  const handleDesignEmail = () => {
+    // This would navigate to the email designer page
+    // For now we'll just set a state to show it would work
+    setShowEmailDesigner(true);
+    // In a real implementation, you would navigate to a route
+    // navigate("/email-marketing/design");
+  };
   
   return (
     <EmailErrorProvider>
@@ -83,6 +88,15 @@ const EmailMarketing = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
+                <div className="flex justify-end gap-3 mb-6">
+                  <Button 
+                    variant="outline" 
+                    onClick={handleDesignEmail}
+                    className="flex items-center gap-2"
+                  >
+                    <Edit className="h-4 w-4" /> Design Email
+                  </Button>
+                </div>
                 <EmailCampaignBuilder 
                   templates={templates}
                   onSave={createCampaign}

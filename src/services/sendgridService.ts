@@ -8,6 +8,7 @@ export interface SendgridEmailOptions {
   subject: string;
   text?: string;
   html?: string;
+  from?: string;        // Keep this for backward compatibility
   from_name?: string;   // Added to match the Edge Function
   from_email?: string;  // Added to match the Edge Function
   replyTo?: string; 

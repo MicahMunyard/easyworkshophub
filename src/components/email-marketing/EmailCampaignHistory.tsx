@@ -39,7 +39,7 @@ const EmailCampaignHistory: React.FC<EmailCampaignHistoryProps> = ({ campaigns, 
     );
   }
 
-  if (campaigns.length === 0) {
+  if (!campaigns || campaigns.length === 0) {
     return (
       <div className="text-center py-8">
         <p className="text-muted-foreground">No campaigns found. Create your first campaign.</p>

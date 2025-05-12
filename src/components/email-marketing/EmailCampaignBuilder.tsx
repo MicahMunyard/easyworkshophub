@@ -349,7 +349,7 @@ const EmailCampaignBuilder: React.FC<EmailCampaignBuilderProps> = ({ templates, 
               Save as Draft
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Submitting..." : "Create Campaign"}
+              {isSubmitting ? "Submitting..." : "Send Campaign"}
             </Button>
           </div>
         </div>

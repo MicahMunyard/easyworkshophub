@@ -61,8 +61,8 @@ export interface ChartData {
   sent?: number;
   opened?: number;
   clicked?: number;
-  openRate?: number; // Changed from string | number to just number
-  clickRate?: number; // Changed from string | number to just number
+  openRate?: number;
+  clickRate?: number;
 }
 
 /**
@@ -90,8 +90,10 @@ export const prepareEngagementData = (analytics: EmailAnalytic[]): ChartData[] =
 export const prepareCampaignPerformanceData = (analytics: EmailAnalytic[]): ChartData[] => {
   return analytics.map(item => ({
     name: item.campaign_name,
-    openRate: parseFloat((item.open_count / item.sent_count * 100).toFixed(1)),
-    clickRate: parseFloat((item.click_count / item.open_count * 100).toFixed(1))
+    openRate: parseFloat((item.open_count / item.sent_count * 100).toFixed(1)) || 0,
+    clickRate: item.open_count > 0 
+      ? parseFloat((item.click_count / item.open_count * 100).toFixed(1)) || 0
+      : 0
   }));
 };
 
