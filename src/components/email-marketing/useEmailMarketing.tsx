@@ -243,7 +243,7 @@ export const useEmailMarketing = () => {
         subject: `[TEST] ${options.subject || "Test Email"}`,
         html: options.content,
         text: options.note ? `Note: ${options.note}\n\n---\n\n` : undefined,
-        from_email: options.from || undefined  // Change 'from' to 'from_email' to match the type
+        from: options.from || undefined  // Use 'from' which is the correct property in SendgridEmailOptions
       });
       
       if (result.success) {
