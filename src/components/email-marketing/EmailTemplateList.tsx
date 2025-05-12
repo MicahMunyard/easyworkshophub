@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { 
   Card, 
@@ -116,15 +117,6 @@ const EmailTemplateList: React.FC<EmailTemplateListProps> = ({
     setIsTestModalOpen(true);
   };
 
-  // Fix the retry function type issue by wrapping it properly
-  const handleApiErrorWithWrapper = (error: any, component: string, testRecipients: string[], testOptions: any) => {
-    return handleApiError(error, addError, component, async () => {
-      // Converting the return value to void by ignoring it
-      await handleSendTest(testRecipients, testOptions);
-      return;
-    });
-  };
-
   const handleSendTest = async (recipients: string[], options: any) => {
     if (!selectedTemplate || !onTestEmail) {
       return { 
@@ -142,8 +134,16 @@ const EmailTemplateList: React.FC<EmailTemplateListProps> = ({
       
       return result;
     } catch (error) {
-      // Use the wrapper function that returns Promise<void>
-      handleApiErrorWithWrapper(error, "EmailTemplateList", recipients, options);
+      // Simplified error handling
+      handleApiError(error, addError, "EmailTemplateList", async () => {
+        if (selectedTemplate && onTestEmail) {
+          await onTestEmail(recipients, {
+            subject: selectedTemplate.subject,
+            content: selectedTemplate.content,
+            note: options.note
+          });
+        }
+      });
       
       return { 
         success: false, 

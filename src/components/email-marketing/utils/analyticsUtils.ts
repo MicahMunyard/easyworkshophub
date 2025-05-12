@@ -1,7 +1,11 @@
 
 import { EmailAnalytic } from "../types";
 
-// Calculate open rate as a percentage
+/**
+ * Calculate open rate as a percentage from analytics data
+ * @param analytics Array of email analytics data
+ * @returns Formatted open rate percentage as string
+ */
 export const calculateOpenRate = (analytics: EmailAnalytic[]): string => {
   const totalSent = analytics.reduce((sum, item) => sum + item.sent_count, 0);
   const totalOpens = analytics.reduce((sum, item) => sum + item.open_count, 0);
@@ -9,7 +13,11 @@ export const calculateOpenRate = (analytics: EmailAnalytic[]): string => {
   return totalSent ? (totalOpens / totalSent * 100).toFixed(1) : "0.0";
 };
 
-// Calculate click rate as a percentage
+/**
+ * Calculate click rate as a percentage from analytics data
+ * @param analytics Array of email analytics data
+ * @returns Formatted click rate percentage as string
+ */
 export const calculateClickRate = (analytics: EmailAnalytic[]): string => {
   const totalOpens = analytics.reduce((sum, item) => sum + item.open_count, 0);
   const totalClicks = analytics.reduce((sum, item) => sum + item.click_count, 0);
@@ -17,33 +25,51 @@ export const calculateClickRate = (analytics: EmailAnalytic[]): string => {
   return totalOpens ? (totalClicks / totalOpens * 100).toFixed(1) : "0.0";
 };
 
-// Calculate total sent emails
+/**
+ * Calculate total sent emails
+ * @param analytics Array of email analytics data
+ * @returns Sum of sent emails
+ */
 export const calculateTotalSent = (analytics: EmailAnalytic[]): number => {
   return analytics.reduce((sum, item) => sum + item.sent_count, 0);
 };
 
-// Calculate total opened emails
+/**
+ * Calculate total opened emails
+ * @param analytics Array of email analytics data
+ * @returns Sum of opened emails
+ */
 export const calculateTotalOpens = (analytics: EmailAnalytic[]): number => {
   return analytics.reduce((sum, item) => sum + item.open_count, 0);
 };
 
-// Calculate total clicked emails
+/**
+ * Calculate total clicked emails
+ * @param analytics Array of email analytics data
+ * @returns Sum of clicked emails
+ */
 export const calculateTotalClicks = (analytics: EmailAnalytic[]): number => {
   return analytics.reduce((sum, item) => sum + item.click_count, 0);
 };
 
-// Data structure for charts
+/**
+ * Data structure for charts
+ */
 export interface ChartData {
   name: string;
   value?: number;
   sent?: number;
   opened?: number;
   clicked?: number;
-  openRate?: string | number;
-  clickRate?: string | number;
+  openRate?: number; // Changed from string | number to just number
+  clickRate?: number; // Changed from string | number to just number
 }
 
-// Prepare data for engagement funnel
+/**
+ * Prepare data for email engagement funnel chart
+ * @param analytics Array of email analytics data
+ * @returns Formatted data for funnel chart
+ */
 export const prepareEngagementData = (analytics: EmailAnalytic[]): ChartData[] => {
   const totalSent = calculateTotalSent(analytics);
   const totalOpens = calculateTotalOpens(analytics);
@@ -56,7 +82,11 @@ export const prepareEngagementData = (analytics: EmailAnalytic[]): ChartData[] =
   ];
 };
 
-// Prepare data for campaign performance
+/**
+ * Prepare data for campaign performance chart
+ * @param analytics Array of email analytics data
+ * @returns Formatted data for performance chart
+ */
 export const prepareCampaignPerformanceData = (analytics: EmailAnalytic[]): ChartData[] => {
   return analytics.map(item => ({
     name: item.campaign_name,
@@ -65,7 +95,11 @@ export const prepareCampaignPerformanceData = (analytics: EmailAnalytic[]): Char
   }));
 };
 
-// Prepare data for campaign timeline
+/**
+ * Prepare data for campaign timeline chart
+ * @param analytics Array of email analytics data
+ * @returns Formatted data for timeline chart
+ */
 export const prepareCampaignTimelineData = (analytics: EmailAnalytic[]): ChartData[] => {
   return analytics.map(item => ({
     name: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),

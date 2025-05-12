@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { EmailTemplate, EmailCampaign, EmailAutomation, EmailAnalytic, SendgridFormValues } from "./types";
 import { useSendgrid } from "@/hooks/email/useSendgrid";
@@ -237,13 +238,13 @@ export const useEmailMarketing = () => {
         };
       }
       
-      // Send the email with the correct object format (including 'to' property)
+      // Send the email with the correct object format
       const result = await sendEmail(recipients[0], {
         to: recipients,
         subject: `[TEST] ${options.subject || "Test Email"}`,
         html: options.content,
         text: options.note ? `Note: ${options.note}\n\n---\n\n` : undefined,
-        from: options.from || undefined  // Use 'from' which is the correct property in SendgridEmailOptions
+        from_email: options.from || undefined  // Use from_email which is now part of SendgridEmailOptions
       });
       
       if (result.success) {
