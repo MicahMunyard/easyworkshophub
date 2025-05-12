@@ -61,11 +61,35 @@ class SendgridService {
         throw new Error('SendGrid API key is not configured');
       }
 
+      // Process email content
+      let processedOptions = { ...options };
+      
+      // If content is a serialized JSON object with html and design
+      if (processedOptions.html && processedOptions.html.startsWith('{') && processedOptions.html.includes('"html":')) {
+        try {
+          const content = JSON.parse(processedOptions.html);
+          if (content.html) {
+            processedOptions.html = content.html;
+          }
+        } catch (e) {
+          // If parsing fails, use original content
+        }
+      }
+      
+      // Make sure we have from_email and from_name that match what the Edge Function expects
+      if (!processedOptions.from_email) {
+        processedOptions.from_email = options.from || this.getWorkshopEmail(workshopName);
+      }
+      
+      if (!processedOptions.from_name) {
+        processedOptions.from_name = workshopName;
+      }
+
       // Call the Supabase Edge Function
       const { data, error } = await supabase.functions.invoke('sendgrid-email/send', {
         body: {
           workshopName,
-          options,
+          options: processedOptions,
           replyToEmail
         }
       });
@@ -102,12 +126,36 @@ class SendgridService {
         throw new Error('SendGrid API key is not configured');
       }
 
+      // Process email content for campaigns
+      let processedOptions = { ...options };
+      
+      // If content is a serialized JSON object with html and design
+      if (processedOptions.html && processedOptions.html.startsWith('{') && processedOptions.html.includes('"html":')) {
+        try {
+          const content = JSON.parse(processedOptions.html);
+          if (content.html) {
+            processedOptions.html = content.html;
+          }
+        } catch (e) {
+          // If parsing fails, use original content
+        }
+      }
+      
+      // Make sure we have from_email and from_name that match what the Edge Function expects
+      if (!processedOptions.from_email) {
+        processedOptions.from_email = options.from || this.getWorkshopEmail(workshopName);
+      }
+      
+      if (!processedOptions.from_name) {
+        processedOptions.from_name = workshopName;
+      }
+
       // Call the Supabase Edge Function
       const { data, error } = await supabase.functions.invoke('sendgrid-email/campaign', {
         body: {
           workshopName,
           recipients,
-          options,
+          options: processedOptions,
           replyToEmail
         }
       });

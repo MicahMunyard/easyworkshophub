@@ -44,7 +44,7 @@ export interface EmailTemplateListProps {
 
 export interface EmailCampaignBuilderProps {
   templates: EmailTemplate[];
-  onSave: (campaign: Omit<EmailCampaign, 'id' | 'created_at'>) => Promise<boolean>;
+  onSave: (campaign: Omit<EmailCampaign, 'id' | 'created_at' | 'status' | 'recipient_count' | 'open_rate' | 'click_rate' | 'sent_at'>) => Promise<boolean>;
 }
 
 export interface EmailCampaignHistoryProps {

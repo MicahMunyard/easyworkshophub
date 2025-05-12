@@ -134,8 +134,8 @@ export const EmailDesigner: React.FC<EmailDesignerProps> = ({
             options={{
               features: {
                 textEditor: {
-                  tables: true,
-                  alignments: true
+                  tables: true
+                  // Removed 'alignments' property as it's causing type error
                 }
               },
               appearance: {

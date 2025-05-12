@@ -34,9 +34,9 @@ const EmailDesignerPage = () => {
         const success = await createCampaign({
           name: template.name,
           subject: template.subject,
-          content: template.content,
-          recipients: [], // This would be populated in the campaign configuration step
-          scheduled_for: null
+          content: template.content
+          // Remove the recipients property as it doesn't exist on the expected type
+          // scheduled_for is optional so we can leave it out
         });
         
         return success;
@@ -62,7 +62,11 @@ const EmailDesignerPage = () => {
       </div>
       
       <EmailDesigner
-        initialTemplate={initialTemplate}
+        initialTemplate={initialTemplate ? {
+          name: initialTemplate.name,
+          subject: initialTemplate.subject,
+          content: initialTemplate.content || '' // Provide a default empty string if content is missing
+        } : undefined}
         mode={mode || 'template'}
         onSave={handleSave}
         onCancel={handleCancel}
