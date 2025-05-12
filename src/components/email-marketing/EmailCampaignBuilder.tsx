@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { EmailCampaignBuilderProps } from "./types";
 import {
@@ -131,6 +130,8 @@ const EmailCampaignBuilder: React.FC<EmailCampaignBuilderProps> = ({ templates, 
     setIsSubmitting(true);
     
     try {
+      const audienceType = formValues.recipient_segments.includes("all") ? "all" : "segment";
+      
       const campaignData = {
         name: formValues.name,
         subject: formValues.subject,
@@ -140,7 +141,7 @@ const EmailCampaignBuilder: React.FC<EmailCampaignBuilderProps> = ({ templates, 
         scheduled_for: formValues.schedule ? formValues.scheduled_for : undefined,
         from_email: workshopEmail, 
         sendImmediately: !formValues.schedule,
-        audienceType: formValues.recipient_segments.includes("all") ? "all" : "segment" // Add audienceType here
+        audienceType: audienceType as "all" | "segment" // Type assertion to fix the error
       };
       
       const success = await onSave(campaignData);

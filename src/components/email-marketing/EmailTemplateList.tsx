@@ -117,10 +117,10 @@ const EmailTemplateList: React.FC<EmailTemplateListProps> = ({
   };
 
   // Fix the retry function type issue by wrapping it properly
-  const handleApiErrorWithWrapper = (error: any, component: string) => {
+  const handleApiErrorWithWrapper = (error: any, component: string, testRecipients: string[], testOptions: any) => {
     return handleApiError(error, addError, component, async () => {
       // Converting the return value to void by ignoring it
-      await handleSendTest(recipients, options);
+      await handleSendTest(testRecipients, testOptions);
       return;
     });
   };
@@ -143,7 +143,7 @@ const EmailTemplateList: React.FC<EmailTemplateListProps> = ({
       return result;
     } catch (error) {
       // Use the wrapper function that returns Promise<void>
-      handleApiErrorWithWrapper(error, "EmailTemplateList");
+      handleApiErrorWithWrapper(error, "EmailTemplateList", recipients, options);
       
       return { 
         success: false, 

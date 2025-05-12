@@ -238,7 +238,7 @@ export const useEmailMarketing = () => {
       }
       
       // Send the email with the correct object format (including 'to' property)
-      const result = await sendEmail({
+      const result = await sendEmail(recipients[0], {
         to: recipients,
         subject: `[TEST] ${options.subject || "Test Email"}`,
         html: options.content,
