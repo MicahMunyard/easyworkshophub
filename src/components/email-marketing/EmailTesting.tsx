@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -43,6 +42,8 @@ interface EmailTestingProps {
   emailContent: string;
   onSendTest: (recipients: string[], options: any) => Promise<{ success: boolean; message?: string }>;
   isSubmitting: boolean;
+  isOpen?: boolean;
+  onOpenChange?: (isOpen: boolean) => void;
 }
 
 // Device preview frames
@@ -73,9 +74,12 @@ const EmailTesting: React.FC<EmailTestingProps> = ({
   emailSubject,
   emailContent,
   onSendTest,
-  isSubmitting
+  isSubmitting,
+  isOpen = false,
+  onOpenChange
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(isOpen);
+
   const [activeTab, setActiveTab] = useState("preview");
   const [activeDevice, setActiveDevice] = useState("desktop");
   const [testRecipients, setTestRecipients] = useState("");
@@ -182,19 +186,32 @@ const EmailTesting: React.FC<EmailTestingProps> = ({
     );
   };
 
+  useEffect(() => {
+    if (isOpen !== undefined) {
+      setIsDialogOpen(isOpen);
+    }
+  }, [isOpen]);
+
+  const handleDialogOpenChange = (open: boolean) => {
+    setIsDialogOpen(open);
+    if (onOpenChange) {
+      onOpenChange(open);
+    }
+  };
+
   return (
     <>
       <Button
         type="button"
         variant="outline"
-        onClick={() => setIsOpen(true)}
+        onClick={() => handleDialogOpenChange(true)}
         className="flex items-center gap-2"
       >
         <Mail className="h-4 w-4" />
         Test Send & Preview
       </Button>
 
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <Dialog open={isDialogOpen} onOpenChange={handleDialogOpenChange}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Email Testing & Preview</DialogTitle>

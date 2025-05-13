@@ -39,7 +39,21 @@ export const useEmailTemplates = (templateType?: string) => {
     
     try {
       const fetchedTemplates = await getEmailTemplates(user.id, templateType);
-      setTemplates(fetchedTemplates);
+      
+      // Map the database fields to our EmailTemplate interface
+      const mappedTemplates: EmailTemplate[] = fetchedTemplates.map(template => ({
+        id: template.id,
+        name: template.name,
+        subject: template.subject,
+        content: template.body || '', // Map 'body' from DB to 'content' in our interface
+        category: template.template_type || 'other', // Map 'template_type' to 'category'
+        created_at: template.created_at,
+        updated_at: template.updated_at || template.created_at,
+        is_default: template.is_default,
+        template_type: template.template_type
+      }));
+      
+      setTemplates(mappedTemplates);
     } catch (error: any) {
       toast({
         title: "Error",
