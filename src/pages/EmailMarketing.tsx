@@ -35,7 +35,9 @@ const EmailMarketing = () => {
     createAutomation,
     isEmailConfigured,
     exportAnalytics,
-    sendTestEmail
+    sendTestEmail,
+    saveSendgridConfig,
+    testSendgridConnection
   } = useEmailMarketing();
 
   // Handle navigation to email designer
@@ -260,7 +262,10 @@ const EmailMarketing = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <SendgridConfig />
+                <SendgridConfig 
+                  onSaveConfig={saveSendgridConfig}
+                  onTestConnection={testSendgridConnection}
+                />
               </CardContent>
             </Card>
           </TabsContent>

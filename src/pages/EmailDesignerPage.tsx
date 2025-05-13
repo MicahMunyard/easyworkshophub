@@ -20,13 +20,12 @@ const EmailDesignerPage = () => {
   const handleSave = async (template: { name: string; subject: string; content: string }) => {
     try {
       if (mode === 'template') {
-        const templateId = await createTemplate(
-          template.name,
-          template.subject,
-          template.content,
-          'html',
-          false
-        );
+        const templateId = await createTemplate({
+          name: template.name,
+          subject: template.subject,
+          content: template.content,
+          category: 'other'  // Default category
+        });
         
         return !!templateId;
       } else {
@@ -36,7 +35,8 @@ const EmailDesignerPage = () => {
           subject: template.subject,
           content: template.content,
           audienceType: 'all', // Default audience type
-          sendImmediately: false // Default to not sending immediately
+          sendImmediately: false, // Default to not sending immediately
+          template_id: undefined // Not using a template directly
         });
         
         return success;

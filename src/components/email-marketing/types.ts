@@ -132,7 +132,18 @@ export interface SendgridEmailOptions {
   html?: string;
   text?: string;
   from?: string;
+  from_name?: string;   // Standardized to match Edge Function
+  from_email?: string;  // Standardized to match Edge Function
   replyTo?: string;
+  attachments?: Array<{
+    content: string;
+    filename: string;
+    type: string;
+    disposition: string;
+  }>;
+  templateId?: string;
+  dynamicTemplateData?: Record<string, any>;
+  categories?: string[];
 }
 
 // Enhanced Email Analytics Props
@@ -140,4 +151,9 @@ export interface EnhancedEmailAnalyticsProps {
   analytics: EmailAnalytic[];
   isLoading: boolean;
   exportAnalytics?: (format: 'csv' | 'pdf') => Promise<void>;
+}
+
+export interface EmailRecipient {
+  email: string;
+  name?: string;
 }
