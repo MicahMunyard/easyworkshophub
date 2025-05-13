@@ -1,6 +1,12 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
+// Helper function to get Supabase Edge Function URL
+export const getEdgeFunctionUrl = (functionName: string): string => {
+  const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
+  return `${supabaseUrl}/functions/v1/${functionName}`;
+};
+
 // Fetch email templates from Supabase
 export const getEmailTemplates = async (userId: string, templateType?: string) => {
   let query = supabase
