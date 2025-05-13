@@ -4,13 +4,23 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { saveEmailTemplate, getEmailTemplates } from "./utils/supabaseUtils";
 
+interface EmailTemplateInput {
+  name: string;
+  subject: string;
+  content: string;
+  category: string;
+}
+
 interface EmailTemplate {
   id: string;
   name: string;
   subject: string;
-  body: string;
-  is_default: boolean;
-  template_type: string;
+  content: string;
+  category: string;
+  created_at: string;
+  updated_at: string;
+  is_default?: boolean;
+  template_type?: string;
 }
 
 export const useEmailTemplates = (templateType?: string) => {
@@ -45,23 +55,19 @@ export const useEmailTemplates = (templateType?: string) => {
     fetchTemplates();
   }, [fetchTemplates]);
 
-  const createTemplate = async (
-    name: string, 
-    subject: string, 
-    body: string,
-    type: string,
-    isDefault: boolean = false
-  ) => {
+  const createTemplate = async (templateInput: EmailTemplateInput) => {
     if (!user) return null;
     
     try {
+      const { name, subject, content, category } = templateInput;
+      
       const templateId = await saveEmailTemplate(
         user.id,
         name,
         subject,
-        body,
-        type,
-        isDefault
+        content,
+        category,
+        false // isDefault
       );
       
       if (templateId) {

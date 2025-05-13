@@ -20,6 +20,7 @@ const EmailDesignerPage = () => {
   const handleSave = async (template: { name: string; subject: string; content: string }) => {
     try {
       if (mode === 'template') {
+        // Call createTemplate with the correct parameters
         const templateId = await createTemplate({
           name: template.name,
           subject: template.subject,
