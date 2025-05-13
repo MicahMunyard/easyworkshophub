@@ -1,124 +1,156 @@
+
 import React from "react";
-import { 
-  Card, 
-  CardContent, 
-  CardHeader, 
-  CardTitle, 
-  CardDescription 
-} from "@/components/ui/card";
-import { 
-  ResponsiveContainer, 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  Legend 
-} from 'recharts';
-import { EmailAnalytic } from "./types";
-import { Skeleton } from "@/components/ui/skeleton";
+import { EmailAnalyticsProps } from "./types";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import CampaignCountCard from "./analytics/CampaignCountCard";
+import OpenRateCard from "./analytics/OpenRateCard";
+import ClickRateCard from "./analytics/ClickRateCard";
+import CampaignPerformanceChart from "./analytics/CampaignPerformanceChart";
+import CampaignTimelineChart from "./analytics/CampaignTimelineChart";
+import EmailEngagementChart from "./analytics/EmailEngagementChart";
+import { BarChart, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Download } from "lucide-react";
 
-interface EnhancedEmailAnalyticsProps {
-  analytics: EmailAnalytic[];
-  isLoading: boolean;
-  exportAnalytics?: (format: 'csv' | 'pdf') => Promise<void>;
-}
-
-const EnhancedEmailAnalytics: React.FC<EnhancedEmailAnalyticsProps> = ({ 
+const EnhancedEmailAnalytics: React.FC<EmailAnalyticsProps> = ({ 
   analytics, 
   isLoading,
-  exportAnalytics
+  exportAnalytics 
 }) => {
-  // Mock function to calculate Click-to-Open Rate (CTOR)
-  const calculateCTOR = (openCount: number, clickCount: number): number => {
-    if (openCount === 0) return 0;
-    return (clickCount / openCount) * 100;
-  };
-
-  // Transform analytics data for the chart
-  const chartData = analytics.map(item => ({
-    name: item.campaign_name,
-    "Open Rate": (item.open_count / item.sent_count) * 100,
-    "Click Rate": (item.click_count / item.sent_count) * 100,
-    "CTOR": calculateCTOR(item.open_count, item.click_count),
-  }));
-
-  // Custom tooltip content
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-background border border-border rounded p-2 shadow-md">
-          <p className="font-medium">{label}</p>
-          <p className="text-sm flex items-center">
-            <span className="w-3 h-3 rounded-full bg-blue-500 mr-2"></span>
-            Open Rate: {typeof payload[0].value === 'number' ? payload[0].value.toFixed(1) : payload[0].value}%
-          </p>
-          <p className="text-sm flex items-center">
-            <span className="w-3 h-3 rounded-full bg-green-500 mr-2"></span>
-            Click Rate: {typeof payload[1].value === 'number' ? payload[1].value.toFixed(1) : payload[1].value}%
-          </p>
-          <p className="text-sm flex items-center">
-            <span className="w-3 h-3 rounded-full bg-amber-500 mr-2"></span>
-            CTOR: {typeof payload[2].value === 'number' ? payload[2].value.toFixed(1) : payload[2].value}%
-          </p>
-        </div>
-      );
-    }
-    return null;
-  };
-
-  return (
-    <div className="space-y-4">
-      <div className="flex justify-end space-x-2">
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={() => exportAnalytics && exportAnalytics('csv')}
-          disabled={isLoading}
-        >
-          <Download className="h-4 w-4 mr-2" />
-          Export CSV
-        </Button>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={() => exportAnalytics && exportAnalytics('pdf')}
-          disabled={isLoading}
-        >
-          <Download className="h-4 w-4 mr-2" />
-          Export PDF
-        </Button>
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <Card>
+          <CardContent className="py-10">
+            <div className="flex justify-center items-center h-40">
+              <div className="animate-pulse text-center">
+                <div className="h-4 w-48 bg-muted rounded mb-4 mx-auto"></div>
+                <div className="h-3 w-36 bg-muted rounded mb-6 mx-auto"></div>
+                <div className="h-10 w-10 rounded-full bg-muted mx-auto"></div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
-      
+    );
+  }
+
+  if (!analytics || analytics.length === 0) {
+    return (
       <Card>
-        <CardHeader>
-          <CardTitle>Campaign Performance Metrics</CardTitle>
-          <CardDescription>
-            Track email campaign performance over time.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <Skeleton className="w-full h-[300px]" />
-          ) : (
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis tickFormatter={(value) => value + "%"} />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend />
-                <Bar dataKey="Open Rate" fill="#3b82f6" />
-                <Bar dataKey="Click Rate" fill="#16a34a" />
-                <Bar dataKey="CTOR" fill="#f59e0b" />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
+        <CardContent className="p-8 text-center">
+          <div className="mx-auto bg-muted rounded-full w-12 h-12 flex items-center justify-center mb-4">
+            <BarChart className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <h3 className="font-medium text-lg mb-2">No analytics data available</h3>
+          <p className="text-muted-foreground mb-4">
+            Start sending campaigns to generate insights and track performance metrics.
+          </p>
         </CardContent>
       </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-end">
+        {exportAnalytics && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={exportAnalytics}
+            className="flex items-center gap-2"
+          >
+            <Download className="h-4 w-4" />
+            Export Data
+          </Button>
+        )}
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <CampaignCountCard analytics={analytics} />
+        <OpenRateCard analytics={analytics} />
+        <ClickRateCard analytics={analytics} />
+      </div>
+
+      <Tabs defaultValue="performance" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="performance">Campaign Performance</TabsTrigger>
+          <TabsTrigger value="timeline">Email Timeline</TabsTrigger>
+          <TabsTrigger value="engagement">Engagement</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="performance">
+          <Card>
+            <CardHeader>
+              <CardTitle>Campaign Performance</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CampaignPerformanceChart analytics={analytics} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="timeline">
+          <Card>
+            <CardHeader>
+              <CardTitle>Email Timeline</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CampaignTimelineChart analytics={analytics} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="engagement">
+          <Card>
+            <CardHeader>
+              <CardTitle>Email Engagement</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-8">
+              <EmailEngagementChart analytics={analytics} />
+              
+              <div className="border-t pt-4">
+                <h3 className="font-medium mb-4">Campaign Comparison</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left font-medium px-2 py-2">Campaign</th>
+                        <th className="text-left font-medium px-2 py-2">Sent</th>
+                        <th className="text-left font-medium px-2 py-2">Opens</th>
+                        <th className="text-left font-medium px-2 py-2">Clicks</th>
+                        <th className="text-left font-medium px-2 py-2">Open Rate</th>
+                        <th className="text-left font-medium px-2 py-2">Click Rate</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {analytics.map((campaign) => (
+                        <tr key={campaign.campaign_id} className="border-b hover:bg-muted/50">
+                          <td className="px-2 py-2">{campaign.campaign_name}</td>
+                          <td className="px-2 py-2">{campaign.recipients}</td>
+                          <td className="px-2 py-2">{campaign.opens}</td>
+                          <td className="px-2 py-2">{campaign.clicks}</td>
+                          <td className="px-2 py-2">
+                            {campaign.recipients > 0 ? 
+                              `${((campaign.opens / campaign.recipients) * 100).toFixed(1)}%` : 
+                              '0.0%'}
+                          </td>
+                          <td className="px-2 py-2">
+                            {campaign.opens > 0 ? 
+                              `${((campaign.clicks / campaign.opens) * 100).toFixed(1)}%` : 
+                              '0.0%'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

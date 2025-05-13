@@ -1,40 +1,69 @@
-
 // Email marketing types
 
 export interface EmailTemplate {
   id: string;
   name: string;
+  description?: string;
   subject: string;
   content: string;
-  description?: string;
-  category?: string;
-  created_at?: string;
-  updated_at?: string;
+  category: "service" | "promotion" | "newsletter" | "reminder" | "other";
+  is_default?: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface EmailCampaign {
   id: string;
   name: string;
   subject: string;
-  content: string;
-  status: 'draft' | 'scheduled' | 'sent' | 'failed';
-  recipient_count: number;
-  open_rate?: number;
-  click_rate?: number;
-  scheduled_for?: string | null;
-  sent_at?: string | null;
+  content?: string;
+  template_id?: string;
+  status: "draft" | "scheduled" | "sending" | "sent" | "failed";
+  audience_type: "all" | "segment" | "tag" | "list";
+  audience_filter?: any;
+  scheduled_at?: string;
+  sent_at?: string;
+  opens?: number;
+  clicks?: number;
   created_at: string;
-  audienceType?: string;
-  sendImmediately?: boolean;
+  updated_at: string;
+}
+
+export interface EmailAutomation {
+  id: string;
+  name: string;
+  description?: string;
+  trigger_type: "event" | "schedule";
+  trigger_details: {
+    event?: string;
+    schedule?: string;
+  };
+  template_id: string;
+  status: "draft" | "active" | "inactive" | "completed";
+  frequency: "daily" | "weekly" | "monthly" | "custom";
+  last_run?: string;
+  next_run?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface EmailAnalytic {
   campaign_id: string;
   campaign_name: string;
-  sent_count: number;
-  open_count: number;
-  click_count: number;
-  date: string;
+  subject: string;
+  sent_at: string;
+  recipients: number;
+  opens: number;
+  clicks: number;
+  unsubscribes: number;
+  bounces: number;
+  complaints: number;
+}
+
+export interface EmailAnalyticsProps {
+  analytics: EmailAnalytic[];
+  isLoading: boolean;
+  exportAnalytics?: () => void;
 }
 
 export interface EmailTemplateListProps {

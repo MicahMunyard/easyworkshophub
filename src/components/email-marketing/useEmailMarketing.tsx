@@ -1,9 +1,10 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { EmailTemplate, EmailCampaign, EmailAutomation, EmailAnalytic, SendgridFormValues } from "./types";
 import { useSendgrid } from "@/hooks/email/useSendgrid";
 import { useSendgridEmail } from "@/hooks/email/useSendgridEmail";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from '@/contexts/AuthContext';
+import { cleanupDemoData } from '@/hooks/communication/api/cleanupDemoData';
 
 export const useEmailMarketing = () => {
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
@@ -16,7 +17,8 @@ export const useEmailMarketing = () => {
   const { isConfigured: isSendgridConfigured, getWorkshopEmail } = useSendgrid();
   const { sendEmail, sendMarketingCampaign, getAnalytics } = useSendgridEmail();
   const { toast } = useToast();
-
+  const { user } = useAuth();
+  
   // Load email marketing data
   useEffect(() => {
     const loadData = async () => {
@@ -123,7 +125,24 @@ export const useEmailMarketing = () => {
     
     loadData();
   }, [isSendgridConfigured, getAnalytics, toast]);
-
+  
+  // Clean up demo data on first load
+  useEffect(() => {
+    if (user) {
+      const cleanupDemo = async () => {
+        try {
+          // Clean up demo data silently without notification
+          await cleanupDemoData(user.id);
+          console.log("Demo email marketing data removed");
+        } catch (error) {
+          console.error("Error cleaning up demo data:", error);
+        }
+      };
+      
+      cleanupDemo();
+    }
+  }, [user]);
+  
   // Create a new template
   const createTemplate = async (template: Omit<EmailTemplate, 'id' | 'created_at' | 'updated_at'>) => {
     try {
@@ -153,7 +172,7 @@ export const useEmailMarketing = () => {
       return false;
     }
   };
-
+  
   // Create a new campaign
   const createCampaign = async (campaign: Omit<EmailCampaign, 'id' | 'created_at' | 'status' | 'recipient_count' | 'open_rate' | 'click_rate' | 'sent_at'>) => {
     try {
@@ -192,7 +211,7 @@ export const useEmailMarketing = () => {
       return false;
     }
   };
-
+  
   // Create a new automation
   const createAutomation = async (automation: Omit<EmailAutomation, 'id' | 'created_at'>) => {
     try {
@@ -227,7 +246,7 @@ export const useEmailMarketing = () => {
       return false;
     }
   };
-
+  
   // Send a test email
   const sendTestEmail = async (recipients: string[], options: any) => {
     try {
@@ -264,7 +283,7 @@ export const useEmailMarketing = () => {
       };
     }
   };
-
+  
   // Save SendGrid configuration
   const saveSendgridConfig = async (config: SendgridFormValues): Promise<boolean> => {
     try {
@@ -293,7 +312,7 @@ export const useEmailMarketing = () => {
       return false;
     }
   };
-
+  
   // Test SendGrid connection
   const testSendgridConnection = async (): Promise<{ success: boolean; message: string }> => {
     try {
@@ -315,7 +334,7 @@ export const useEmailMarketing = () => {
       };
     }
   };
-
+  
   // Export analytics to CSV or PDF
   const exportAnalytics = async (format: 'csv' | 'pdf'): Promise<void> => {
     try {
@@ -334,7 +353,7 @@ export const useEmailMarketing = () => {
       });
     }
   };
-
+  
   return {
     templates,
     campaigns,

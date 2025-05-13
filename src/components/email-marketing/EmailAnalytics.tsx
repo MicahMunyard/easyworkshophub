@@ -9,8 +9,7 @@ import ClickRateCard from "./analytics/ClickRateCard";
 import CampaignPerformanceChart from "./analytics/CampaignPerformanceChart";
 import CampaignTimelineChart from "./analytics/CampaignTimelineChart";
 import EmailEngagementChart from "./analytics/EmailEngagementChart";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle } from "lucide-react";
+import { BarChart } from "lucide-react";
 
 const EmailAnalytics: React.FC<EmailAnalyticsProps> = ({ analytics, isLoading }) => {
   if (isLoading) {
@@ -33,12 +32,17 @@ const EmailAnalytics: React.FC<EmailAnalyticsProps> = ({ analytics, isLoading })
 
   if (!analytics || analytics.length === 0) {
     return (
-      <Alert variant="default" className="mb-6">
-        <AlertTriangle className="h-4 w-4" />
-        <AlertDescription>
-          No analytics data available. Start sending campaigns to generate insights.
-        </AlertDescription>
-      </Alert>
+      <Card>
+        <CardContent className="p-8 text-center">
+          <div className="mx-auto bg-muted rounded-full w-12 h-12 flex items-center justify-center mb-4">
+            <BarChart className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <h3 className="font-medium text-lg mb-2">No analytics data available</h3>
+          <p className="text-muted-foreground mb-4">
+            Start sending campaigns to generate insights and track performance metrics.
+          </p>
+        </CardContent>
+      </Card>
     );
   }
 

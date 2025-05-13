@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import {
   Dialog,
@@ -14,28 +15,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
-import { AlertCircle, Check, Smartphone, Mail, Clock, AlertTriangle, Info } from "lucide-react";
-import { EmailTemplate, EmailCampaign } from "./types";
+import { AlertCircle, Check, Smartphone, Mail, AlertTriangle, Info } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
 
 interface EmailTestingProps {
   emailSubject: string;
@@ -43,7 +27,7 @@ interface EmailTestingProps {
   onSendTest: (recipients: string[], options: any) => Promise<{ success: boolean; message?: string }>;
   isSubmitting: boolean;
   isOpen?: boolean;
-  onOpenChange?: (isOpen: boolean) => void;
+  onOpenChange?: (open: boolean) => void;
 }
 
 // Device preview frames
@@ -78,8 +62,7 @@ const EmailTesting: React.FC<EmailTestingProps> = ({
   isOpen = false,
   onOpenChange
 }) => {
-  const [isDialogOpen, setIsDialogOpen] = useState(isOpen);
-
+  const [open, setOpen] = useState(isOpen);
   const [activeTab, setActiveTab] = useState("preview");
   const [activeDevice, setActiveDevice] = useState("desktop");
   const [testRecipients, setTestRecipients] = useState("");
@@ -87,6 +70,21 @@ const EmailTesting: React.FC<EmailTestingProps> = ({
   const [additionalNote, setAdditionalNote] = useState("");
   const [testResults, setTestResults] = useState<{success: boolean; message?: string} | null>(null);
   const [spamCheckResults, setSpamCheckResults] = useState<{score: number; triggers: string[]} | null>(null);
+
+  // Handle the controlled vs uncontrolled state
+  const handleOpenChange = (newOpen: boolean) => {
+    setOpen(newOpen);
+    if (onOpenChange) {
+      onOpenChange(newOpen);
+    }
+  };
+
+  // Update local state when prop changes
+  useEffect(() => {
+    if (isOpen !== undefined && isOpen !== open) {
+      setOpen(isOpen);
+    }
+  }, [isOpen, open]);
 
   // Split multiple email addresses
   const getRecipientList = () => {
@@ -186,319 +184,292 @@ const EmailTesting: React.FC<EmailTestingProps> = ({
     );
   };
 
-  useEffect(() => {
-    if (isOpen !== undefined) {
-      setIsDialogOpen(isOpen);
-    }
-  }, [isOpen]);
+  const dialogContent = (
+    <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogHeader>
+        <DialogTitle>Email Testing & Preview</DialogTitle>
+      </DialogHeader>
 
-  const handleDialogOpenChange = (open: boolean) => {
-    setIsDialogOpen(open);
-    if (onOpenChange) {
-      onOpenChange(open);
-    }
-  };
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid grid-cols-3">
+          <TabsTrigger value="preview">Device Preview</TabsTrigger>
+          <TabsTrigger value="test-send">Test Send</TabsTrigger>
+          <TabsTrigger value="spam-check">Spam Check</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="preview" className="space-y-4">
+          <div className="flex justify-center space-x-4 mb-4">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={activeDevice === "desktop" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setActiveDevice("desktop")}
+                  >
+                    <span className="text-xs">Desktop</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Desktop Preview</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={activeDevice === "mobile" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setActiveDevice("mobile")}
+                  >
+                    <Smartphone className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Mobile Preview</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={activeDevice === "tablet" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setActiveDevice("tablet")}
+                  >
+                    <span className="text-xs">Tablet</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Tablet Preview</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+
+          {getDevicePreview()}
+
+          <div className="space-y-4 border-t pt-4">
+            <div className="text-sm font-medium">Email Client Compatibility</div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              {emailClients.map(client => (
+                <div 
+                  key={client.id} 
+                  className="flex items-center p-2 border rounded-md"
+                >
+                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center mr-2">
+                    <Mail className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium">{client.name}</div>
+                    {client.popular && (
+                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
+                        Popular
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setActiveTab("test-send")}
+              >
+                Send Test Email
+              </Button>
+              <Button
+                type="button"
+                onClick={() => performSpamCheck()}
+              >
+                Check for Spam Triggers
+              </Button>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="test-send" className="space-y-4">
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="testRecipients">Test Recipients</Label>
+              <Textarea
+                id="testRecipients"
+                value={testRecipients}
+                onChange={(e) => setTestRecipients(e.target.value)}
+                placeholder="Enter email addresses separated by commas"
+                className="h-24"
+              />
+              <div className="text-xs text-muted-foreground">
+                Enter multiple emails separated by commas
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <div className="flex-1">
+                <Input
+                  id="additionalRecipient"
+                  value={additionalRecipient}
+                  onChange={(e) => setAdditionalRecipient(e.target.value)}
+                  placeholder="Add another recipient"
+                />
+              </div>
+              <Button 
+                type="button" 
+                onClick={handleAddRecipient}
+                disabled={!additionalRecipient || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(additionalRecipient)}
+              >
+                Add
+              </Button>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="additionalNote">Additional Note (Optional)</Label>
+              <Textarea
+                id="additionalNote"
+                value={additionalNote}
+                onChange={(e) => setAdditionalNote(e.target.value)}
+                placeholder="Add a note to include with the test email"
+                className="h-24"
+              />
+            </div>
+
+            {testResults && (
+              <Alert variant={testResults.success ? "default" : "destructive"} className="mt-4">
+                {testResults.success ? (
+                  <Check className="h-4 w-4" />
+                ) : (
+                  <AlertCircle className="h-4 w-4" />
+                )}
+                <AlertDescription>{testResults.message}</AlertDescription>
+              </Alert>
+            )}
+
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setActiveTab("preview")}
+              >
+                Back to Preview
+              </Button>
+              <Button
+                type="button"
+                onClick={handleSendTest}
+                disabled={isSubmitting || getRecipientList().length === 0}
+              >
+                {isSubmitting ? "Sending..." : "Send Test Email"}
+              </Button>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="spam-check" className="space-y-4">
+          <div className="mb-4">
+            <Button
+              type="button"
+              onClick={performSpamCheck}
+              className="w-full"
+            >
+              Run Spam Check
+            </Button>
+          </div>
+
+          {spamCheckResults ? (
+            <div className="space-y-4">
+              <div className="border rounded-md p-4">
+                <div className="flex items-center mb-4">
+                  <div className="text-2xl font-bold mr-2">
+                    Spam Score: {spamCheckResults.score}/10
+                  </div>
+                  <div className={`flex items-center ${getSpamScoreIndicator(spamCheckResults.score).color}`}>
+                    {getSpamScoreIndicator(spamCheckResults.score).icon}
+                    <span className="ml-1">
+                      {getSpamScoreIndicator(spamCheckResults.score).text} Risk
+                    </span>
+                  </div>
+                </div>
+
+                <div className="border-t pt-4 mt-4">
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="font-medium mb-2">Detected Trigger Words</h3>
+                      {spamCheckResults.triggers.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {spamCheckResults.triggers.map((word, index) => (
+                            <div key={index} className="px-2 py-1 rounded-md bg-amber-50 text-amber-700 border border-amber-200 text-sm">
+                              {word}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No common spam trigger words detected</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <h3 className="font-medium mb-2">Recommendations</h3>
+                      <ul className="space-y-2 text-sm text-muted-foreground list-disc pl-5">
+                        {spamCheckResults.triggers.length > 0 && (
+                          <li>Consider removing or rephrasing the highlighted trigger words</li>
+                        )}
+                        <li>Use a clear, specific subject line that accurately reflects the content</li>
+                        <li>Avoid excessive use of capital letters and exclamation points</li>
+                        <li>Maintain a balanced text-to-image ratio</li>
+                        <li>Include a physical address and unsubscribe link</li>
+                        <li>Send from a consistent, recognizable sender name</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border rounded-md p-4">
+                <h3 className="font-medium mb-2">Deliverability Tips</h3>
+                <div className="space-y-2">
+                  <div className="flex items-start gap-2">
+                    <Info className="h-4 w-4 text-blue-500 mt-0.5" />
+                    <p className="text-sm">
+                      <span className="font-medium">Warm up your domain:</span> When starting email marketing, gradually increase sending volume
+                    </p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <Info className="h-4 w-4 text-blue-500 mt-0.5" />
+                    <p className="text-sm">
+                      <span className="font-medium">SPF, DKIM, DMARC:</span> Ensure these email authentication standards are set up correctly
+                    </p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <Info className="h-4 w-4 text-blue-500 mt-0.5" />
+                    <p className="text-sm">
+                      <span className="font-medium">Clean your lists:</span> Regularly remove inactive subscribers to maintain good sending reputation
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">Run a spam check to analyze your email content</p>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
+    </DialogContent>
+  );
 
   return (
     <>
       <Button
         type="button"
         variant="outline"
-        onClick={() => handleDialogOpenChange(true)}
+        onClick={() => handleOpenChange(true)}
         className="flex items-center gap-2"
       >
         <Mail className="h-4 w-4" />
         Test Send & Preview
       </Button>
 
-      <Dialog open={isDialogOpen} onOpenChange={handleDialogOpenChange}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Email Testing & Preview</DialogTitle>
-          </DialogHeader>
-
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid grid-cols-3">
-              <TabsTrigger value="preview">Device Preview</TabsTrigger>
-              <TabsTrigger value="test-send">Test Send</TabsTrigger>
-              <TabsTrigger value="spam-check">Spam Check</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="preview" className="space-y-4">
-              <div className="flex justify-center space-x-4 mb-4">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant={activeDevice === "desktop" ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setActiveDevice("desktop")}
-                      >
-                        <span className="text-xs">Desktop</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Desktop Preview</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant={activeDevice === "mobile" ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setActiveDevice("mobile")}
-                      >
-                        <Smartphone className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Mobile Preview</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant={activeDevice === "tablet" ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setActiveDevice("tablet")}
-                      >
-                        <span className="text-xs">Tablet</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Tablet Preview</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-
-              {getDevicePreview()}
-
-              <div className="space-y-4 border-t pt-4">
-                <div className="text-sm font-medium">Email Client Compatibility</div>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                  {emailClients.map(client => (
-                    <div 
-                      key={client.id} 
-                      className="flex items-center p-2 border rounded-md"
-                    >
-                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center mr-2">
-                        <Mail className="h-4 w-4 text-primary" />
-                      </div>
-                      <div>
-                        <div className="text-sm font-medium">{client.name}</div>
-                        {client.popular && (
-                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
-                            Popular
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex justify-end space-x-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setActiveTab("test-send")}
-                  >
-                    Send Test Email
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={() => performSpamCheck()}
-                  >
-                    Check for Spam Triggers
-                  </Button>
-                </div>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="test-send" className="space-y-4">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="testRecipients">Test Recipients</Label>
-                  <Textarea
-                    id="testRecipients"
-                    value={testRecipients}
-                    onChange={(e) => setTestRecipients(e.target.value)}
-                    placeholder="Enter email addresses separated by commas"
-                    className="h-24"
-                  />
-                  <div className="text-xs text-muted-foreground">
-                    Enter multiple emails separated by commas
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <div className="flex-1">
-                    <Input
-                      id="additionalRecipient"
-                      value={additionalRecipient}
-                      onChange={(e) => setAdditionalRecipient(e.target.value)}
-                      placeholder="Add another recipient"
-                    />
-                  </div>
-                  <Button 
-                    type="button" 
-                    onClick={handleAddRecipient}
-                    disabled={!additionalRecipient || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(additionalRecipient)}
-                  >
-                    Add
-                  </Button>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="additionalNote">Additional Note (Optional)</Label>
-                  <Textarea
-                    id="additionalNote"
-                    value={additionalNote}
-                    onChange={(e) => setAdditionalNote(e.target.value)}
-                    placeholder="Add a note to include with the test email"
-                    className="h-24"
-                  />
-                </div>
-
-                {testResults && (
-                  <Alert variant={testResults.success ? "default" : "destructive"} className="mt-4">
-                    {testResults.success ? (
-                      <Check className="h-4 w-4" />
-                    ) : (
-                      <AlertCircle className="h-4 w-4" />
-                    )}
-                    <AlertDescription>{testResults.message}</AlertDescription>
-                  </Alert>
-                )}
-
-                <div className="flex justify-end space-x-2 pt-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setActiveTab("preview")}
-                  >
-                    Back to Preview
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={handleSendTest}
-                    disabled={isSubmitting || getRecipientList().length === 0}
-                  >
-                    {isSubmitting ? "Sending..." : "Send Test Email"}
-                  </Button>
-                </div>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="spam-check" className="space-y-4">
-              <div className="mb-4">
-                <Button
-                  type="button"
-                  onClick={performSpamCheck}
-                  className="w-full"
-                >
-                  Run Spam Check
-                </Button>
-              </div>
-
-              {spamCheckResults ? (
-                <div className="space-y-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Spam Score Analysis</CardTitle>
-                      <CardDescription>
-                        Analysis of potential deliverability issues
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center mb-4">
-                        <div className="text-2xl font-bold mr-2">
-                          Spam Score: {spamCheckResults.score}/10
-                        </div>
-                        <div className={`flex items-center ${getSpamScoreIndicator(spamCheckResults.score).color}`}>
-                          {getSpamScoreIndicator(spamCheckResults.score).icon}
-                          <span className="ml-1">
-                            {getSpamScoreIndicator(spamCheckResults.score).text} Risk
-                          </span>
-                        </div>
-                      </div>
-
-                      <Separator className="my-4" />
-
-                      <div className="space-y-4">
-                        <div>
-                          <h3 className="font-medium mb-2">Detected Trigger Words</h3>
-                          {spamCheckResults.triggers.length > 0 ? (
-                            <div className="flex flex-wrap gap-2">
-                              {spamCheckResults.triggers.map((word, index) => (
-                                <Badge key={index} variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-                                  {word}
-                                </Badge>
-                              ))}
-                            </div>
-                          ) : (
-                            <p className="text-sm text-muted-foreground">No common spam trigger words detected</p>
-                          )}
-                        </div>
-
-                        <div>
-                          <h3 className="font-medium mb-2">Recommendations</h3>
-                          <ul className="space-y-2 text-sm text-muted-foreground list-disc pl-5">
-                            {spamCheckResults.triggers.length > 0 && (
-                              <li>Consider removing or rephrasing the highlighted trigger words</li>
-                            )}
-                            <li>Use a clear, specific subject line that accurately reflects the content</li>
-                            <li>Avoid excessive use of capital letters and exclamation points</li>
-                            <li>Maintain a balanced text-to-image ratio</li>
-                            <li>Include a physical address and unsubscribe link</li>
-                            <li>Send from a consistent, recognizable sender name</li>
-                          </ul>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Deliverability Tips</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        <div className="flex items-start gap-2">
-                          <Info className="h-4 w-4 text-blue-500 mt-0.5" />
-                          <p className="text-sm">
-                            <span className="font-medium">Warm up your domain:</span> When starting email marketing, gradually increase sending volume
-                          </p>
-                        </div>
-                        <div className="flex items-start gap-2">
-                          <Info className="h-4 w-4 text-blue-500 mt-0.5" />
-                          <p className="text-sm">
-                            <span className="font-medium">SPF, DKIM, DMARC:</span> Ensure these email authentication standards are set up correctly
-                          </p>
-                        </div>
-                        <div className="flex items-start gap-2">
-                          <Info className="h-4 w-4 text-blue-500 mt-0.5" />
-                          <p className="text-sm">
-                            <span className="font-medium">Clean your lists:</span> Regularly remove inactive subscribers to maintain good sending reputation
-                          </p>
-                        </div>
-                        <div className="flex items-start gap-2">
-                          <Info className="h-4 w-4 text-blue-500 mt-0.5" />
-                          <p className="text-sm">
-                            <span className="font-medium">Test before sending:</span> Always test emails on multiple clients before sending to your full list
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">Run a spam check to analyze your email content</p>
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
-        </DialogContent>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        {dialogContent}
       </Dialog>
     </>
   );
