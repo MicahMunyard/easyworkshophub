@@ -1,6 +1,5 @@
 
-import React, { useRef, useState, useEffect } from 'react';
-import EmailEditor from 'react-email-editor';
+import React, { useState, useEffect } from "react";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -18,13 +17,13 @@ interface EmailDesignerProps {
   onCancel?: () => void;
 }
 
-export const EmailDesigner: React.FC<EmailDesignerProps> = ({ 
+const EmailDesigner: React.FC<EmailDesignerProps> = ({ 
   initialTemplate,
   onSave,
   mode,
   onCancel
 }) => {
-  const emailEditorRef = useRef<any>(null);
+  const emailEditorRef = React.useRef<any>(null);
   const [name, setName] = useState(initialTemplate?.name || '');
   const [subject, setSubject] = useState(initialTemplate?.subject || '');
   const [isSaving, setIsSaving] = useState(false);
@@ -36,11 +35,16 @@ export const EmailDesigner: React.FC<EmailDesignerProps> = ({
     if (initialTemplate?.content && emailEditorRef.current?.editor) {
       try {
         // Try loading as JSON design
-        const design = JSON.parse(initialTemplate.content);
-        emailEditorRef.current.editor.loadDesign(design);
+        const contentObj = JSON.parse(initialTemplate.content);
+        if (contentObj.design) {
+          emailEditorRef.current.editor.loadDesign(contentObj.design);
+        } else if (contentObj.html) {
+          emailEditorRef.current.editor.loadHTML(contentObj.html);
+        }
       } catch (e) {
         // Fallback to loading as HTML
         emailEditorRef.current.editor.loadHTML(initialTemplate.content);
+        console.log("Loaded as HTML instead of JSON design", e);
       }
     }
   }, [initialTemplate, emailEditorRef.current?.editor]);
@@ -62,15 +66,21 @@ export const EmailDesigner: React.FC<EmailDesignerProps> = ({
       emailEditorRef.current.editor.exportHtml(async (data: any) => {
         const { html, design } = data;
         
-        // Save both HTML and design JSON
+        // Ensure the content is properly saved and can be loaded later
+        const contentObj = {
+          html,
+          design
+        };
+        
+        // Convert to string but ensure it's valid by testing parse
+        const contentStr = JSON.stringify(contentObj);
+        // Validate it can be parsed back
+        JSON.parse(contentStr);
+        
         const success = await onSave({
           name, 
           subject,
-          // Store both HTML and design state to allow editing later
-          content: JSON.stringify({
-            html,
-            design
-          })
+          content: contentStr
         });
         
         if (success) {
@@ -78,9 +88,12 @@ export const EmailDesigner: React.FC<EmailDesignerProps> = ({
             title: mode === 'template' ? 'Template saved' : 'Campaign created',
             description: mode === 'template' ? 'Email template saved successfully' : 'Email campaign ready to send',
           });
+        } else {
+          throw new Error("Failed to save template");
         }
       });
     } catch (error) {
+      console.error("Error saving email design:", error);
       toast({
         title: 'Save failed',
         description: error instanceof Error ? error.message : 'An unknown error occurred',
@@ -128,38 +141,45 @@ export const EmailDesigner: React.FC<EmailDesignerProps> = ({
         </TabsList>
         
         <TabsContent value="design" className="border rounded-md p-1 min-h-[600px]">
-          <EmailEditor
-            ref={emailEditorRef}
-            minHeight="600px"
-            options={{
-              features: {
-                textEditor: {
-                  tables: true
-                  // Removed 'alignments' property as it's causing type error
-                }
-              },
-              appearance: {
-                theme: 'light',
-                panels: {
+          {/* Using dynamic import for EmailEditor to ensure it works properly */}
+          <div id="emailEditorContainer" className="h-[600px]">
+            {typeof window !== 'undefined' && (
+              React.createElement(
+                require('react-email-editor').default,
+                {
+                  ref: emailEditorRef,
+                  minHeight: "600px",
+                  options: {
+                    features: {
+                      textEditor: {
+                        tables: true
+                      }
+                    },
+                    appearance: {
+                      theme: 'light',
+                      panels: {
+                        tools: {
+                          dock: 'left'
+                        }
+                      }
+                    },
+                    customCSS: [
+                      'https://fonts.googleapis.com/css?family=Roboto:300,400,500,700'
+                    ]
+                  },
                   tools: {
-                    dock: 'left'
+                    image: {
+                      properties: {
+                        src: {
+                          value: 'https://www.workshopbase.com.au/logo.png'
+                        }
+                      }
+                    }
                   }
                 }
-              },
-              customCSS: [
-                'https://fonts.googleapis.com/css?family=Roboto:300,400,500,700'
-              ]
-            }}
-            tools={{
-              image: {
-                properties: {
-                  src: {
-                    value: 'https://www.workshopbase.com.au/logo.png'
-                  }
-                }
-              }
-            }}
-          />
+              )
+            )}
+          </div>
         </TabsContent>
         
         <TabsContent value="preview">
