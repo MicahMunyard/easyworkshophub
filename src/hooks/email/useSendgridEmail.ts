@@ -23,9 +23,17 @@ export function useSendgridEmail() {
         (user?.user_metadata?.name) || 
         'Workshop';
       
-      const result = await sendgridService.sendEmail(
+      // Log for debugging
+      console.log("Sending email with parameters:", {
         workshopName,
         to,
+        options,
+        replyToEmail
+      });
+      
+      const result = await sendgridService.sendEmail(
+        workshopName,
+        to, // Ensure 'to' is correctly passed
         options,
         replyToEmail
       );
@@ -75,6 +83,14 @@ export function useSendgridEmail() {
         (profile?.name) || 
         (user?.user_metadata?.name) || 
         'Workshop';
+      
+      // Log for debugging
+      console.log("Sending marketing campaign with parameters:", {
+        workshopName,
+        recipients,
+        options,
+        replyToEmail
+      });
       
       const result = await sendgridService.sendMarketingCampaign(
         workshopName,

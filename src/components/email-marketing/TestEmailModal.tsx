@@ -63,8 +63,9 @@ export function TestEmailModal({
     setIsSending(true);
     
     try {
+      // Make sure to properly pass the email address as the 'to' parameter
       const result = await sendEmail(
-        data.email,
+        { email: data.email, name: "Test Recipient" }, // Explicit email recipient object format
         {
           subject: `[TEST] ${campaignSubject || "Email Campaign"}`,
           templateId: templateId,
@@ -72,13 +73,15 @@ export function TestEmailModal({
             campaign_name: campaignName || "Test Campaign",
             preview_text: "This is a test email",
             current_date: new Date().toLocaleDateString(),
-          },
+          }
         }
       );
 
       if (result.success) {
         form.reset();
         onClose();
+      } else {
+        throw new Error(result.error?.message || "Failed to send test email");
       }
     } catch (error) {
       console.error("Error sending test email:", error);

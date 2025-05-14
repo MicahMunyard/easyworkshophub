@@ -4,7 +4,6 @@ import { generateWorkshopEmail } from '@/integrations/sendgrid/utils';
 
 // Types for SendGrid integration
 export interface SendgridEmailOptions {
-  to: string | string[];
   subject: string;
   text?: string;
   html?: string;
@@ -84,17 +83,29 @@ class SendgridService {
       if (!processedOptions.from_name) {
         processedOptions.from_name = workshopName;
       }
+      
+      // Log the request for debugging
+      console.log("Sending to edge function with data:", {
+        workshopName,
+        to,
+        options: processedOptions,
+        replyToEmail
+      });
 
       // Call the Supabase Edge Function
       const { data, error } = await supabase.functions.invoke('sendgrid-email/send', {
         body: {
           workshopName,
-          options: processedOptions,
+          options: {
+            ...processedOptions,
+            to // Make sure 'to' is included in the options
+          },
           replyToEmail
         }
       });
 
       if (error) {
+        console.error("Edge function error:", error);
         throw new Error(`Edge function error: ${error.message}`);
       }
 
@@ -149,6 +160,14 @@ class SendgridService {
       if (!processedOptions.from_name) {
         processedOptions.from_name = workshopName;
       }
+      
+      // Log the request for debugging
+      console.log("Sending marketing campaign to edge function with data:", {
+        workshopName,
+        recipients,
+        options: processedOptions,
+        replyToEmail
+      });
 
       // Call the Supabase Edge Function
       const { data, error } = await supabase.functions.invoke('sendgrid-email/campaign', {
@@ -161,6 +180,7 @@ class SendgridService {
       });
 
       if (error) {
+        console.error("Edge function error:", error);
         throw new Error(`Edge function error: ${error.message}`);
       }
 

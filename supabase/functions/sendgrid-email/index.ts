@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 
@@ -50,6 +49,26 @@ function generateWorkshopEmail(workshopName: string): string {
   return `${emailPrefix}@workshopbase.com.au`;
 }
 
+// Helper to format email recipients
+function formatRecipients(recipients: string | EmailRecipient | Array<string | EmailRecipient>): Array<{ email: string; name?: string }> {
+  if (!recipients) {
+    throw new Error("Recipients (to field) is required");
+  }
+  
+  // Convert to array if it's not already
+  const recipientsArray = Array.isArray(recipients) ? recipients : [recipients];
+  
+  return recipientsArray.map(recipient => {
+    if (typeof recipient === 'string') {
+      return { email: recipient };
+    }
+    if (typeof recipient === 'object' && recipient !== null && 'email' in recipient) {
+      return recipient as EmailRecipient;
+    }
+    throw new Error("Invalid recipient format. Expected string or object with email property");
+  });
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -59,6 +78,8 @@ serve(async (req) => {
   try {
     const url = new URL(req.url);
     const path = url.pathname.split("/").pop();
+    
+    console.log(`Processing request to endpoint: ${path}`);
 
     if (!SENDGRID_API_KEY) {
       return new Response(
@@ -69,140 +90,180 @@ serve(async (req) => {
 
     // Handle single email
     if (path === "send") {
-      const { workshopName, options, replyToEmail } = await req.json() as SendEmailRequest;
+      const requestData = await req.json();
+      console.log("Received request data:", JSON.stringify(requestData, null, 2));
+      
+      const { workshopName, options, replyToEmail } = requestData as SendEmailRequest;
+      
+      if (!options.to) {
+        const error = "Validation error: Missing recipient (to field)";
+        console.error(error);
+        return new Response(
+          JSON.stringify({ success: false, error }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+        );
+      }
       
       // Generate the dynamic workshop email if not provided
       const fromEmail = options.from_email || generateWorkshopEmail(workshopName);
       
-      // Format recipients
-      const recipients = Array.isArray(options.to) ? options.to : [options.to];
-      const formattedRecipients = recipients.map(recipient => {
-        if (typeof recipient === 'string') {
-          return { email: recipient };
-        }
-        return recipient;
-      });
-      
-      // Prepare payload
-      const payload = {
-        personalizations: [
-          {
-            to: formattedRecipients,
-            subject: options.subject,
-            dynamic_template_data: options.dynamicTemplateData,
+      // Format recipients using helper function
+      try {
+        const formattedRecipients = formatRecipients(options.to);
+        
+        // Prepare payload
+        const payload = {
+          personalizations: [
+            {
+              to: formattedRecipients,
+              subject: options.subject,
+              dynamic_template_data: options.dynamicTemplateData,
+            },
+          ],
+          from: {
+            email: fromEmail,
+            name: options.from_name || workshopName
           },
-        ],
-        from: {
-          email: fromEmail,
-          name: options.from_name || workshopName
-        },
-        reply_to: replyToEmail ? { email: replyToEmail } : { email: fromEmail },
-        content: [],
-        template_id: options.templateId,
-      };
-      
-      // Add plain text content if provided
-      if (options.text) {
-        payload.content.push({
-          type: "text/plain",
-          value: options.text,
+          reply_to: replyToEmail ? { email: replyToEmail } : { email: fromEmail },
+          content: [],
+          template_id: options.templateId,
+        };
+        
+        console.log("SendGrid API payload:", JSON.stringify(payload, null, 2));
+        
+        // Add plain text content if provided
+        if (options.text) {
+          payload.content.push({
+            type: "text/plain",
+            value: options.text,
+          });
+        }
+        
+        // Add HTML content if provided
+        if (options.html) {
+          payload.content.push({
+            type: "text/html",
+            value: options.html,
+          });
+        }
+        
+        // Send the request to SendGrid
+        const response = await fetch("https://api.sendgrid.com/v3/mail/send", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${SENDGRID_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
         });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`SendGrid API error: ${response.status} ${errorText}`);
+          throw new Error(`SendGrid API error: ${response.status} ${errorText}`);
+        }
+        
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            messageId: response.headers.get('x-message-id') 
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      } catch (error) {
+        console.error("Error formatting recipients or sending email:", error);
+        return new Response(
+          JSON.stringify({ success: false, error: error.message }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+        );
       }
-      
-      // Add HTML content if provided
-      if (options.html) {
-        payload.content.push({
-          type: "text/html",
-          value: options.html,
-        });
-      }
-      
-      // Send the request to SendGrid
-      const response = await fetch("https://api.sendgrid.com/v3/mail/send", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${SENDGRID_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`SendGrid API error: ${response.status} ${errorText}`);
-      }
-      
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          messageId: response.headers.get('x-message-id') 
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
     }
     
     // Handle email campaign
     else if (path === "campaign") {
-      const { workshopName, recipients, options, replyToEmail } = await req.json() as SendCampaignRequest;
+      const requestData = await req.json();
+      console.log("Received campaign request data:", JSON.stringify(requestData, null, 2));
+      
+      const { workshopName, recipients, options, replyToEmail } = requestData as SendCampaignRequest;
+      
+      if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
+        const error = "Validation error: Recipients array is required and cannot be empty";
+        console.error(error);
+        return new Response(
+          JSON.stringify({ success: false, error }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+        );
+      }
       
       // Generate the dynamic workshop email if not provided
       const fromEmail = options.from_email || generateWorkshopEmail(workshopName);
       
-      // Prepare payload
-      const payload = {
-        personalizations: recipients.map(recipient => ({
-          to: [{ email: recipient.email, name: recipient.name }],
-          subject: options.subject,
-          dynamic_template_data: options.dynamicTemplateData,
-        })),
-        from: {
-          email: fromEmail,
-          name: options.from_name || workshopName
-        },
-        reply_to: replyToEmail ? { email: replyToEmail } : { email: fromEmail },
-        content: [],
-        template_id: options.templateId,
-      };
-      
-      // Add plain text content if provided
-      if (options.text) {
-        payload.content.push({
-          type: "text/plain",
-          value: options.text,
+      try {
+        // Prepare payload
+        const payload = {
+          personalizations: recipients.map(recipient => ({
+            to: [{ email: recipient.email, name: recipient.name }],
+            subject: options.subject,
+            dynamic_template_data: options.dynamicTemplateData,
+          })),
+          from: {
+            email: fromEmail,
+            name: options.from_name || workshopName
+          },
+          reply_to: replyToEmail ? { email: replyToEmail } : { email: fromEmail },
+          content: [],
+          template_id: options.templateId,
+        };
+        
+        console.log("SendGrid API campaign payload:", JSON.stringify(payload, null, 2));
+        
+        // Add plain text content if provided
+        if (options.text) {
+          payload.content.push({
+            type: "text/plain",
+            value: options.text,
+          });
+        }
+        
+        // Add HTML content if provided
+        if (options.html) {
+          payload.content.push({
+            type: "text/html",
+            value: options.html,
+          });
+        }
+        
+        // Send the request to SendGrid
+        const response = await fetch("https://api.sendgrid.com/v3/mail/send", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${SENDGRID_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
         });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`SendGrid API error: ${response.status} ${errorText}`);
+          throw new Error(`SendGrid API error: ${response.status} ${errorText}`);
+        }
+        
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            messageId: response.headers.get('x-message-id'),
+            recipientCount: recipients.length
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      } catch (error) {
+        console.error("Error sending campaign:", error);
+        return new Response(
+          JSON.stringify({ success: false, error: error.message }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+        );
       }
-      
-      // Add HTML content if provided
-      if (options.html) {
-        payload.content.push({
-          type: "text/html",
-          value: options.html,
-        });
-      }
-      
-      // Send the request to SendGrid
-      const response = await fetch("https://api.sendgrid.com/v3/mail/send", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${SENDGRID_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`SendGrid API error: ${response.status} ${errorText}`);
-      }
-      
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          messageId: response.headers.get('x-message-id'),
-          recipientCount: recipients.length
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
     }
     
     // Handle analytics request
