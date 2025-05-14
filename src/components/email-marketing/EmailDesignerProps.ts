@@ -1,5 +1,5 @@
 
-// EmailDesigner props separated into its own file for better organization
+// EmailDesignerProps type definition
 export interface EmailDesignerProps {
   initialTemplate?: {
     name: string;
@@ -11,7 +11,7 @@ export interface EmailDesignerProps {
   onCancel?: () => void;
 }
 
-// EmailTesting props
+// EmailTestingProps type definition
 export interface EmailTestingProps {
   emailSubject: string;
   emailContent: string;

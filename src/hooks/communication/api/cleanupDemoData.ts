@@ -17,28 +17,6 @@ export const cleanupDemoData = async (userId: string): Promise<void> => {
       console.error("Error cleaning up demo email templates:", templateError);
     }
     
-    // Find and delete demo email campaigns
-    const { error: campaignError } = await supabase
-      .from('email_campaigns')
-      .delete()
-      .eq('user_id', userId)
-      .ilike('name', '%Demo%');
-    
-    if (campaignError) {
-      console.error("Error cleaning up demo email campaigns:", campaignError);
-    }
-    
-    // Find and delete demo email automations
-    const { error: automationError } = await supabase
-      .from('email_automations')
-      .delete()
-      .eq('user_id', userId)
-      .ilike('name', '%Demo%');
-    
-    if (automationError) {
-      console.error("Error cleaning up demo email automations:", automationError);
-    }
-    
     console.log("Demo email marketing data cleanup completed");
   } catch (error) {
     console.error("Error in demo data cleanup:", error);

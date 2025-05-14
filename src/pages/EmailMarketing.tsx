@@ -7,8 +7,7 @@ import {
   TabsTrigger 
 } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Mail, FileText, Clock, BarChart3, Settings, Plus, Edit } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Mail, FileText, Clock, BarChart3, Plus, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import EmailCampaignBuilder from "@/components/email-marketing/EmailCampaignBuilder";
 import EmailTemplateList from "@/components/email-marketing/EmailTemplateList";
@@ -18,10 +17,9 @@ import EmailCampaignHistory from "@/components/email-marketing/EmailCampaignHist
 import { useEmailMarketing } from "@/components/email-marketing/useEmailMarketing";
 import { EmailErrorProvider, EmailErrorDisplay } from "@/components/email-marketing/EmailErrorProvider";
 import { useNavigate } from "react-router-dom";
-import SendgridConfig from "@/components/email-marketing/SendgridConfig";
 
 const EmailMarketing = () => {
-  const [activeTab, setActiveTab] = useState("campaigns");
+  const [activeTab, setActiveTab] = useState("templates");
   const navigate = useNavigate();
   
   const { 
@@ -33,51 +31,16 @@ const EmailMarketing = () => {
     createCampaign,
     createTemplate,
     createAutomation,
-    isEmailConfigured,
-    exportAnalytics,
     sendTestEmail,
-    saveSendgridConfig,
-    testSendgridConnection
+    exportAnalytics
   } = useEmailMarketing();
 
   // Handle navigation to email designer
   const handleDesignEmail = () => {
-    // Navigate to the email designer page for campaigns
-    navigate("/email-designer/campaign");
-  };
-  
-  // Handle navigation to template designer
-  const handleDesignTemplate = () => {
+    // Navigate to the template designer page
     navigate("/email-designer/template");
   };
 
-  // Check if SendGrid is configured and show setup notice if needed
-  if (!isEmailConfigured) {
-    return (
-      <div className="container mx-auto py-6">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold tracking-tight mb-2">Email Marketing</h1>
-          <p className="text-muted-foreground">
-            Send professional email campaigns to your customers
-          </p>
-        </div>
-        
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 text-center">
-          <h2 className="text-lg font-medium text-amber-800 mb-2">SendGrid Integration Required</h2>
-          <p className="text-amber-700 mb-4">
-            To use email marketing features, you need to configure your SendGrid integration.
-          </p>
-          <Button 
-            onClick={() => setActiveTab("settings")}
-            className="bg-amber-600 hover:bg-amber-700"
-          >
-            Set Up SendGrid Integration
-          </Button>
-        </div>
-      </div>
-    );
-  }
-  
   return (
     <EmailErrorProvider>
       <div className="container mx-auto py-6 space-y-6">
@@ -90,19 +53,11 @@ const EmailMarketing = () => {
           </div>
           <div className="flex gap-2">
             <Button
-              variant="outline"
-              onClick={() => setActiveTab("settings")}
-              className="flex items-center gap-2"
-            >
-              <Settings className="h-4 w-4" />
-              Settings
-            </Button>
-            <Button
               onClick={handleDesignEmail}
               className="flex items-center gap-2"
             >
               <Plus className="h-4 w-4" />
-              Create Campaign
+              Create Template
             </Button>
           </div>
         </div>
@@ -111,14 +66,14 @@ const EmailMarketing = () => {
         <EmailErrorDisplay />
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-5 mb-6">
-            <TabsTrigger value="campaigns" className="flex items-center gap-2">
-              <Mail className="h-4 w-4" />
-              <span>Campaigns</span>
-            </TabsTrigger>
+          <TabsList className="grid w-full grid-cols-4 mb-6">
             <TabsTrigger value="templates" className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
               <span>Templates</span>
+            </TabsTrigger>
+            <TabsTrigger value="campaigns" className="flex items-center gap-2">
+              <Mail className="h-4 w-4" />
+              <span>Campaigns</span>
             </TabsTrigger>
             <TabsTrigger value="automations" className="flex items-center gap-2">
               <Clock className="h-4 w-4" />
@@ -128,11 +83,37 @@ const EmailMarketing = () => {
               <BarChart3 className="h-4 w-4" />
               <span>Analytics</span>
             </TabsTrigger>
-            <TabsTrigger value="settings" className="flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              <span>Settings</span>
-            </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="templates" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle>Email Templates</CardTitle>
+                    <CardDescription>
+                      Manage and create reusable email templates
+                    </CardDescription>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    onClick={handleDesignEmail}
+                    className="flex items-center gap-2"
+                  >
+                    <Edit className="h-4 w-4" /> Design Template
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <EmailTemplateList 
+                  templates={templates} 
+                  isLoading={isLoading}
+                  onSave={createTemplate}
+                  onTestEmail={sendTestEmail}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           <TabsContent value="campaigns" className="space-y-6">
             <Card>
@@ -143,15 +124,6 @@ const EmailMarketing = () => {
                     <CardDescription>
                       Create and send email campaigns to your customers
                     </CardDescription>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      onClick={handleDesignEmail}
-                      className="flex items-center gap-2"
-                    >
-                      <Edit className="h-4 w-4" /> Design Email
-                    </Button>
                   </div>
                 </div>
               </CardHeader>
@@ -174,36 +146,6 @@ const EmailMarketing = () => {
                 <EmailCampaignBuilder 
                   templates={templates}
                   onSave={createCampaign}
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="templates" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <div className="flex justify-between items-center">
-                  <div>
-                    <CardTitle>Email Templates</CardTitle>
-                    <CardDescription>
-                      Manage and create reusable email templates
-                    </CardDescription>
-                  </div>
-                  <Button 
-                    variant="outline" 
-                    onClick={handleDesignTemplate}
-                    className="flex items-center gap-2"
-                  >
-                    <Edit className="h-4 w-4" /> Design Template
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <EmailTemplateList 
-                  templates={templates} 
-                  isLoading={isLoading}
-                  onSave={createTemplate}
-                  onTestEmail={sendTestEmail}
                 />
               </CardContent>
             </Card>
@@ -248,23 +190,6 @@ const EmailMarketing = () => {
                   analytics={analytics}
                   isLoading={isLoading}
                   exportAnalytics={exportAnalytics}
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="settings" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Email Settings</CardTitle>
-                <CardDescription>
-                  Configure your SendGrid integration and email preferences
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <SendgridConfig 
-                  onSaveConfig={saveSendgridConfig}
-                  onTestConnection={testSendgridConnection}
                 />
               </CardContent>
             </Card>

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { EmailCampaignBuilderProps } from "./types";
 import {
@@ -17,158 +18,138 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useSendgridEmail } from "@/hooks/email/useSendgridEmail";
 import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 
-interface FormData {
-  name: string;
-  subject: string;
-  template_id: string;
-  content: string;
-  recipient_segments: string[];
-  scheduled_for: string;
-  schedule: boolean;
-  testEmail: string;
-}
+// Form validation schema
+const campaignSchema = z.object({
+  name: z.string().min(1, "Campaign name is required"),
+  subject: z.string().min(1, "Subject line is required"),
+  template_id: z.string().min(1, "Please select a template"),
+  recipientSegment: z.enum(["all", "segment1", "segment2"]),
+  schedule: z.boolean().default(false),
+  scheduled_for: z.string().optional(),
+  testEmail: z.string().email("Invalid email address").optional().or(z.literal(""))
+});
+
+type CampaignFormData = z.infer<typeof campaignSchema>;
 
 const EmailCampaignBuilder: React.FC<EmailCampaignBuilderProps> = ({ templates, onSave }) => {
   const [date, setDate] = useState<Date>();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSendingTest, setIsSendingTest] = useState(false);
   const { toast } = useToast();
-  const { sendEmail, getWorkshopEmail } = useSendgridEmail();
-  const workshopEmail = getWorkshopEmail("Your Workshop");
 
-  const form = useForm<FormData>({
+  const form = useForm<CampaignFormData>({
+    resolver: zodResolver(campaignSchema),
     defaultValues: {
       name: "",
       subject: "",
       template_id: "",
-      content: "",
-      recipient_segments: ["all"],
-      scheduled_for: "",
+      recipientSegment: "all",
       schedule: false,
+      scheduled_for: "",
       testEmail: ""
     }
   });
 
   const { watch, setValue } = form;
-  const formValues = watch();
+  const selectedTemplateId = watch("template_id");
+  const scheduleEnabled = watch("schedule");
 
+  // Find the selected template
+  const selectedTemplate = templates.find(t => t.id === selectedTemplateId);
+
+  // Update subject when template changes
+  useEffect(() => {
+    if (selectedTemplate) {
+      setValue("subject", selectedTemplate.subject);
+    }
+  }, [selectedTemplate, setValue]);
+
+  // Update scheduled date when date picker changes
   useEffect(() => {
     if (date) {
       setValue("scheduled_for", format(date, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"));
     }
   }, [date, setValue]);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setValue(name as keyof FormData, value);
-  };
-
-  const handleSelectChange = (e: string) => {
-    setValue("template_id", e);
-  };
-
-  const handleSegmentChange = (e: string[]) => {
-    setValue("recipient_segments", e);
-  };
-
-  const handleScheduleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setValue("schedule", e.target.checked);
-  };
-
-  // Send a test email
-  const sendTestEmail = async () => {
-    if (!formValues.testEmail) return;
-    
-    setIsSendingTest(true);
-    try {
-      // Get the content from the selected template
-      const selectedTemplate = templates.find(t => t.id === formValues.template_id);
-      if (!selectedTemplate) throw new Error("Template not found");
-      
-      // Process template placeholders for preview
-      const processedContent = selectedTemplate.content
-        .replace(/{{customer_name}}/g, "Test Recipient")
-        .replace(/{{vehicle}}/g, "Test Vehicle")
-        .replace(/{{service_date}}/g, format(new Date(), "MMMM d, yyyy"))
-        .replace(/{{workshop_name}}/g, "Your Workshop")
-        .replace(/{{service_type}}/g, "Test Service")
-        .replace(/{{expiry_date}}/g, format(new Date(new Date().setDate(new Date().getDate() + 30)), "MMMM d, yyyy"));
-      
-      // Send test email
-      const result = await sendEmail(formValues.testEmail, {
-        subject: `${formValues.subject} [TEST]`,
-        html: processedContent,
-        text: processedContent.replace(/<[^>]*>/g, ' '), // Simple HTML to text conversion
-        to: formValues.testEmail // Added the required "to" property
-      });
-      
-      if (!result.success) {
-        throw new Error(result.error?.message || "Failed to send test email");
-      }
-    } catch (error) {
-      console.error("Error sending test email:", error);
-    } finally {
-      setIsSendingTest(false);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formValues.name || !formValues.subject || !formValues.template_id) return;
-    
+  
+  const handleSubmit = async (formData: CampaignFormData) => {
     setIsSubmitting(true);
     
     try {
-      const audienceType = formValues.recipient_segments.includes("all") ? "all" : "segment";
+      if (!selectedTemplate) {
+        toast({
+          title: "Template not found",
+          description: "Please select a valid email template",
+          variant: "destructive"
+        });
+        return;
+      }
       
       const campaignData = {
-        name: formValues.name,
-        subject: formValues.subject,
-        template_id: formValues.template_id,
-        content: formValues.content,
-        recipient_segments: formValues.recipient_segments,
-        scheduled_for: formValues.schedule ? formValues.scheduled_for : undefined,
-        from_email: workshopEmail, 
-        sendImmediately: !formValues.schedule,
-        audienceType: audienceType as "all" | "segment" // Type assertion to fix the error
+        name: formData.name,
+        subject: formData.subject,
+        template_id: formData.template_id,
+        content: selectedTemplate.content,
+        scheduled_for: formData.schedule ? formData.scheduled_for : undefined,
+        audienceType: formData.recipientSegment === "all" ? "all" : "segment",
+        sendImmediately: !formData.schedule,
+        segmentIds: formData.recipientSegment !== "all" ? [formData.recipientSegment] : undefined
       };
       
       const success = await onSave(campaignData);
       
       if (success) {
+        toast({
+          title: "Campaign created",
+          description: formData.schedule ? "Your campaign has been scheduled" : "Your campaign is being sent",
+        });
+        
         form.reset({
           name: "",
           subject: "",
           template_id: "",
-          content: "",
-          recipient_segments: ["all"],
-          scheduled_for: "",
+          recipientSegment: "all",
           schedule: false,
+          scheduled_for: "",
           testEmail: ""
         });
         setDate(undefined);
       }
     } catch (error) {
       console.error("Error creating campaign:", error);
+      toast({
+        title: "Failed to create campaign",
+        description: "Please try again later",
+        variant: "destructive"
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  if (templates.length === 0 && !isSubmitting) {
+    return (
+      <div className="text-center py-8">
+        <p className="mb-4">You need to create at least one template before creating a campaign.</p>
+        <Button onClick={() => window.location.href = "/email-designer/template"}>
+          Create Your First Template
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <Form {...form}>
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
         <FormField
           control={form.control}
           name="name"
@@ -176,21 +157,7 @@ const EmailCampaignBuilder: React.FC<EmailCampaignBuilderProps> = ({ templates, 
             <FormItem>
               <FormLabel>Campaign Name</FormLabel>
               <FormControl>
-                <Input placeholder="My First Campaign" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="subject"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Subject</FormLabel>
-              <FormControl>
-                <Input placeholder="Special offer inside!" {...field} />
+                <Input placeholder="Spring Service Special" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -202,8 +169,8 @@ const EmailCampaignBuilder: React.FC<EmailCampaignBuilderProps> = ({ templates, 
           name="template_id"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Template</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <FormLabel>Select Template</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select a template" />
@@ -224,12 +191,12 @@ const EmailCampaignBuilder: React.FC<EmailCampaignBuilderProps> = ({ templates, 
 
         <FormField
           control={form.control}
-          name="content"
+          name="subject"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Content</FormLabel>
+              <FormLabel>Subject Line</FormLabel>
               <FormControl>
-                <Textarea placeholder="Write your email content here." {...field} />
+                <Input placeholder="Special offer inside!" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -238,19 +205,14 @@ const EmailCampaignBuilder: React.FC<EmailCampaignBuilderProps> = ({ templates, 
 
         <FormField
           control={form.control}
-          name="recipient_segments"
+          name="recipientSegment"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Recipients</FormLabel>
-              <Select
-                onValueChange={(value) => {
-                  field.onChange([value]);
-                }}
-                defaultValue={field.value[0]}
-              >
+              <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a recipient segment" />
+                    <SelectValue />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
@@ -264,94 +226,69 @@ const EmailCampaignBuilder: React.FC<EmailCampaignBuilderProps> = ({ templates, 
           )}
         />
 
-        <div className="flex items-center space-x-2">
-          <FormField
-            control={form.control}
-            name="schedule"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                <FormControl>
-                  <Input
-                    type="checkbox"
-                    checked={field.value}
-                    onChange={field.onChange}
-                  />
-                </FormControl>
-                <FormLabel className="font-normal">Schedule Campaign</FormLabel>
-              </FormItem>
-            )}
-          />
-
-          {formValues.schedule && (
-            <FormField
-              control={form.control}
-              name="scheduled_for"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Scheduled Date</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant={"outline"}
-                        className={cn(
-                          "w-[240px] pl-3 text-left font-normal",
-                          !date && "text-muted-foreground"
-                        )}
-                      >
-                        {date ? format(date, "PPP") : <span>Pick a date</span>}
-                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={date}
-                        onSelect={setDate}
-                        disabled={(date) =>
-                          date < new Date()
-                        }
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          )}
-        </div>
-
         <FormField
           control={form.control}
-          name="testEmail"
+          name="schedule"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>Send Test Email To</FormLabel>
+            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
               <FormControl>
-                <Input placeholder="test@example.com" {...field} />
+                <input
+                  type="checkbox"
+                  checked={field.value}
+                  onChange={(e) => field.onChange(e.target.checked)}
+                  className="h-4 w-4 mt-1"
+                />
               </FormControl>
-              <FormMessage />
+              <div>
+                <FormLabel className="font-medium">Schedule Campaign</FormLabel>
+                <p className="text-sm text-muted-foreground">
+                  Select a future date and time to send this campaign
+                </p>
+              </div>
             </FormItem>
           )}
         />
 
-        <div className="flex justify-between">
-          <Button 
-            type="button" 
-            variant="secondary"
-            onClick={sendTestEmail}
-            disabled={isSendingTest}
-          >
-            {isSendingTest ? "Sending..." : "Send Test Email"}
+        {scheduleEnabled && (
+          <FormField
+            control={form.control}
+            name="scheduled_for"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>Scheduled Date</FormLabel>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-[240px] pl-3 text-left font-normal",
+                        !date && "text-muted-foreground"
+                      )}
+                    >
+                      {date ? format(date, "PPP") : <span>Pick a date</span>}
+                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={date}
+                      onSelect={setDate}
+                      disabled={(date) => date < new Date()}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+
+        <div className="flex justify-end space-x-2 pt-4">
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Creating..." : scheduleEnabled ? "Schedule Campaign" : "Send Campaign"}
           </Button>
-          <div className="flex space-x-2">
-            <Button type="submit" variant="outline" disabled={isSubmitting}>
-              Save as Draft
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Submitting..." : "Send Campaign"}
-            </Button>
-          </div>
         </div>
       </form>
     </Form>

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -16,10 +16,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { AlertCircle, Check, Smartphone, Mail, AlertTriangle, Info } from "lucide-react";
+import { AlertCircle, Check, Smartphone, Mail, AlertTriangle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Badge } from "@/components/ui/badge";
 
 interface EmailTestingProps {
   emailSubject: string;
@@ -80,7 +79,7 @@ const EmailTesting: React.FC<EmailTestingProps> = ({
   };
 
   // Update local state when prop changes
-  useEffect(() => {
+  React.useEffect(() => {
     if (isOpen !== undefined && isOpen !== open) {
       setOpen(isOpen);
     }
@@ -260,11 +259,6 @@ const EmailTesting: React.FC<EmailTestingProps> = ({
                   </div>
                   <div>
                     <div className="text-sm font-medium">{client.name}</div>
-                    {client.popular && (
-                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
-                        Popular
-                      </Badge>
-                    )}
                   </div>
                 </div>
               ))}
@@ -421,30 +415,6 @@ const EmailTesting: React.FC<EmailTestingProps> = ({
                   </div>
                 </div>
               </div>
-
-              <div className="border rounded-md p-4">
-                <h3 className="font-medium mb-2">Deliverability Tips</h3>
-                <div className="space-y-2">
-                  <div className="flex items-start gap-2">
-                    <Info className="h-4 w-4 text-blue-500 mt-0.5" />
-                    <p className="text-sm">
-                      <span className="font-medium">Warm up your domain:</span> When starting email marketing, gradually increase sending volume
-                    </p>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Info className="h-4 w-4 text-blue-500 mt-0.5" />
-                    <p className="text-sm">
-                      <span className="font-medium">SPF, DKIM, DMARC:</span> Ensure these email authentication standards are set up correctly
-                    </p>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Info className="h-4 w-4 text-blue-500 mt-0.5" />
-                    <p className="text-sm">
-                      <span className="font-medium">Clean your lists:</span> Regularly remove inactive subscribers to maintain good sending reputation
-                    </p>
-                  </div>
-                </div>
-              </div>
             </div>
           ) : (
             <div className="text-center py-8">
@@ -458,16 +428,6 @@ const EmailTesting: React.FC<EmailTestingProps> = ({
 
   return (
     <>
-      <Button
-        type="button"
-        variant="outline"
-        onClick={() => handleOpenChange(true)}
-        className="flex items-center gap-2"
-      >
-        <Mail className="h-4 w-4" />
-        Test Send & Preview
-      </Button>
-
       <Dialog open={open} onOpenChange={handleOpenChange}>
         {dialogContent}
       </Dialog>

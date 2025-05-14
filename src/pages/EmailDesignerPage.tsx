@@ -1,8 +1,7 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import EmailDesigner from '@/components/email-marketing/EmailDesigner';
-import { useEmailTemplates } from '@/hooks/email/useEmailTemplates';
 import { useEmailMarketing } from '@/components/email-marketing/useEmailMarketing';
 import { useToast } from '@/hooks/use-toast';
 
@@ -11,8 +10,7 @@ const EmailDesignerPage = () => {
   const { mode, id } = useParams<{ mode: 'template' | 'campaign'; id?: string }>();
   const { toast } = useToast();
   
-  const { templates, createTemplate } = useEmailTemplates();
-  const { createCampaign } = useEmailMarketing();
+  const { templates, createTemplate, createCampaign } = useEmailMarketing();
   
   // Find template if editing an existing one
   const initialTemplate = id ? templates.find(t => t.id === id) : undefined;
@@ -21,14 +19,18 @@ const EmailDesignerPage = () => {
     try {
       if (mode === 'template') {
         // Call createTemplate with the correct parameters
-        const templateId = await createTemplate({
+        const success = await createTemplate({
           name: template.name,
           subject: template.subject,
           content: template.content,
           category: 'other'  // Default category
         });
         
-        return !!templateId;
+        if (success) {
+          navigate("/email-marketing");
+        }
+        
+        return success;
       } else {
         // Handle campaign creation
         const success = await createCampaign({
@@ -39,6 +41,10 @@ const EmailDesignerPage = () => {
           sendImmediately: false, // Default to not sending immediately
           template_id: undefined // Not using a template directly
         });
+        
+        if (success) {
+          navigate("/email-marketing");
+        }
         
         return success;
       }
