@@ -1,10 +1,14 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, lazy, Suspense } from "react";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
+
+// Dynamically import the email editor component
+const EmailEditor = lazy(() => import('react-email-editor').then(module => ({ default: module.default })));
 
 interface EmailDesignerProps {
   initialTemplate?: {
@@ -28,11 +32,12 @@ const EmailDesigner: React.FC<EmailDesignerProps> = ({
   const [subject, setSubject] = useState(initialTemplate?.subject || '');
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('design');
+  const [editorLoaded, setEditorLoaded] = useState(false);
   const { toast } = useToast();
   
   // Load template into editor when available
   useEffect(() => {
-    if (initialTemplate?.content && emailEditorRef.current?.editor) {
+    if (initialTemplate?.content && emailEditorRef.current?.editor && editorLoaded) {
       try {
         // Try loading as JSON design
         const contentObj = JSON.parse(initialTemplate.content);
@@ -47,7 +52,7 @@ const EmailDesigner: React.FC<EmailDesignerProps> = ({
         console.log("Loaded as HTML instead of JSON design", e);
       }
     }
-  }, [initialTemplate, emailEditorRef.current?.editor]);
+  }, [initialTemplate, editorLoaded]);
   
   const saveTemplate = async () => {
     if (!name || !subject) {
@@ -109,6 +114,10 @@ const EmailDesigner: React.FC<EmailDesignerProps> = ({
       onCancel();
     }
   };
+
+  const handleEditorReady = () => {
+    setEditorLoaded(true);
+  };
   
   return (
     <div className="space-y-4">
@@ -141,44 +150,41 @@ const EmailDesigner: React.FC<EmailDesignerProps> = ({
         </TabsList>
         
         <TabsContent value="design" className="border rounded-md p-1 min-h-[600px]">
-          {/* Using dynamic import for EmailEditor to ensure it works properly */}
           <div id="emailEditorContainer" className="h-[600px]">
-            {typeof window !== 'undefined' && (
-              React.createElement(
-                require('react-email-editor').default,
-                {
-                  ref: emailEditorRef,
-                  minHeight: "600px",
-                  options: {
-                    features: {
-                      textEditor: {
-                        tables: true
-                      }
-                    },
-                    appearance: {
-                      theme: 'light',
-                      panels: {
-                        tools: {
-                          dock: 'left'
-                        }
-                      }
-                    },
-                    customCSS: [
-                      'https://fonts.googleapis.com/css?family=Roboto:300,400,500,700'
-                    ]
+            <Suspense fallback={<Skeleton className="w-full h-[600px]" />}>
+              <EmailEditor
+                ref={emailEditorRef}
+                onReady={handleEditorReady}
+                minHeight="600px"
+                options={{
+                  features: {
+                    textEditor: {
+                      tables: true
+                    }
                   },
-                  tools: {
-                    image: {
-                      properties: {
-                        src: {
-                          value: 'https://www.workshopbase.com.au/logo.png'
-                        }
+                  appearance: {
+                    theme: 'light',
+                    panels: {
+                      tools: {
+                        dock: 'left'
+                      }
+                    }
+                  },
+                  customCSS: [
+                    'https://fonts.googleapis.com/css?family=Roboto:300,400,500,700'
+                  ]
+                }}
+                tools={{
+                  image: {
+                    properties: {
+                      src: {
+                        value: 'https://www.workshopbase.com.au/logo.png'
                       }
                     }
                   }
-                }
-              )
-            )}
+                }}
+              />
+            </Suspense>
           </div>
         </TabsContent>
         
@@ -194,7 +200,7 @@ const EmailDesigner: React.FC<EmailDesignerProps> = ({
                 title="Email Preview"
                 srcDoc=""
                 ref={(frame) => {
-                  if (frame && emailEditorRef.current?.editor) {
+                  if (frame && emailEditorRef.current?.editor && editorLoaded) {
                     emailEditorRef.current.editor.exportHtml((data: any) => {
                       frame.srcdoc = data.html;
                     });
@@ -217,7 +223,7 @@ const EmailDesigner: React.FC<EmailDesignerProps> = ({
                   readOnly
                   id="html-code-display"
                   ref={(textarea) => {
-                    if (textarea && emailEditorRef.current?.editor) {
+                    if (textarea && emailEditorRef.current?.editor && editorLoaded) {
                       emailEditorRef.current.editor.exportHtml((data: any) => {
                         textarea.value = data.html;
                       });
