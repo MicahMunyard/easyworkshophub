@@ -43,7 +43,9 @@ export interface EmailAutomation {
   status: 'active' | 'paused' | 'draft';
   created_at: string;
   next_run?: string;
+  last_run?: string;
   frequency?: 'daily' | 'weekly' | 'monthly' | 'custom';
+  updated_at?: string;
 }
 
 export interface EmailAnalytic {
@@ -57,6 +59,10 @@ export interface EmailAnalytic {
   bounces: number;
   spam_reports: number;
   unsubscribes: number;
+  sent_count?: number;
+  open_count?: number;
+  click_count?: number;
+  date?: string;
 }
 
 export interface EmailTemplateListProps {
@@ -132,4 +138,20 @@ export interface SendgridEmailOptions {
 export interface EmailRecipient {
   email: string;
   name?: string;
+}
+
+// Add the missing SendgridConfig related types
+export interface SendgridFormValues {
+  apiKey: string;
+  senderName: string;
+  senderEmail: string;
+  replyToEmail?: string;
+  enableTracking: boolean;
+  enableUnsubscribeFooter: boolean;
+}
+
+export interface SendgridConfigProps {
+  onSaveConfig: (data: SendgridFormValues) => Promise<boolean>;
+  onTestConnection: () => Promise<{ success: boolean; message: string }>;
+  existingConfig?: SendgridFormValues & { isConfigured?: boolean };
 }
