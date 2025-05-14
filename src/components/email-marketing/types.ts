@@ -1,4 +1,5 @@
 
+// Email marketing types
 export interface EmailTemplate {
   id: string;
   name: string;
@@ -14,6 +15,7 @@ export interface EmailCampaign {
   id: string;
   name: string;
   subject: string;
+  content?: string;
   template_id?: string;
   scheduled_for?: string;
   sent_at?: string;
@@ -22,9 +24,9 @@ export interface EmailCampaign {
   open_rate?: number;
   click_rate?: number;
   created_at: string;
-  audienceType: 'all' | 'segment';
-  sendImmediately: boolean;
-  segmentIds?: string[];
+  audience_type: 'all' | 'segment';
+  send_immediately?: boolean;
+  segment_ids?: string[];
 }
 
 export interface EmailAutomation {
@@ -69,23 +71,65 @@ export interface EmailCampaignBuilderProps {
   onSave: (campaign: Omit<EmailCampaign, 'id' | 'created_at' | 'status' | 'recipient_count' | 'open_rate' | 'click_rate' | 'sent_at'>) => Promise<boolean>;
 }
 
+export interface EmailCampaignHistoryProps {
+  campaigns: EmailCampaign[];
+  isLoading: boolean;
+}
+
 export interface EmailAnalyticsProps {
   analytics: EmailAnalytic[];
   isLoading: boolean;
   exportAnalytics?: (format: 'csv' | 'pdf') => Promise<void>;
 }
 
-export interface SendgridFormValues {
-  apiKey: string;
-  senderName: string;
-  senderEmail: string;
-  replyToEmail?: string;
-  enableTracking: boolean;
-  enableUnsubscribeFooter: boolean;
+export interface EmailAutomationProps {
+  automations: EmailAutomation[];
+  templates: EmailTemplate[];
+  isLoading: boolean;
+  onSave: (automation: Omit<EmailAutomation, 'id' | 'created_at'>) => Promise<boolean>;
 }
 
-export interface SendgridConfigProps {
-  onSaveConfig: (config: SendgridFormValues) => Promise<boolean>;
-  onTestConnection: () => Promise<{ success: boolean; message: string }>;
-  existingConfig?: SendgridFormValues & { isConfigured?: boolean };
+export interface EmailDesignerProps {
+  initialTemplate?: {
+    name: string;
+    subject: string;
+    content: string;
+  };
+  onSave: (template: { name: string; subject: string; content: string }) => Promise<boolean>;
+  mode: 'template' | 'campaign';
+  onCancel?: () => void;
+}
+
+export interface EmailTestingProps {
+  emailSubject: string;
+  emailContent: string;
+  onSendTest: (recipients: string[], options: any) => Promise<{ success: boolean; message?: string }>;
+  isSubmitting: boolean;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+
+// SendGrid specific types
+export interface SendgridEmailOptions {
+  to: string | string[];
+  subject: string;
+  text?: string;
+  html?: string;
+  from_email?: string;
+  from_name?: string;
+  reply_to?: string;
+  attachments?: Array<{
+    content: string;
+    filename: string;
+    type: string;
+    disposition: string;
+  }>;
+  template_id?: string;
+  dynamic_template_data?: Record<string, any>;
+  categories?: string[];
+}
+
+export interface EmailRecipient {
+  email: string;
+  name?: string;
 }

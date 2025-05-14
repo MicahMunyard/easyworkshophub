@@ -34,17 +34,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CalendarIcon, Clock, Mail, Plus, RotateCw, Calendar as CalendarIcon2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { EmailTemplate, EmailAutomation } from "./types";
+import { EmailTemplate, EmailAutomation, EmailAutomationProps } from "./types";
 import { useToast } from "@/hooks/use-toast";
 
-interface EmailAutomationsProps {
-  automations: EmailAutomation[];
-  templates: EmailTemplate[];
-  isLoading: boolean;
-  onSave: (automation: Omit<EmailAutomation, 'id' | 'created_at'>) => Promise<boolean>;
-}
-
-const EmailAutomations: React.FC<EmailAutomationsProps> = ({ 
+const EmailAutomations: React.FC<EmailAutomationProps> = ({ 
   automations, 
   templates, 
   isLoading, 
@@ -100,7 +93,7 @@ const EmailAutomations: React.FC<EmailAutomationsProps> = ({
         template_id: selectedTemplate,
         status: "draft",
         frequency: frequency,
-        updated_at: new Date().toISOString(),
+        next_run: date ? date.toISOString() : undefined
       };
 
       const success = await onSave(newAutomation);
@@ -127,7 +120,7 @@ const EmailAutomations: React.FC<EmailAutomationsProps> = ({
     switch (status) {
       case "active":
         return "bg-green-100 text-green-800 border-green-200";
-      case "inactive":
+      case "paused":
         return "bg-amber-100 text-amber-800 border-amber-200";
       case "draft":
         return "bg-blue-100 text-blue-800 border-blue-200";
@@ -255,11 +248,9 @@ const EmailAutomations: React.FC<EmailAutomationsProps> = ({
                       
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <p className="text-sm font-medium">Last Run</p>
+                          <p className="text-sm font-medium">Created</p>
                           <p className="text-sm text-muted-foreground">
-                            {automation.last_run 
-                              ? format(new Date(automation.last_run), "PPP") 
-                              : "Never run"}
+                            {format(new Date(automation.created_at), "PPP")}
                           </p>
                         </div>
                         <div>

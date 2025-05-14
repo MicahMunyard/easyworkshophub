@@ -98,11 +98,10 @@ const EmailCampaignBuilder: React.FC<EmailCampaignBuilderProps> = ({ templates, 
         name: formData.name,
         subject: formData.subject,
         template_id: formData.template_id,
-        content: selectedTemplate.content,
         scheduled_for: formData.schedule ? formData.scheduled_for : undefined,
-        audienceType: formData.recipientSegment === "all" ? "all" : "segment",
-        sendImmediately: !formData.schedule,
-        segmentIds: formData.recipientSegment !== "all" ? [formData.recipientSegment] : undefined
+        audience_type: formData.recipientSegment === "all" ? "all" : "segment" as "all" | "segment",
+        send_immediately: !formData.schedule,
+        segment_ids: formData.recipientSegment !== "all" ? [formData.recipientSegment] : undefined
       };
       
       const success = await onSave(campaignData);

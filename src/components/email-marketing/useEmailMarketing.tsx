@@ -4,7 +4,6 @@ import { EmailTemplate, EmailCampaign, EmailAutomation, EmailAnalytic } from "./
 import { useSendgridEmail } from "@/hooks/email/useSendgridEmail";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
-import { cleanupDemoData } from '@/hooks/communication/api/cleanupDemoData';
 import { supabase } from "@/integrations/supabase/client";
 
 export const useEmailMarketing = () => {
@@ -25,9 +24,6 @@ export const useEmailMarketing = () => {
       try {
         if (!user) return;
 
-        // Clean up any existing demo data
-        await cleanupDemoData(user.id);
-        
         // Load real templates
         const { data: templateData, error: templateError } = await supabase
           .from('email_templates')
@@ -140,9 +136,6 @@ export const useEmailMarketing = () => {
         throw new Error("Template not found");
       }
       
-      // Use template content if available
-      const emailContent = template ? template.content : campaign.content;
-      
       // This would be handled by the backend in a real integration
       const newCampaignData: EmailCampaign = {
         id: `campaign-${Date.now()}`,
@@ -150,22 +143,21 @@ export const useEmailMarketing = () => {
         subject: campaign.subject,
         template_id: campaign.template_id,
         scheduled_for: campaign.scheduled_for,
-        status: campaign.sendImmediately ? "sending" : "scheduled",
+        status: campaign.send_immediately ? "sending" : "scheduled",
         recipient_count: 0, // Set by the real system
         created_at: new Date().toISOString(),
-        audienceType: campaign.audienceType,
-        sendImmediately: campaign.sendImmediately,
-        segmentIds: campaign.segmentIds
+        audience_type: campaign.audience_type,
+        segment_ids: campaign.segment_ids
       };
       
       // In a real app, this would be handled by a server endpoint
-      if (campaign.sendImmediately) {
+      if (campaign.send_immediately) {
         // Simulate immediate sending (in a real system, this would be handled by the server)
         setTimeout(() => {
           setCampaigns(prev => {
             const updated = prev.map(c => 
               c.id === newCampaignData.id 
-                ? { ...c, status: 'sent', sent_at: new Date().toISOString() } 
+                ? { ...c, status: 'sent' as 'draft' | 'scheduled' | 'sending' | 'sent' | 'failed', sent_at: new Date().toISOString() } 
                 : c
             );
             return updated;
@@ -177,7 +169,7 @@ export const useEmailMarketing = () => {
       
       toast({
         title: "Campaign created",
-        description: campaign.sendImmediately 
+        description: campaign.send_immediately 
           ? "Your email campaign is being sent" 
           : "Your email campaign has been scheduled",
       });

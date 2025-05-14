@@ -7,8 +7,8 @@ import { EmailAnalytic } from "../types";
  * @returns Formatted open rate percentage as string
  */
 export const calculateOpenRate = (analytics: EmailAnalytic[]): string => {
-  const totalSent = analytics.reduce((sum, item) => sum + item.sent_count, 0);
-  const totalOpens = analytics.reduce((sum, item) => sum + item.open_count, 0);
+  const totalSent = analytics.reduce((sum, item) => sum + item.recipients, 0);
+  const totalOpens = analytics.reduce((sum, item) => sum + item.opens, 0);
   
   return totalSent ? (totalOpens / totalSent * 100).toFixed(1) : "0.0";
 };
@@ -19,8 +19,8 @@ export const calculateOpenRate = (analytics: EmailAnalytic[]): string => {
  * @returns Formatted click rate percentage as string
  */
 export const calculateClickRate = (analytics: EmailAnalytic[]): string => {
-  const totalOpens = analytics.reduce((sum, item) => sum + item.open_count, 0);
-  const totalClicks = analytics.reduce((sum, item) => sum + item.click_count, 0);
+  const totalOpens = analytics.reduce((sum, item) => sum + item.opens, 0);
+  const totalClicks = analytics.reduce((sum, item) => sum + item.clicks, 0);
   
   return totalOpens ? (totalClicks / totalOpens * 100).toFixed(1) : "0.0";
 };
@@ -31,7 +31,7 @@ export const calculateClickRate = (analytics: EmailAnalytic[]): string => {
  * @returns Sum of sent emails
  */
 export const calculateTotalSent = (analytics: EmailAnalytic[]): number => {
-  return analytics.reduce((sum, item) => sum + item.sent_count, 0);
+  return analytics.reduce((sum, item) => sum + item.recipients, 0);
 };
 
 /**
@@ -40,7 +40,7 @@ export const calculateTotalSent = (analytics: EmailAnalytic[]): number => {
  * @returns Sum of opened emails
  */
 export const calculateTotalOpens = (analytics: EmailAnalytic[]): number => {
-  return analytics.reduce((sum, item) => sum + item.open_count, 0);
+  return analytics.reduce((sum, item) => sum + item.opens, 0);
 };
 
 /**
@@ -49,7 +49,7 @@ export const calculateTotalOpens = (analytics: EmailAnalytic[]): number => {
  * @returns Sum of clicked emails
  */
 export const calculateTotalClicks = (analytics: EmailAnalytic[]): number => {
-  return analytics.reduce((sum, item) => sum + item.click_count, 0);
+  return analytics.reduce((sum, item) => sum + item.clicks, 0);
 };
 
 /**
@@ -90,9 +90,9 @@ export const prepareEngagementData = (analytics: EmailAnalytic[]): ChartData[] =
 export const prepareCampaignPerformanceData = (analytics: EmailAnalytic[]): ChartData[] => {
   return analytics.map(item => ({
     name: item.campaign_name,
-    openRate: parseFloat((item.open_count / item.sent_count * 100).toFixed(1)) || 0,
-    clickRate: item.open_count > 0 
-      ? parseFloat((item.click_count / item.open_count * 100).toFixed(1)) || 0
+    openRate: parseFloat(((item.opens / item.recipients) * 100).toFixed(1)) || 0,
+    clickRate: item.opens > 0 
+      ? parseFloat(((item.clicks / item.opens) * 100).toFixed(1)) || 0
       : 0
   }));
 };
@@ -104,9 +104,9 @@ export const prepareCampaignPerformanceData = (analytics: EmailAnalytic[]): Char
  */
 export const prepareCampaignTimelineData = (analytics: EmailAnalytic[]): ChartData[] => {
   return analytics.map(item => ({
-    name: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    sent: item.sent_count,
-    opened: item.open_count,
-    clicked: item.click_count
+    name: new Date(item.sent_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    sent: item.recipients,
+    opened: item.opens,
+    clicked: item.clicks
   }));
 };
