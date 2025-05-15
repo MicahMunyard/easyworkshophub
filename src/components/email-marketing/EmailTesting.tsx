@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +21,7 @@ import {
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-
+import { Label } from "@/components/ui/label";
 import type { EmailTestingProps } from "./types.d";
 
 interface TestEmailFormValues {
@@ -87,10 +88,10 @@ const EmailTesting: React.FC<EmailTestingProps> = ({
 
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
-            <Label htmlFor="email">Recipients</Label>
+            <Label htmlFor="recipients">Recipients</Label>
             <Input
               type="email"
-              id="email"
+              id="recipients"
               name="recipients"
               placeholder="Enter recipient email addresses, separated by commas"
               value={formValues.recipients}
@@ -124,17 +125,3 @@ const EmailTesting: React.FC<EmailTestingProps> = ({
 };
 
 export default EmailTesting;
-
-const Label = React.forwardRef<
-  HTMLLabelElement,
-  React.HTMLAttributes<HTMLLabelElement>
->(({ className, ...props }, ref) => {
-  return (
-    <label
-      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-      {...props}
-      ref={ref}
-    />
-  )
-})
-Label.displayName = "Label"

@@ -161,6 +161,7 @@ export interface SendgridFormValues {
   replyToEmail?: string;
   enableTracking?: boolean;
   enableUnsubscribeFooter?: boolean;
+  isConfigured?: boolean;
 }
 
 export interface SendgridEmailOptions {
