@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +16,7 @@ import { CheckIcon, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-import type { EmailTestingProps } from "./types";
+import type { EmailTestingProps } from "./types.d";
 
 const EmailTesting: React.FC<EmailTestingProps> = ({ 
   emailSubject,
