@@ -5,7 +5,7 @@ import {
   SendgridEmailOptions, 
   EmailRecipient, 
   SendEmailResult 
-} from '@/components/email-marketing/types.d';
+} from '@/components/email-marketing/types';
 
 export function useSendgridEmail() {
   const [isLoading, setIsLoading] = useState(false);
