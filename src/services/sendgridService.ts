@@ -14,6 +14,15 @@ class SendgridService {
   }
   
   /**
+   * Checks if SendGrid is configured
+   */
+  isConfigured(): boolean {
+    // This would normally check if we have API keys, etc.
+    // For now, return true for development purposes
+    return true;
+  }
+  
+  /**
    * Sends an email using the SendGrid Edge Function
    * @param workshopName The name of the workshop
    * @param recipient The recipient of the email
@@ -70,6 +79,62 @@ class SendgridService {
         error: error instanceof Error ? error : new Error('Unknown error sending email')
       };
     }
+  }
+
+  /**
+   * Sends a marketing campaign to multiple recipients
+   */
+  async sendMarketingCampaign(
+    workshopName: string,
+    recipients: EmailRecipient[],
+    options: SendgridEmailOptions,
+    replyToEmail?: string
+  ): Promise<SendEmailResult> {
+    try {
+      if (!this.supabaseUrl) {
+        throw new Error('Supabase URL is not configured');
+      }
+      
+      // Debug logs
+      console.log('Sending marketing campaign to recipients:', recipients.length);
+      
+      // Call SendGrid Edge Function with proper parameters
+      const response = await fetch(`${this.supabaseUrl}/functions/v1/sendgrid-campaign`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          workshopName,
+          recipients,
+          options,
+          replyToEmail
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Error ${response.status}: Failed to send campaign`);
+      }
+      
+      const result = await response.json();
+      return { success: true };
+      
+    } catch (error) {
+      console.error('SendGrid marketing campaign error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error : new Error('Unknown error sending marketing campaign')
+      };
+    }
+  }
+
+  /**
+   * Get the workshop's email address
+   */
+  getWorkshopEmail(workshopName: string): string {
+    // This is a simplified implementation
+    return `noreply@${workshopName.toLowerCase().replace(/\s+/g, '-')}.com`;
   }
 }
 

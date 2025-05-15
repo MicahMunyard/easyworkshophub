@@ -10,6 +10,8 @@ export interface EmailTemplate {
   created_at: string;
   updated_at?: string;
   is_default?: boolean;
+  html?: string;
+  design?: string;
 }
 
 // Email Campaign Types
@@ -20,7 +22,7 @@ export interface EmailCampaign {
   content?: string;
   template_id?: string | null;
   status: "draft" | "scheduled" | "sending" | "sent" | "failed";
-  audience_type: "all" | "segment" | "tag" | "list";
+  audience_type: "all" | "segment";
   audience_filter?: any;
   scheduled_for?: string;
   scheduled_at?: string;
@@ -120,6 +122,10 @@ export interface TestEmailModalProps {
   templateId?: string;
   campaignSubject?: string;
   campaignName?: string;
+  emailSubject?: string;
+  emailContent?: string;
+  onSendTest?: (recipients: string[], options: any) => Promise<{ success: boolean; message?: string }>;
+  isSubmitting?: boolean;
 }
 
 // SendGrid Types
@@ -127,8 +133,8 @@ export interface SendgridConfigProps {
   isConfigured?: boolean;
   onSave?: (values: SendgridFormValues) => Promise<boolean>;
   onTest?: () => Promise<boolean>;
-  onSaveConfig?: (config: SendgridFormValues) => Promise<void>;
-  onTestConnection?: (config: SendgridFormValues) => Promise<{success: boolean; message: string}>;
+  onSaveConfig?: (config: SendgridFormValues) => Promise<boolean>;
+  onTestConnection?: (config?: SendgridFormValues) => Promise<{success: boolean; message: string}>;
   existingConfig?: SendgridFormValues | null;
 }
 
@@ -144,7 +150,7 @@ export interface SendgridFormValues {
 }
 
 export interface SendgridEmailOptions {
-  to: string | string[] | EmailRecipient | EmailRecipient[];
+  to?: string | string[] | EmailRecipient | EmailRecipient[];
   subject: string;
   text?: string;
   html?: string;

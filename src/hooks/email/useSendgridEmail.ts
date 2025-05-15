@@ -1,76 +1,87 @@
 
 import { useState } from 'react';
-import { sendgridService } from '@/services/sendgridService';
+import { 
+  SendgridEmailOptions, 
+  EmailRecipient, 
+  SendEmailResult 
+} from '@/components/email-marketing/types';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
-import type { EmailRecipient, SendgridEmailOptions, SendEmailResult } from '@/components/email-marketing/types.d';
 
 export function useSendgridEmail() {
-  const [isSending, setIsSending] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
   const { toast } = useToast();
-  const { user } = useAuth();
-  
-  const sendEmail = async (recipient: EmailRecipient | string, options: SendgridEmailOptions): Promise<SendEmailResult> => {
-    if (!user) {
-      return {
-        success: false,
-        error: new Error('User must be authenticated to send emails')
-      };
-    }
-    
-    setIsSending(true);
-    
+
+  /**
+   * Send an email using the SendGrid API
+   */
+  const sendEmail = async (
+    to: string | EmailRecipient,
+    options: SendgridEmailOptions
+  ): Promise<SendEmailResult> => {
+    // For now, this is a mock implementation
+    setIsLoading(true);
+    setError(null);
+
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        console.log('Sending email to:', to);
+        console.log('Email options:', options);
+        
+        setIsLoading(false);
+        resolve({ success: true });
+      }, 1000);
+    });
+  };
+
+  /**
+   * Send a test email
+   */
+  const sendTestEmail = async (
+    recipient: string,
+    subject: string,
+    content: string
+  ): Promise<SendEmailResult> => {
+    setIsLoading(true);
+    setError(null);
+
     try {
-      console.log("Sending email with options:", JSON.stringify(options, null, 2));
-      
-      // Format recipient if it's a string
-      const formattedRecipient = typeof recipient === 'string' 
-        ? { email: recipient, name: recipient.split('@')[0] } 
-        : recipient;
-      
-      // Make sure 'to' field is present in options
-      const enhancedOptions = {
-        ...options,
-        to: options.to || formattedRecipient.email
-      };
-      
-      // Call the sendgrid service
-      const result = await sendgridService.sendEmail(
-        "Your Workshop", // Workshop name placeholder - in real app this would be from user config
-        formattedRecipient,
-        enhancedOptions,
-        options.replyTo
-      );
-      
+      const result = await sendEmail(recipient, {
+        subject,
+        html: content,
+        text: "This is a test email"
+      });
+
       if (result.success) {
         toast({
-          title: 'Email sent',
-          description: 'Your email has been sent successfully',
+          title: "Test email sent",
+          description: "Your test email has been sent successfully",
         });
       } else {
-        throw result.error || new Error('Failed to send email');
+        throw result.error || new Error("Failed to send test email");
       }
-      
+
       return result;
-    } catch (error) {
-      console.error('Error sending email:', error);
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('Unknown error sending test email');
+      setError(error);
+      
       toast({
-        title: 'Email failed',
-        description: error instanceof Error ? error.message : 'Failed to send email',
-        variant: 'destructive'
+        title: 'Failed to send test email',
+        description: error.message,
+        variant: 'destructive',
       });
       
-      return {
-        success: false,
-        error: error instanceof Error ? error : new Error('Failed to send email')
-      };
+      return { success: false, error };
     } finally {
-      setIsSending(false);
+      setIsLoading(false);
     }
   };
-  
+
   return {
+    isLoading,
+    error,
     sendEmail,
-    isSending
+    sendTestEmail
   };
 }

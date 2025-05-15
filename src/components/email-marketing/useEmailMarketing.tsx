@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useSendgridEmail } from "@/hooks/email/useSendgridEmail";
@@ -103,6 +102,7 @@ export const useEmailMarketing = () => {
         subject: template.subject,
         content: template.content,
         category: template.category,
+        description: template.description,
         created_at: new Date().toISOString(),
       };
       
@@ -249,6 +249,7 @@ export const useEmailMarketing = () => {
       const result = await sendEmail(
         recipients[0],
         {
+          to: recipients[0],
           subject: options.subject,
           html: options.content,
           text: "This is a test email"

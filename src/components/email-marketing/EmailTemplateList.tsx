@@ -86,10 +86,10 @@ const EmailTemplateList: React.FC<EmailTemplateListProps> = ({
     try {
       const newTemplate: Omit<EmailTemplate, 'id' | 'created_at' | 'updated_at'> = {
         name,
-        description,
         subject,
         content,
         category,
+        description
       };
 
       const success = await onSave(newTemplate);

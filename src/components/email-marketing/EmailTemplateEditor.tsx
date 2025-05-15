@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { EmailTemplate } from "./types";
 import { Button } from "@/components/ui/button";
@@ -48,7 +47,7 @@ const EmailTemplateEditor: React.FC<EmailTemplateEditorProps> = ({
     description: "",
     subject: "",
     content: "",
-    category: "service"
+    category: "service" as "service" | "promotion" | "newsletter" | "reminder" | "other"
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState("editor");
@@ -184,10 +183,10 @@ const EmailTemplateEditor: React.FC<EmailTemplateEditorProps> = ({
     try {
       const success = await onSave({
         name: formData.name,
-        description: formData.description,
         subject: formData.subject,
         content: formData.content,
-        category: formData.category as "service" | "promotion" | "newsletter" | "reminder" | "other"
+        category: formData.category,
+        description: formData.description
       });
       
       if (success) {

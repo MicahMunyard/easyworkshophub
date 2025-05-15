@@ -82,10 +82,10 @@ const EmailAutomations: React.FC<EmailAutomationProps> = ({
     setIsSubmitting(true);
 
     try {
-      const newAutomation: Omit<EmailAutomation, 'id' | 'created_at'> = {
+      const newAutomation: Omit<EmailAutomation, "id" | "created_at"> = {
         name,
         description,
-        trigger_type: triggerType,
+        trigger_type: triggerType as EmailAutomation["trigger_type"],
         trigger_details: {
           event: triggerType === "event" ? selectedEvent : undefined,
           schedule: triggerType === "schedule" ? frequency : undefined,
@@ -93,7 +93,10 @@ const EmailAutomations: React.FC<EmailAutomationProps> = ({
         template_id: selectedTemplate,
         status: "draft",
         frequency: frequency,
-        next_run: date ? date.toISOString() : undefined
+        next_run: date ? date.toISOString() : undefined,
+        is_active: false,
+        audience_type: "all",
+        segment_ids: []
       };
 
       const success = await onSave(newAutomation);

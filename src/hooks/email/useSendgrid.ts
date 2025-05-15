@@ -17,7 +17,7 @@ export function useSendgrid() {
    * Send an email using the current workshop's identity
    */
   const sendEmail = useCallback(async (
-    to: string | EmailRecipient | Array<string | EmailRecipient>,
+    to: string | EmailRecipient,
     options: SendgridEmailOptions
   ): Promise<SendEmailResult> => {
     if (!workshop?.name) {

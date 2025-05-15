@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -49,6 +48,8 @@ import { SendgridFormValues, SendgridConfigProps } from "./types";
 // Form schema with validation
 const sendgridFormSchema = z.object({
   apiKey: z.string().min(1, "API Key is required"),
+  fromName: z.string().min(1, "Sender name is required"),
+  fromEmail: z.string().email("Invalid email address"),
   senderName: z.string().min(1, "Sender name is required"),
   senderEmail: z.string().email("Invalid email address"),
   replyToEmail: z.string().email("Invalid email address").optional(),
@@ -71,6 +72,8 @@ const SendgridConfig: React.FC<SendgridConfigProps> = ({
     resolver: zodResolver(sendgridFormSchema),
     defaultValues: {
       apiKey: existingConfig?.apiKey || "",
+      fromName: existingConfig?.fromName || "",
+      fromEmail: existingConfig?.fromEmail || "",
       senderName: existingConfig?.senderName || "",
       senderEmail: existingConfig?.senderEmail || "",
       replyToEmail: existingConfig?.replyToEmail || "",
@@ -83,11 +86,13 @@ const SendgridConfig: React.FC<SendgridConfigProps> = ({
     if (existingConfig) {
       form.reset({
         apiKey: existingConfig.apiKey || "",
+        fromName: existingConfig.fromName || "",
+        fromEmail: existingConfig.fromEmail || "",
         senderName: existingConfig.senderName || "",
         senderEmail: existingConfig.senderEmail || "",
         replyToEmail: existingConfig.replyToEmail || "",
-        enableTracking: existingConfig.enableTracking,
-        enableUnsubscribeFooter: existingConfig.enableUnsubscribeFooter,
+        enableTracking: existingConfig.enableTracking !== false,
+        enableUnsubscribeFooter: existingConfig.enableUnsubscribeFooter !== false,
       });
     }
   }, [existingConfig, form]);
@@ -99,6 +104,8 @@ const SendgridConfig: React.FC<SendgridConfigProps> = ({
     const values = form.getValues();
     return (
       values.apiKey !== existingConfig.apiKey ||
+      values.fromName !== existingConfig.fromName ||
+      values.fromEmail !== existingConfig.fromEmail ||
       values.senderName !== existingConfig.senderName ||
       values.senderEmail !== existingConfig.senderEmail ||
       values.replyToEmail !== existingConfig.replyToEmail ||
@@ -115,6 +122,8 @@ const SendgridConfig: React.FC<SendgridConfigProps> = ({
 
   // Test the SendGrid connection
   const testConnection = async () => {
+    if (!onTestConnection) return;
+    
     setIsTesting(true);
     setTestResult(null);
     
@@ -133,6 +142,8 @@ const SendgridConfig: React.FC<SendgridConfigProps> = ({
 
   // Submit the form
   const onSubmit = async (data: SendgridFormValues) => {
+    if (!onSaveConfig) return;
+    
     setIsSubmitting(true);
     
     try {
