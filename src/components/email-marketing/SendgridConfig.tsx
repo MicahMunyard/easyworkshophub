@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -43,7 +44,7 @@ import {
   RotateCw
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { SendgridFormValues, SendgridConfigProps } from "./types";
+import { SendgridFormValues, SendgridConfigProps } from "./types.d";
 
 // Form schema with validation
 const sendgridFormSchema = z.object({
