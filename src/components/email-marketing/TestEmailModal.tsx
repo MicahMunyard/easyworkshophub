@@ -22,20 +22,13 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useSendgridEmail } from "@/hooks/email/useSendgridEmail";
+import { TestEmailModalProps } from "./types";
 
 const testEmailSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
 });
 
 type TestEmailFormData = z.infer<typeof testEmailSchema>;
-
-interface TestEmailModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  templateId?: string;
-  campaignSubject?: string;
-  campaignName?: string;
-}
 
 export function TestEmailModal({
   isOpen,
@@ -63,19 +56,26 @@ export function TestEmailModal({
     setIsSending(true);
     
     try {
-      // Make sure to properly pass the email address as the 'to' parameter
-      const result = await sendEmail(
-        { email: data.email, name: "Test Recipient" }, // Explicit email recipient object format
-        {
-          subject: `[TEST] ${campaignSubject || "Email Campaign"}`,
-          templateId: templateId,
-          dynamicTemplateData: {
-            campaign_name: campaignName || "Test Campaign",
-            preview_text: "This is a test email",
-            current_date: new Date().toLocaleDateString(),
-          }
+      // Format the recipient as an EmailRecipient object
+      const recipient = {
+        email: data.email,
+        name: "Test Recipient"
+      };
+      
+      // Create the email options with correct property structure
+      const emailOptions = {
+        to: data.email,
+        subject: `[TEST] ${campaignSubject || "Email Campaign"}`,
+        templateId: templateId,
+        dynamicTemplateData: {
+          campaign_name: campaignName || "Test Campaign",
+          preview_text: "This is a test email",
+          current_date: new Date().toLocaleDateString(),
         }
-      );
+      };
+
+      // Call sendEmail with properly formatted parameters
+      const result = await sendEmail(recipient, emailOptions);
 
       if (result.success) {
         form.reset();

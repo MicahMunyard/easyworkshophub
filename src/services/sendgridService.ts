@@ -1,54 +1,46 @@
 
-import { supabase } from '@/integrations/supabase/client';
-import { generateWorkshopEmail } from '@/integrations/sendgrid/utils';
-
-// Types for SendGrid integration
-export interface SendgridEmailOptions {
-  subject: string;
-  text?: string;
-  html?: string;
-  from?: string;        // Keep this for backward compatibility
-  from_name?: string;   // Added to match the Edge Function
-  from_email?: string;  // Added to match the Edge Function
-  replyTo?: string; 
-  attachments?: Array<{
-    content: string;
-    filename: string;
-    type: string;
-    disposition: string;
-  }>;
-  templateId?: string;
-  dynamicTemplateData?: Record<string, any>;
-  categories?: string[];
-}
-
-export interface EmailRecipient {
-  email: string;
-  name?: string;
-}
+import { EmailRecipient, SendgridEmailOptions } from '@/components/email-marketing/types';
 
 export interface SendEmailResult {
   success: boolean;
-  messageId?: string;
   error?: Error;
+  data?: any;
 }
 
-/**
- * Service for handling SendGrid operations at the application level
- * Uses the Supabase edge function to send emails
- */
-class SendgridService {
-  private domain = 'workshopbase.com.au';
-  private isApiKeySet: boolean;
+// Normalize recipient format for consistency
+function normalizeRecipient(recipient: string | EmailRecipient | Array<string | EmailRecipient>): any {
+  if (typeof recipient === 'string') {
+    return { email: recipient };
+  } else if (Array.isArray(recipient)) {
+    return recipient.map(r => typeof r === 'string' ? { email: r } : r);
+  }
+  return recipient;
+}
 
-  constructor() {
-    // Check if the edge function is configured
-    this.isApiKeySet = true; // Assuming the API key is set in Supabase secrets
+class SendgridService {
+  private apiKey: string | null = null;
+  private defaultSender: string | null = null;
+  private defaultSenderName: string | null = null;
+
+  // Check if SendGrid is configured
+  isConfigured(): boolean {
+    return Boolean(this.apiKey && this.defaultSender);
   }
 
-  /**
-   * Send an email from a workshop's dynamic address
-   */
+  // Configure SendGrid service
+  configure(apiKey: string, sender: string, senderName: string): void {
+    this.apiKey = apiKey;
+    this.defaultSender = sender;
+    this.defaultSenderName = senderName;
+    console.log('SendGrid service configured');
+  }
+
+  // Generate a workshop email based on name
+  getWorkshopEmail(workshopName: string): string {
+    return this.defaultSender || `${workshopName.toLowerCase().replace(/\s+/g, '-')}@example.com`;
+  }
+
+  // Send a single email
   async sendEmail(
     workshopName: string,
     to: string | EmailRecipient | Array<string | EmailRecipient>,
@@ -56,76 +48,57 @@ class SendgridService {
     replyToEmail?: string
   ): Promise<SendEmailResult> {
     try {
-      if (!this.isApiKeySet) {
-        throw new Error('SendGrid API key is not configured');
+      if (!this.isConfigured()) {
+        console.warn('SendGrid is not configured');
+        return { success: false, error: new Error('SendGrid is not configured') };
       }
 
-      // Process email content
-      let processedOptions = { ...options };
-      
-      // If content is a serialized JSON object with html and design
-      if (processedOptions.html && processedOptions.html.startsWith('{') && processedOptions.html.includes('"html":')) {
-        try {
-          const content = JSON.parse(processedOptions.html);
-          if (content.html) {
-            processedOptions.html = content.html;
-          }
-        } catch (e) {
-          // If parsing fails, use original content
-        }
-      }
-      
-      // Make sure we have from_email and from_name that match what the Edge Function expects
-      if (!processedOptions.from_email) {
-        processedOptions.from_email = options.from || this.getWorkshopEmail(workshopName);
-      }
-      
-      if (!processedOptions.from_name) {
-        processedOptions.from_name = workshopName;
-      }
-      
-      // Log the request for debugging
-      console.log("Sending to edge function with data:", {
-        workshopName,
-        to,
-        options: processedOptions,
-        replyToEmail
-      });
+      // Debug logs to track what data is being passed
+      console.log('Sending email with SendGrid service:');
+      console.log('- Workshop:', workshopName);
+      console.log('- To:', JSON.stringify(to));
+      console.log('- Options:', JSON.stringify(options));
+      console.log('- Reply-To:', replyToEmail);
 
-      // Call the Supabase Edge Function
-      const { data, error } = await supabase.functions.invoke('sendgrid-email/send', {
-        body: {
+      const normalizedTo = normalizeRecipient(to);
+      console.log('- Normalized To:', JSON.stringify(normalizedTo));
+
+      // Ensure the to field is properly set in options
+      options.to = options.to || normalizedTo;
+
+      // Call the SendGrid Edge Function
+      const response = await fetch('/api/sendgrid-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           workshopName,
-          options: {
-            ...processedOptions,
-            to // Make sure 'to' is included in the options
-          },
+          options,
           replyToEmail
-        }
+        }),
       });
 
-      if (error) {
-        console.error("Edge function error:", error);
-        throw new Error(`Edge function error: ${error.message}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('SendGrid API error:', response.status, errorText);
+        throw new Error(`SendGrid API error: ${response.status} ${errorText}`);
       }
 
-      return {
-        success: data.success,
-        messageId: data.messageId,
-        error: data.error ? new Error(data.error) : undefined
-      };
+      const result = await response.json();
+      console.log('SendGrid API success:', result);
+      
+      return { success: true, data: result };
     } catch (error) {
-      console.error('Error sending email via SendGrid:', error);
+      console.error('Error in sendEmail:', error);
       return {
         success: false,
-        error: error instanceof Error ? error : new Error('Unknown error sending email')
+        error: error instanceof Error ? error : new Error('Unknown error in sendEmail')
       };
     }
   }
-  
-  /**
-   * Send a marketing email campaign
-   */
+
+  // Send a marketing campaign to multiple recipients
   async sendMarketingCampaign(
     workshopName: string,
     recipients: EmailRecipient[],
@@ -133,110 +106,55 @@ class SendgridService {
     replyToEmail?: string
   ): Promise<SendEmailResult> {
     try {
-      if (!this.isApiKeySet) {
-        throw new Error('SendGrid API key is not configured');
+      if (!recipients.length) {
+        return { success: false, error: new Error('No recipients provided') };
       }
 
-      // Process email content for campaigns
-      let processedOptions = { ...options };
-      
-      // If content is a serialized JSON object with html and design
-      if (processedOptions.html && processedOptions.html.startsWith('{') && processedOptions.html.includes('"html":')) {
-        try {
-          const content = JSON.parse(processedOptions.html);
-          if (content.html) {
-            processedOptions.html = content.html;
-          }
-        } catch (e) {
-          // If parsing fails, use original content
-        }
-      }
-      
-      // Make sure we have from_email and from_name that match what the Edge Function expects
-      if (!processedOptions.from_email) {
-        processedOptions.from_email = options.from || this.getWorkshopEmail(workshopName);
-      }
-      
-      if (!processedOptions.from_name) {
-        processedOptions.from_name = workshopName;
-      }
-      
-      // Log the request for debugging
-      console.log("Sending marketing campaign to edge function with data:", {
-        workshopName,
-        recipients,
-        options: processedOptions,
-        replyToEmail
-      });
+      console.log(`Sending marketing campaign to ${recipients.length} recipients`);
 
-      // Call the Supabase Edge Function
-      const { data, error } = await supabase.functions.invoke('sendgrid-email/campaign', {
-        body: {
-          workshopName,
-          recipients,
-          options: processedOptions,
-          replyToEmail
-        }
-      });
+      // Ensure the to field is set properly for a campaign
+      options.to = recipients;
 
-      if (error) {
-        console.error("Edge function error:", error);
-        throw new Error(`Edge function error: ${error.message}`);
-      }
-
-      return {
-        success: data.success,
-        messageId: data.messageId,
-        error: data.error ? new Error(data.error) : undefined
-      };
+      return await this.sendEmail(workshopName, recipients, options, replyToEmail);
     } catch (error) {
-      console.error('Error sending campaign via SendGrid:', error);
+      console.error('Error in sendMarketingCampaign:', error);
       return {
         success: false,
-        error: error instanceof Error ? error : new Error('Unknown error sending campaign')
+        error: error instanceof Error ? error : new Error('Unknown error in sendMarketingCampaign')
       };
     }
   }
-  
-  /**
-   * Get analytics data from SendGrid
-   */
-  async getAnalytics(): Promise<any> {
+
+  // Get email analytics
+  async getAnalytics(): Promise<{ success: boolean; data?: any; error?: Error }> {
     try {
-      if (!this.isApiKeySet) {
-        throw new Error('SendGrid API key is not configured');
+      if (!this.isConfigured()) {
+        return { success: false, error: new Error('SendGrid is not configured') };
       }
 
-      // Call the Supabase Edge Function
-      const { data, error } = await supabase.functions.invoke('sendgrid-email/analytics', {
-        body: {}
+      // Call the analytics API endpoint
+      const response = await fetch('/api/sendgrid-analytics', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
 
-      if (error) {
-        throw new Error(`Edge function error: ${error.message}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch analytics: ${response.status}`);
       }
 
-      return data;
+      const data = await response.json();
+      return { success: true, data };
     } catch (error) {
-      console.error('Error fetching analytics from SendGrid:', error);
-      throw error;
+      console.error('Error in getAnalytics:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error : new Error('Unknown error in getAnalytics')
+      };
     }
-  }
-  
-  /**
-   * Generate an email address for a workshop
-   */
-  getWorkshopEmail(workshopName: string): string {
-    return generateWorkshopEmail(workshopName);
-  }
-  
-  /**
-   * Check if SendGrid is properly configured
-   */
-  isConfigured(): boolean {
-    return this.isApiKeySet;
   }
 }
 
-// Export a singleton instance
 export const sendgridService = new SendgridService();
+export type { EmailRecipient, SendgridEmailOptions };

@@ -36,10 +36,11 @@ const EmailDesignerPage = () => {
         const success = await createCampaign({
           name: template.name,
           subject: template.subject,
-          template_id: undefined, // Not using a template directly
+          content: template.content, // Pass the content
+          template_id: null, // Not using a template directly
           scheduled_for: undefined,
           audience_type: 'all', // Default audience type
-          send_immediately: false // Default to not sending immediately
+          send_immediately: true // Default to sending immediately
         });
         
         if (success) {
