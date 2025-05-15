@@ -56,6 +56,7 @@ const sendgridFormSchema = z.object({
   replyToEmail: z.string().email("Invalid email address").optional(),
   enableTracking: z.boolean().default(true),
   enableUnsubscribeFooter: z.boolean().default(true),
+  isConfigured: z.boolean().optional(),
 });
 
 const SendgridConfig: React.FC<SendgridConfigProps> = ({
@@ -80,6 +81,7 @@ const SendgridConfig: React.FC<SendgridConfigProps> = ({
       replyToEmail: existingConfig?.replyToEmail || "",
       enableTracking: existingConfig?.enableTracking !== false,
       enableUnsubscribeFooter: existingConfig?.enableUnsubscribeFooter !== false,
+      isConfigured: existingConfig?.isConfigured || false,
     },
   });
 
@@ -94,6 +96,7 @@ const SendgridConfig: React.FC<SendgridConfigProps> = ({
         replyToEmail: existingConfig.replyToEmail || "",
         enableTracking: existingConfig.enableTracking !== false,
         enableUnsubscribeFooter: existingConfig.enableUnsubscribeFooter !== false,
+        isConfigured: existingConfig.isConfigured || false,
       });
     }
   }, [existingConfig, form]);
