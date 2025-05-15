@@ -4,157 +4,76 @@ import type { EmailRecipient, SendgridEmailOptions } from '@/components/email-ma
 export interface SendEmailResult {
   success: boolean;
   error?: Error;
-  data?: any;
-}
-
-// Normalize recipient format for consistency
-function normalizeRecipient(recipient: string | EmailRecipient | Array<string | EmailRecipient>): any {
-  if (typeof recipient === 'string') {
-    return { email: recipient };
-  } else if (Array.isArray(recipient)) {
-    return recipient.map(r => typeof r === 'string' ? { email: r } : r);
-  }
-  return recipient;
 }
 
 class SendgridService {
-  private apiKey: string | null = null;
-  private defaultSender: string | null = null;
-  private defaultSenderName: string | null = null;
-
-  // Check if SendGrid is configured
-  isConfigured(): boolean {
-    return Boolean(this.apiKey && this.defaultSender);
+  private supabaseUrl: string;
+  
+  constructor() {
+    this.supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
   }
-
-  // Configure SendGrid service
-  configure(apiKey: string, sender: string, senderName: string): void {
-    this.apiKey = apiKey;
-    this.defaultSender = sender;
-    this.defaultSenderName = senderName;
-    console.log('SendGrid service configured');
-  }
-
-  // Generate a workshop email based on name
-  getWorkshopEmail(workshopName: string): string {
-    return this.defaultSender || `${workshopName.toLowerCase().replace(/\s+/g, '-')}@example.com`;
-  }
-
-  // Send a single email
+  
+  /**
+   * Sends an email using the SendGrid Edge Function
+   * @param workshopName The name of the workshop
+   * @param recipient The recipient of the email
+   * @param options Email options including subject, content, etc.
+   * @param replyToEmail Optional reply-to email address
+   * @returns Promise with the result of the email send operation
+   */
   async sendEmail(
     workshopName: string,
-    to: string | EmailRecipient | Array<string | EmailRecipient>,
+    recipient: EmailRecipient | string,
     options: SendgridEmailOptions,
     replyToEmail?: string
   ): Promise<SendEmailResult> {
     try {
-      if (!this.isConfigured()) {
-        console.warn('SendGrid is not configured');
-        return { success: false, error: new Error('SendGrid is not configured') };
+      if (!this.supabaseUrl) {
+        throw new Error('Supabase URL is not configured');
       }
-
-      // Debug logs to track what data is being passed
-      console.log('Sending email with SendGrid service:');
-      console.log('- Workshop:', workshopName);
-      console.log('- To:', JSON.stringify(to));
-      console.log('- Options:', JSON.stringify(options));
-      console.log('- Reply-To:', replyToEmail);
-
-      const normalizedTo = normalizeRecipient(to);
-      console.log('- Normalized To:', JSON.stringify(normalizedTo));
-
-      // Ensure the to field is properly set in options
-      options.to = options.to || normalizedTo;
-
-      // Call the SendGrid Edge Function
-      const response = await fetch('/api/sendgrid-email', {
+      
+      // Format recipient if it's a string
+      const formattedRecipient = typeof recipient === 'string' 
+        ? { email: recipient, name: recipient.split('@')[0] } 
+        : recipient;
+      
+      // Debug logs
+      console.log('Sending email with recipient:', JSON.stringify(formattedRecipient, null, 2));
+      console.log('Email options:', JSON.stringify(options, null, 2));
+      
+      // Call SendGrid Edge Function with proper parameters
+      const response = await fetch(`${this.supabaseUrl}/functions/v1/sendgrid`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           workshopName,
-          options,
-          replyToEmail
-        }),
+          to: formattedRecipient,  // Pass formatted recipient
+          options,                 // Pass all options
+          replyToEmail             // Pass reply-to email
+        })
       });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('SendGrid API error:', response.status, errorText);
-        throw new Error(`SendGrid API error: ${response.status} ${errorText}`);
-      }
-
-      const result = await response.json();
-      console.log('SendGrid API success:', result);
       
-      return { success: true, data: result };
-    } catch (error) {
-      console.error('Error in sendEmail:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error : new Error('Unknown error in sendEmail')
-      };
-    }
-  }
-
-  // Send a marketing campaign to multiple recipients
-  async sendMarketingCampaign(
-    workshopName: string,
-    recipients: EmailRecipient[],
-    options: SendgridEmailOptions,
-    replyToEmail?: string
-  ): Promise<SendEmailResult> {
-    try {
-      if (!recipients.length) {
-        return { success: false, error: new Error('No recipients provided') };
-      }
-
-      console.log(`Sending marketing campaign to ${recipients.length} recipients`);
-
-      // Ensure the to field is set properly for a campaign
-      options.to = recipients;
-
-      return await this.sendEmail(workshopName, recipients, options, replyToEmail);
-    } catch (error) {
-      console.error('Error in sendMarketingCampaign:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error : new Error('Unknown error in sendMarketingCampaign')
-      };
-    }
-  }
-
-  // Get email analytics
-  async getAnalytics(): Promise<{ success: boolean; data?: any; error?: Error }> {
-    try {
-      if (!this.isConfigured()) {
-        return { success: false, error: new Error('SendGrid is not configured') };
-      }
-
-      // Call the analytics API endpoint
-      const response = await fetch('/api/sendgrid-analytics', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
       if (!response.ok) {
-        throw new Error(`Failed to fetch analytics: ${response.status}`);
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Error ${response.status}: Failed to send email`);
       }
-
-      const data = await response.json();
-      return { success: true, data };
+      
+      const result = await response.json();
+      return { success: true };
+      
     } catch (error) {
-      console.error('Error in getAnalytics:', error);
+      console.error('SendGrid service error:', error);
       return {
         success: false,
-        error: error instanceof Error ? error : new Error('Unknown error in getAnalytics')
+        error: error instanceof Error ? error : new Error('Unknown error sending email')
       };
     }
   }
 }
 
 export const sendgridService = new SendgridService();
+
+// These types need to be re-exported for backwards compatibility
 export type { EmailRecipient, SendgridEmailOptions };

@@ -8,160 +8,69 @@ import type { EmailRecipient, SendgridEmailOptions, SendEmailResult } from '@/co
 export function useSendgridEmail() {
   const [isSending, setIsSending] = useState(false);
   const { toast } = useToast();
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
   
-  const sendEmail = async (
-    to: string | EmailRecipient | Array<string | EmailRecipient>,
-    options: SendgridEmailOptions,
-    replyToEmail?: string
-  ): Promise<SendEmailResult> => {
+  const sendEmail = async (recipient: EmailRecipient | string, options: SendgridEmailOptions): Promise<SendEmailResult> => {
+    if (!user) {
+      return {
+        success: false,
+        error: new Error('User must be authenticated to send emails')
+      };
+    }
+    
     setIsSending(true);
     
     try {
-      // Get workshop name from profile, user metadata or default
-      const workshopName = 
-        (profile?.name) ||
-        (user?.user_metadata?.name) || 
-        'Workshop';
+      console.log("Sending email with options:", JSON.stringify(options, null, 2));
       
-      // Log for debugging
-      console.log("Sending email with parameters:", {
-        workshopName,
-        to,
-        options,
-        replyToEmail
-      });
+      // Format recipient if it's a string
+      const formattedRecipient = typeof recipient === 'string' 
+        ? { email: recipient, name: recipient.split('@')[0] } 
+        : recipient;
       
+      // Make sure 'to' field is present in options
+      const enhancedOptions = {
+        ...options,
+        to: options.to || formattedRecipient.email
+      };
+      
+      // Call the sendgrid service
       const result = await sendgridService.sendEmail(
-        workshopName,
-        to, // Ensure 'to' is correctly passed
-        options,
-        replyToEmail
+        "Your Workshop", // Workshop name placeholder - in real app this would be from user config
+        formattedRecipient,
+        enhancedOptions,
+        options.replyTo
       );
       
       if (result.success) {
         toast({
-          title: "Email sent successfully",
-          description: "Your email has been delivered",
+          title: 'Email sent',
+          description: 'Your email has been sent successfully',
         });
       } else {
-        toast({
-          title: "Failed to send email",
-          description: result.error?.message || "Please try again later",
-          variant: "destructive",
-        });
+        throw result.error || new Error('Failed to send email');
       }
       
       return result;
     } catch (error) {
-      console.error("Error in useSendgridEmail:", error);
-      
+      console.error('Error sending email:', error);
       toast({
-        title: "Error sending email",
-        description: error instanceof Error ? error.message : "An unexpected error occurred",
-        variant: "destructive",
+        title: 'Email failed',
+        description: error instanceof Error ? error.message : 'Failed to send email',
+        variant: 'destructive'
       });
       
       return {
         success: false,
-        error: error instanceof Error ? error : new Error("Unknown error")
+        error: error instanceof Error ? error : new Error('Failed to send email')
       };
     } finally {
       setIsSending(false);
     }
-  };
-  
-  const sendMarketingCampaign = async (
-    recipients: EmailRecipient[],
-    options: SendgridEmailOptions,
-    replyToEmail?: string
-  ): Promise<SendEmailResult> => {
-    setIsSending(true);
-    
-    try {
-      // Get workshop name from profile, user metadata or default
-      const workshopName = 
-        (profile?.name) || 
-        (user?.user_metadata?.name) || 
-        'Workshop';
-      
-      // Log for debugging
-      console.log("Sending marketing campaign with parameters:", {
-        workshopName,
-        recipients,
-        options,
-        replyToEmail
-      });
-      
-      const result = await sendgridService.sendMarketingCampaign(
-        workshopName,
-        recipients,
-        options,
-        replyToEmail
-      );
-      
-      if (result.success) {
-        toast({
-          title: "Campaign sent successfully",
-          description: `Email campaign sent to ${recipients.length} recipients`,
-        });
-      } else {
-        toast({
-          title: "Failed to send campaign",
-          description: result.error?.message || "Please try again later",
-          variant: "destructive",
-        });
-      }
-      
-      return result;
-    } catch (error) {
-      console.error("Error in sendMarketingCampaign:", error);
-      
-      toast({
-        title: "Error sending campaign",
-        description: error instanceof Error ? error.message : "An unexpected error occurred",
-        variant: "destructive",
-      });
-      
-      return {
-        success: false,
-        error: error instanceof Error ? error : new Error("Unknown error")
-      };
-    } finally {
-      setIsSending(false);
-    }
-  };
-  
-  const getAnalytics = async () => {
-    try {
-      const result = await sendgridService.getAnalytics();
-      return result.data || [];
-    } catch (error) {
-      console.error("Error fetching analytics:", error);
-      toast({
-        title: "Error fetching analytics",
-        description: error instanceof Error ? error.message : "An unexpected error occurred",
-        variant: "destructive",
-      });
-      return [];
-    }
-  };
-  
-  const getWorkshopEmail = (defaultWorkshopName: string = 'Workshop'): string => {
-    const workshopName = 
-      (profile?.name) || 
-      (user?.user_metadata?.name) || 
-      defaultWorkshopName;
-      
-    return sendgridService.getWorkshopEmail(workshopName);
   };
   
   return {
     sendEmail,
-    sendMarketingCampaign,
-    getAnalytics,
-    getWorkshopEmail,
-    isConfigured: sendgridService.isConfigured(),
     isSending
   };
 }

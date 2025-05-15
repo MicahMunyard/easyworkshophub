@@ -73,7 +73,7 @@ const EmailDesignerPage = () => {
         initialTemplate={initialTemplate ? {
           name: initialTemplate.name,
           subject: initialTemplate.subject,
-          content: initialTemplate.content || '' // Provide a default empty string if content is missing
+          content: initialTemplate.content
         } : undefined}
         mode={mode || 'template'}
         onSave={handleSave}

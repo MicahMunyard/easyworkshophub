@@ -3,52 +3,68 @@ import type { EmailRecipient } from "@/components/email-marketing/types.d";
 
 /**
  * Normalizes different recipient formats into a standard EmailRecipient object or array
+ * @param recipient Could be string, EmailRecipient object, or arrays of either
+ * @returns Normalized EmailRecipient object or array of objects
  */
-export function normalizeRecipient(
-  recipient: string | EmailRecipient | Array<string | EmailRecipient>
-): EmailRecipient | EmailRecipient[] {
-  if (typeof recipient === "string") {
-    return { email: recipient };
-  } else if (Array.isArray(recipient)) {
-    return recipient.map((r) => (typeof r === "string" ? { email: r } : r));
+export const normalizeRecipient = (
+  recipient: string | string[] | EmailRecipient | EmailRecipient[]
+): EmailRecipient | EmailRecipient[] => {
+  // Case 1: Single string email
+  if (typeof recipient === 'string') {
+    return {
+      email: recipient,
+      name: recipient.split('@')[0] // Simple name extraction from email
+    };
   }
-  return recipient;
-}
+  
+  // Case 2: Single EmailRecipient object
+  if (typeof recipient === 'object' && !Array.isArray(recipient) && recipient.email) {
+    return recipient;
+  }
+  
+  // Case 3: Array of strings or EmailRecipient objects
+  if (Array.isArray(recipient)) {
+    return recipient.map(item => {
+      if (typeof item === 'string') {
+        return {
+          email: item,
+          name: item.split('@')[0]
+        };
+      }
+      return item;
+    });
+  }
+  
+  // Default fallback
+  console.error('Invalid recipient format:', recipient);
+  if (typeof recipient === 'object' && recipient !== null) {
+    return {
+      email: 'unknown@example.com',
+      name: 'Unknown Recipient'
+    };
+  }
+  
+  throw new Error('Invalid recipient format');
+};
 
 /**
- * Formats recipient for display (e.g. "John Doe <john@example.com>")
+ * Formats an email address with name if available
+ * @param recipient The email recipient
+ * @returns Formatted email string like "Name <email@example.com>"
  */
-export function formatRecipientForDisplay(recipient: EmailRecipient): string {
+export const formatEmailAddress = (recipient: EmailRecipient): string => {
   if (recipient.name) {
     return `${recipient.name} <${recipient.email}>`;
   }
   return recipient.email;
-}
+};
 
 /**
  * Validates an email address format
+ * @param email Email address to validate
+ * @returns Boolean indicating if email is valid
  */
-export function isValidEmail(email: string): boolean {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-}
-
-/**
- * Parses a comma-separated list of emails into an array of EmailRecipient objects
- */
-export function parseEmailList(emailList: string): EmailRecipient[] {
-  return emailList
-    .split(",")
-    .map((email) => email.trim())
-    .filter((email) => email && isValidEmail(email))
-    .map((email) => ({ email }));
-}
-
-/**
- * Helper to log email operations with consistent formatting
- */
-export function logEmailOperation(operation: string, data: any): void {
-  console.group(`📧 Email Operation: ${operation}`);
-  console.log(JSON.stringify(data, null, 2));
-  console.groupEnd();
-}
+export const validateEmail = (email: string): boolean => {
+  const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return pattern.test(email);
+};

@@ -124,11 +124,11 @@ export interface TestEmailModalProps {
 
 // SendGrid Types
 export interface SendgridConfigProps {
-  isConfigured: boolean;
-  onSave: (values: SendgridFormValues) => Promise<boolean>;
-  onTest: () => Promise<boolean>;
+  isConfigured?: boolean;
+  onSave?: (values: SendgridFormValues) => Promise<boolean>;
+  onTest?: () => Promise<boolean>;
   onSaveConfig?: (config: SendgridFormValues) => Promise<void>;
-  onTestConnection?: (config: SendgridFormValues) => Promise<boolean>;
+  onTestConnection?: (config: SendgridFormValues) => Promise<{success: boolean; message: string}>;
   existingConfig?: SendgridFormValues | null;
 }
 
@@ -148,9 +148,9 @@ export interface SendgridEmailOptions {
   subject: string;
   text?: string;
   html?: string;
-  from?: string;        // Keep this for backward compatibility
-  from_name?: string;   // Standardized to match Edge Function
-  from_email?: string;  // Standardized to match Edge Function
+  from?: string;
+  from_name?: string;
+  from_email?: string;
   replyTo?: string; 
   templateId?: string;
   dynamicTemplateData?: Record<string, any>;

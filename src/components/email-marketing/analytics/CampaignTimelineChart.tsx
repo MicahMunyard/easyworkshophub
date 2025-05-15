@@ -10,7 +10,7 @@ import {
   ResponsiveContainer,
   Legend
 } from "recharts";
-import { EmailAnalytic } from "../types";
+import type { EmailAnalytic } from "../types.d";
 import { prepareCampaignTimelineData, ChartData } from "../utils/analyticsUtils";
 
 interface CampaignTimelineChartProps {

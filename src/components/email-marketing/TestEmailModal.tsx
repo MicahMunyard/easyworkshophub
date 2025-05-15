@@ -104,7 +104,7 @@ export function TestEmailModal({
         </DialogHeader>
         
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSendTest)} className="space-y-4 py-4">
+          <form onSubmit={form.handleSubmit(handleSendTest)} className="space-y-4">
             <FormField
               control={form.control}
               name="email"

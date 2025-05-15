@@ -1,6 +1,6 @@
 
 import React from "react";
-import { EmailAnalyticsProps } from "./types";
+import type { EmailAnalyticsProps } from "./types.d";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import CampaignCountCard from "./analytics/CampaignCountCard";

@@ -34,7 +34,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CalendarIcon, Clock, Mail, Plus, RotateCw, Calendar as CalendarIcon2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { EmailTemplate, EmailAutomation, EmailAutomationProps } from "./types";
+import type { EmailTemplate, EmailAutomation, EmailAutomationProps } from "./types.d";
 import { useToast } from "@/hooks/use-toast";
 
 const EmailAutomations: React.FC<EmailAutomationProps> = ({ 
