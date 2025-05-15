@@ -1,5 +1,5 @@
 
-import { EmailRecipient, SendgridEmailOptions } from '@/components/email-marketing/types';
+import type { EmailRecipient, SendgridEmailOptions } from '@/components/email-marketing/types.d';
 
 export interface SendEmailResult {
   success: boolean;

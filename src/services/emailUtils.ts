@@ -1,5 +1,5 @@
 
-import { EmailRecipient } from "@/components/email-marketing/types";
+import type { EmailRecipient } from "@/components/email-marketing/types.d";
 
 /**
  * Normalizes different recipient formats into a standard EmailRecipient object or array

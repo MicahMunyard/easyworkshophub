@@ -1,8 +1,9 @@
 
 import { useState } from 'react';
-import { sendgridService, EmailRecipient, SendgridEmailOptions, SendEmailResult } from '@/services/sendgridService';
+import { sendgridService } from '@/services/sendgridService';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import type { EmailRecipient, SendgridEmailOptions, SendEmailResult } from '@/components/email-marketing/types.d';
 
 export function useSendgridEmail() {
   const [isSending, setIsSending] = useState(false);

@@ -7,9 +7,9 @@ export interface EmailTemplate {
   content: string;
   category?: "service" | "promotion" | "newsletter" | "reminder" | "other";
   description?: string;
-  is_default?: boolean;
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
+  is_default?: boolean;
 }
 
 // Email Campaign Types
@@ -18,7 +18,7 @@ export interface EmailCampaign {
   name: string;
   subject: string;
   content?: string;
-  template_id?: string;
+  template_id?: string | null;
   status: "draft" | "scheduled" | "sending" | "sent" | "failed";
   audience_type: "all" | "segment" | "tag" | "list";
   audience_filter?: any;
@@ -31,7 +31,7 @@ export interface EmailCampaign {
   opens?: number;
   clicks?: number;
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
   send_immediately?: boolean;
 }
 
@@ -40,7 +40,7 @@ export interface EmailAutomation {
   id: string;
   name: string;
   description?: string;
-  trigger_type: "welcome" | "abandoned_cart" | "service_reminder" | "birthday" | "custom";
+  trigger_type: "welcome" | "abandoned_cart" | "service_reminder" | "birthday" | "custom" | "schedule" | "event";
   trigger_details?: {
     event?: string;
     schedule?: string;
@@ -74,6 +74,13 @@ export interface EmailAnalytic {
   unsubscribes?: number;
   bounces?: number;
   complaints?: number;
+  id?: string;
+}
+
+// Email Recipient Type
+export interface EmailRecipient {
+  email: string;
+  name?: string;
 }
 
 // Props Types for Components
@@ -134,11 +141,6 @@ export interface SendgridFormValues {
   replyToEmail?: string;
   enableTracking?: boolean;
   enableUnsubscribeFooter?: boolean;
-}
-
-export interface EmailRecipient {
-  email: string;
-  name?: string;
 }
 
 export interface SendgridEmailOptions {

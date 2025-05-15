@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useSendgridEmail } from "@/hooks/email/useSendgridEmail";
-import { TestEmailModalProps } from "./types";
+import type { TestEmailModalProps } from "./types.d";
 
 const testEmailSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
