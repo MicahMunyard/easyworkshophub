@@ -22,7 +22,7 @@ export interface EmailCampaign {
   content?: string;
   template_id?: string | null;
   status: "draft" | "scheduled" | "sending" | "sent" | "failed";
-  audience_type: "all" | "segment" | "list" | "tag";
+  audience_type: "all" | "segment";
   audience_filter?: any;
   scheduled_for?: string;
   scheduled_at?: string;
@@ -134,6 +134,14 @@ export interface TestEmailModalProps {
   isSubmitting?: boolean;
 }
 
+// Email Testing Component Props
+export interface EmailTestingProps {
+  emailSubject: string;
+  emailContent: string;
+  onSendTest: (recipients: string[], options: any) => Promise<{ success: boolean; message?: string }>;
+  isSubmitting: boolean;
+}
+
 // SendGrid Types
 export interface SendgridConfigProps {
   isConfigured?: boolean;
@@ -173,12 +181,4 @@ export interface SendgridEmailOptions {
     type: string;
     disposition: string;
   }>;
-}
-
-// Email Testing Component Props
-export interface EmailTestingProps {
-  emailSubject: string;
-  emailContent: string;
-  onSendTest: (recipients: string[], options: any) => Promise<{ success: boolean; message?: string }>;
-  isSubmitting: boolean;
 }
