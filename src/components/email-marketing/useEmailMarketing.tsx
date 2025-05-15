@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useSendgridEmail } from "@/hooks/email/useSendgridEmail";
@@ -181,7 +182,7 @@ export const useEmailMarketing = () => {
         content: campaign.content,
         template_id: campaign.template_id,
         status: campaign.send_immediately ? "sending" : "draft",
-        audience_type: campaign.audience_type,
+        audience_type: campaign.audience_type || "all",
         recipient_count: 0,
         scheduled_for: campaign.scheduled_for,
         created_at: new Date().toISOString(),

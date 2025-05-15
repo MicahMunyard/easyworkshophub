@@ -1,202 +1,169 @@
 
-import React, { useState } from 'react';
-import { Button } from "@/components/ui/button";
+import React, { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { 
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { SendHorizonal, LoaderCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { RotateCw, Mail, AlertCircle } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface EmailTestingProps {
-  emailSubject?: string;
-  emailContent?: string;
   isOpen?: boolean;
   onClose?: () => void;
+  emailSubject: string;
+  emailContent: string;
   onSendTest: (recipients: string[], options: any) => Promise<{ success: boolean; message?: string }>;
   isSubmitting: boolean;
 }
 
-const EmailTesting: React.FC<EmailTestingProps> = ({ 
+const EmailTesting: React.FC<EmailTestingProps> = ({
+  isOpen = false,
+  onClose,
   emailSubject,
   emailContent,
-  isOpen: propIsOpen, 
-  onClose, 
   onSendTest,
   isSubmitting
 }) => {
-  const [isOpen, setIsOpen] = useState(propIsOpen || false);
-  const [recipients, setRecipients] = useState<string>("");
-  const [note, setNote] = useState<string>("");
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [testResult, setTestResult] = useState<{ success: boolean; message?: string } | null>(null);
+  const [showDialog, setShowDialog] = useState(isOpen);
+  const [recipients, setRecipients] = useState("");
+  const [note, setNote] = useState("");
+  const [isSending, setIsSending] = useState(false);
   const { toast } = useToast();
 
   const handleClose = () => {
     if (onClose) {
       onClose();
     } else {
-      setIsOpen(false);
+      setShowDialog(false);
     }
-    resetForm();
   };
 
-  const resetForm = () => {
-    setRecipients("");
-    setNote("");
-    setError(null);
-    setTestResult(null);
-  };
-
-  const validateForm = () => {
+  const handleSend = async () => {
     if (!recipients.trim()) {
-      setError("Please enter at least one email address");
-      return false;
+      toast({
+        title: "Error",
+        description: "Please enter at least one recipient email address",
+        variant: "destructive"
+      });
+      return;
     }
 
-    const emailList = recipients.split(',').map(email => email.trim());
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    
-    for (const email of emailList) {
-      if (!emailRegex.test(email)) {
-        setError(`Invalid email address: ${email}`);
-        return false;
-      }
+    const emailList = recipients
+      .split(",")
+      .map(email => email.trim())
+      .filter(email => email);
+
+    if (emailList.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please enter valid email addresses",
+        variant: "destructive"
+      });
+      return;
     }
 
-    setError(null);
-    return true;
-  };
+    setIsSending(true);
 
-  const handleSendTest = async () => {
-    if (!validateForm()) return;
-
-    setIsLoading(true);
-    setTestResult(null);
-    
     try {
-      const recipientsList = recipients.split(',').map(email => email.trim());
-      const result = await onSendTest(recipientsList, {
+      const result = await onSendTest(emailList, {
         subject: emailSubject,
         content: emailContent,
-        note: note.trim() || undefined
+        note: note
       });
 
-      setTestResult(result);
-      
       if (result.success) {
         toast({
           title: "Test email sent",
-          description: "Your test email has been sent successfully",
+          description: `Email sent successfully to ${emailList.join(", ")}`,
         });
-        
-        setTimeout(() => {
-          handleClose();
-        }, 1500);
+        handleClose();
+      } else {
+        toast({
+          title: "Failed to send test email",
+          description: result.message || "An error occurred while sending the test email",
+          variant: "destructive"
+        });
       }
     } catch (error) {
-      setTestResult({
-        success: false,
-        message: error instanceof Error ? error.message : "Failed to send test email"
-      });
-      
       toast({
-        title: "Failed to send test",
-        description: error instanceof Error ? error.message : "An error occurred",
-        variant: "destructive",
+        title: "Error",
+        description: error instanceof Error ? error.message : "An error occurred while sending the test email",
+        variant: "destructive"
       });
     } finally {
-      setIsLoading(false);
+      setIsSending(false);
     }
   };
 
   return (
-    <Dialog open={propIsOpen !== undefined ? propIsOpen : isOpen} onOpenChange={handleClose}>
+    <Dialog open={isOpen || showDialog} onOpenChange={(open) => {
+      if (!open) handleClose();
+    }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Send Test Email</DialogTitle>
-          <DialogDescription>
-            Send a test email to verify your template
-          </DialogDescription>
         </DialogHeader>
-
-        <div className="space-y-4 py-2">
-          <div>
+        <div className="space-y-4 py-3">
+          <div className="space-y-2">
             <Label htmlFor="recipients">Recipients</Label>
             <Input
               id="recipients"
+              placeholder="email@example.com, email2@example.com"
               value={recipients}
               onChange={(e) => setRecipients(e.target.value)}
-              placeholder="email@example.com, another@example.com"
-              disabled={isLoading || isSubmitting}
             />
-            <p className="text-xs text-muted-foreground mt-1">
-              Enter one or more email addresses, separated by commas
+            <p className="text-xs text-muted-foreground">
+              Separate multiple email addresses with commas
             </p>
           </div>
-
-          <div>
-            <Label htmlFor="note">Note (Optional)</Label>
-            <Textarea
-              id="note"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="Add a note to explain the purpose of this test..."
-              rows={2}
-              disabled={isLoading || isSubmitting}
+          
+          <div className="space-y-2">
+            <Label htmlFor="subject">Subject</Label>
+            <Input
+              id="subject"
+              value={emailSubject}
+              disabled
             />
           </div>
-
-          {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          {testResult && (
-            <Alert variant={testResult.success ? "default" : "destructive"}>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{testResult.message}</AlertDescription>
-            </Alert>
-          )}
+          
+          <div className="space-y-2">
+            <Label htmlFor="note">Additional Note (Optional)</Label>
+            <Textarea
+              id="note"
+              placeholder="Add a note to include in the test email"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              rows={2}
+            />
+          </div>
         </div>
-
-        <DialogFooter>
+        <div className="flex justify-end gap-2 pt-4">
           <Button
             variant="outline"
             onClick={handleClose}
-            disabled={isLoading || isSubmitting}
+            disabled={isSending || isSubmitting}
           >
             Cancel
           </Button>
           <Button
-            onClick={handleSendTest}
-            disabled={isLoading || isSubmitting}
+            onClick={handleSend}
+            disabled={isSending || isSubmitting}
             className="gap-2"
           >
-            {(isLoading || isSubmitting) ? (
+            {(isSending || isSubmitting) ? (
               <>
-                <RotateCw className="h-4 w-4 animate-spin" />
+                <LoaderCircle className="h-4 w-4 animate-spin" />
                 Sending...
               </>
             ) : (
               <>
-                <Mail className="h-4 w-4" />
+                <SendHorizonal className="h-4 w-4" />
                 Send Test
               </>
             )}
           </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );

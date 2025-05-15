@@ -22,7 +22,7 @@ export interface EmailCampaign {
   content?: string;
   template_id?: string | null;
   status: "draft" | "scheduled" | "sending" | "sent" | "failed";
-  audience_type: "all" | "segment";
+  audience_type: "all" | "segment" | "list" | "tag";
   audience_filter?: any;
   scheduled_for?: string;
   scheduled_at?: string;
