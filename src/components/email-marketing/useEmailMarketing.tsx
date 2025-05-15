@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useSendgridEmail } from "@/hooks/email/useSendgridEmail";
-import type { EmailTemplate, EmailCampaign, EmailAutomation, EmailAnalytic } from "./types.d";
+import type { EmailTemplate, EmailCampaign, EmailAutomation, EmailAnalytic } from "./types";
 
 // Mock data for development
 const mockTemplates: EmailTemplate[] = [
