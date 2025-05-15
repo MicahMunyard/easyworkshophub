@@ -1,11 +1,11 @@
 
 import { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
 import { 
   SendgridEmailOptions, 
   EmailRecipient, 
   SendEmailResult 
-} from '@/components/email-marketing/types';
-import { useToast } from '@/hooks/use-toast';
+} from '@/components/email-marketing/types.d';
 
 export function useSendgridEmail() {
   const [isLoading, setIsLoading] = useState(false);
@@ -47,6 +47,7 @@ export function useSendgridEmail() {
 
     try {
       const result = await sendEmail(recipient, {
+        to: recipient,
         subject,
         html: content,
         text: "This is a test email"

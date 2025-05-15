@@ -4,9 +4,9 @@ export interface EmailTemplate {
   id: string;
   name: string;
   subject: string;
-  content: string;
+  content: string;  // Adding this property
   category?: "service" | "promotion" | "newsletter" | "reminder" | "other";
-  description?: string;
+  description?: string;  // Adding this property
   created_at: string;
   updated_at?: string;
   is_default?: boolean;
@@ -22,7 +22,7 @@ export interface EmailCampaign {
   content?: string;
   template_id?: string | null;
   status: "draft" | "scheduled" | "sending" | "sent" | "failed";
-  audience_type: "all" | "segment" | "list" | "tag";
+  audience_type: "all" | "segment" | "list" | "tag";  // Expanding audience_type options
   audience_filter?: any;
   scheduled_for?: string;
   scheduled_at?: string;
@@ -85,6 +85,12 @@ export interface EmailRecipient {
   name?: string;
 }
 
+// Email Sending Result Type
+export interface SendEmailResult {
+  success: boolean;
+  error?: Error;
+}
+
 // Props Types for Components
 export interface EmailCampaignBuilderProps {
   templates: EmailTemplate[];
@@ -133,20 +139,20 @@ export interface SendgridConfigProps {
   isConfigured?: boolean;
   onSave?: (values: SendgridFormValues) => Promise<boolean>;
   onTest?: () => Promise<boolean>;
-  onSaveConfig?: (config: SendgridFormValues) => Promise<boolean>;
-  onTestConnection?: (config?: SendgridFormValues) => Promise<{success: boolean; message: string}>;
-  existingConfig?: SendgridFormValues | null;
+  onSaveConfig?: (config: SendgridFormValues) => Promise<boolean>;  // Adding this
+  onTestConnection?: (config?: SendgridFormValues) => Promise<{success: boolean; message: string}>;  // Adding this
+  existingConfig?: SendgridFormValues | null;  // Adding this
 }
 
 export interface SendgridFormValues {
   apiKey: string;
   fromEmail: string;
   fromName: string;
-  senderName?: string;
-  senderEmail?: string;
-  replyToEmail?: string;
-  enableTracking?: boolean;
-  enableUnsubscribeFooter?: boolean;
+  senderName?: string;  // Adding this property
+  senderEmail?: string;  // Adding this property
+  replyToEmail?: string;  // Adding this property
+  enableTracking?: boolean;  // Adding this property
+  enableUnsubscribeFooter?: boolean;  // Adding this property
 }
 
 export interface SendgridEmailOptions {
@@ -169,7 +175,10 @@ export interface SendgridEmailOptions {
   }>;
 }
 
-export interface SendEmailResult {
-  success: boolean;
-  error?: Error;
+// Email Testing Component Props
+export interface EmailTestingProps {
+  emailSubject: string;
+  emailContent: string;
+  onSendTest: (recipients: string[], options: any) => Promise<{ success: boolean; message?: string }>;
+  isSubmitting: boolean;
 }
