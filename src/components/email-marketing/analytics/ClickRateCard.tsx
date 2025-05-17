@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import type { EmailAnalytic } from "../types.d";
+import type { EmailAnalytic } from "../types";
 import { calculateClickRate, calculateTotalOpens, calculateTotalClicks } from "../utils/analyticsUtils";
 
 interface ClickRateCardProps {

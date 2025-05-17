@@ -9,7 +9,7 @@ import {
   Tooltip, 
   ResponsiveContainer
 } from "recharts";
-import type { EmailAnalytic } from "../types.d";
+import type { EmailAnalytic } from "../types";
 import { prepareEngagementData, ChartData } from "../utils/analyticsUtils";
 
 interface EmailEngagementChartProps {

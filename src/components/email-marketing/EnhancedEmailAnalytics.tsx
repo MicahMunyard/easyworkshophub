@@ -3,7 +3,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import EmailAnalytics from "./EmailAnalytics";
-import type { EnhancedEmailAnalyticsProps } from "./types.d";
+import type { EnhancedEmailAnalyticsProps } from "./types";
 
 const EnhancedEmailAnalytics: React.FC<EnhancedEmailAnalyticsProps> = ({
   analytics,

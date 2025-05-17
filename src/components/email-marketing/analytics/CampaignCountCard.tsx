@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import type { EmailAnalytic } from "../types.d";
+import type { EmailAnalytic } from "../types";
 import { calculateTotalSent } from "../utils/analyticsUtils";
 
 interface CampaignCountCardProps {

@@ -1,5 +1,4 @@
-
-import type { EmailAnalytic } from "../types.d";
+import type { EmailAnalytic } from "../types";
 
 /**
  * Calculate open rate as a percentage from analytics data

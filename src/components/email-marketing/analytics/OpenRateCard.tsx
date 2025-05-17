@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import type { EmailAnalytic } from "../types.d";
+import type { EmailAnalytic } from "../types";
 import { calculateOpenRate, calculateTotalSent, calculateTotalOpens } from "../utils/analyticsUtils";
 
 interface OpenRateCardProps {
