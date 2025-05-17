@@ -1,91 +1,14 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useSendgridEmail } from "@/hooks/email/useSendgridEmail";
 import type { EmailTemplate, EmailCampaign, EmailAutomation, EmailAnalytic } from "./types.d";
 
-// Mock data for development
-const mockTemplates: EmailTemplate[] = [
-  {
-    id: "template-1",
-    name: "Service Reminder",
-    subject: "Your vehicle is due for service",
-    content: "<p>Hello {{customer_name}},</p><p>Your vehicle is due for service soon.</p>",
-    category: "service",
-    description: "Reminds customers about upcoming service appointments",
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: "template-2",
-    name: "Welcome Message",
-    subject: "Welcome to our workshop!",
-    content: "<p>Welcome to our workshop, {{customer_name}}!</p>",
-    category: "other",
-    created_at: new Date().toISOString(),
-  }
-];
-
-const mockAutomations: EmailAutomation[] = [
-  {
-    id: "automation-1",
-    name: "Monthly Newsletter",
-    trigger_type: "schedule",
-    template_id: "template-1",
-    is_active: true,
-    audience_type: "all",
-    status: "active",
-    created_at: new Date().toISOString(),
-    next_run: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-  }
-];
-
-const mockAnalytics: EmailAnalytic[] = [
-  {
-    campaign_id: "campaign-1",
-    campaign_name: "May Service Promotion",
-    sent_date: new Date().toISOString(),
-    recipients: 230,
-    opens: 125,
-    clicks: 75,
-  },
-  {
-    campaign_id: "campaign-2",
-    campaign_name: "Spring Tire Offer",
-    sent_date: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-    recipients: 185,
-    opens: 95,
-    clicks: 45,
-  }
-];
-
-const mockCampaigns: EmailCampaign[] = [
-  {
-    id: "campaign-1",
-    name: "May Service Promotion",
-    subject: "Special May Service Offer",
-    status: "sent",
-    audience_type: "all",
-    recipient_count: 230,
-    open_rate: 54.3,
-    click_rate: 60.0,
-    sent_at: new Date().toISOString(),
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: "campaign-2",
-    name: "Spring Tire Offer",
-    subject: "Get ready for spring with new tires",
-    status: "draft",
-    audience_type: "segment",
-    recipient_count: 0,
-    created_at: new Date().toISOString(),
-  }
-];
-
 export const useEmailMarketing = () => {
-  const [templates, setTemplates] = useState<EmailTemplate[]>(mockTemplates);
-  const [campaigns, setCampaigns] = useState<EmailCampaign[]>(mockCampaigns);
-  const [automations, setAutomations] = useState<EmailAutomation[]>(mockAutomations);
-  const [analytics, setAnalytics] = useState<EmailAnalytic[]>(mockAnalytics);
+  const [templates, setTemplates] = useState<EmailTemplate[]>([]);
+  const [campaigns, setCampaigns] = useState<EmailCampaign[]>([]);
+  const [automations, setAutomations] = useState<EmailAutomation[]>([]);
+  const [analytics, setAnalytics] = useState<EmailAnalytic[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { sendEmail } = useSendgridEmail();

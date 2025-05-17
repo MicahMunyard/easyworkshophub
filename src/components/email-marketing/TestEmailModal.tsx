@@ -1,92 +1,93 @@
 
-import { useState } from "react";
-import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle 
+import React, { useState } from "react";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { useSendgridEmail } from "@/hooks/email/useSendgridEmail";
-import type { TestEmailModalProps } from "./types.d";
+import { Label } from "@/components/ui/label";
+import { AlertCircle, SendIcon, UserCheck } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useEmailMarketing } from "./useEmailMarketing";
 
-const testEmailSchema = z.object({
-  email: z.string().email("Please enter a valid email address"),
-});
+interface TestEmailModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  templateId?: string;
+  campaignSubject?: string;
+  campaignName?: string;
+}
 
-type TestEmailFormData = z.infer<typeof testEmailSchema>;
-
-export function TestEmailModal({
+export const TestEmailModal: React.FC<TestEmailModalProps> = ({
   isOpen,
   onClose,
   templateId,
   campaignSubject,
-  campaignName
-}: TestEmailModalProps) {
+  campaignName,
+}) => {
+  const [recipient, setRecipient] = useState("");
   const [isSending, setIsSending] = useState(false);
-  const { sendEmail } = useSendgridEmail();
+  const { toast } = useToast();
+  const { templates, sendTestEmail } = useEmailMarketing();
+  
+  const selectedTemplate = templateId ? templates.find(t => t.id === templateId) : null;
 
-  const form = useForm<TestEmailFormData>({
-    resolver: zodResolver(testEmailSchema),
-    defaultValues: {
-      email: "",
-    },
-  });
+  const handleSendTest = async () => {
+    if (!recipient) {
+      toast({
+        title: "Email required",
+        description: "Please enter a recipient email address",
+        variant: "destructive"
+      });
+      return;
+    }
 
-  const handleSendTest = async (data: TestEmailFormData) => {
-    if (!templateId) {
-      form.setError("email", { message: "No template selected" });
+    if (!selectedTemplate && !campaignSubject) {
+      toast({
+        title: "No content",
+        description: "No template or campaign content found to send",
+        variant: "destructive"
+      });
       return;
     }
 
     setIsSending(true);
     
     try {
-      // Format the recipient as an EmailRecipient object
-      const recipient = {
-        email: data.email,
-        name: "Test Recipient"
-      };
+      // Use either the template content or a simple placeholder
+      const content = selectedTemplate?.content || "<p>This is test content for your campaign.</p>";
+      const subject = campaignSubject || selectedTemplate?.subject || "Test Email";
       
-      // Create the email options with correct property structure
-      const emailOptions = {
-        to: data.email,
-        subject: `[TEST] ${campaignSubject || "Email Campaign"}`,
-        templateId: templateId,
-        dynamicTemplateData: {
-          campaign_name: campaignName || "Test Campaign",
-          preview_text: "This is a test email",
-          current_date: new Date().toLocaleDateString(),
-        }
-      };
-
-      // Call sendEmail with properly formatted parameters
-      const result = await sendEmail(recipient, emailOptions);
-
+      const result = await sendTestEmail([recipient], {
+        subject,
+        content,
+        note: `Test for ${campaignName || selectedTemplate?.name || "email campaign"}`
+      });
+      
       if (result.success) {
-        form.reset();
+        toast({
+          title: "Test sent",
+          description: `Test email sent to ${recipient}`,
+        });
         onClose();
       } else {
-        throw new Error(result.error?.message || "Failed to send test email");
+        toast({
+          title: "Failed to send",
+          description: result.message || "There was an error sending the test email",
+          variant: "destructive",
+        });
       }
     } catch (error) {
-      console.error("Error sending test email:", error);
-      form.setError("email", { 
-        message: error instanceof Error ? error.message : "Failed to send test email" 
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "An unknown error occurred",
+        variant: "destructive"
       });
     } finally {
       setIsSending(false);
@@ -99,41 +100,55 @@ export function TestEmailModal({
         <DialogHeader>
           <DialogTitle>Send Test Email</DialogTitle>
           <DialogDescription>
-            Send a test version of this campaign to verify how it will look.
+            Send a test email to preview how your email will look in recipients' inboxes.
           </DialogDescription>
         </DialogHeader>
-        
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSendTest)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email address</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="you@example.com"
-                      {...field}
-                      autoComplete="email"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="recipient">Recipient Email</Label>
+            <Input
+              id="recipient"
+              placeholder="your@email.com"
+              value={recipient}
+              onChange={(e) => setRecipient(e.target.value)}
             />
-            
-            <DialogFooter className="mt-6 gap-2 sm:gap-0">
-              <Button type="button" variant="outline" onClick={onClose} disabled={isSending}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSending || !templateId}>
-                {isSending ? "Sending..." : "Send Test"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+          </div>
+
+          {!selectedTemplate && !campaignSubject && (
+            <div className="flex items-center space-x-2 text-amber-500 text-sm">
+              <AlertCircle className="h-4 w-4" />
+              <span>No template or campaign selected. Please select one first.</span>
+            </div>
+          )}
+
+          {(selectedTemplate || campaignSubject) && (
+            <div className="text-sm text-muted-foreground">
+              <p className="font-medium">You will send:</p>
+              <p><span className="font-medium">Subject:</span> {campaignSubject || selectedTemplate?.subject}</p>
+              <p><span className="font-medium">From:</span> Your configured sender email</p>
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="outline" disabled={isSending}>Cancel</Button>
+          </DialogClose>
+          <Button 
+            onClick={handleSendTest} 
+            disabled={!recipient || isSending || (!selectedTemplate && !campaignSubject)}
+            className="flex items-center gap-2"
+          >
+            {isSending ? (
+              <>Sending...</>
+            ) : (
+              <>
+                <SendIcon className="h-4 w-4" />
+                Send Test
+              </>
+            )}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
-}
+};
