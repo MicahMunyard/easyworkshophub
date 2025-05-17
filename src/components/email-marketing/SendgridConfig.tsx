@@ -73,7 +73,18 @@ const SendgridConfig: React.FC<SendgridConfigProps> = ({
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-      const success = await saveSendgridConfig(values);
+      const configValues: SendgridFormValues = {
+        apiKey: values.apiKey,
+        fromName: values.fromName,
+        fromEmail: values.fromEmail,
+        senderName: values.senderName,
+        senderEmail: values.senderEmail,
+        replyToEmail: values.replyToEmail,
+        enableTracking: values.enableTracking,
+        enableUnsubscribeFooter: values.enableUnsubscribeFooter,
+      };
+
+      const success = await saveSendgridConfig(configValues);
       
       if (success) {
         toast({
@@ -82,7 +93,7 @@ const SendgridConfig: React.FC<SendgridConfigProps> = ({
         });
         
         if (onSaveConfig) {
-          await onSaveConfig(values);
+          await onSaveConfig(configValues);
         }
       } else {
         toast({
@@ -104,10 +115,21 @@ const SendgridConfig: React.FC<SendgridConfigProps> = ({
     setIsTesting(true);
     try {
       const values = form.getValues();
-      const result = await testSendgridConnection(values);
+      const configValues: SendgridFormValues = {
+        apiKey: values.apiKey,
+        fromName: values.fromName,
+        fromEmail: values.fromEmail,
+        senderName: values.senderName,
+        senderEmail: values.senderEmail,
+        replyToEmail: values.replyToEmail,
+        enableTracking: values.enableTracking,
+        enableUnsubscribeFooter: values.enableUnsubscribeFooter,
+      };
+
+      const result = await testSendgridConnection(configValues);
       
       if (onTestConnection) {
-        await onTestConnection(values);
+        await onTestConnection(configValues);
       }
       
       if (result.success) {

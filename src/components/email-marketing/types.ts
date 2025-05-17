@@ -1,3 +1,4 @@
+
 export interface EmailCampaign {
   id: string;
   name: string;

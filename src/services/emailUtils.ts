@@ -1,5 +1,5 @@
-import { formatDate } from "@/hooks/email/utils/dateUtils";
-import type { EmailRecipient, EmailType } from "@/components/email-marketing/types";
+
+import type { EmailRecipient } from "@/components/email-marketing/types";
 
 /**
  * Normalizes different recipient formats into a standard EmailRecipient object or array

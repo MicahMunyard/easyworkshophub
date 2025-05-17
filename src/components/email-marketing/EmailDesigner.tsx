@@ -1,4 +1,5 @@
-import React, { useState, useCallback } from 'react';
+
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { EmailDesignerProps } from './types';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +13,8 @@ const EmailDesigner: React.FC<EmailDesignerProps> = (props) => {
   const [subject, setSubject] = useState(initialTemplate?.subject || '');
   const [content, setContent] = useState(initialTemplate?.content || '');
   const [isSaving, setIsSaving] = useState(false);
+  const [editorLoaded, setEditorLoaded] = useState(false);
+  const emailEditorRef = useRef<any>(null);
   const { toast } = useToast();
 
   const handleNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -25,6 +28,53 @@ const EmailDesigner: React.FC<EmailDesignerProps> = (props) => {
   const handleContentChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setContent(e.target.value);
   }, []);
+
+  useEffect(() => {
+    if (initialTemplate?.content && emailEditorRef.current?.editor && editorLoaded) {
+      try {
+        // Log for debugging
+        console.log("Loading template content:", initialTemplate.content);
+        
+        // Try loading as JSON design
+        let contentObj;
+        try {
+          contentObj = JSON.parse(initialTemplate.content);
+          console.log("Parsed content object:", contentObj);
+        } catch (e) {
+          console.log("Not valid JSON, using as HTML");
+          // Handle as raw HTML
+          emailEditorRef.current.editor.loadHTML(initialTemplate.content);
+          return;
+        }
+        
+        // Load based on content structure
+        if (contentObj.design) {
+          console.log("Loading design");
+          emailEditorRef.current.editor.loadDesign(contentObj.design);
+        } else if (contentObj.html) {
+          console.log("Loading HTML");
+          emailEditorRef.current.editor.loadHTML(contentObj.html);
+        } else {
+          console.log("No valid design or HTML found");
+          // Fallback to treating the whole content as HTML
+          emailEditorRef.current.editor.loadHTML(initialTemplate.content);
+        }
+      } catch (e) {
+        console.error("Error loading template:", e);
+        // Fallback to loading as HTML with clear error
+        try {
+          emailEditorRef.current.editor.loadHTML(initialTemplate.content);
+        } catch (err) {
+          console.error("Failed to load template as HTML:", err);
+          toast({
+            title: 'Template loading error',
+            description: 'Could not load the email template',
+            variant: 'destructive'
+          });
+        }
+      }
+    }
+  }, [initialTemplate, editorLoaded, toast]);
 
   const handleSave = async () => {
     setIsSaving(true);

@@ -1,5 +1,6 @@
+
 import axios from "axios";
-import { SendEmailResult, SendgridEmailOptions, EmailRecipient } from "@/components/email-marketing/types";
+import { EmailRecipient, SendgridEmailOptions } from "@/components/email-marketing/types";
 
 export interface SendEmailResult {
   success: boolean;
@@ -139,6 +140,3 @@ class SendgridService {
 }
 
 export const sendgridService = new SendgridService();
-
-// These types need to be re-exported for backwards compatibility
-export type { EmailRecipient, SendgridEmailOptions };
