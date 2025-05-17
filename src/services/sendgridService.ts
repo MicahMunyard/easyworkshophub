@@ -1,5 +1,5 @@
-
-import type { EmailRecipient, SendgridEmailOptions } from '@/components/email-marketing/types.d';
+import axios from "axios";
+import { SendEmailResult, SendgridEmailOptions, EmailRecipient } from "@/components/email-marketing/types";
 
 export interface SendEmailResult {
   success: boolean;
