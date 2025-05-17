@@ -60,7 +60,7 @@ export interface EmailAutomation {
   status: "active" | "paused" | "draft";
   created_at: string;
   next_run?: string;
-  frequency?: "daily" | "weekly" | "monthly";
+  frequency?: "daily" | "weekly" | "monthly" | "custom";
 }
 
 export interface EmailAnalytic {
@@ -93,4 +93,29 @@ export interface SendEmailResult {
   success: boolean;
   message?: string;
   error?: Error;
+}
+
+export interface EmailAnalyticsProps {
+  analytics: EmailAnalytic[];
+  isLoading: boolean;
+}
+
+export interface EmailAutomationProps {
+  automations: EmailAutomation[];
+  templates: EmailTemplate[];
+  isLoading: boolean;
+  onSave: (automation: Omit<EmailAutomation, "id" | "created_at">) => Promise<boolean>;
+}
+
+export interface EmailTestingProps {
+  emailSubject: string;
+  emailContent: string;
+  onSendTest: (recipients: string[], options: any) => Promise<{ success: boolean; message?: string }>;
+  isSubmitting: boolean;
+}
+
+export interface EnhancedEmailAnalyticsProps {
+  analytics: EmailAnalytic[];
+  isLoading: boolean;
+  exportAnalytics: () => void;
 }
