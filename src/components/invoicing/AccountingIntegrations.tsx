@@ -5,46 +5,58 @@ import { Button } from "@/components/ui/button";
 import { Check, ExternalLink, LinkIcon, RefreshCw, X } from "lucide-react";
 import { useAccountingIntegrations } from "@/hooks/invoicing/useAccountingIntegrations";
 import { useXeroWebhook } from "@/hooks/invoicing/useXeroWebhook";
+import { useMyobWebhook } from "@/hooks/invoicing/useMyobWebhook";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AccountingProvider } from "@/types/accounting";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
 import { Input } from "@/components/ui/input";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 
 const AccountingIntegrations: React.FC = () => {
   const {
     integrations,
     isLoading,
     connectXero,
+    connectMyob,
     disconnectIntegration,
     hasActiveIntegration,
     refreshIntegrations
   } = useAccountingIntegrations();
 
-  const { getWebhookUrl } = useXeroWebhook();
-  const [webhookUrl, setWebhookUrl] = useState<string>("");
-  const [isLoadingWebhook, setIsLoadingWebhook] = useState<boolean>(false);
+  const { getWebhookUrl: getXeroWebhookUrl } = useXeroWebhook();
+  const { getWebhookUrl: getMyobWebhookUrl } = useMyobWebhook();
+  const [xeroWebhookUrl, setXeroWebhookUrl] = useState<string>("");
+  const [myobWebhookUrl, setMyobWebhookUrl] = useState<string>("");
+  const [isLoadingXeroWebhook, setIsLoadingXeroWebhook] = useState<boolean>(false);
+  const [isLoadingMyobWebhook, setIsLoadingMyobWebhook] = useState<boolean>(false);
 
   useEffect(() => {
-    const fetchWebhookUrl = async () => {
+    const fetchWebhookUrls = async () => {
       if (hasActiveIntegration('xero')) {
-        setIsLoadingWebhook(true);
-        const url = await getWebhookUrl();
-        setWebhookUrl(url);
-        setIsLoadingWebhook(false);
+        setIsLoadingXeroWebhook(true);
+        const url = await getXeroWebhookUrl();
+        setXeroWebhookUrl(url);
+        setIsLoadingXeroWebhook(false);
+      }
+      
+      if (hasActiveIntegration('myob')) {
+        setIsLoadingMyobWebhook(true);
+        const url = await getMyobWebhookUrl();
+        setMyobWebhookUrl(url);
+        setIsLoadingMyobWebhook(false);
       }
     };
 
-    fetchWebhookUrl();
+    fetchWebhookUrls();
   }, [integrations]);
 
-  const copyWebhookUrl = () => {
-    if (webhookUrl) {
-      navigator.clipboard.writeText(webhookUrl);
+  const copyWebhookUrl = (url: string, provider: string) => {
+    if (url) {
+      navigator.clipboard.writeText(url);
       toast({
         title: "Copied!",
-        description: "Webhook URL copied to clipboard",
+        description: `${provider} webhook URL copied to clipboard`,
       });
     }
   };
@@ -54,7 +66,16 @@ const AccountingIntegrations: React.FC = () => {
     
     if (!integration) {
       return (
-        <Button onClick={() => provider === 'xero' ? connectXero() : null} className="ml-auto">
+        <Button 
+          onClick={() => {
+            if (provider === 'xero') {
+              connectXero();
+            } else if (provider === 'myob') {
+              connectMyob();
+            }
+          }} 
+          className="ml-auto"
+        >
           Connect
         </Button>
       );
@@ -86,7 +107,16 @@ const AccountingIntegrations: React.FC = () => {
             <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
               Disconnected
             </Badge>
-            <Button onClick={() => provider === 'xero' ? connectXero() : null} size="sm">
+            <Button 
+              onClick={() => {
+                if (provider === 'xero') {
+                  connectXero();
+                } else if (provider === 'myob') {
+                  connectMyob();
+                }
+              }} 
+              size="sm"
+            >
               Reconnect
             </Button>
           </>
@@ -153,11 +183,11 @@ const AccountingIntegrations: React.FC = () => {
                   Configure this URL in your Xero Developer Dashboard to receive payment status updates:
                 </p>
                 <div className="flex items-center gap-2">
-                  {isLoadingWebhook ? (
+                  {isLoadingXeroWebhook ? (
                     <Skeleton className="h-9 w-full" />
                   ) : (
                     <Input 
-                      value={webhookUrl} 
+                      value={xeroWebhookUrl} 
                       readOnly 
                       className="text-xs font-mono bg-gray-100"
                     />
@@ -165,8 +195,8 @@ const AccountingIntegrations: React.FC = () => {
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    onClick={copyWebhookUrl} 
-                    disabled={isLoadingWebhook || !webhookUrl}
+                    onClick={() => copyWebhookUrl(xeroWebhookUrl, "Xero")} 
+                    disabled={isLoadingXeroWebhook || !xeroWebhookUrl}
                   >
                     Copy
                   </Button>
@@ -183,11 +213,41 @@ const AccountingIntegrations: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="font-medium">MYOB</h3>
-                  <p className="text-sm text-muted-foreground">Sync invoices with MYOB (Coming soon)</p>
+                  <p className="text-sm text-muted-foreground">Sync invoices with MYOB</p>
                 </div>
               </div>
-              <Badge variant="secondary">Coming Soon</Badge>
+              {renderIntegrationStatus('myob')}
             </div>
+            
+            {hasActiveIntegration('myob') && (
+              <div className="bg-gray-50 rounded-md p-4 mb-4">
+                <h4 className="font-medium text-sm mb-2 flex items-center">
+                  <LinkIcon size={14} className="mr-1" /> Webhook Configuration
+                </h4>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Configure this URL in your MYOB Developer Dashboard to receive payment status updates:
+                </p>
+                <div className="flex items-center gap-2">
+                  {isLoadingMyobWebhook ? (
+                    <Skeleton className="h-9 w-full" />
+                  ) : (
+                    <Input 
+                      value={myobWebhookUrl} 
+                      readOnly 
+                      className="text-xs font-mono bg-gray-100"
+                    />
+                  )}
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => copyWebhookUrl(myobWebhookUrl, "MYOB")} 
+                    disabled={isLoadingMyobWebhook || !myobWebhookUrl}
+                  >
+                    Copy
+                  </Button>
+                </div>
+              </div>
+            )}
 
             <div className="text-sm text-muted-foreground mt-6 bg-muted p-3 rounded">
               <p className="font-medium mb-2">How accounting sync works:</p>

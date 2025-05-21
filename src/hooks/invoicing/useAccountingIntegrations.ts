@@ -1,179 +1,186 @@
 
-import { useState, useEffect } from 'react';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { AccountingProvider, AccountingIntegration, SyncInvoiceResult } from '@/types/accounting';
-import { Invoice } from '@/types/invoice';
-import type { Database } from '@/integrations/supabase/types'; // import the type from generated types
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/components/ui/use-toast";
+import { AccountingIntegration, AccountingProvider, SyncInvoiceResult } from "@/types/accounting";
+import { Invoice } from "@/types/invoice";
 
 export const useAccountingIntegrations = () => {
-  const [integrations, setIntegrations] = useState<AccountingIntegration[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isSyncing, setIsSyncing] = useState<boolean>(false);
-  const { toast } = useToast();
   const { user } = useAuth();
+  const { toast } = useToast();
+  const [integrations, setIntegrations] = useState<AccountingIntegration[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
 
-  // Use the correct Supabase generated type for accounting_integrations
-  type DBIntegration = Database['public']['Tables']['accounting_integrations']['Row'];
-
-  const fetchIntegrations = async () => {
-    if (!user) {
+  useEffect(() => {
+    if (user) {
+      fetchIntegrations();
+    } else {
       setIntegrations([]);
       setIsLoading(false);
-      return;
     }
+  }, [user]);
+
+  const fetchIntegrations = async () => {
+    if (!user) return;
 
     setIsLoading(true);
     try {
-      // Use the correct table import and casting
       const { data, error } = await supabase
-        .from('accounting_integrations')
-        .select('*')
-        .eq('user_id', user.id);
+        .from("accounting_integrations")
+        .select("*")
+        .eq("user_id", user.id);
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
-      setIntegrations(
-        (data as DBIntegration[] | null)?.map((integration) => ({
-          id: integration.id,
-          userId: integration.user_id,
-          provider: integration.provider as AccountingProvider,
-          status: integration.status as 'active' | 'disconnected' | 'error',
-          connectedAt: integration.connected_at,
-          expiresAt: integration.expires_at || undefined,
-          lastSyncAt: integration.last_sync_at || undefined,
-          error: integration.last_error || undefined,
-        })) || []
-      );
+      setIntegrations(data || []);
     } catch (error) {
-      console.error('Error fetching integrations:', error);
+      console.error("Error fetching integrations:", error);
       toast({
-        title: 'Error',
-        description: 'Failed to load accounting integrations',
-        variant: 'destructive'
+        title: "Error",
+        description: "Failed to load accounting integrations",
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchIntegrations();
-  }, [user]);
+  const connectXero = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke("xero-integration/get-auth-url");
 
-  const connectXero = () => {
-    if (!user) {
+      if (error) throw error;
+      if (data?.authUrl) {
+        window.location.href = data.authUrl;
+      }
+    } catch (error) {
+      console.error("Error connecting to Xero:", error);
       toast({
-        title: 'Authentication Required',
-        description: 'Please log in to connect to Xero',
-        variant: 'destructive'
+        title: "Connection Failed",
+        description: "Could not initiate Xero connection",
+        variant: "destructive",
       });
-      return;
     }
+  };
 
-    // Generate a URL to start the OAuth flow
-    const clientId = '855D6BA1D7BD43DC879511D0040DB33D';
-    const redirectUri = encodeURIComponent('https://app.workshopbase.com/integrations/xero/oauth');
-    const scope = encodeURIComponent('accounting.transactions accounting.contacts');
-    const state = encodeURIComponent(user.id);
+  const connectMyob = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke("myob-integration/get-auth-url");
 
-    const authUrl = `https://login.xero.com/identity/connect/authorize?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&state=${state}`;
-
-    // Open the Xero authorization window
-    window.open(authUrl, '_blank', 'width=800,height=600');
+      if (error) throw error;
+      if (data?.authUrl) {
+        window.location.href = data.authUrl;
+      }
+    } catch (error) {
+      console.error("Error connecting to MYOB:", error);
+      toast({
+        title: "Connection Failed",
+        description: "Could not initiate MYOB connection",
+        variant: "destructive",
+      });
+    }
   };
 
   const disconnectIntegration = async (provider: AccountingProvider) => {
-    if (!user) return;
+    if (!user) return false;
 
     try {
       const { error } = await supabase
-        .from('accounting_integrations')
-        .update({ status: 'disconnected', updated_at: new Date().toISOString() })
-        .eq('user_id', user.id)
-        .eq('provider', provider);
+        .from("accounting_integrations")
+        .update({ status: "disconnected" })
+        .eq("user_id", user.id)
+        .eq("provider", provider);
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
+
+      setIntegrations(prev =>
+        prev.map(integration =>
+          integration.provider === provider
+            ? { ...integration, status: "disconnected" }
+            : integration
+        )
+      );
 
       toast({
-        title: 'Success',
-        description: `Disconnected from ${provider.toUpperCase()}`,
+        title: "Disconnected",
+        description: `Successfully disconnected from ${provider.toUpperCase()}`,
       });
 
-      fetchIntegrations();
+      return true;
     } catch (error) {
-      console.error(`Error disconnecting ${provider}:`, error);
+      console.error(`Error disconnecting from ${provider}:`, error);
       toast({
-        title: 'Error',
-        description: `Failed to disconnect from ${provider.toUpperCase()}`,
-        variant: 'destructive'
+        title: "Disconnection Failed",
+        description: `Could not disconnect from ${provider.toUpperCase()}`,
+        variant: "destructive",
       });
+      return false;
     }
   };
 
-  const syncInvoice = async (invoice: Invoice, provider: AccountingProvider): Promise<SyncInvoiceResult> => {
-    if (!user) {
-      toast({
-        title: 'Authentication Required',
-        description: 'Please log in to sync invoices',
-        variant: 'destructive'
-      });
-      return { success: false, error: 'Not authenticated' };
+  const syncInvoice = async (
+    invoice: Invoice,
+    provider: AccountingProvider
+  ): Promise<SyncInvoiceResult> => {
+    if (!user || !hasActiveIntegration(provider)) {
+      return { success: false, error: `No active ${provider} integration` };
     }
 
     setIsSyncing(true);
     try {
-      // Call edge function to sync the invoice
-      const { data, error } = await supabase.functions.invoke('xero-integration/sync-invoice', {
-        body: {
-          invoice,
-          provider
+      // Call the provider-specific edge function
+      const { data, error } = await supabase.functions.invoke(
+        `${provider}-integration/sync-invoice`,
+        {
+          body: { invoice, provider }
         }
+      );
+
+      if (error || !data?.success) {
+        throw new Error(error?.message || data?.error || `Failed to sync invoice to ${provider}`);
+      }
+
+      // Update the invoice in the database with the external ID
+      const externalIdField = `${provider}InvoiceId`;
+      const { error: updateError } = await supabase
+        .from("user_invoices")
+        .update({
+          [externalIdField]: data.externalId,
+          last_synced_at: new Date().toISOString()
+        })
+        .eq("id", invoice.id);
+
+      if (updateError) {
+        throw new Error(`Failed to update invoice with ${provider} ID`);
+      }
+
+      toast({
+        title: "Invoice Synced",
+        description: `Invoice #${invoice.invoiceNumber} synced to ${provider.toUpperCase()}`,
       });
 
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      if (data.success && data.externalId) {
-        // Update the invoice in our database with the external ID
-        await supabase
-          .from('user_invoices')
-          .update({
-            [`${provider}_invoice_id`]: data.externalId,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', invoice.id);
-
-        toast({
-          title: 'Success',
-          description: `Invoice ${invoice.invoiceNumber} synced to ${provider.toUpperCase()}`,
-        });
-
-        return { success: true, externalId: data.externalId };
-      } else {
-        throw new Error(data.error || 'Failed to sync invoice');
-      }
-    } catch (error: any) {
+      return { success: true, externalId: data.externalId };
+    } catch (error) {
       console.error(`Error syncing invoice to ${provider}:`, error);
       toast({
-        title: 'Sync Failed',
-        description: error.message || `Failed to sync invoice to ${provider.toUpperCase()}`,
-        variant: 'destructive'
+        title: "Sync Failed",
+        description: error instanceof Error ? error.message : `Error syncing to ${provider.toUpperCase()}`,
+        variant: "destructive",
       });
-      return { success: false, error: error.message };
+      return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
     } finally {
       setIsSyncing(false);
     }
   };
 
-  const hasActiveIntegration = (provider: AccountingProvider) => {
-    return integrations.some(i => i.provider === provider && i.status === 'active');
+  const refreshIntegrations = () => {
+    fetchIntegrations();
+  };
+
+  const hasActiveIntegration = (provider: AccountingProvider): boolean => {
+    return integrations.some(i => i.provider === provider && i.status === "active");
   };
 
   return {
@@ -181,9 +188,10 @@ export const useAccountingIntegrations = () => {
     isLoading,
     isSyncing,
     connectXero,
+    connectMyob,
     disconnectIntegration,
     syncInvoice,
-    hasActiveIntegration,
-    refreshIntegrations: fetchIntegrations
+    refreshIntegrations,
+    hasActiveIntegration
   };
 };

@@ -1,21 +1,19 @@
 
-project_id = "workshopbase-email-marketing"
+project_id = "qyjjbpyqxwrluhymvshn"
 
 [api]
 enabled = true
-port = 54321
+port = 8080
 schemas = ["public", "storage", "graphql_public"]
 
 [db]
-port = 54322
+port = 5432
 
 [studio]
-port = 54323
+port = 3000
 
 [inbucket]
-port = 54324
-smtp_port = 54325
-pop3_port = 54326
+port = 4000
 
 [storage]
 enabled = true
@@ -26,5 +24,11 @@ enabled = true
 [realtime]
 enabled = true
 
-[functions.sendgrid-email]
+[functions]
+enabled = true
+
+[functions.xero-integration]
+verify_jwt = true
+
+[functions.myob-integration]
 verify_jwt = true

@@ -35,6 +35,27 @@ export interface XeroInvoiceData {
   amountPaid: number;
 }
 
+export interface MyobInvoiceData {
+  id: string;
+  number: string;
+  date: string;
+  dueDate: string;
+  customer: {
+    id: string;
+    name: string;
+  };
+  lines: {
+    description: string;
+    quantity: number;
+    unitPrice: number;
+    total: number;
+  }[];
+  subtotal: number;
+  totalTax: number;
+  totalAmount: number;
+  status: string;
+}
+
 export interface SyncInvoiceResult {
   success: boolean;
   externalId?: string;

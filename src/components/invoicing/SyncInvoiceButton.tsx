@@ -35,6 +35,18 @@ const SyncInvoiceButton: React.FC<SyncInvoiceButtonProps> = ({
   };
 
   const isInvoiceSynced = Boolean(invoice[`${provider}InvoiceId`]);
+  
+  // Get display name based on provider
+  const getProviderDisplayName = () => {
+    switch(provider) {
+      case 'xero':
+        return 'Xero';
+      case 'myob':
+        return 'MYOB';
+      default:
+        return provider.toUpperCase();
+    }
+  };
 
   return (
     <Button
@@ -52,7 +64,11 @@ const SyncInvoiceButton: React.FC<SyncInvoiceButtonProps> = ({
       ) : (
         <>
           <RefreshCw size={14} />
-          <span>{isInvoiceSynced ? "Update in Xero" : "Sync to Xero"}</span>
+          <span>
+            {isInvoiceSynced 
+              ? `Update in ${getProviderDisplayName()}` 
+              : `Sync to ${getProviderDisplayName()}`}
+          </span>
         </>
       )}
     </Button>
