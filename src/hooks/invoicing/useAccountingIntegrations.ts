@@ -34,7 +34,22 @@ export const useAccountingIntegrations = () => {
 
       if (error) throw error;
 
-      setIntegrations(data || []);
+      if (data && Array.isArray(data)) {
+        const formattedIntegrations: AccountingIntegration[] = data.map(item => ({
+          id: item.id,
+          userId: item.user_id,
+          provider: item.provider as AccountingProvider,
+          status: item.status as "active" | "disconnected" | "error",
+          connectedAt: item.connected_at,
+          expiresAt: item.expires_at,
+          lastSyncAt: item.last_sync_at,
+          error: item.last_error,
+          accessToken: item.access_token,
+          refreshToken: item.refresh_token,
+          tenantId: item.tenant_id
+        }));
+        setIntegrations(formattedIntegrations);
+      }
     } catch (error) {
       console.error("Error fetching integrations:", error);
       toast({
@@ -105,7 +120,7 @@ export const useAccountingIntegrations = () => {
 
       toast({
         title: "Disconnected",
-        description: `Successfully disconnected from ${provider.toUpperCase()}`,
+        description: `Successfully disconnected from ${provider === 'xero' ? 'Xero' : 'MYOB'}`,
       });
 
       return true;
@@ -113,7 +128,7 @@ export const useAccountingIntegrations = () => {
       console.error(`Error disconnecting from ${provider}:`, error);
       toast({
         title: "Disconnection Failed",
-        description: `Could not disconnect from ${provider.toUpperCase()}`,
+        description: `Could not disconnect from ${provider === 'xero' ? 'Xero' : 'MYOB'}`,
         variant: "destructive",
       });
       return false;
@@ -148,7 +163,7 @@ export const useAccountingIntegrations = () => {
         .from("user_invoices")
         .update({
           [externalIdField]: data.externalId,
-          last_synced_at: new Date().toISOString()
+          last_sync_at: new Date().toISOString()
         })
         .eq("id", invoice.id);
 
@@ -158,7 +173,7 @@ export const useAccountingIntegrations = () => {
 
       toast({
         title: "Invoice Synced",
-        description: `Invoice #${invoice.invoiceNumber} synced to ${provider.toUpperCase()}`,
+        description: `Invoice #${invoice.invoiceNumber} synced to ${provider === 'xero' ? 'Xero' : 'MYOB'}`,
       });
 
       return { success: true, externalId: data.externalId };
@@ -166,7 +181,7 @@ export const useAccountingIntegrations = () => {
       console.error(`Error syncing invoice to ${provider}:`, error);
       toast({
         title: "Sync Failed",
-        description: error instanceof Error ? error.message : `Error syncing to ${provider.toUpperCase()}`,
+        description: error instanceof Error ? error.message : `Error syncing to ${provider === 'xero' ? 'Xero' : 'MYOB'}`,
         variant: "destructive",
       });
       return { success: false, error: error instanceof Error ? error.message : "Unknown error" };

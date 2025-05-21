@@ -12,6 +12,7 @@ const MYOB_WEBHOOK_KEY = Deno.env.get("MYOB_WEBHOOK_KEY") || "";
 const REDIRECT_URI = "https://app.workshopbase.com/integrations/myob/oauth";
 const MYOB_AUTH_URL = "https://secure.myob.com/oauth2/account/authorize";
 const MYOB_TOKEN_URL = "https://secure.myob.com/oauth2/v1/authorize";
+const MYOB_API_BASE_URL = "https://api.myob.com/accountright/";
 
 serve(async (req) => {
   // Handle CORS for preflight requests
@@ -160,7 +161,7 @@ serve(async (req) => {
           .from("accounting_integrations")
           .update({ 
             status: "disconnected",
-            error: `Token refresh failed: ${errorText}`
+            last_error: `Token refresh failed: ${errorText}`
           })
           .eq("user_id", userId)
           .eq("provider", "myob");
@@ -181,7 +182,7 @@ serve(async (req) => {
           refresh_token: tokenData.refresh_token,
           expires_at: new Date(Date.now() + tokenData.expires_in * 1000).toISOString(),
           status: "active",
-          error: null
+          last_error: null
         })
         .eq("user_id", userId)
         .eq("provider", "myob");
@@ -272,22 +273,25 @@ serve(async (req) => {
         const myobAccessToken = integration.access_token;
         const businessId = integration.tenant_id;
   
+        // Create Base64 encoded username:password for cftoken header
+        // In a real scenario, you would use actual credentials from the user
+        // For this example, we'll use a placeholder value
+        const cfTokenValue = btoa("administrator:");
+  
         // Map WorkshopBase invoice to MYOB invoice format
-        // This structure will vary based on MYOB's specific API requirements
         const myobInvoice = {
           Number: invoice.invoiceNumber,
           Date: invoice.date,
           DueDate: invoice.dueDate,
           Customer: {
             Name: invoice.customerName,
-            Id: invoice.customerId
+            UID: invoice.customerId // Assuming this is the UID in MYOB
           },
           Lines: invoice.items.map(item => ({
             Description: item.description,
             Quantity: item.quantity,
             UnitPrice: item.unitPrice,
             Total: item.total,
-            // Add other required MYOB invoice line properties
           })),
           Subtotal: invoice.subtotal,
           TotalTax: invoice.taxTotal,
@@ -295,13 +299,15 @@ serve(async (req) => {
           Status: "Open" // Adjust based on MYOB status options
         };
   
-        // Call the MYOB API to create the invoice
-        const myobResponse = await fetch(`https://api.myob.com/accountright/${businessId}/Sale/Invoice`, {
+        // Call the MYOB API to create the invoice with correct headers
+        const myobResponse = await fetch(`${MYOB_API_BASE_URL}${businessId}/Sale/Invoice`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${myobAccessToken}`,
+            'x-myobapi-cftoken': cfTokenValue,
             'x-myobapi-key': MYOB_CLIENT_ID,
             'x-myobapi-version': 'v2',
+            'Accept-Encoding': 'gzip,deflate',
             'Content-Type': 'application/json',
             'Accept': 'application/json'
           },

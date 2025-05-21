@@ -38,14 +38,12 @@ const SyncInvoiceButton: React.FC<SyncInvoiceButtonProps> = ({
   
   // Get display name based on provider
   const getProviderDisplayName = () => {
-    switch(provider) {
-      case 'xero':
-        return 'Xero';
-      case 'myob':
-        return 'MYOB';
-      default:
-        return provider.toUpperCase();
+    if (provider === 'xero') {
+      return 'Xero';
+    } else if (provider === 'myob') {
+      return 'MYOB';
     }
+    return provider;
   };
 
   return (

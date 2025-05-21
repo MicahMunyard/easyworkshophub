@@ -10,6 +10,9 @@ export interface AccountingIntegration {
   expiresAt?: string;
   lastSyncAt?: string;
   error?: string;
+  accessToken?: string;
+  refreshToken?: string;
+  tenantId?: string;
 }
 
 export interface XeroInvoiceData {

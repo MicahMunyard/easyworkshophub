@@ -53,7 +53,7 @@ const MyobOAuthCallback = () => {
     };
 
     processOAuthCallback();
-  }, [user]);
+  }, [user, searchParams]);
 
   const handleClose = () => {
     navigate("/invoicing");
