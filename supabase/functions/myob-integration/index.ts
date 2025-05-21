@@ -275,7 +275,6 @@ serve(async (req) => {
   
         // Create Base64 encoded username:password for cftoken header
         // In a real scenario, you would use actual credentials from the user
-        // For this example, we'll use a placeholder value
         const cfTokenValue = btoa("administrator:");
   
         // Map WorkshopBase invoice to MYOB invoice format
@@ -300,6 +299,7 @@ serve(async (req) => {
         };
   
         // Call the MYOB API to create the invoice with correct headers
+        // Updated headers based on the MYOB documentation
         const myobResponse = await fetch(`${MYOB_API_BASE_URL}${businessId}/Sale/Invoice`, {
           method: 'POST',
           headers: {

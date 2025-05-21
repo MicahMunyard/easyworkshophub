@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -163,7 +162,7 @@ export const useAccountingIntegrations = () => {
         .from("user_invoices")
         .update({
           [externalIdField]: data.externalId,
-          last_sync_at: new Date().toISOString()
+          lastSyncedAt: new Date().toISOString() // Using correct field name lastSyncedAt instead of last_sync_at
         })
         .eq("id", invoice.id);
 
