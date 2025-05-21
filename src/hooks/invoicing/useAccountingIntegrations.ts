@@ -158,13 +158,13 @@ export const useAccountingIntegrations = () => {
       }
 
       // Update the invoice in the database with the external ID
-      const externalIdField = `${provider}InvoiceId`;
+      const externalIdField = `${provider}_invoice_id`; // Using snake_case to match DB schema
       const { error: updateError } = await supabase
         .from("user_invoices")
         .update({
           [externalIdField]: data.externalId,
-          // Using lastSyncedAt to match the Invoice type definition
-          lastSyncedAt: new Date().toISOString()
+          // Using snake_case format to match the database schema
+          last_synced_at: new Date().toISOString()
         })
         .eq("id", invoice.id);
 
