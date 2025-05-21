@@ -163,7 +163,8 @@ export const useAccountingIntegrations = () => {
         .from("user_invoices")
         .update({
           [externalIdField]: data.externalId,
-          last_synced_at: new Date().toISOString() // Using correct snake_case field name format
+          // Using lastSyncedAt to match the Invoice type definition
+          lastSyncedAt: new Date().toISOString()
         })
         .eq("id", invoice.id);
 
