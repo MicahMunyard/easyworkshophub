@@ -24,14 +24,37 @@ serve(async (req) => {
     const url = new URL(req.url);
     const path = url.pathname.split("/").pop();
     
+    console.log(`[DEBUG] Request received for path: ${path}`);
+    console.log(`[DEBUG] Request method: ${req.method}`);
+    
     // Create Supabase client
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     
     // Authentication URL generator
     if (path === "get-auth-url") {
+      console.log("[DEBUG] Processing get-auth-url request");
+      
+      // Debug environment variables
+      console.log("[DEBUG] MYOB_CLIENT_ID exists:", !!MYOB_CLIENT_ID);
+      console.log("[DEBUG] MYOB_CLIENT_ID length:", MYOB_CLIENT_ID?.length || 0);
+      console.log("[DEBUG] MYOB_CLIENT_ID value:", MYOB_CLIENT_ID ? `${MYOB_CLIENT_ID.substring(0, 8)}...` : "NOT SET");
+      console.log("[DEBUG] MYOB_CLIENT_SECRET exists:", !!MYOB_CLIENT_SECRET);
+      console.log("[DEBUG] REDIRECT_URI:", REDIRECT_URI);
+      console.log("[DEBUG] MYOB_AUTH_URL:", MYOB_AUTH_URL);
+      
+      if (!MYOB_CLIENT_ID) {
+        console.error("[ERROR] MYOB_CLIENT_ID is not set!");
+        return new Response(
+          JSON.stringify({ error: "MYOB_CLIENT_ID environment variable is not set" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
       const scopes = "CompanyFile.Read CompanyFile.Write Invoice.Read Invoice.Write";
       
       const authUrl = `${MYOB_AUTH_URL}?client_id=${MYOB_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=${encodeURIComponent(scopes)}`;
+      
+      console.log("[DEBUG] Generated auth URL:", authUrl);
       
       return new Response(
         JSON.stringify({ authUrl }),
@@ -41,16 +64,27 @@ serve(async (req) => {
     
     // OAuth callback handling
     if (path === "oauth-callback") {
+      console.log("[DEBUG] Processing oauth-callback request");
+      
       const params = await req.json();
       const code = params.code;
       const businessId = params.businessId; // This is the company file ID
       
+      console.log("[DEBUG] OAuth callback params:", { code: !!code, businessId });
+      
       if (!code) {
+        console.error("[ERROR] No authorization code provided");
         return new Response(
           JSON.stringify({ error: "No authorization code provided" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+      
+      // Debug environment variables for token exchange
+      console.log("[DEBUG] Token exchange - CLIENT_ID exists:", !!MYOB_CLIENT_ID);
+      console.log("[DEBUG] Token exchange - CLIENT_SECRET exists:", !!MYOB_CLIENT_SECRET);
+      console.log("[DEBUG] Token exchange - REDIRECT_URI:", REDIRECT_URI);
+      console.log("[DEBUG] Token exchange - TOKEN_URL:", MYOB_TOKEN_URL);
       
       // Exchange code for access token
       const formData = new URLSearchParams();
@@ -61,6 +95,8 @@ serve(async (req) => {
       formData.append("redirect_uri", REDIRECT_URI);
       formData.append("grant_type", "authorization_code");
       
+      console.log("[DEBUG] Form data for token exchange:", Object.fromEntries(formData.entries()));
+      
       const tokenResponse = await fetch(MYOB_TOKEN_URL, {
         method: "POST",
         headers: {
@@ -69,9 +105,13 @@ serve(async (req) => {
         body: formData.toString()
       });
       
+      console.log("[DEBUG] Token response status:", tokenResponse.status);
+      console.log("[DEBUG] Token response headers:", Object.fromEntries(tokenResponse.headers.entries()));
+      
       if (!tokenResponse.ok) {
         const errorText = await tokenResponse.text();
-        console.error("Error exchanging code for token:", errorText);
+        console.error("[ERROR] Error exchanging code for token:", errorText);
+        console.error("[ERROR] Token response status:", tokenResponse.status);
         return new Response(
           JSON.stringify({ error: "Failed to exchange code for token", details: errorText }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -79,10 +119,12 @@ serve(async (req) => {
       }
       
       const tokenData = await tokenResponse.json();
+      console.log("[DEBUG] Token data received:", { ...tokenData, access_token: "***", refresh_token: "***" });
       
       // Get user ID from the request
       const authHeader = req.headers.get("Authorization");
       if (!authHeader) {
+        console.error("[ERROR] No authorization header");
         return new Response(
           JSON.stringify({ error: "No authorization header" }),
           { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -93,11 +135,14 @@ serve(async (req) => {
       const { data: { user }, error: userError } = await supabase.auth.getUser(token);
       
       if (userError || !user) {
+        console.error("[ERROR] Invalid user token:", userError);
         return new Response(
           JSON.stringify({ error: "Invalid user token" }),
           { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+      
+      console.log("[DEBUG] User authenticated:", user.id);
       
       // Store the tokens in the database
       const { error: storeError } = await supabase
@@ -114,12 +159,14 @@ serve(async (req) => {
         });
       
       if (storeError) {
-        console.error("Error storing token:", storeError);
+        console.error("[ERROR] Error storing token:", storeError);
         return new Response(
           JSON.stringify({ error: "Failed to store integration data" }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+      
+      console.log("[DEBUG] Integration stored successfully");
       
       return new Response(
         JSON.stringify({ success: true }),
@@ -129,9 +176,12 @@ serve(async (req) => {
     
     // Token refresh endpoint
     if (path === "refresh-token") {
+      console.log("[DEBUG] Processing refresh-token request");
+      
       const { provider, refreshToken, userId } = await req.json();
       
       if (provider !== "myob" || !refreshToken || !userId) {
+        console.error("[ERROR] Invalid refresh parameters");
         return new Response(
           JSON.stringify({ error: "Invalid refresh parameters" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -154,7 +204,7 @@ serve(async (req) => {
       
       if (!refreshResponse.ok) {
         const errorText = await refreshResponse.text();
-        console.error("Error refreshing token:", errorText);
+        console.error("[ERROR] Error refreshing token:", errorText);
         
         // Update status to disconnected if refresh fails
         await supabase
@@ -188,7 +238,7 @@ serve(async (req) => {
         .eq("provider", "myob");
       
       if (updateError) {
-        console.error("Error updating tokens:", updateError);
+        console.error("[ERROR] Error updating tokens:", updateError);
         return new Response(
           JSON.stringify({ error: "Failed to update token data" }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -208,6 +258,8 @@ serve(async (req) => {
     
     // Get webhook URL endpoint
     if (path === "get-webhook-url") {
+      console.log("[DEBUG] Processing get-webhook-url request");
+      
       const webhookUrl = `${SUPABASE_URL}/functions/v1/myob-integration/webhook`;
       
       return new Response(
@@ -221,8 +273,12 @@ serve(async (req) => {
 
     // Sync invoice to MYOB
     if (path === "sync-invoice") {
+      console.log("[DEBUG] Processing sync-invoice request");
+      
       try {
         const { invoice, provider } = await req.json();
+        console.log("[DEBUG] Invoice sync requested for provider:", provider);
+        console.log("[DEBUG] Invoice data:", JSON.stringify(invoice));
   
         if (provider !== 'myob') {
           throw new Error(`Provider ${provider} not supported`);
@@ -231,6 +287,7 @@ serve(async (req) => {
         // Get user ID from the request
         const authHeader = req.headers.get("Authorization");
         if (!authHeader) {
+          console.error("[ERROR] No authorization header in sync request");
           return new Response(
             JSON.stringify({ error: "No authorization header" }),
             { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -241,12 +298,15 @@ serve(async (req) => {
         const { data: { user }, error: userError } = await supabase.auth.getUser(token);
   
         if (userError || !user) {
+          console.error("[ERROR] Invalid user token in sync request:", userError);
           return new Response(
             JSON.stringify({ error: "Invalid user token" }),
             { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
   
+        console.log("[DEBUG] User authenticated for sync:", user.id);
+        
         // Retrieve the MYOB access token and business ID from the database
         const { data: integration, error: integrationError } = await supabase
           .from('accounting_integrations')
@@ -256,7 +316,7 @@ serve(async (req) => {
           .single();
   
         if (integrationError) {
-          console.error('Error retrieving integration:', integrationError);
+          console.error('[ERROR] Error retrieving integration for sync:', integrationError);
           return new Response(
             JSON.stringify({ error: 'Failed to retrieve integration details' }),
             { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -264,6 +324,10 @@ serve(async (req) => {
         }
   
         if (!integration?.access_token || !integration?.tenant_id) {
+          console.error('[ERROR] Missing integration credentials:', { 
+            hasAccessToken: !!integration?.access_token, 
+            hasTenantId: !!integration?.tenant_id 
+          });
           return new Response(
             JSON.stringify({ success: false, error: 'Not connected to MYOB' }),
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -272,10 +336,17 @@ serve(async (req) => {
   
         const myobAccessToken = integration.access_token;
         const businessId = integration.tenant_id;
+        
+        console.log('[DEBUG] Retrieved integration data:', { 
+          businessId,
+          tokenExists: !!myobAccessToken,
+          tokenLength: myobAccessToken?.length
+        });
   
         // Create Base64 encoded username:password for cftoken header
         // In a real scenario, you would use actual credentials from the user
         const cfTokenValue = btoa("administrator:");
+        console.log('[DEBUG] Created cftoken header');
   
         // Map WorkshopBase invoice to MYOB invoice format
         const myobInvoice = {
@@ -297,9 +368,13 @@ serve(async (req) => {
           TotalAmount: invoice.total,
           Status: "Open" // Adjust based on MYOB status options
         };
+        
+        console.log('[DEBUG] Mapped invoice data to MYOB format');
+        console.log('[DEBUG] MYOB API URL:', `${MYOB_API_BASE_URL}${businessId}/Sale/Invoice`);
   
         // Call the MYOB API to create the invoice with correct headers
         // Updated headers based on the MYOB documentation
+        console.log('[DEBUG] Sending request to MYOB API');
         const myobResponse = await fetch(`${MYOB_API_BASE_URL}${businessId}/Sale/Invoice`, {
           method: 'POST',
           headers: {
@@ -313,10 +388,13 @@ serve(async (req) => {
           },
           body: JSON.stringify(myobInvoice)
         });
+        
+        console.log('[DEBUG] MYOB API response status:', myobResponse.status);
+        console.log('[DEBUG] MYOB API response headers:', Object.fromEntries(myobResponse.headers.entries()));
   
         if (!myobResponse.ok) {
           const errorText = await myobResponse.text();
-          console.error('Error creating invoice in MYOB:', errorText);
+          console.error('[ERROR] Error creating invoice in MYOB:', errorText);
           return new Response(
             JSON.stringify({ success: false, error: `Failed to create invoice in MYOB: ${errorText}` }),
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -324,7 +402,10 @@ serve(async (req) => {
         }
   
         const myobData = await myobResponse.json();
+        console.log('[DEBUG] MYOB API response data:', myobData);
+        
         const externalId = myobData.UID || myobData.Id;
+        console.log('[DEBUG] Extracted external ID:', externalId);
   
         return new Response(
           JSON.stringify({ success: true, externalId }),
@@ -332,7 +413,7 @@ serve(async (req) => {
         );
   
       } catch (error) {
-        console.error("Failed to sync invoice", error);
+        console.error("[ERROR] Failed to sync invoice", error);
         return new Response(
           JSON.stringify({ success: false, error: error.message }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -341,13 +422,14 @@ serve(async (req) => {
     }
     
     // Default response for unsupported paths
+    console.log(`[DEBUG] Unsupported path: ${path}`);
     return new Response(
       JSON.stringify({ error: "Unsupported path" }),
       { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
     
   } catch (error) {
-    console.error("Error processing request:", error);
+    console.error("[ERROR] Error processing request:", error);
     
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
