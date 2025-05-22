@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -157,20 +156,25 @@ export const useAccountingIntegrations = () => {
         throw new Error(error?.message || data?.error || `Failed to sync invoice to ${provider}`);
       }
 
-      // Update the invoice in the database with the external ID
-      const externalIdField = `${provider}_invoice_id`; // Using snake_case to match DB schema
+      // Update the invoice in the database with the external ID only
+      const externalIdField = `${provider}_invoice_id`;
       const { error: updateError } = await supabase
         .from("user_invoices")
         .update({
-          [externalIdField]: data.externalId,
-          // Using snake_case format to match the database schema
-          last_synced_at: new Date().toISOString()
+          [externalIdField]: data.externalId
         })
         .eq("id", invoice.id);
 
       if (updateError) {
         throw new Error(`Failed to update invoice with ${provider} ID`);
       }
+
+      // Update the integration's last sync time instead
+      await supabase
+        .from("accounting_integrations")
+        .update({ last_sync_at: new Date().toISOString() })
+        .eq("user_id", user.id)
+        .eq("provider", provider);
 
       toast({
         title: "Invoice Synced",
