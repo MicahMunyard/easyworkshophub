@@ -1,12 +1,12 @@
+
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -18,9 +18,10 @@ const Auth = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
   // If the user is logged in, redirect to the previous location or dashboard
-  React.useEffect(() => {
+  useEffect(() => {
     if (user) {
       const from = location.state?.from?.pathname || "/";
       navigate(from, { replace: true });
@@ -41,20 +42,36 @@ const Auth = () => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    // Clear error messages when user starts typing
+    if (errorMessage) setErrorMessage(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setErrorMessage(null);
 
     try {
       if (isSignUp) {
         if (formData.password !== formData.confirmPassword) {
+          setErrorMessage("Passwords don't match");
           toast({
             title: "Passwords don't match",
             description: "Please make sure your passwords match.",
             variant: "destructive",
           });
+          setIsLoading(false);
+          return;
+        }
+
+        if (formData.password.length < 6) {
+          setErrorMessage("Password must be at least 6 characters");
+          toast({
+            title: "Password too short",
+            description: "Password must be at least 6 characters long.",
+            variant: "destructive",
+          });
+          setIsLoading(false);
           return;
         }
 
@@ -66,8 +83,9 @@ const Auth = () => {
       } else {
         await signIn(formData.email, formData.password);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Authentication error:", error);
+      setErrorMessage(error?.message || "Authentication failed");
     } finally {
       setIsLoading(false);
     }
@@ -93,6 +111,12 @@ const Auth = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {errorMessage && (
+              <div className="bg-destructive/10 text-destructive p-3 rounded-md mb-4 text-sm">
+                {errorMessage}
+              </div>
+            )}
+            
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>

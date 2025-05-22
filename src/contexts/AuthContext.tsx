@@ -26,33 +26,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      setSession(data.session);
-      setUser(data.session?.user ?? null);
-      
-      if (data.session?.user) {
-        fetchProfile(data.session.user.id);
-      } else {
-        setLoading(false);
-      }
-    };
-
-    fetchSession();
-
+    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, newSession) => {
+      (event, newSession) => {
+        console.log("Auth state changed:", event);
         setSession(newSession);
         setUser(newSession?.user ?? null);
         
         if (newSession?.user) {
-          fetchProfile(newSession.user.id);
+          // Use setTimeout to prevent potential deadlocks
+          setTimeout(() => {
+            fetchProfile(newSession.user.id);
+          }, 0);
         } else {
           setProfile(null);
           setLoading(false);
         }
       }
     );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log("Initial session check:", session ? "Session found" : "No session");
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        fetchProfile(session.user.id);
+      } else {
+        setLoading(false);
+      }
+    });
 
     return () => {
       subscription.unsubscribe();
@@ -61,16 +65,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchProfile = async (userId: string) => {
     try {
+      console.log("Fetching profile for user:", userId);
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('user_id', userId)  // Changed from 'id' to 'user_id' to match the database schema
-        .single();
+        .eq('id', userId)  
+        .maybeSingle(); // Use maybeSingle instead of single to handle no results case
 
-      if (error) throw error;
-      setProfile(data);
+      if (error) {
+        console.error('Error fetching profile:', error.message);
+      }
+      
+      if (data) {
+        console.log("Profile data retrieved:", data);
+        setProfile(data);
+      } else {
+        console.log("No profile found, user might need to create one");
+        setProfile(null);
+      }
     } catch (error: any) {
-      console.error('Error fetching profile:', error.message);
+      console.error('Error in profile fetch function:', error.message);
     } finally {
       setLoading(false);
     }
@@ -79,19 +93,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true);
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
-      navigate('/');
-      toast({
-        title: "Welcome back!",
-        description: "You've successfully signed in.",
-      });
+      console.log("Attempting sign in for:", email);
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      
+      if (error) {
+        console.error("Sign in error:", error.message);
+        throw error;
+      }
+      
+      if (data.user) {
+        console.log("Sign in successful");
+        // Navigation handled by auth state change listener
+        toast({
+          title: "Welcome back!",
+          description: "You've successfully signed in.",
+        });
+      }
     } catch (error: any) {
+      console.error("Sign in process failed:", error);
       toast({
         title: "Sign in failed",
         description: error.message,
         variant: "destructive",
       });
+      throw error; // Re-throw to handle in the component
     } finally {
       setLoading(false);
     }
@@ -100,25 +125,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signUp = async (email: string, password: string, userData?: any) => {
     try {
       setLoading(true);
-      const { error } = await supabase.auth.signUp({ 
+      console.log("Attempting sign up for:", email);
+      const { data, error } = await supabase.auth.signUp({ 
         email, 
         password,
         options: {
           data: userData
         }
       });
-      if (error) throw error;
+      
+      if (error) {
+        console.error("Sign up error:", error.message);
+        throw error;
+      }
+      
+      console.log("Sign up response:", data);
       toast({
         title: "Account created",
         description: "Please check your email to confirm your account.",
       });
       navigate('/auth/signin');
     } catch (error: any) {
+      console.error("Sign up process failed:", error);
       toast({
         title: "Sign up failed",
         description: error.message,
         variant: "destructive",
       });
+      throw error; // Re-throw to handle in the component
     } finally {
       setLoading(false);
     }
@@ -127,14 +161,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = async () => {
     try {
       setLoading(true);
+      console.log("Attempting sign out");
       const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      
+      if (error) {
+        console.error("Sign out error:", error.message);
+        throw error;
+      }
+      
+      console.log("Sign out successful");
       navigate('/auth/signin');
       toast({
         title: "Signed out",
         description: "You've been successfully signed out.",
       });
     } catch (error: any) {
+      console.error("Sign out process failed:", error);
       toast({
         title: "Sign out failed",
         description: error.message,
@@ -149,14 +191,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setLoading(true);
       
-      if (!user) throw new Error("Not authenticated");
+      if (!user) {
+        throw new Error("Not authenticated");
+      }
       
+      console.log("Updating profile for user:", user.id);
       const { error } = await supabase
         .from('profiles')
         .update(data)
-        .eq('user_id', user.id);  // Changed from 'id' to 'user_id' to match the database schema
+        .eq('id', user.id);
       
-      if (error) throw error;
+      if (error) {
+        console.error("Profile update error:", error.message);
+        throw error;
+      }
       
       // Refresh profile data
       fetchProfile(user.id);
@@ -166,6 +214,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: "Your profile has been successfully updated.",
       });
     } catch (error: any) {
+      console.error("Profile update process failed:", error);
       toast({
         title: "Update failed",
         description: error.message,

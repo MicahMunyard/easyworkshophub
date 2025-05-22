@@ -2,7 +2,7 @@
 import React, { useEffect } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { toast } from "@/components/ui/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -11,6 +11,7 @@ interface ProtectedRouteProps {
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { user, loading } = useAuth();
   const location = useLocation();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!loading && !user) {
@@ -21,7 +22,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
       });
       console.log("User not authenticated, redirecting to sign in page");
     }
-  }, [user, loading]);
+  }, [user, loading, toast]);
 
   if (loading) {
     return (

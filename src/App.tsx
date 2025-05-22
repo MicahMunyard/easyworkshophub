@@ -1,3 +1,4 @@
+
 import React from "react";
 import {
   Routes,
@@ -8,6 +9,7 @@ import {
 import Layout from "./components/Layout";
 import { useAuth } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
+import Auth from "./pages/Auth";
 import Jobs from "./pages/Jobs";
 import Invoicing from "./pages/Invoicing";
 import Index from "./pages/Index";
@@ -36,6 +38,11 @@ const App = () => {
   return (
     <NotificationProvider>
       <Routes>
+        {/* Auth Routes - should be accessible without authentication */}
+        <Route path="/auth/signin" element={<Auth />} />
+        <Route path="/auth/signup" element={<Auth />} />
+        <Route path="/auth/reset-password" element={<Auth />} />
+
         {/* App Routes with Layout */}
         <Route element={<Layout><Outlet /></Layout>}>
           {/* Main Pages */}
@@ -56,14 +63,17 @@ const App = () => {
           <Route path="/workshop" element={<ProtectedRoute><Workshop /></ProtectedRoute>} />
           <Route path="/suppliers" element={<ProtectedRoute><Suppliers /></ProtectedRoute>} />
           <Route path="/workshop-setup" element={<ProtectedRoute><WorkshopSetup /></ProtectedRoute>} />
-          <Route path="/technician-portal" element={<ProtectedRoute><TechnicianPortal /></ProtectedRoute>} />
+          <Route path="/technician-portal" element={<TechnicianPortal />} /> 
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
           <Route path="/help" element={<ProtectedRoute><div className="container py-8"><h1 className="text-3xl font-bold mb-4">Help & Support</h1><p>This page is under construction.</p></div></ProtectedRoute>} />
           
           {/* EzyParts Routes */}
           <Route path="/ezyparts/*" element={<ProtectedRoute><EzyPartsRoutes /></ProtectedRoute>} />
-          {/* Add the route for EmailDesignerPage */}
+          {/* Route for EmailDesignerPage */}
           <Route path="/email-designer/:mode/:id?" element={<EmailDesignerPage />} />
+          
+          {/* Redirect any unmatched routes to dashboard */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
     </NotificationProvider>
