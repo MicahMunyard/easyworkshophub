@@ -37,7 +37,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Use setTimeout to prevent potential deadlocks
           setTimeout(() => {
             fetchProfile(newSession.user.id);
-          }, 0); // Fixed: Using 0 as a number instead of a string
+          }, 0); // Fixing: Using 0 as a number for the delay parameter
         } else {
           setProfile(null);
           setLoading(false);
@@ -209,7 +209,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Refresh profile data
       setTimeout(() => {
         fetchProfile(user.id);
-      }, 0); // Fixed: Using 0 as a number instead of a string
+      }, 0); // Fixing: Using 0 as a number for the delay parameter
       
       toast({
         title: "Profile updated",
