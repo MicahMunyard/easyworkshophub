@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Session, User } from '@supabase/supabase-js';
@@ -204,10 +205,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw error;
       }
       
-      // Refresh profile data
+      // Refresh profile data - Fix the setTimeout argument to be a number
       setTimeout(() => {
         fetchProfile(user.id);
-      }, 0); // Fixed: Using numeric 0 instead of string "0"
+      }, 0);
       
       toast({
         title: "Profile updated",

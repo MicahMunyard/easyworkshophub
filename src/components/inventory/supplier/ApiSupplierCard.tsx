@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -5,7 +6,6 @@ import { Supplier } from '@/types/inventory';
 import { Link, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 import { useEzyParts } from '@/contexts/EzyPartsContext';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 
 interface ApiSupplierCardProps {
   supplier: Supplier;
