@@ -37,7 +37,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Use setTimeout to prevent potential deadlocks
           setTimeout(() => {
             fetchProfile(newSession.user.id);
-          }, 0); // Fixed: Using numeric 0 instead of string "0"
+          }, 0);
         } else {
           setProfile(null);
           setLoading(false);
