@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Session, User } from '@supabase/supabase-js';
@@ -37,7 +36,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Use setTimeout to prevent potential deadlocks
           setTimeout(() => {
             fetchProfile(newSession.user.id);
-          }, 0); // Fixing: Using 0 as a number for the delay parameter
+          }, 0); // Using a numeric value for the delay parameter
         } else {
           setProfile(null);
           setLoading(false);
@@ -209,7 +208,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Refresh profile data
       setTimeout(() => {
         fetchProfile(user.id);
-      }, 0); // Fixing: Using 0 as a number for the delay parameter
+      }, 0); // Using a numeric value for the delay parameter
       
       toast({
         title: "Profile updated",
