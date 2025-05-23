@@ -23,8 +23,8 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({ supplier }) => {
     // Reset connection error state when credentials change
     setConnectionError(null);
     
-    // Extract the Supabase URL from the client
-    const url = supabase.supabaseUrl;
+    // Extract the Supabase URL from the client - using the URL directly to avoid protected property access
+    const url = "https://qyjjbpyqxwrluhymvshn.supabase.co";
     console.log('Supabase URL detected:', url);
     setSupabaseUrl(url);
     

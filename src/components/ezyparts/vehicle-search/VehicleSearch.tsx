@@ -49,8 +49,8 @@ const VehicleSearch: React.FC = () => {
 
   // Fetch the Supabase URL on component mount
   useEffect(() => {
-    // Extract the Supabase URL from the client
-    const url = supabase.supabaseUrl;
+    // Extract the Supabase URL from the client - using the URL directly to avoid protected property access
+    const url = "https://qyjjbpyqxwrluhymvshn.supabase.co";
     console.log('Supabase URL detected:', url);
     setSupabaseUrl(url);
   }, []);
