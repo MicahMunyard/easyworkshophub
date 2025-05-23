@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useEzyParts } from '@/contexts/EzyPartsContext';
@@ -13,6 +12,7 @@ import { RegistrationSearchForm } from './RegistrationSearchForm';
 import { DetailsSearchForm } from './DetailsSearchForm';
 import { ConfigurationAlert } from './ConfigurationAlert';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import type { RegistrationSearch, DetailsSearch } from './types';
 
 const VehicleSearch: React.FC = () => {
@@ -38,6 +38,7 @@ const VehicleSearch: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [isEzyPartsWindowOpen, setIsEzyPartsWindowOpen] = useState(false);
+  const [supabaseUrl, setSupabaseUrl] = useState<string>('');
   
   // Check if credentials are properly configured
   const isConfigured = credentials.clientId && 
@@ -46,6 +47,14 @@ const VehicleSearch: React.FC = () => {
                       credentials.username && 
                       credentials.password;
 
+  // Fetch the Supabase URL on component mount
+  useEffect(() => {
+    // Extract the Supabase URL from the client
+    const url = supabase.supabaseUrl;
+    console.log('Supabase URL detected:', url);
+    setSupabaseUrl(url);
+  }, []);
+  
   // Monitor EzyParts window and handle closure
   useEffect(() => {
     if (isEzyPartsWindowOpen) {
@@ -120,11 +129,11 @@ const VehicleSearch: React.FC = () => {
     setConnectionError(null);
     
     try {
-      // Get the full URL for the quote endpoint
+      // Get the full URL for the quote endpoint using the Supabase URL
       const baseUrl = window.location.origin;
       
-      // Improved URL handling with more specific routes to avoid edge function confusion
-      const quoteUrl = `${baseUrl}/api/ezyparts-quote`;
+      // Use the correct Supabase Edge Function URL format
+      const quoteUrl = `${supabaseUrl}/functions/v1/ezyparts-quote`;
       
       // Log the exact URL for debugging purposes
       console.log('Setting quoteUrl to:', quoteUrl);
@@ -247,7 +256,8 @@ const VehicleSearch: React.FC = () => {
     returnToApp,
     credentials,
     isProduction,
-    toast
+    toast,
+    supabaseUrl // Add supabaseUrl to dependencies
   ]);
 
   if (!isConfigured) {

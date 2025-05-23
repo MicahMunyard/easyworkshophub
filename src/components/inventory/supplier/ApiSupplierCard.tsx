@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,6 +5,7 @@ import { Supplier } from '@/types/inventory';
 import { Link, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 import { useEzyParts } from '@/contexts/EzyPartsContext';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ApiSupplierCardProps {
   supplier: Supplier;
@@ -16,11 +16,17 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({ supplier }) => {
   const { toast } = useToast();
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [supabaseUrl, setSupabaseUrl] = useState<string>('');
   
   // Check credentials when component mounts or when they change
   useEffect(() => {
     // Reset connection error state when credentials change
     setConnectionError(null);
+    
+    // Extract the Supabase URL from the client
+    const url = supabase.supabaseUrl;
+    console.log('Supabase URL detected:', url);
+    setSupabaseUrl(url);
     
     // Check credentials on mount and when they change
     if (!credentials.accountId || !credentials.username || !credentials.password) {
@@ -73,7 +79,10 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({ supplier }) => {
         // Current origin for return URL
         const origin = window.location.origin;
         const returnUrl = `${origin}/ezyparts/quote`;
-        const quoteUrl = `${origin}/api/ezyparts-quote`;
+        
+        // Use the correct Supabase Edge Function URL format
+        const quoteUrl = `${supabaseUrl}/functions/v1/ezyparts-quote`;
+        console.log('Using Supabase Edge Function URL:', quoteUrl);
         
         // Open a popup window for EzyParts
         const ezyPartsWindow = window.open('', 'ezyPartsWindow', 'width=1024,height=768');
