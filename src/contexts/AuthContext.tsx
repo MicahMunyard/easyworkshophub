@@ -36,7 +36,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Use setTimeout to prevent potential deadlocks
           setTimeout(() => {
             fetchProfile(newSession.user.id);
-          }, 0); // Using a numeric value for the delay parameter
+          }, 0);
         } else {
           setProfile(null);
           setLoading(false);
@@ -69,7 +69,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .from('profiles')
         .select('*')
         .eq('id', userId)  
-        .maybeSingle(); // Use maybeSingle instead of single to handle no results case
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching profile:', error.message);
@@ -102,7 +102,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (data.user) {
         console.log("Sign in successful");
-        // Navigation handled by auth state change listener
         toast({
           title: "Welcome back!",
           description: "You've successfully signed in.",
@@ -115,7 +114,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: error.message,
         variant: "destructive",
       });
-      throw error; // Re-throw to handle in the component
+      throw error;
     } finally {
       setLoading(false);
     }
@@ -151,7 +150,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: error.message,
         variant: "destructive",
       });
-      throw error; // Re-throw to handle in the component
+      throw error;
     } finally {
       setLoading(false);
     }
@@ -208,7 +207,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Refresh profile data
       setTimeout(() => {
         fetchProfile(user.id);
-      }, 0); // Using a numeric value for the delay parameter
+      }, 0);
       
       toast({
         title: "Profile updated",
