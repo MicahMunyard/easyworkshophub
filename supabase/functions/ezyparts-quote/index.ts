@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -364,7 +365,8 @@ async function processPartsToInventory(supabase: any, payload: any, quoteId: str
 
 function createInventoryRedirectResponse(requestUrl: string, quoteId: string): Response {
   const url = new URL(requestUrl);
-  const baseUrl = `${url.protocol}//${url.host}`;
+  // Use the correct base URL for the app
+  const baseUrl = 'https://app.workshopbase.com.au';
   const successUrl = `${baseUrl}/inventory?tab=inventory&ezyparts_products=added`;
   
   return new Response(
@@ -509,7 +511,7 @@ function createErrorPage(message: string): string {
     <html>
       <head>
         <title>EzyParts Integration Error</title>
-        <meta http-equiv="refresh" content="5; url=/ezyparts/search">
+        <meta http-equiv="refresh" content="5; url=https://app.workshopbase.com.au/ezyparts/search">
         <style>
           body { 
             font-family: Arial, sans-serif; 
@@ -541,11 +543,11 @@ function createErrorPage(message: string): string {
           <h2>EzyParts Integration Issue</h2>
           <p>${message}</p>
           <p>You will be redirected to vehicle search in 5 seconds.</p>
-          <p><a href="/ezyparts/search">Click here to return to vehicle search</a></p>
+          <p><a href="https://app.workshopbase.com.au/ezyparts/search">Click here to return to vehicle search</a></p>
         </div>
         <script>
           setTimeout(function() {
-            window.location.href = "/ezyparts/search";
+            window.location.href = "https://app.workshopbase.com.au/ezyparts/search";
           }, 5000);
         </script>
       </body>
