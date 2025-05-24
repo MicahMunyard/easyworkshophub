@@ -71,6 +71,9 @@ serve(async (req) => {
         
         if (error) throw error;
         
+        // Process parts and add to inventory automatically
+        await processPartsToInventory(supabase, jsonData, data[0].id);
+        
         return createRedirectResponse(req.url, data[0].id);
       }
     } else {
@@ -203,6 +206,9 @@ serve(async (req) => {
       
       console.log("Quote stored successfully with ID:", data[0].id);
 
+      // Process parts and add to inventory automatically
+      await processPartsToInventory(supabase, payload, data[0].id);
+
       // Log successful processing
       await supabase
         .from("ezyparts_logs")
@@ -218,8 +224,8 @@ serve(async (req) => {
           }
         });
 
-      // Return redirect response
-      return createRedirectResponse(req.url, data[0].id);
+      // Return redirect response to parts selection page with success
+      return createSuccessRedirectResponse(req.url, data[0].id);
       
     } else {
       // No payload found - log for debugging
@@ -289,10 +295,140 @@ serve(async (req) => {
   }
 });
 
+async function processPartsToInventory(supabase: any, payload: any, quoteId: string) {
+  try {
+    console.log("Processing parts to inventory for quote:", quoteId);
+    
+    // Convert EzyParts parts to inventory items format
+    const inventoryItems = payload.parts.map((part: any) => {
+      const code = `EP-${part.sku.toUpperCase()}-${Math.random().toString(36).substring(2, 8)}`;
+      
+      return {
+        code,
+        name: part.partDescription,
+        description: `${part.partDescription} - Brand: ${part.brand}`,
+        category: part.productCategory || 'Auto Parts',
+        supplier: 'Burson Auto Parts',
+        supplier_id: 'ezyparts-burson',
+        in_stock: part.qty,
+        min_stock: 5,
+        price: part.nettPriceEach,
+        location: 'Main Warehouse',
+        last_order: new Date().toISOString().split('T')[0],
+        user_id: null // Will be set when we can identify the user
+      };
+    });
+
+    // For now, we'll store these as general inventory items
+    // In a production system, you'd want to associate with a specific user
+    const { data, error } = await supabase
+      .from('default_inventory_items')
+      .insert(inventoryItems);
+
+    if (error) {
+      console.error("Error adding parts to inventory:", error);
+      throw error;
+    }
+
+    console.log(`Successfully added ${inventoryItems.length} parts to inventory`);
+    
+    // Log the successful inventory addition
+    await supabase
+      .from("ezyparts_logs")
+      .insert({
+        level: "info",
+        message: "Parts added to inventory",
+        data: {
+          quoteId,
+          partsAdded: inventoryItems.length,
+          timestamp: new Date().toISOString()
+        }
+      });
+
+  } catch (error) {
+    console.error("Error processing parts to inventory:", error);
+    
+    // Log the error but don't fail the whole process
+    await supabase
+      .from("ezyparts_logs")
+      .insert({
+        level: "error",
+        message: "Failed to add parts to inventory",
+        data: {
+          quoteId,
+          error: error.message,
+          timestamp: new Date().toISOString()
+        }
+      });
+  }
+}
+
+function createSuccessRedirectResponse(requestUrl: string, quoteId: string): Response {
+  const url = new URL(requestUrl);
+  const baseUrl = `${url.protocol}//${url.host}`;
+  const successUrl = `${baseUrl}/inventory?tab=inventory&ezyparts_products=added`;
+  
+  return new Response(
+    `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>EzyParts Parts Added Successfully</title>
+        <meta http-equiv="refresh" content="3; url=${successUrl}">
+        <style>
+          body { 
+            font-family: Arial, sans-serif; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            margin: 0;
+            background-color: #f0f9ff;
+          }
+          .container {
+            text-align: center;
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-left: 4px solid #10b981;
+          }
+          .success-icon {
+            color: #10b981;
+            font-size: 48px;
+            margin-bottom: 16px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="success-icon">✅</div>
+          <h2>Parts Successfully Added!</h2>
+          <p>Your selected parts from EzyParts have been added to your inventory and are ready for job invoicing.</p>
+          <p>You will be redirected to your inventory in 3 seconds.</p>
+          <p><a href="${successUrl}">Click here to view your inventory now</a></p>
+        </div>
+        <script>
+          setTimeout(function() {
+            window.location.href = "${successUrl}";
+          }, 3000);
+        </script>
+      </body>
+    </html>
+    `,
+    { 
+      headers: { 
+        ...corsHeaders,
+        "Content-Type": "text/html"
+      } 
+    }
+  );
+}
+
 function createRedirectResponse(requestUrl: string, quoteId: string): Response {
   const url = new URL(requestUrl);
   const baseUrl = `${url.protocol}//${url.host}`;
-  const quoteHandlerUrl = `${baseUrl}/ezyparts/quote?quote_id=${quoteId}`;
+  const partsSelectionUrl = `${baseUrl}/ezyparts/parts-selection?quote_id=${quoteId}`;
   
   return new Response(
     `
@@ -300,7 +436,7 @@ function createRedirectResponse(requestUrl: string, quoteId: string): Response {
     <html>
       <head>
         <title>Processing EzyParts Quote</title>
-        <meta http-equiv="refresh" content="2; url=${quoteHandlerUrl}">
+        <meta http-equiv="refresh" content="2; url=${partsSelectionUrl}">
         <style>
           body { 
             font-family: Arial, sans-serif; 
@@ -339,11 +475,11 @@ function createRedirectResponse(requestUrl: string, quoteId: string): Response {
           <div class="spinner"></div>
           <p>Your quote has been received and is being processed...</p>
           <p>You will be redirected automatically in 2 seconds.</p>
-          <p><a href="${quoteHandlerUrl}">Click here if you are not redirected automatically</a></p>
+          <p><a href="${partsSelectionUrl}">Click here if you are not redirected automatically</a></p>
         </div>
         <script>
           setTimeout(function() {
-            window.location.href = "${quoteHandlerUrl}";
+            window.location.href = "${partsSelectionUrl}";
           }, 2000);
         </script>
       </body>
