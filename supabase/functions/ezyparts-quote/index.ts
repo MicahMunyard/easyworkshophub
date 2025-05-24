@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -74,7 +73,7 @@ serve(async (req) => {
         // Process parts and add to inventory automatically
         await processPartsToInventory(supabase, jsonData, data[0].id);
         
-        return createRedirectResponse(req.url, data[0].id);
+        return createInventoryRedirectResponse(req.url, data[0].id);
       }
     } else {
       // Handle HTML content (default expected format)
@@ -224,8 +223,8 @@ serve(async (req) => {
           }
         });
 
-      // Return redirect response to parts selection page with success
-      return createSuccessRedirectResponse(req.url, data[0].id);
+      // Return redirect response to inventory page with success - NO vehicle selection needed
+      return createInventoryRedirectResponse(req.url, data[0].id);
       
     } else {
       // No payload found - log for debugging
@@ -363,7 +362,7 @@ async function processPartsToInventory(supabase: any, payload: any, quoteId: str
   }
 }
 
-function createSuccessRedirectResponse(requestUrl: string, quoteId: string): Response {
+function createInventoryRedirectResponse(requestUrl: string, quoteId: string): Response {
   const url = new URL(requestUrl);
   const baseUrl = `${url.protocol}//${url.host}`;
   const successUrl = `${baseUrl}/inventory?tab=inventory&ezyparts_products=added`;
@@ -409,6 +408,16 @@ function createSuccessRedirectResponse(requestUrl: string, quoteId: string): Res
           <p><a href="${successUrl}">Click here to view your inventory now</a></p>
         </div>
         <script>
+          // Close the EzyParts window if it's still open
+          try {
+            if (window.opener && !window.opener.closed) {
+              window.opener.focus();
+            }
+            window.close();
+          } catch (e) {
+            console.log('Could not close window automatically');
+          }
+          
           setTimeout(function() {
             window.location.href = "${successUrl}";
           }, 3000);
