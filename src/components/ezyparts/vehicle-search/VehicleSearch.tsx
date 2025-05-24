@@ -1,18 +1,16 @@
+
 import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useEzyParts } from '@/contexts/EzyPartsContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2 } from 'lucide-react';
+import { Loader2, ShoppingCart, Package } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { RegistrationSearchForm } from './RegistrationSearchForm';
 import { DetailsSearchForm } from './DetailsSearchForm';
 import { ConfigurationAlert } from './ConfigurationAlert';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 import type { RegistrationSearch, DetailsSearch } from './types';
 
 const VehicleSearch: React.FC = () => {
@@ -34,11 +32,10 @@ const VehicleSearch: React.FC = () => {
     seriesChassis: '',
     engine: ''
   });
-  const [returnToApp, setReturnToApp] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [isEzyPartsWindowOpen, setIsEzyPartsWindowOpen] = useState(false);
-  const [supabaseUrl, setSupabaseUrl] = useState<string>('');
+  const [supabaseUrl] = useState<string>('https://qyjjbpyqxwrluhymvshn.supabase.co');
   
   // Check if credentials are properly configured
   const isConfigured = credentials.clientId && 
@@ -47,14 +44,6 @@ const VehicleSearch: React.FC = () => {
                       credentials.username && 
                       credentials.password;
 
-  // Fetch the Supabase URL on component mount
-  useEffect(() => {
-    // Extract the Supabase URL from the client - using the URL directly to avoid protected property access
-    const url = "https://qyjjbpyqxwrluhymvshn.supabase.co";
-    console.log('Supabase URL detected:', url);
-    setSupabaseUrl(url);
-  }, []);
-  
   // Monitor EzyParts window and handle closure
   useEffect(() => {
     if (isEzyPartsWindowOpen) {
@@ -67,7 +56,6 @@ const VehicleSearch: React.FC = () => {
             console.log('EzyParts window was closed by user');
           }
         } catch (e) {
-          // Handle potential security errors
           clearInterval(interval);
           setIsEzyPartsWindowOpen(false);
           setIsSubmitting(false);
@@ -129,28 +117,24 @@ const VehicleSearch: React.FC = () => {
     setConnectionError(null);
     
     try {
-      // Get the full URL for the quote endpoint using the Supabase URL
       const baseUrl = window.location.origin;
-      
-      // Use the correct Supabase Edge Function URL format
       const quoteUrl = `${supabaseUrl}/functions/v1/ezyparts-quote`;
       
-      // Log the exact URL for debugging purposes
-      console.log('Setting quoteUrl to:', quoteUrl);
+      // Enhanced return URL that includes vehicle context
+      const vehicleContext = searchMethod === 'registration' 
+        ? `rego=${encodeURIComponent(registrationSearch.regoNumber)}&state=${encodeURIComponent(registrationSearch.state)}`
+        : `make=${encodeURIComponent(detailsSearch.make)}&model=${encodeURIComponent(detailsSearch.model)}&year=${detailsSearch.year}`;
       
-      // Use window.location.origin and pathname to form a specific return URL
-      // This ensures we return to the right place in the app
-      const returnUrl = returnToApp ? `${baseUrl}/ezyparts/quote` : '';
-      console.log('Setting returnUrl to:', returnUrl);
+      const returnUrl = `${baseUrl}/ezyparts/parts-selection?${vehicleContext}`;
       
-      // Debug info for troubleshooting
       console.log('EzyParts Search Parameters:', {
         accountId: credentials.accountId ? 'set' : 'not set',
         username: credentials.username ? 'set' : 'not set',
         quoteUrl,
         returnUrl,
         isProduction,
-        searchMethod
+        searchMethod,
+        vehicleContext
       });
       
       // Create a proper form element that will be submitted
@@ -162,7 +146,7 @@ const VehicleSearch: React.FC = () => {
       
       // Use window.open to create a popup window for the EzyParts session
       // @ts-ignore
-      window.ezyPartsWindow = window.open('', 'ezyPartsWindow', 'width=1024,height=768');
+      window.ezyPartsWindow = window.open('', 'ezyPartsWindow', 'width=1200,height=800,scrollbars=yes,resizable=yes');
       // @ts-ignore
       if (!window.ezyPartsWindow) {
         toast({
@@ -176,7 +160,7 @@ const VehicleSearch: React.FC = () => {
       
       setIsEzyPartsWindowOpen(true);
       // @ts-ignore
-      form.target = 'ezyPartsWindow'; // Target the popup window
+      form.target = 'ezyPartsWindow';
       
       // Create and add the required fields
       const createField = (name: string, value: string | number | boolean | undefined) => {
@@ -234,7 +218,7 @@ const VehicleSearch: React.FC = () => {
       
       toast({
         title: 'Connecting to EzyParts',
-        description: 'EzyParts will open in a new window. Please check your browser if it doesn\'t appear.'
+        description: 'EzyParts will open in a new window. After selecting parts, click "Send to WMS" to add them to your inventory.'
       });
     } catch (error) {
       console.error('Error launching EzyParts:', error);
@@ -253,11 +237,10 @@ const VehicleSearch: React.FC = () => {
     detailsSearch, 
     navigate, 
     isConfigured,
-    returnToApp,
     credentials,
     isProduction,
     toast,
-    supabaseUrl // Add supabaseUrl to dependencies
+    supabaseUrl
   ]);
 
   if (!isConfigured) {
@@ -265,71 +248,96 @@ const VehicleSearch: React.FC = () => {
   }
 
   return (
-    <Card className="w-full max-w-2xl mx-auto">
-      <CardHeader>
-        <CardTitle>Find Vehicle</CardTitle>
-        <CardDescription>
-          Search for a vehicle by registration or details to find parts in EzyParts
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {connectionError && (
-          <Alert variant="destructive" className="mb-4">
-            <AlertTitle>Connection Error</AlertTitle>
-            <AlertDescription>{connectionError}</AlertDescription>
-          </Alert>
-        )}
-      
-        <Tabs value={searchMethod} onValueChange={(value) => setSearchMethod(value as 'registration' | 'details')}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="registration">Search by Registration</TabsTrigger>
-            <TabsTrigger value="details">Search by Vehicle Details</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="registration" className="space-y-4 mt-4">
-            <RegistrationSearchForm 
-              values={registrationSearch}
-              onChange={setRegistrationSearch}
-            />
-          </TabsContent>
-          
-          <TabsContent value="details" className="space-y-4 mt-4">
-            <DetailsSearchForm
-              values={detailsSearch}
-              onChange={setDetailSearch}
-            />
-          </TabsContent>
-        </Tabs>
-        
-        <div className="flex items-center space-x-2 mt-6">
-          <Switch
-            id="returnToApp"
-            checked={returnToApp}
-            onCheckedChange={setReturnToApp}
-          />
-          <Label htmlFor="returnToApp">
-            Return to WorkshopBase after selecting parts
-          </Label>
-        </div>
-      </CardContent>
-      
-      <CardFooter className="flex justify-end">
-        <Button 
-          onClick={handleSearch} 
-          className="px-6"
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Connecting...
-            </>
-          ) : (
-            'Search EzyParts'
+    <div className="space-y-6">
+      {/* Enhanced Header with Clear Instructions */}
+      <Card className="border-blue-200 bg-blue-50">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-blue-800">
+            <Package className="h-5 w-5" />
+            Find Vehicle Parts
+          </CardTitle>
+          <CardDescription className="text-blue-700">
+            Search for a vehicle to find compatible parts. Selected parts will be added directly to your inventory for job invoicing.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-4 text-sm text-blue-600">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-full bg-blue-200 flex items-center justify-center text-xs font-semibold">1</div>
+              <span>Search Vehicle</span>
+            </div>
+            <div className="flex-1 h-px bg-blue-300"></div>
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-full bg-blue-200 flex items-center justify-center text-xs font-semibold">2</div>
+              <span>Select Parts in EzyParts</span>
+            </div>
+            <div className="flex-1 h-px bg-blue-300"></div>
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-full bg-blue-200 flex items-center justify-center text-xs font-semibold">3</div>
+              <span>Add to Inventory</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="w-full max-w-2xl mx-auto">
+        <CardHeader>
+          <CardTitle>Vehicle Search</CardTitle>
+          <CardDescription>
+            Find parts by searching for a specific vehicle
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {connectionError && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertTitle>Connection Error</AlertTitle>
+              <AlertDescription>{connectionError}</AlertDescription>
+            </Alert>
           )}
-        </Button>
-      </CardFooter>
-    </Card>
+        
+          <Tabs value={searchMethod} onValueChange={(value) => setSearchMethod(value as 'registration' | 'details')}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="registration">Search by Registration</TabsTrigger>
+              <TabsTrigger value="details">Search by Vehicle Details</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="registration" className="space-y-4 mt-4">
+              <RegistrationSearchForm 
+                values={registrationSearch}
+                onChange={setRegistrationSearch}
+              />
+            </TabsContent>
+            
+            <TabsContent value="details" className="space-y-4 mt-4">
+              <DetailsSearchForm
+                values={detailsSearch}
+                onChange={setDetailSearch}
+              />
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+        
+        <CardFooter className="flex justify-end">
+          <Button 
+            onClick={handleSearch} 
+            className="px-6"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Connecting to EzyParts...
+              </>
+            ) : (
+              <>
+                <ShoppingCart className="mr-2 h-4 w-4" />
+                Find Parts in EzyParts
+              </>
+            )}
+          </Button>
+        </CardFooter>
+      </Card>
+    </div>
   );
 };
 
