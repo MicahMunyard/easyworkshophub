@@ -205,7 +205,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw error;
       }
       
-      // Refresh profile data - Fix the setTimeout argument to be a number
+      // Refresh profile data - Fix the setTimeout parameter to be a number
       setTimeout(() => {
         fetchProfile(user.id);
       }, 0);
