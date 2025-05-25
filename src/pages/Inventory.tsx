@@ -6,6 +6,7 @@ import AddBrakeCleanerProduct from "@/components/inventory/AddBrakeCleanerProduc
 import InventoryPageHeader from "@/components/inventory/InventoryPageHeader";
 import InventoryTabs from "@/components/inventory/InventoryTabs";
 import { useSuppliers } from "@/hooks/inventory/useSuppliers";
+import { useInventoryItems } from "@/hooks/inventory/useInventoryItems";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { FileCheck, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ import { Supplier } from "@/types/inventory";
 
 const Inventory = () => {
   const { suppliers } = useSuppliers();
+  const { refreshInventoryItems } = useInventoryItems();
   const [activeTab, setActiveTab] = useState("inventory");
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   const [isOrderMode, setIsOrderMode] = useState(false);
@@ -37,6 +39,9 @@ const Inventory = () => {
     if (ezyPartsProducts === 'added') {
       setShowEzyPartsSuccess(true);
       
+      // Refresh inventory items to show the new parts
+      refreshInventoryItems();
+      
       // Remove the parameter from URL after processing
       searchParams.delete('ezyparts_products');
       navigate({
@@ -49,7 +54,7 @@ const Inventory = () => {
         setShowEzyPartsSuccess(false);
       }, 5000);
     }
-  }, [location, navigate]);
+  }, [location, navigate, refreshInventoryItems]);
 
   // This effect will run once when the component mounts
   useEffect(() => {
@@ -88,7 +93,7 @@ const Inventory = () => {
             <FileCheck className="h-4 w-4 text-green-500" />
             <AlertTitle>Products Added Successfully</AlertTitle>
             <AlertDescription className="flex items-center justify-between">
-              <span>Products from EzyParts have been added to your inventory.</span>
+              <span>Products from EzyParts have been added to your inventory and are ready for invoicing.</span>
               <Button 
                 variant="ghost" 
                 size="icon" 

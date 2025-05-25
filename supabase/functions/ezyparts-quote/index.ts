@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -26,6 +25,24 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
+    // Get user ID from URL parameters or headers
+    const url = new URL(req.url);
+    const userId = url.searchParams.get('user_id') || req.headers.get('x-user-id');
+
+    if (!userId) {
+      console.error("No user ID provided in request");
+      return new Response(
+        createErrorPage("User authentication required. Please log in and try again."),
+        { 
+          status: 200,
+          headers: { 
+            ...corsHeaders,
+            "Content-Type": "text/html"
+          } 
+        }
+      );
+    }
+
     // Log the raw request for debugging
     await supabase
       .from("ezyparts_logs")
@@ -35,6 +52,7 @@ serve(async (req) => {
         data: {
           method: req.method,
           url: req.url,
+          userId: userId,
           headers: Object.fromEntries(req.headers.entries()),
           timestamp: new Date().toISOString()
         }
@@ -64,6 +82,7 @@ serve(async (req) => {
         const { data, error } = await supabase
           .from("ezyparts_quotes")
           .insert({
+            user_id: userId,
             quote_data: jsonData,
             created_at: new Date().toISOString()
           })
@@ -72,7 +91,7 @@ serve(async (req) => {
         if (error) throw error;
         
         // Process parts and add to inventory automatically
-        await processPartsToInventory(supabase, jsonData, data[0].id);
+        await processPartsToInventory(supabase, jsonData, data[0].id, userId);
         
         return createInventoryRedirectResponse(req.url, data[0].id);
       }
@@ -194,6 +213,7 @@ serve(async (req) => {
       const { data, error } = await supabase
         .from("ezyparts_quotes")
         .insert({
+          user_id: userId,
           quote_data: payload,
           created_at: new Date().toISOString()
         })
@@ -207,7 +227,7 @@ serve(async (req) => {
       console.log("Quote stored successfully with ID:", data[0].id);
 
       // Process parts and add to inventory automatically
-      await processPartsToInventory(supabase, payload, data[0].id);
+      await processPartsToInventory(supabase, payload, data[0].id, userId);
 
       // Log successful processing
       await supabase
@@ -217,6 +237,7 @@ serve(async (req) => {
           message: "Quote processed successfully",
           data: {
             quoteId: data[0].id,
+            userId: userId,
             extractionMethod,
             vehicle: `${payload.headers?.make} ${payload.headers?.model}`,
             partsCount: payload.parts?.length,
@@ -237,6 +258,7 @@ serve(async (req) => {
           level: "error",
           message: "No quote payload found",
           data: {
+            userId: userId,
             contentType,
             contentLength: htmlContent.length,
             contentPreview: htmlContent.substring(0, 1000),
@@ -295,20 +317,16 @@ serve(async (req) => {
   }
 });
 
-async function processPartsToInventory(supabase: any, payload: any, quoteId: string) {
+async function processPartsToInventory(supabase: any, payload: any, quoteId: string, userId: string) {
   try {
-    console.log("Processing parts to inventory for quote:", quoteId);
-    
-    // Get the default user ID or create a system user for EzyParts items
-    // For now, we'll use a fixed user ID that should be replaced with actual user context
-    const systemUserId = "00000000-0000-0000-0000-000000000000"; // This should be replaced with actual user ID
+    console.log("Processing parts to inventory for quote:", quoteId, "user:", userId);
     
     // Convert EzyParts parts to user inventory items format
     const inventoryItems = payload.parts.map((part: any) => {
       const code = `EP-${part.sku.toUpperCase()}-${Math.random().toString(36).substring(2, 8)}`;
       
       return {
-        user_id: systemUserId, // This should come from the request context
+        user_id: userId,
         code,
         name: part.partDescription,
         description: `${part.partDescription} - Brand: ${part.brand}`,
@@ -318,42 +336,21 @@ async function processPartsToInventory(supabase: any, payload: any, quoteId: str
         min_stock: 5,
         price: part.nettPriceEach,
         location: 'Main Warehouse',
-        last_order: new Date().toISOString().split('T')[0],
         status: 'normal'
       };
     });
 
-    // Add to user inventory items (the table that the frontend uses)
+    // Add to user inventory items
     const { data, error } = await supabase
       .from('user_inventory_items')
       .insert(inventoryItems);
 
     if (error) {
       console.error("Error adding parts to user inventory:", error);
-      
-      // Fallback: try to add to default inventory if user inventory fails
-      const defaultItems = inventoryItems.map(item => ({
-        ...item,
-        user_id: undefined, // Remove user_id for default table
-        supplier_id: 'ezyparts-burson',
-        instock: item.in_stock,
-        minstock: item.min_stock,
-        lastorder: item.last_order,
-        imageurl: null
-      }));
-      
-      const { data: fallbackData, error: fallbackError } = await supabase
-        .from('default_inventory_items')
-        .insert(defaultItems);
-        
-      if (fallbackError) {
-        throw fallbackError;
-      }
-      
-      console.log(`Successfully added ${inventoryItems.length} parts to default inventory as fallback`);
-    } else {
-      console.log(`Successfully added ${inventoryItems.length} parts to user inventory`);
+      throw error;
     }
+    
+    console.log(`Successfully added ${inventoryItems.length} parts to user inventory`);
     
     // Log the successful inventory addition
     await supabase
@@ -363,6 +360,7 @@ async function processPartsToInventory(supabase: any, payload: any, quoteId: str
         message: "Parts added to inventory",
         data: {
           quoteId,
+          userId,
           partsAdded: inventoryItems.length,
           timestamp: new Date().toISOString()
         }
@@ -379,10 +377,13 @@ async function processPartsToInventory(supabase: any, payload: any, quoteId: str
         message: "Failed to add parts to inventory",
         data: {
           quoteId,
+          userId,
           error: error.message,
           timestamp: new Date().toISOString()
         }
       });
+    
+    throw error; // Re-throw to show error to user
   }
 }
 
