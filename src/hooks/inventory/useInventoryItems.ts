@@ -31,9 +31,9 @@ export const useInventoryItems = () => {
       // Transform Supabase data to match our InventoryItem interface
       const transformedItems: InventoryItem[] = (data || []).map(item => ({
         id: item.id,
-        code: item.code || item.id.substring(0, 8).toUpperCase(), // Use code from DB or generate from ID
+        code: item.code || item.id.substring(0, 8).toUpperCase(),
         name: item.name,
-        description: item.description || `${item.name} - ${item.category || 'General'}`, // Use description from DB or generate
+        description: item.description || `${item.name} - ${item.category || 'General'}`,
         category: item.category || 'General',
         supplier: item.supplier || 'Unknown',
         supplierId: 'unknown', // We'll need to map this properly
@@ -105,7 +105,8 @@ export const useInventoryItems = () => {
           min_stock: newItem.minStock,
           price: newItem.price,
           location: newItem.location,
-          status: newItem.status
+          status: newItem.status,
+          last_order: newItem.lastOrder ? new Date(newItem.lastOrder) : null
         })
         .select()
         .single();
@@ -147,6 +148,7 @@ export const useInventoryItems = () => {
         min_stock: updatedData.minStock,
         price: updatedData.price,
         location: updatedData.location,
+        last_order: updatedData.lastOrder ? new Date(updatedData.lastOrder) : null
       };
 
       const { error } = await supabase

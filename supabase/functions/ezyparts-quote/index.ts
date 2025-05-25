@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -25,10 +26,27 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // Get user ID from URL parameters or headers
+    // Get user ID from URL parameters, headers, or try to extract from auth
     const url = new URL(req.url);
-    const userId = url.searchParams.get('user_id') || req.headers.get('x-user-id');
+    let userId = url.searchParams.get('user_id') || req.headers.get('x-user-id');
 
+    // If no user ID provided, try to get from authorization header
+    if (!userId) {
+      const authHeader = req.headers.get('authorization');
+      if (authHeader?.startsWith('Bearer ')) {
+        try {
+          const token = authHeader.replace('Bearer ', '');
+          const { data: { user }, error } = await supabase.auth.getUser(token);
+          if (user && !error) {
+            userId = user.id;
+          }
+        } catch (authError) {
+          console.log("Could not authenticate user from token:", authError);
+        }
+      }
+    }
+
+    // If still no user ID, show error
     if (!userId) {
       console.error("No user ID provided in request");
       return new Response(
@@ -44,42 +62,43 @@ serve(async (req) => {
     }
 
     // Log the raw request for debugging
-    await supabase
-      .from("ezyparts_logs")
-      .insert({
-        level: "info",
-        message: "Webhook request received",
-        data: {
-          method: req.method,
-          url: req.url,
-          userId: userId,
-          headers: Object.fromEntries(req.headers.entries()),
-          timestamp: new Date().toISOString()
-        }
-      });
+    try {
+      await supabase
+        .from("ezyparts_logs")
+        .insert({
+          level: "info",
+          message: "Webhook request received",
+          data: {
+            method: req.method,
+            url: req.url,
+            userId: userId,
+            headers: Object.fromEntries(req.headers.entries()),
+            timestamp: new Date().toISOString()
+          }
+        });
+    } catch (logError) {
+      console.warn("Could not log to database:", logError);
+    }
 
     // Handle different content types
     const contentType = req.headers.get("content-type") || "";
     let htmlContent = "";
 
     if (contentType.includes("application/x-www-form-urlencoded")) {
-      // Handle form data (EzyParts might send this way)
       const formData = await req.formData();
       console.log("Form data received:", Object.fromEntries(formData.entries()));
       
-      // Check if quote data is in form field
       const quoteData = formData.get("quoteData") || formData.get("payload");
       if (quoteData) {
         htmlContent = quoteData.toString();
       }
     } else if (contentType.includes("application/json")) {
-      // Handle JSON payload
       const jsonData = await req.json();
       console.log("JSON data received:", jsonData);
       
-      // If it's already parsed JSON, store it directly
       if (jsonData.headers && jsonData.parts) {
-        const { data, error } = await supabase
+        // Store quote first
+        const { data: quoteData, error: quoteError } = await supabase
           .from("ezyparts_quotes")
           .insert({
             user_id: userId,
@@ -88,54 +107,62 @@ serve(async (req) => {
           })
           .select("id");
         
-        if (error) throw error;
+        if (quoteError) {
+          console.error("Error storing quote:", quoteError);
+          throw quoteError;
+        }
         
-        // Process parts and add to inventory automatically
-        await processPartsToInventory(supabase, jsonData, data[0].id, userId);
+        // Process parts to inventory
+        const inventoryResult = await processPartsToInventory(supabase, jsonData, quoteData[0].id, userId);
         
-        return createInventoryRedirectResponse(req.url, data[0].id);
+        if (inventoryResult.success) {
+          return createInventoryRedirectResponse(req.url, quoteData[0].id);
+        } else {
+          throw new Error(inventoryResult.error || "Failed to add parts to inventory");
+        }
       }
     } else {
-      // Handle HTML content (default expected format)
       htmlContent = await req.text();
     }
 
     console.log("Raw content length:", htmlContent.length);
     console.log("Content preview:", htmlContent.substring(0, 500));
 
-    // Log the raw content for debugging
-    await supabase
-      .from("ezyparts_raw_payloads")
-      .insert({
-        source: "webhook",
-        content_type: contentType,
-        raw_content: htmlContent,
-        received_at: new Date().toISOString()
-      });
+    // Store raw payload for debugging
+    try {
+      await supabase
+        .from("ezyparts_raw_payloads")
+        .insert({
+          source: "webhook",
+          content_type: contentType,
+          raw_content: htmlContent,
+          received_at: new Date().toISOString()
+        });
+    } catch (payloadError) {
+      console.warn("Could not store raw payload:", payloadError);
+    }
 
-    // Multiple strategies to extract the quote payload
+    // Extract quote payload using multiple strategies
     let payload = null;
     let extractionMethod = "";
 
-    // Strategy 1: Look for quotePayload div (standard method)
+    // Strategy 1: Look for quotePayload div
     const payloadMatch = htmlContent.match(/id=["']quotePayload["'][^>]*>(.*?)<\/div>/s);
     if (payloadMatch && payloadMatch[1]) {
       try {
         const rawPayload = payloadMatch[1].trim();
         console.log("Found quotePayload div, content:", rawPayload.substring(0, 200));
         
-        // Try direct JSON parse first
+        // Try various parsing methods
         try {
           payload = JSON.parse(rawPayload);
           extractionMethod = "div-direct";
         } catch {
-          // Try decoding if it's URL encoded
           try {
             const decodedPayload = decodeURIComponent(rawPayload);
             payload = JSON.parse(decodedPayload);
             extractionMethod = "div-decoded";
           } catch {
-            // Try HTML entity decoding
             const htmlDecoded = rawPayload
               .replace(/&quot;/g, '"')
               .replace(/&amp;/g, '&')
@@ -151,40 +178,7 @@ serve(async (req) => {
       }
     }
 
-    // Strategy 2: Look for JSON in script tags
-    if (!payload) {
-      const scriptMatch = htmlContent.match(/<script[^>]*>(.*?)<\/script>/gs);
-      if (scriptMatch) {
-        for (const script of scriptMatch) {
-          const jsonMatch = script.match(/({.*"headers".*"parts".*})/s);
-          if (jsonMatch) {
-            try {
-              payload = JSON.parse(jsonMatch[1]);
-              extractionMethod = "script-tag";
-              break;
-            } catch (e) {
-              console.log("Failed to parse JSON from script tag");
-            }
-          }
-        }
-      }
-    }
-
-    // Strategy 3: Look for any JSON-like structure in the content
-    if (!payload) {
-      const jsonPattern = /({[^{}]*"headers"[^{}]*"parts"[^{}]*})/s;
-      const jsonMatch = htmlContent.match(jsonPattern);
-      if (jsonMatch) {
-        try {
-          payload = JSON.parse(jsonMatch[1]);
-          extractionMethod = "pattern-match";
-        } catch (e) {
-          console.log("Failed to parse JSON from pattern match");
-        }
-      }
-    }
-
-    // Strategy 4: Check if the entire content is JSON
+    // Strategy 2: Look for JSON in entire content if it starts with {
     if (!payload && htmlContent.trim().startsWith('{')) {
       try {
         payload = JSON.parse(htmlContent);
@@ -197,12 +191,7 @@ serve(async (req) => {
     console.log("Extraction method used:", extractionMethod);
     console.log("Payload extracted:", !!payload);
 
-    if (payload) {
-      // Validate the payload has required fields
-      if (!payload.headers || !payload.parts) {
-        throw new Error("Invalid payload structure - missing headers or parts");
-      }
-
+    if (payload && payload.headers && payload.parts) {
       console.log("Valid payload found:", {
         vehicle: `${payload.headers?.make || 'Unknown'} ${payload.headers?.model || 'Unknown'}`,
         parts: payload.parts?.length || 0,
@@ -210,7 +199,7 @@ serve(async (req) => {
       });
 
       // Store the quote in the database
-      const { data, error } = await supabase
+      const { data: quoteData, error: quoteError } = await supabase
         .from("ezyparts_quotes")
         .insert({
           user_id: userId,
@@ -219,58 +208,68 @@ serve(async (req) => {
         })
         .select("id");
       
-      if (error) {
-        console.error("Error storing quote:", error);
-        throw error;
+      if (quoteError) {
+        console.error("Error storing quote:", quoteError);
+        throw quoteError;
       }
       
-      console.log("Quote stored successfully with ID:", data[0].id);
+      console.log("Quote stored successfully with ID:", quoteData[0].id);
 
-      // Process parts and add to inventory automatically
-      await processPartsToInventory(supabase, payload, data[0].id, userId);
+      // Process parts and add to inventory
+      const inventoryResult = await processPartsToInventory(supabase, payload, quoteData[0].id, userId);
+      
+      if (inventoryResult.success) {
+        // Log successful processing
+        try {
+          await supabase
+            .from("ezyparts_logs")
+            .insert({
+              level: "info",
+              message: "Quote processed successfully",
+              data: {
+                quoteId: quoteData[0].id,
+                userId: userId,
+                extractionMethod,
+                vehicle: `${payload.headers?.make} ${payload.headers?.model}`,
+                partsCount: payload.parts?.length,
+                partsAddedToInventory: inventoryResult.addedCount,
+                timestamp: new Date().toISOString()
+              }
+            });
+        } catch (logError) {
+          console.warn("Could not log success:", logError);
+        }
 
-      // Log successful processing
-      await supabase
-        .from("ezyparts_logs")
-        .insert({
-          level: "info",
-          message: "Quote processed successfully",
-          data: {
-            quoteId: data[0].id,
-            userId: userId,
-            extractionMethod,
-            vehicle: `${payload.headers?.make} ${payload.headers?.model}`,
-            partsCount: payload.parts?.length,
-            timestamp: new Date().toISOString()
-          }
-        });
-
-      // Return redirect response to inventory page with success
-      return createInventoryRedirectResponse(req.url, data[0].id);
+        return createInventoryRedirectResponse(req.url, quoteData[0].id);
+      } else {
+        throw new Error(inventoryResult.error || "Failed to add parts to inventory");
+      }
       
     } else {
-      // No payload found - log for debugging
-      console.error("No quote payload found in request");
+      console.error("No valid quote payload found in request");
       
-      await supabase
-        .from("ezyparts_logs")
-        .insert({
-          level: "error",
-          message: "No quote payload found",
-          data: {
-            userId: userId,
-            contentType,
-            contentLength: htmlContent.length,
-            contentPreview: htmlContent.substring(0, 1000),
-            timestamp: new Date().toISOString()
-          }
-        });
+      try {
+        await supabase
+          .from("ezyparts_logs")
+          .insert({
+            level: "error",
+            message: "No quote payload found",
+            data: {
+              userId: userId,
+              contentType,
+              contentLength: htmlContent.length,
+              contentPreview: htmlContent.substring(0, 1000),
+              timestamp: new Date().toISOString()
+            }
+          });
+      } catch (logError) {
+        console.warn("Could not log error:", logError);
+      }
 
-      // Return error page that will redirect after showing message
       return new Response(
-        createErrorPage("No quote data found in the request. Please try again or contact support."),
+        createErrorPage("No quote data found in the request. Please make sure you clicked 'Send to WMS' in EzyParts."),
         { 
-          status: 200, // Use 200 so browser doesn't show error page
+          status: 200,
           headers: { 
             ...corsHeaders,
             "Content-Type": "text/html"
@@ -303,9 +302,8 @@ serve(async (req) => {
       console.error("Failed to log error:", logError);
     }
 
-    // Return user-friendly error page
     return new Response(
-      createErrorPage(`Processing error: ${error.message}. Please try again.`),
+      createErrorPage(`Processing error: ${error.message}. Please try again or contact support.`),
       { 
         status: 200,
         headers: { 
@@ -321,6 +319,10 @@ async function processPartsToInventory(supabase: any, payload: any, quoteId: str
   try {
     console.log("Processing parts to inventory for quote:", quoteId, "user:", userId);
     
+    if (!payload.parts || !Array.isArray(payload.parts) || payload.parts.length === 0) {
+      throw new Error("No parts found in payload");
+    }
+
     // Convert EzyParts parts to user inventory items format
     const inventoryItems = payload.parts.map((part: any) => {
       const code = `EP-${part.sku.toUpperCase()}-${Math.random().toString(36).substring(2, 8)}`;
@@ -328,68 +330,72 @@ async function processPartsToInventory(supabase: any, payload: any, quoteId: str
       return {
         user_id: userId,
         code,
-        name: part.partDescription,
-        description: `${part.partDescription} - Brand: ${part.brand}`,
+        name: part.partDescription || 'Unknown Part',
+        description: `${part.partDescription || 'Unknown Part'} - Brand: ${part.brand || 'Unknown'}`,
         category: part.productCategory || 'Auto Parts',
         supplier: 'Burson Auto Parts',
-        in_stock: part.qty,
+        in_stock: part.qty || 1,
         min_stock: 5,
-        price: part.nettPriceEach,
+        price: parseFloat(part.nettPriceEach) || 0,
         location: 'Main Warehouse',
-        status: 'normal'
+        status: 'normal',
+        last_order: new Date().toISOString()
       };
     });
+
+    console.log("Prepared inventory items:", inventoryItems.length);
+    console.log("Sample item:", inventoryItems[0]);
 
     // Add to user inventory items
     const { data, error } = await supabase
       .from('user_inventory_items')
-      .insert(inventoryItems);
+      .insert(inventoryItems)
+      .select('id');
 
     if (error) {
       console.error("Error adding parts to user inventory:", error);
-      throw error;
+      throw new Error(`Database error: ${error.message}`);
     }
     
     console.log(`Successfully added ${inventoryItems.length} parts to user inventory`);
+    console.log("Inserted items IDs:", data?.map((item: any) => item.id));
     
-    // Log the successful inventory addition
-    await supabase
-      .from("ezyparts_logs")
-      .insert({
-        level: "info",
-        message: "Parts added to inventory",
-        data: {
-          quoteId,
-          userId,
-          partsAdded: inventoryItems.length,
-          timestamp: new Date().toISOString()
-        }
-      });
+    return {
+      success: true,
+      addedCount: inventoryItems.length,
+      items: data
+    };
 
   } catch (error) {
     console.error("Error processing parts to inventory:", error);
     
-    // Log the error but don't fail the whole process
-    await supabase
-      .from("ezyparts_logs")
-      .insert({
-        level: "error",
-        message: "Failed to add parts to inventory",
-        data: {
-          quoteId,
-          userId,
-          error: error.message,
-          timestamp: new Date().toISOString()
-        }
-      });
+    // Log the error but return detailed info
+    try {
+      await supabase
+        .from("ezyparts_logs")
+        .insert({
+          level: "error",
+          message: "Failed to add parts to inventory",
+          data: {
+            quoteId,
+            userId,
+            error: error.message,
+            timestamp: new Date().toISOString()
+          }
+        });
+    } catch (logError) {
+      console.warn("Could not log inventory error:", logError);
+    }
     
-    throw error; // Re-throw to show error to user
+    return {
+      success: false,
+      error: error.message,
+      addedCount: 0
+    };
   }
 }
 
 function createInventoryRedirectResponse(requestUrl: string, quoteId: string): Response {
-  const url = new URL(requestUrl);
-  // Use the correct base URL for the app
   const baseUrl = 'https://app.workshopbase.com.au';
   const successUrl = `${baseUrl}/inventory?tab=inventory&ezyparts_products=added`;
   
@@ -434,16 +440,6 @@ function createInventoryRedirectResponse(requestUrl: string, quoteId: string): R
           <p><a href="${successUrl}">Click here to view your inventory now</a></p>
         </div>
         <script>
-          // Close the EzyParts window if it's still open
-          try {
-            if (window.opener && !window.opener.closed) {
-              window.opener.focus();
-            }
-            window.close();
-          } catch (e) {
-            console.log('Could not close window automatically');
-          }
-          
           setTimeout(function() {
             window.location.href = "${successUrl}";
           }, 3000);
