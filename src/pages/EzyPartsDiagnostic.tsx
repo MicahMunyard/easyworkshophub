@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useEzyParts } from '@/contexts/EzyPartsContext';
 import { Button } from "@/components/ui/button";
@@ -64,7 +63,6 @@ const EzyPartsDiagnostic: React.FC = () => {
                                 credentials.clientId && 
                                 credentials.clientSecret;
       
-      // Fixed: Make sure success is a boolean value
       setTestResults(prev => ({
         ...prev,
         credentials: {
@@ -75,7 +73,7 @@ const EzyPartsDiagnostic: React.FC = () => {
         }
       }));
       
-      // Test 2: EzyParts API Connection
+      // Test 2: EzyParts API Connection (use existing context method)
       try {
         const connectionSuccess = await testEzyPartsConnection();
         setTestResults(prev => ({
@@ -97,10 +95,10 @@ const EzyPartsDiagnostic: React.FC = () => {
         }));
       }
       
-      // Test 3: Edge Function Accessibility
+      // Test 3: Edge Function Accessibility (correct endpoint)
       try {
         const baseUrl = window.location.origin;
-        const diagnosticUrl = `${baseUrl}/api/ezyparts-diagnostic?action=test`;
+        const diagnosticUrl = `${baseUrl}/functions/v1/ezyparts-diagnostic?action=test-api`;
         
         const response = await fetch(diagnosticUrl);
         const data = await response.json();
@@ -124,10 +122,10 @@ const EzyPartsDiagnostic: React.FC = () => {
         }));
       }
       
-      // Test 4: Webhook Test
+      // Test 4: Webhook Test (correct endpoint)
       try {
         const baseUrl = window.location.origin;
-        const webhookTestUrl = `${baseUrl}/api/ezyparts-diagnostic?action=test-webhook`;
+        const webhookTestUrl = `${baseUrl}/functions/v1/ezyparts-diagnostic?action=test-webhook`;
         
         const response = await fetch(webhookTestUrl);
         const data = await response.json();
@@ -167,7 +165,7 @@ const EzyPartsDiagnostic: React.FC = () => {
     
     try {
       const baseUrl = window.location.origin;
-      const setupUrl = `${baseUrl}/api/ezyparts-diagnostic?action=setup`;
+      const setupUrl = `${baseUrl}/functions/v1/ezyparts-diagnostic?action=setup`;
       
       const response = await fetch(setupUrl);
       const data = await response.json();
@@ -190,7 +188,7 @@ const EzyPartsDiagnostic: React.FC = () => {
     
     try {
       const baseUrl = window.location.origin;
-      const logsUrl = `${baseUrl}/api/ezyparts-diagnostic?action=logs`;
+      const logsUrl = `${baseUrl}/functions/v1/ezyparts-diagnostic?action=logs`;
       
       const response = await fetch(logsUrl);
       const data = await response.json();
@@ -334,7 +332,7 @@ const EzyPartsDiagnostic: React.FC = () => {
                     <div className="space-y-1">
                       <span className="text-sm font-medium">Webhook URL:</span>
                       <code className="block bg-muted p-2 rounded text-xs break-all">
-                        {window.location.origin}/api/ezyparts-quote
+                        {window.location.origin}/functions/v1/ezyparts-quote
                       </code>
                     </div>
                     
@@ -354,7 +352,7 @@ const EzyPartsDiagnostic: React.FC = () => {
                   variant="outline"
                   onClick={() => {
                     const baseUrl = window.location.origin;
-                    const webhookTestUrl = `${baseUrl}/api/ezyparts-diagnostic?action=test-webhook`;
+                    const webhookTestUrl = `${baseUrl}/functions/v1/ezyparts-diagnostic?action=test-webhook`;
                     window.open(webhookTestUrl, '_blank');
                   }}
                 >

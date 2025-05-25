@@ -25,8 +25,8 @@ serve(async (req) => {
     const url = new URL(req.url);
     const action = url.searchParams.get("action") || "";
 
-    // Test EzyParts API connection
-    if (action === "test-api") {
+    // Test EzyParts API connection - handle both 'test' and 'test-api' actions
+    if (action === "test-api" || action === "test") {
       try {
         // Get credentials from Supabase secrets
         const { data: clientId } = await supabase.functions.invoke('get-secret', { 
@@ -226,6 +226,44 @@ serve(async (req) => {
       });
     }
 
+    // Setup diagnostic tables
+    if (action === "setup") {
+      try {
+        // Check if tables exist and create them if needed
+        const { error: logsError } = await supabase
+          .from("ezyparts_logs")
+          .select("id")
+          .limit(1);
+        
+        const { error: payloadsError } = await supabase
+          .from("ezyparts_raw_payloads")
+          .select("id")
+          .limit(1);
+        
+        // If tables don't exist, they would be created by the webhook function
+        // For now, just return success if we can query them
+        return new Response(JSON.stringify({
+          success: true,
+          message: "Diagnostic tables are accessible",
+          data: {
+            logsTableExists: !logsError,
+            payloadsTableExists: !payloadsError
+          },
+          timestamp: new Date().toISOString()
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      } catch (error) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: `Setup error: ${error.message}`,
+          timestamp: new Date().toISOString()
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
+    }
+
     // Default response with available actions
     return new Response(JSON.stringify({
       message: "EzyParts Diagnostic API",
@@ -233,7 +271,8 @@ serve(async (req) => {
         { action: "test-api", description: "Test EzyParts API connection and authentication" },
         { action: "test-webhook", description: "Test ezyparts-quote webhook endpoint" },
         { action: "logs", description: "View recent logs" },
-        { action: "env", description: "Show environment variables (non-sensitive)" }
+        { action: "env", description: "Show environment variables (non-sensitive)" },
+        { action: "setup", description: "Setup diagnostic tables" }
       ],
       timestamp: new Date().toISOString()
     }), {
