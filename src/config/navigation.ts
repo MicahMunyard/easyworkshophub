@@ -100,57 +100,57 @@ export const mainNavSections = [
   {
     name: "Dashboard",
     path: "/",
-    icon: <LayoutDashboard className="h-5 w-5" />
+    icon: "LayoutDashboard"
   },
   {
     name: "Bookings",
     path: "/booking-diary",
-    icon: <Calendar className="h-5 w-5" />
+    icon: "Calendar"
   },
   {
     name: "Invoicing",
     path: "/invoicing",
-    icon: <FileText className="h-5 w-5" />
+    icon: "FileText"
   },
   {
     name: "Email",
     path: "/email-integration",
-    icon: <Mail className="h-5 w-5" />
+    icon: "Mail"
   },
   {
     name: "Communication",
     path: "/communication",
-    icon: <MessageSquare className="h-5 w-5" />
+    icon: "MessageSquare"
   },
   {
     name: "Inventory",
     path: "/inventory",
-    icon: <Package className="h-5 w-5" />
+    icon: "Package"
   },
   {
     name: "Customers",
     path: "/customers",
-    icon: <Users className="h-5 w-5" />
+    icon: "Users"
   },
   {
     name: "Marketing",
     path: "/marketing",
-    icon: <BarChart3 className="h-5 w-5" />
+    icon: "BarChart3"
   },
   {
     name: "Reports",
     path: "/reports",
-    icon: <BarChart3 className="h-5 w-5" />
+    icon: "BarChart3"
   },
   {
     name: "Timesheets",
     path: "/timesheets",
-    icon: <Clock className="h-5 w-5" />
+    icon: "Clock"
   },
   {
     name: "EzyParts",
     path: "/ezyparts",
-    icon: <FileCode className="h-5 w-5" />
+    icon: "FileCode"
   }
 ];
 
@@ -184,16 +184,16 @@ export const settingsNavSections = [
   {
     name: "Workshop Setup",
     path: "/workshop-setup",
-    icon: <Wrench className="h-5 w-5" />
+    icon: "Wrench"
   },
   {
     name: "Settings",
     path: "/settings",
-    icon: <Settings className="h-5 w-5" />
+    icon: "Settings"
   },
   {
     name: "Help & Support",
     path: "/help",
-    icon: <HelpCircle className="h-5 w-5" />
+    icon: "HelpCircle"
   }
 ];
