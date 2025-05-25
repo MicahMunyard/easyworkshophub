@@ -27,25 +27,21 @@ serve(async (req) => {
       throw new Error("User ID is required");
     }
 
-    // Get credentials from Supabase secrets
-    const { data: accountId } = await supabase.functions.invoke('get-secret', { 
-      body: { name: 'EZYPARTS_ACCOUNT_ID' } 
+    // Get OAuth credentials from Supabase secrets (these are the only ones we need)
+    const { data: clientId } = await supabase.functions.invoke('get-secret', { 
+      body: { name: 'BURSONS_OAUTH_NAME' } 
     });
     
-    const { data: username } = await supabase.functions.invoke('get-secret', { 
-      body: { name: 'EZYPARTS_USERNAME' } 
+    const { data: clientSecret } = await supabase.functions.invoke('get-secret', { 
+      body: { name: 'BURSONS_OAUTH_SECRET' } 
     });
     
-    const { data: password } = await supabase.functions.invoke('get-secret', { 
-      body: { name: 'EZYPARTS_PASSWORD' } 
-    });
-
     const { data: environment } = await supabase.functions.invoke('get-secret', { 
       body: { name: 'EZYPARTS_ENVIRONMENT' } 
     });
 
-    if (!accountId || !username || !password) {
-      throw new Error("EzyParts credentials not configured. Please contact your administrator.");
+    if (!clientId || !clientSecret) {
+      throw new Error("EzyParts OAuth credentials not configured. Please contact your administrator.");
     }
 
     const isProduction = environment === 'production';
@@ -57,11 +53,11 @@ serve(async (req) => {
     const baseUrl = req.headers.get('origin') || 'https://app.workshopbase.com.au';
     const webhookUrl = `${baseUrl}/functions/v1/ezyparts-quote?user_id=${user_id}`;
 
-    // Build search parameters
+    // For the web form, we use the OAuth credentials as account credentials
     const formData = {
-      accountId,
-      username,
-      password,
+      accountId: clientId,
+      username: clientId,
+      password: clientSecret,
       quoteUrl: webhookUrl,
       returnUrl: `${baseUrl}/inventory`,
       userAgent: 'Mozilla/5.0',

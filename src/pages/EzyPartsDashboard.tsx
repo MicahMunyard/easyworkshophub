@@ -22,7 +22,7 @@ const EzyPartsDashboard: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <VehicleSearchCard isConfigured={true} apiStatus="ok" />
+        <VehicleSearchCard isConfigured={true} apiStatus="connected" />
         <CurrentQuoteCard quote={currentQuote} onClearQuote={clearQuote} />
       </div>
     </div>

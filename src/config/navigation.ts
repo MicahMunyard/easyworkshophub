@@ -1,3 +1,4 @@
+
 import { LayoutDashboard, Search, Users, Settings, FileCode, Car } from "lucide-react"
 
 export const dashboardConfig = {
@@ -77,3 +78,8 @@ export const mainNav = [
     ],
   },
 ]
+
+// Export empty arrays for the missing navigation sections
+export const mainNavSections = [];
+export const secondaryNavSections = [];
+export const settingsNavSections = [];
