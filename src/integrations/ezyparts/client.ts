@@ -1,4 +1,3 @@
-
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { 
   AuthResponse, 
@@ -81,16 +80,36 @@ export class EzyPartsClient {
       params.append('client_id', this.clientId);
       params.append('client_secret', this.clientSecret);
       
+      console.log('Making auth request to:', this.authUrl);
+      
       // Make the token request with form data as specified
-      const response = await axios.post<AuthResponse>(
+      const response = await axios.post(
         this.authUrl,
         params.toString(),
         {
           headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
-          }
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'application/json'
+          },
+          timeout: 15000
         }
       );
+      
+      // Check if response is HTML (error page) instead of JSON
+      if (typeof response.data === 'string' && response.data.includes('<html>')) {
+        console.error('Received HTML response instead of JSON:', response.data.substring(0, 500));
+        throw new Error('EzyParts API returned HTML instead of JSON. This might indicate a server error or incorrect endpoint.');
+      }
+      
+      // Validate response structure
+      if (!response.data || typeof response.data !== 'object') {
+        throw new Error('Invalid response format from EzyParts API');
+      }
+      
+      if (!response.data.access_token) {
+        console.error('No access token in response:', response.data);
+        throw new Error('No access token received from EzyParts API');
+      }
       
       // Extract token and set expiry time (subtracting 60 seconds for safety)
       this.token = response.data.access_token;
@@ -100,8 +119,25 @@ export class EzyPartsClient {
       console.log('Successfully obtained new EzyParts OAuth token');
       return this.token;
     } catch (error) {
+      if (axios.isAxiosError(error)) {
+        console.error('Axios error:', {
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          message: error.message
+        });
+        
+        if (error.response?.status === 401) {
+          throw new Error('Invalid EzyParts credentials. Please check your client ID and secret.');
+        } else if (error.response?.status >= 500) {
+          throw new Error('EzyParts server error. Please try again later.');
+        } else if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
+          throw new Error('Cannot connect to EzyParts API. Please check your internet connection.');
+        }
+      }
+      
       console.error('Error obtaining EzyParts auth token:', error);
-      throw new Error('Failed to authenticate with EzyParts API');
+      throw new Error(`Failed to authenticate with EzyParts API: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
