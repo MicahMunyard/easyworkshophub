@@ -3,15 +3,19 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, Car, Search } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { AlertCircle, Car, Search, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { ConfigurationAlert } from './ConfigurationAlert';
 import { RegistrationSearchForm } from './RegistrationSearchForm';
 import { DetailsSearchForm } from './DetailsSearchForm';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 const VehicleSearch: React.FC = () => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [isSearching, setIsSearching] = useState(false);
+  const [isTestingConnection, setIsTestingConnection] = useState(false);
 
   if (!user) {
     return (
@@ -26,41 +30,73 @@ const VehicleSearch: React.FC = () => {
     );
   }
 
-  const handleSearch = (searchData: any) => {
+  const testEzyPartsConnection = async () => {
+    setIsTestingConnection(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('ezyparts-diagnostic', {
+        body: { action: 'test-api', user_id: user.id }
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        toast({
+          title: "Connection Successful",
+          description: "EzyParts API is working correctly.",
+        });
+      } else {
+        toast({
+          title: "Connection Failed", 
+          description: data.error || "Failed to connect to EzyParts API.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Connection test error:', error);
+      toast({
+        title: "Connection Error",
+        description: "Failed to test EzyParts connection.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsTestingConnection(false);
+    }
+  };
+
+  const handleSearch = async (searchData: any) => {
     setIsSearching(true);
     
-    // Construct the webhook URL with proper Supabase function endpoint and user ID
-    const webhookUrl = `https://qyjjbpyqxwrluhymvshn.supabase.co/functions/v1/ezyparts-quote?user_id=${user.id}`;
-    
-    // Construct the EzyParts URL with search parameters and webhook URL
-    let ezyPartsUrl = 'https://staging.ezyparts.net.au/vehiclesearch?';
-    
-    // Add search parameters
-    const params = new URLSearchParams();
-    if (searchData.registration) {
-      params.append('rego', searchData.registration);
-      params.append('state', searchData.state);
-    } else {
-      params.append('make', searchData.make);
-      params.append('model', searchData.model);
-      if (searchData.year) params.append('year', searchData.year);
-      if (searchData.engine) params.append('engine', searchData.engine);
-      if (searchData.variant) params.append('variant', searchData.variant);
+    try {
+      const { data, error } = await supabase.functions.invoke('ezyparts-search', {
+        body: {
+          user_id: user.id,
+          search_params: searchData
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.redirect_url) {
+        // Open EzyParts in new window with the generated URL
+        window.open(data.redirect_url, '_blank', 'width=1200,height=800');
+        
+        toast({
+          title: "EzyParts Opened",
+          description: "Search for parts and click 'Send to WMS' to add them to your inventory.",
+        });
+      } else {
+        throw new Error(data.error || 'Failed to generate EzyParts URL');
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+      toast({
+        title: "Search Failed",
+        description: error instanceof Error ? error.message : "Failed to open EzyParts search.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSearching(false);
     }
-    
-    // Add the webhook URL for "Send to WMS" functionality
-    params.append('wms_webhook', encodeURIComponent(webhookUrl));
-    
-    ezyPartsUrl += params.toString();
-    
-    console.log('Opening EzyParts with URL:', ezyPartsUrl);
-    console.log('Webhook URL being passed:', webhookUrl);
-    console.log('User ID:', user.id);
-    
-    // Open EzyParts in a new window
-    window.open(ezyPartsUrl, '_blank', 'width=1200,height=800');
-    
-    setIsSearching(false);
   };
 
   return (
@@ -69,13 +105,25 @@ const VehicleSearch: React.FC = () => {
         <div className="p-2 bg-blue-100 rounded-lg">
           <Car className="h-6 w-6 text-blue-600" />
         </div>
-        <div>
+        <div className="flex-1">
           <h1 className="text-2xl font-bold">Vehicle Search</h1>
           <p className="text-muted-foreground">Search for vehicle parts using EzyParts</p>
         </div>
+        <Button 
+          variant="outline" 
+          onClick={testEzyPartsConnection}
+          disabled={isTestingConnection}
+        >
+          {isTestingConnection ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Testing...
+            </>
+          ) : (
+            'Test Connection'
+          )}
+        </Button>
       </div>
-
-      <ConfigurationAlert />
 
       <Card>
         <CardHeader>
@@ -108,17 +156,6 @@ const VehicleSearch: React.FC = () => {
           After searching, select the parts you need in EzyParts and click "Send to WMS" to add them to your WorkshopBase inventory.
         </AlertDescription>
       </Alert>
-      
-      {/* Debug information for development */}
-      {import.meta.env.DEV && (
-        <Alert>
-          <AlertDescription>
-            <strong>Debug Info:</strong><br/>
-            User ID: {user.id}<br/>
-            Webhook URL: {`https://qyjjbpyqxwrluhymvshn.supabase.co/functions/v1/ezyparts-quote?user_id=${user.id}`}
-          </AlertDescription>
-        </Alert>
-      )}
     </div>
   );
 };
