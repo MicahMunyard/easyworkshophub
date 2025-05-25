@@ -224,7 +224,7 @@ serve(async (req) => {
           }
         });
 
-      // Return redirect response to inventory page with success - NO vehicle selection needed
+      // Return redirect response to inventory page with success
       return createInventoryRedirectResponse(req.url, data[0].id);
       
     } else {
@@ -299,38 +299,61 @@ async function processPartsToInventory(supabase: any, payload: any, quoteId: str
   try {
     console.log("Processing parts to inventory for quote:", quoteId);
     
-    // Convert EzyParts parts to inventory items format
+    // Get the default user ID or create a system user for EzyParts items
+    // For now, we'll use a fixed user ID that should be replaced with actual user context
+    const systemUserId = "00000000-0000-0000-0000-000000000000"; // This should be replaced with actual user ID
+    
+    // Convert EzyParts parts to user inventory items format
     const inventoryItems = payload.parts.map((part: any) => {
       const code = `EP-${part.sku.toUpperCase()}-${Math.random().toString(36).substring(2, 8)}`;
       
       return {
+        user_id: systemUserId, // This should come from the request context
         code,
         name: part.partDescription,
         description: `${part.partDescription} - Brand: ${part.brand}`,
         category: part.productCategory || 'Auto Parts',
         supplier: 'Burson Auto Parts',
-        supplier_id: 'ezyparts-burson',
         in_stock: part.qty,
         min_stock: 5,
         price: part.nettPriceEach,
         location: 'Main Warehouse',
         last_order: new Date().toISOString().split('T')[0],
-        user_id: null // Will be set when we can identify the user
+        status: 'normal'
       };
     });
 
-    // For now, we'll store these as general inventory items
-    // In a production system, you'd want to associate with a specific user
+    // Add to user inventory items (the table that the frontend uses)
     const { data, error } = await supabase
-      .from('default_inventory_items')
+      .from('user_inventory_items')
       .insert(inventoryItems);
 
     if (error) {
-      console.error("Error adding parts to inventory:", error);
-      throw error;
+      console.error("Error adding parts to user inventory:", error);
+      
+      // Fallback: try to add to default inventory if user inventory fails
+      const defaultItems = inventoryItems.map(item => ({
+        ...item,
+        user_id: undefined, // Remove user_id for default table
+        supplier_id: 'ezyparts-burson',
+        instock: item.in_stock,
+        minstock: item.min_stock,
+        lastorder: item.last_order,
+        imageurl: null
+      }));
+      
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from('default_inventory_items')
+        .insert(defaultItems);
+        
+      if (fallbackError) {
+        throw fallbackError;
+      }
+      
+      console.log(`Successfully added ${inventoryItems.length} parts to default inventory as fallback`);
+    } else {
+      console.log(`Successfully added ${inventoryItems.length} parts to user inventory`);
     }
-
-    console.log(`Successfully added ${inventoryItems.length} parts to inventory`);
     
     // Log the successful inventory addition
     await supabase
@@ -423,75 +446,6 @@ function createInventoryRedirectResponse(requestUrl: string, quoteId: string): R
           setTimeout(function() {
             window.location.href = "${successUrl}";
           }, 3000);
-        </script>
-      </body>
-    </html>
-    `,
-    { 
-      headers: { 
-        ...corsHeaders,
-        "Content-Type": "text/html"
-      } 
-    }
-  );
-}
-
-function createRedirectResponse(requestUrl: string, quoteId: string): Response {
-  const url = new URL(requestUrl);
-  const baseUrl = `${url.protocol}//${url.host}`;
-  const partsSelectionUrl = `${baseUrl}/ezyparts/parts-selection?quote_id=${quoteId}`;
-  
-  return new Response(
-    `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <title>Processing EzyParts Quote</title>
-        <meta http-equiv="refresh" content="2; url=${partsSelectionUrl}">
-        <style>
-          body { 
-            font-family: Arial, sans-serif; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            height: 100vh; 
-            margin: 0;
-            background-color: #f5f5f5;
-          }
-          .container {
-            text-align: center;
-            background: white;
-            padding: 2rem;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-          }
-          .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3498db;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 20px auto;
-          }
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <h2>Processing Your EzyParts Quote</h2>
-          <div class="spinner"></div>
-          <p>Your quote has been received and is being processed...</p>
-          <p>You will be redirected automatically in 2 seconds.</p>
-          <p><a href="${partsSelectionUrl}">Click here if you are not redirected automatically</a></p>
-        </div>
-        <script>
-          setTimeout(function() {
-            window.location.href = "${partsSelectionUrl}";
-          }, 2000);
         </script>
       </body>
     </html>
