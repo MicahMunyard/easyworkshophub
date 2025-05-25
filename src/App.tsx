@@ -1,3 +1,4 @@
+
 import React from "react";
 import {
   Routes,
@@ -13,7 +14,6 @@ import Jobs from "./pages/Jobs";
 import Invoicing from "./pages/Invoicing";
 import Index from "./pages/Index";
 import { NotificationProvider } from "./contexts/NotificationContext";
-import EzyPartsRoutes from "./routes/EzyPartsRoutes";
 import Workshop from "./pages/Workshop";
 import BookingDiary from "./pages/BookingDiary";
 import EmailIntegration from "./pages/EmailIntegration";
@@ -31,7 +31,7 @@ import TechnicianPortal from "./pages/TechnicianPortal";
 import Settings from "./pages/Settings";
 import EmailDesignerPage from './pages/EmailDesignerPage';
 import EzyPartsDashboard from './pages/EzyPartsDashboard';
-import VehicleSearch from './pages/VehicleSearch';
+import VehicleSearch from './components/ezyparts/vehicle-search/VehicleSearch';
 
 const App = () => {
   const { user } = useAuth();
@@ -69,8 +69,9 @@ const App = () => {
           <Route path="/help" element={<ProtectedRoute><div className="container py-8"><h1 className="text-3xl font-bold mb-4">Help & Support</h1><p>This page is under construction.</p></div></ProtectedRoute>} />
           
           {/* EzyParts Routes */}
-          <Route path="/ezyparts" element={<EzyPartsDashboard />} />
-          <Route path="/ezyparts/search" element={<VehicleSearch />} />
+          <Route path="/ezyparts" element={<ProtectedRoute><EzyPartsDashboard /></ProtectedRoute>} />
+          <Route path="/ezyparts/search" element={<ProtectedRoute><VehicleSearch /></ProtectedRoute>} />
+          
           {/* Route for EmailDesignerPage */}
           <Route path="/email-designer/:mode/:id?" element={<EmailDesignerPage />} />
           

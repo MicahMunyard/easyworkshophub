@@ -15,7 +15,6 @@ const VehicleSearch: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isSearching, setIsSearching] = useState(false);
-  const [isTestingConnection, setIsTestingConnection] = useState(false);
 
   if (!user) {
     return (
@@ -29,39 +28,6 @@ const VehicleSearch: React.FC = () => {
       </div>
     );
   }
-
-  const testEzyPartsConnection = async () => {
-    setIsTestingConnection(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('ezyparts-diagnostic', {
-        body: { action: 'test-api', user_id: user.id }
-      });
-
-      if (error) throw error;
-
-      if (data.success) {
-        toast({
-          title: "Connection Successful",
-          description: "EzyParts API is working correctly.",
-        });
-      } else {
-        toast({
-          title: "Connection Failed", 
-          description: data.error || "Failed to connect to EzyParts API.",
-          variant: "destructive"
-        });
-      }
-    } catch (error) {
-      console.error('Connection test error:', error);
-      toast({
-        title: "Connection Error",
-        description: "Failed to test EzyParts connection.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsTestingConnection(false);
-    }
-  };
 
   const handleSearch = async (searchData: any) => {
     setIsSearching(true);
@@ -109,20 +75,6 @@ const VehicleSearch: React.FC = () => {
           <h1 className="text-2xl font-bold">Vehicle Search</h1>
           <p className="text-muted-foreground">Search for vehicle parts using EzyParts</p>
         </div>
-        <Button 
-          variant="outline" 
-          onClick={testEzyPartsConnection}
-          disabled={isTestingConnection}
-        >
-          {isTestingConnection ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Testing...
-            </>
-          ) : (
-            'Test Connection'
-          )}
-        </Button>
       </div>
 
       <Card>
