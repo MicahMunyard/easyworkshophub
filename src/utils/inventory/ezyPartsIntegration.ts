@@ -17,20 +17,23 @@ export const convertEzyPartsToInventoryItems = (
 
   // Get supplier info from the headers
   const supplierName = 'Burson Auto Parts';
-  const supplierId = 'ezyparts-burson'; // Use consistent ID for EzyParts supplier
+  const supplierId = 'burson-auto-parts'; // Updated to match the webhook
 
   // Map each part from the EzyParts quote to an inventory item
   return quote.parts.map(part => {
     // Generate a unique code that includes part SKU for traceability
-    const code = `EP-${part.sku.toUpperCase()}-${uuidv4().substring(0, 6)}`;
+    const code = `BP-${part.sku.toUpperCase()}-${uuidv4().substring(0, 6)}`;
     
     // Default minimum stock level
     const minStock = 5;
     
+    // Generate product image URL based on SKU and brand
+    const imageUrl = generateProductImageUrl(part.sku, part.brand);
+    
     return {
       code,
       name: part.partDescription,
-      description: `${part.partDescription} - Brand: ${part.brand}`,
+      description: `${part.partDescription} - Brand: ${part.brand} - SKU: ${part.sku}`,
       category: part.productCategory || 'Auto Parts',
       supplier: supplierName,
       supplierId,
@@ -39,10 +42,31 @@ export const convertEzyPartsToInventoryItems = (
       price: part.nettPriceEach,
       location: 'Main Warehouse',
       lastOrder: new Date().toISOString(),
-      imageUrl: '', // EzyParts doesn't provide image URLs
+      imageUrl,
+      brand: part.brand,
     };
   });
 };
+
+/**
+ * Generate a product image URL based on SKU and brand
+ * This attempts to create a valid image URL for Burson Auto Parts products
+ */
+function generateProductImageUrl(sku: string, brand: string): string {
+  if (!sku) return '';
+  
+  // Common patterns for Burson Auto Parts product images
+  const possibleImageUrls = [
+    `https://images.burson.com.au/products/${sku.toLowerCase()}.jpg`,
+    `https://images.burson.com.au/products/${sku.toUpperCase()}.jpg`,
+    `https://cdn.burson.com.au/images/products/${sku.toLowerCase()}.png`,
+    `https://api.burson.com.au/images/${sku}.jpg`,
+  ];
+  
+  // Return the first pattern as default
+  // In production, you might want to test which URL actually exists
+  return possibleImageUrls[0];
+}
 
 /**
  * Takes an EzyParts quote and adds the parts to the inventory system

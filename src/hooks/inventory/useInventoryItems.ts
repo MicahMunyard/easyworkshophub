@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { InventoryItem } from '@/types/inventory';
 import { v4 as uuidv4 } from 'uuid';
@@ -43,7 +42,8 @@ export const useInventoryItems = () => {
         location: item.location || '',
         lastOrder: item.last_order?.toString() || '',
         status: item.status as 'normal' | 'low' | 'critical',
-        imageUrl: undefined
+        imageUrl: item.image_url || undefined,
+        brand: item.brand || undefined
       }));
 
       setInventoryItems(transformedItems);
@@ -107,7 +107,9 @@ export const useInventoryItems = () => {
           price: newItem.price,
           location: newItem.location,
           status: newItem.status,
-          last_order: newItem.lastOrder ? newItem.lastOrder : null
+          last_order: newItem.lastOrder ? newItem.lastOrder : null,
+          image_url: newItem.imageUrl || null,
+          brand: newItem.brand || null
         })
         .select()
         .single();
@@ -150,7 +152,9 @@ export const useInventoryItems = () => {
         min_stock: updatedData.minStock,
         price: updatedData.price,
         location: updatedData.location,
-        last_order: updatedData.lastOrder ? updatedData.lastOrder : null
+        last_order: updatedData.lastOrder ? updatedData.lastOrder : null,
+        image_url: updatedData.imageUrl || null,
+        brand: updatedData.brand || null
       };
 
       const { error } = await supabase

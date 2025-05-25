@@ -30,6 +30,7 @@ export interface InventoryItem {
   lastOrder?: string;
   status: 'normal' | 'low' | 'critical';
   imageUrl?: string;
+  brand?: string;
 }
 
 export interface OrderItem {
