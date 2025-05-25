@@ -1,51 +1,91 @@
 
 import React from 'react';
-import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Edit, Trash2, Phone, Mail, MapPin } from 'lucide-react';
 import { Supplier } from '@/types/inventory';
-import { ShoppingCart, Truck } from 'lucide-react';
 
 interface SupplierCardProps {
   supplier: Supplier;
-  onStartOrder: (supplier: Supplier) => void;
+  onEdit: (supplier: Supplier) => void;
+  onDelete: (supplier: Supplier) => void;
 }
 
-const SupplierCard: React.FC<SupplierCardProps> = ({ supplier, onStartOrder }) => {
+const SupplierCard: React.FC<SupplierCardProps> = ({
+  supplier,
+  onEdit,
+  onDelete
+}) => {
   return (
-    <Card key={supplier.id} className="flex flex-col">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg flex items-center gap-2">
-          <Truck className="h-4 w-4" />
-          {supplier.name}
-        </CardTitle>
-        <CardDescription>{supplier.category}</CardDescription>
-      </CardHeader>
-      
-      <CardContent className="pb-2 pt-0">
-        <div className="text-sm">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="font-medium">Contact:</span>
-            <span>{supplier.contactPerson}</span>
-          </div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="font-medium">Email:</span>
-            <span className="text-xs">{supplier.email}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="font-medium">Phone:</span>
-            <span>{supplier.phone}</span>
+    <Card className="relative">
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between">
+          <div>
+            <CardTitle className="text-lg">{supplier.name}</CardTitle>
+            <div className="flex items-center gap-2 mt-1">
+              <Badge variant="outline">{supplier.category}</Badge>
+              <Badge 
+                variant={supplier.status === 'active' ? 'default' : 'secondary'}
+                className={supplier.status === 'active' ? 'bg-green-100 text-green-800' : ''}
+              >
+                {supplier.status}
+              </Badge>
+            </div>
           </div>
         </div>
-      </CardContent>
+      </CardHeader>
       
-      <div className="mt-auto p-4 pt-0">
-        <Button 
-          className="w-full" 
-          onClick={() => onStartOrder(supplier)}
-        >
-          <ShoppingCart className="h-4 w-4 mr-2" /> Create Order
-        </Button>
-      </div>
+      <CardContent className="space-y-3">
+        <div className="text-sm space-y-2">
+          <div className="flex items-center gap-2">
+            <Phone className="h-4 w-4 text-muted-foreground" />
+            <span>{supplier.phone}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Mail className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm">{supplier.email}</span>
+          </div>
+          {supplier.address && (
+            <div className="flex items-start gap-2">
+              <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+              <span className="text-sm">{supplier.address}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="text-sm">
+          <span className="text-muted-foreground">Contact Person:</span>
+          <p className="font-medium">{supplier.contactPerson}</p>
+        </div>
+
+        {supplier.notes && (
+          <div className="text-sm">
+            <span className="text-muted-foreground">Notes:</span>
+            <p className="text-sm text-gray-600 mt-1">{supplier.notes}</p>
+          </div>
+        )}
+
+        <div className="flex gap-2 pt-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => onEdit(supplier)}
+            className="flex-1"
+          >
+            <Edit className="h-4 w-4 mr-2" />
+            Edit
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => onDelete(supplier)}
+            className="text-red-600 hover:text-red-700"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </CardContent>
     </Card>
   );
 };
