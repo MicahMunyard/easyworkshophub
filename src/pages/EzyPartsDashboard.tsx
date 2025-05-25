@@ -35,13 +35,41 @@ const EzyPartsDashboard: React.FC = () => {
       if (error) throw error;
 
       if (data.redirect_url) {
-        // Open EzyParts in new window with the generated URL
-        window.open(data.redirect_url, '_blank', 'width=1200,height=800');
-        
-        toast({
-          title: "EzyParts Opened",
-          description: "Search for parts and click 'Send to WMS' to add them to your inventory.",
-        });
+        // Handle data URL by converting to blob and opening
+        if (data.redirect_url.startsWith('data:text/html;base64,')) {
+          // Decode the base64 HTML
+          const base64Data = data.redirect_url.split(',')[1];
+          const htmlContent = atob(base64Data);
+          
+          // Create a blob and open it
+          const blob = new Blob([htmlContent], { type: 'text/html' });
+          const blobUrl = URL.createObjectURL(blob);
+          
+          // Open the blob URL in a new window
+          const newWindow = window.open(blobUrl, '_blank', 'width=1200,height=800');
+          
+          // Clean up the blob URL after a short delay
+          setTimeout(() => {
+            URL.revokeObjectURL(blobUrl);
+          }, 1000);
+          
+          if (newWindow) {
+            toast({
+              title: "EzyParts Opened",
+              description: "Search for parts and click 'Send to WMS' to add them to your inventory.",
+            });
+          } else {
+            throw new Error('Popup blocked. Please allow popups for this site.');
+          }
+        } else {
+          // Regular URL - open directly
+          window.open(data.redirect_url, '_blank', 'width=1200,height=800');
+          
+          toast({
+            title: "EzyParts Opened",
+            description: "Search for parts and click 'Send to WMS' to add them to your inventory.",
+          });
+        }
       } else {
         throw new Error(data.error || 'Failed to generate EzyParts URL');
       }
