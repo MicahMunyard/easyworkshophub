@@ -93,7 +93,7 @@ const QuoteProductProcessor: React.FC<ProductSelectionProps> = ({
       // Save the complete quote for reference
       saveQuoteToLocalStorage(quote);
       
-      // Add selected parts to inventory
+      // Add selected parts to inventory - now properly handling async function
       const addedInventoryItems = await addEzyPartsQuoteToInventory(selectedPartsQuote, addInventoryItem);
       
       // Update UI state

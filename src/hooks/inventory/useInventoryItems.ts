@@ -31,9 +31,9 @@ export const useInventoryItems = () => {
       // Transform Supabase data to match our InventoryItem interface
       const transformedItems: InventoryItem[] = (data || []).map(item => ({
         id: item.id,
-        code: item.id.substring(0, 8).toUpperCase(), // Generate code from ID if not present
+        code: item.code || item.id.substring(0, 8).toUpperCase(), // Use code from DB or generate from ID
         name: item.name,
-        description: `${item.name} - ${item.category}`, // Generate description if not present
+        description: item.description || `${item.name} - ${item.category || 'General'}`, // Use description from DB or generate
         category: item.category || 'General',
         supplier: item.supplier || 'Unknown',
         supplierId: 'unknown', // We'll need to map this properly
@@ -75,7 +75,7 @@ export const useInventoryItems = () => {
   };
 
   // Add a new inventory item
-  const addInventoryItem = async (itemData: Omit<InventoryItem, 'id' | 'status'>) => {
+  const addInventoryItem = async (itemData: Omit<InventoryItem, 'id' | 'status'>): Promise<InventoryItem | null> => {
     if (!user) {
       toast({
         title: "Authentication Required",
@@ -96,7 +96,9 @@ export const useInventoryItems = () => {
         .from('user_inventory_items')
         .insert({
           user_id: user.id,
+          code: newItem.code,
           name: newItem.name,
+          description: newItem.description,
           category: newItem.category,
           supplier: newItem.supplier,
           in_stock: newItem.inStock,
@@ -136,7 +138,9 @@ export const useInventoryItems = () => {
 
     try {
       const updatedItem = {
+        code: updatedData.code,
         name: updatedData.name,
+        description: updatedData.description,
         category: updatedData.category,
         supplier: updatedData.supplier,
         in_stock: updatedData.inStock,

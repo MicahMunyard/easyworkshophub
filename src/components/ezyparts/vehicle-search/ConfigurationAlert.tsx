@@ -1,26 +1,30 @@
 
 import React from 'react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle, Settings } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
 
 export const ConfigurationAlert: React.FC = () => {
   const navigate = useNavigate();
-  
+
   return (
-    <Alert variant="destructive" className="mb-6">
-      <AlertTitle>Configuration Required</AlertTitle>
-      <AlertDescription>
-        EzyParts integration is not configured. Please set up your credentials first.
+    <Alert className="bg-blue-50 border-blue-200">
+      <AlertCircle className="h-4 w-4 text-blue-500" />
+      <AlertDescription className="flex items-center justify-between">
+        <span className="text-blue-700">
+          Make sure your EzyParts integration is configured before searching for vehicles.
+        </span>
         <Button 
           variant="outline" 
-          className="mt-2" 
+          size="sm" 
           onClick={() => navigate('/ezyparts/config')}
+          className="ml-4"
         >
-          Go to Configuration
+          <Settings className="mr-2 h-4 w-4" />
+          Configure
         </Button>
       </AlertDescription>
     </Alert>
   );
 };
-

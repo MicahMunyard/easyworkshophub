@@ -1,18 +1,18 @@
 
 export const AUSTRALIAN_STATES = [
-  { value: "ACT", label: "Australian Capital Territory" },
-  { value: "NSW", label: "New South Wales" },
-  { value: "NT", label: "Northern Territory" },
-  { value: "QLD", label: "Queensland" },
-  { value: "SA", label: "South Australia" },
-  { value: "TAS", label: "Tasmania" },
-  { value: "VIC", label: "Victoria" },
-  { value: "WA", label: "Western Australia" }
-] as const;
+  { value: 'NSW', label: 'New South Wales' },
+  { value: 'VIC', label: 'Victoria' },
+  { value: 'QLD', label: 'Queensland' },
+  { value: 'WA', label: 'Western Australia' },
+  { value: 'SA', label: 'South Australia' },
+  { value: 'TAS', label: 'Tasmania' },
+  { value: 'ACT', label: 'Australian Capital Territory' },
+  { value: 'NT', label: 'Northern Territory' }
+];
 
-// Years for dropdown (current year down to 1950)
+// Generate years from current year back to 1980
+const currentYear = new Date().getFullYear();
 export const YEARS = Array.from(
-  { length: new Date().getFullYear() - 1949 }, 
-  (_, i) => (new Date().getFullYear() - i).toString()
+  { length: currentYear - 1979 }, 
+  (_, i) => (currentYear - i).toString()
 );
-
