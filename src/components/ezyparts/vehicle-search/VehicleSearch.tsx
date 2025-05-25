@@ -5,9 +5,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, Car, Search } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import ConfigurationAlert from './ConfigurationAlert';
-import RegistrationSearchForm from './RegistrationSearchForm';
-import DetailsSearchForm from './DetailsSearchForm';
+import { ConfigurationAlert } from './ConfigurationAlert';
+import { RegistrationSearchForm } from './RegistrationSearchForm';
+import { DetailsSearchForm } from './DetailsSearchForm';
 
 const VehicleSearch: React.FC = () => {
   const { user } = useAuth();

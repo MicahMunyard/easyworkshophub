@@ -46,17 +46,30 @@ export const convertEzyPartsToInventoryItems = (
 
 /**
  * Takes an EzyParts quote and adds the parts to the inventory system
- * @returns Array of added inventory items
+ * @returns Promise that resolves to array of added inventory items
  */
-export const addEzyPartsQuoteToInventory = (
+export const addEzyPartsQuoteToInventory = async (
   quote: QuoteResponse,
-  addInventoryItem: (item: Omit<InventoryItem, 'id' | 'status'>) => InventoryItem
-): InventoryItem[] => {
+  addInventoryItem: (item: Omit<InventoryItem, 'id' | 'status'>) => Promise<InventoryItem | null>
+): Promise<InventoryItem[]> => {
   // Convert EzyParts parts to inventory items
   const inventoryItems = convertEzyPartsToInventoryItems(quote);
   
-  // Add each item to inventory and return the results
-  return inventoryItems.map(item => addInventoryItem(item));
+  // Add each item to inventory and collect the results
+  const addedItems: InventoryItem[] = [];
+  
+  for (const item of inventoryItems) {
+    try {
+      const addedItem = await addInventoryItem(item);
+      if (addedItem) {
+        addedItems.push(addedItem);
+      }
+    } catch (error) {
+      console.error('Error adding item to inventory:', error);
+    }
+  }
+  
+  return addedItems;
 };
 
 /**

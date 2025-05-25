@@ -94,12 +94,10 @@ const QuoteProductProcessor: React.FC<ProductSelectionProps> = ({
       saveQuoteToLocalStorage(quote);
       
       // Add selected parts to inventory
-      const partsToAdd = selectedPartsQuote.parts.map(part => part.partDescription);
-      
-      // Add parts to inventory
-      addEzyPartsQuoteToInventory(selectedPartsQuote, addInventoryItem);
+      const addedInventoryItems = await addEzyPartsQuoteToInventory(selectedPartsQuote, addInventoryItem);
       
       // Update UI state
+      const partsToAdd = addedInventoryItems.map(item => item.name);
       setAddedItems(partsToAdd);
       setCompleted(true);
       setProcessing(false);

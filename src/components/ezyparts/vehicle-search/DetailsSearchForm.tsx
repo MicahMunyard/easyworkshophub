@@ -1,53 +1,49 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { YEARS } from './constants';
-import type { DetailsSearch } from './types';
 
-interface Props {
-  values: DetailsSearch;
-  onChange: (values: DetailsSearch) => void;
+interface DetailsSearchProps {
+  onSearch: (searchData: any) => void;
+  isSearching: boolean;
 }
 
-export const DetailsSearchForm: React.FC<Props> = ({ values, onChange }) => {
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    
-    // Handle vehicleId specially as it needs to be a number
-    if (name === 'vehicleId') {
-      onChange({
-        ...values,
-        [name]: value ? parseInt(value, 10) : 0
-      });
-      return;
-    }
-    
-    onChange({
-      ...values,
-      [name]: value
-    });
-  };
+export const DetailsSearchForm: React.FC<DetailsSearchProps> = ({ onSearch, isSearching }) => {
+  const [make, setMake] = useState('');
+  const [model, setModel] = useState('');
+  const [year, setYear] = useState('');
+  const [vehicleId, setVehicleId] = useState('');
+  const [seriesChassis, setSeriesChassis] = useState('');
+  const [engine, setEngine] = useState('');
 
-  const handleYearChange = (year: string) => {
-    onChange({
-      ...values,
-      year: parseInt(year, 10)
-    });
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (make && model) {
+      onSearch({ 
+        make, 
+        model, 
+        year: year ? parseInt(year) : undefined,
+        vehicleId: vehicleId ? parseInt(vehicleId) : undefined,
+        seriesChassis,
+        engine
+      });
+    }
   };
 
   return (
-    <div className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="make">Make</Label>
           <Input
             id="make"
-            name="make"
-            value={values.make}
-            onChange={handleInputChange}
+            value={make}
+            onChange={(e) => setMake(e.target.value)}
             placeholder="e.g. Toyota"
+            required
           />
         </div>
         
@@ -55,10 +51,10 @@ export const DetailsSearchForm: React.FC<Props> = ({ values, onChange }) => {
           <Label htmlFor="model">Model</Label>
           <Input
             id="model"
-            name="model"
-            value={values.model}
-            onChange={handleInputChange}
+            value={model}
+            onChange={(e) => setModel(e.target.value)}
             placeholder="e.g. Corolla"
+            required
           />
         </div>
       </div>
@@ -66,14 +62,14 @@ export const DetailsSearchForm: React.FC<Props> = ({ values, onChange }) => {
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="year">Year</Label>
-          <Select onValueChange={handleYearChange} value={values.year.toString()}>
+          <Select onValueChange={setYear} value={year}>
             <SelectTrigger id="year">
               <SelectValue placeholder="Select year" />
             </SelectTrigger>
             <SelectContent className="max-h-[200px]">
-              {YEARS.map((year) => (
-                <SelectItem key={year} value={year}>
-                  {year}
+              {YEARS.map((yearOption) => (
+                <SelectItem key={yearOption} value={yearOption}>
+                  {yearOption}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -84,9 +80,8 @@ export const DetailsSearchForm: React.FC<Props> = ({ values, onChange }) => {
           <Label htmlFor="vehicleId">Vehicle ID (Optional)</Label>
           <Input
             id="vehicleId"
-            name="vehicleId"
-            value={values.vehicleId || ''}
-            onChange={handleInputChange}
+            value={vehicleId}
+            onChange={(e) => setVehicleId(e.target.value)}
             placeholder="EzyParts Vehicle ID"
             type="number"
           />
@@ -98,9 +93,8 @@ export const DetailsSearchForm: React.FC<Props> = ({ values, onChange }) => {
           <Label htmlFor="seriesChassis">Series/Chassis (Optional)</Label>
           <Input
             id="seriesChassis"
-            name="seriesChassis"
-            value={values.seriesChassis}
-            onChange={handleInputChange}
+            value={seriesChassis}
+            onChange={(e) => setSeriesChassis(e.target.value)}
             placeholder="Series or Chassis Code"
           />
         </div>
@@ -109,13 +103,16 @@ export const DetailsSearchForm: React.FC<Props> = ({ values, onChange }) => {
           <Label htmlFor="engine">Engine (Optional)</Label>
           <Input
             id="engine"
-            name="engine"
-            value={values.engine}
-            onChange={handleInputChange}
+            value={engine}
+            onChange={(e) => setEngine(e.target.value)}
             placeholder="Engine Type/Size"
           />
         </div>
       </div>
-    </div>
+      
+      <Button type="submit" disabled={isSearching || !make || !model} className="w-full">
+        {isSearching ? 'Searching...' : 'Search Vehicle'}
+      </Button>
+    </form>
   );
 };
