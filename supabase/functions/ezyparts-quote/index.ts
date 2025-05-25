@@ -17,9 +17,10 @@ serve(async (req) => {
   console.log("=== EzyParts Quote Webhook Called ===");
   console.log("Method:", req.method);
   console.log("URL:", req.url);
+  console.log("Headers:", Object.fromEntries(req.headers.entries()));
 
   try {
-    // Initialize Supabase client
+    // Initialize Supabase client with service role for database operations
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
@@ -29,10 +30,12 @@ serve(async (req) => {
     const url = new URL(req.url);
     const userId = url.searchParams.get('user_id');
 
+    console.log("Processing webhook for user:", userId);
+
     if (!userId) {
       console.error("No user ID provided in request");
       return new Response(
-        createErrorPage("User authentication required. Please log in and try again."),
+        createErrorPage("User authentication required. Please ensure you're logged in to WorkshopBase."),
         { 
           status: 200,
           headers: { 
@@ -43,9 +46,7 @@ serve(async (req) => {
       );
     }
 
-    console.log("Processing webhook for user:", userId);
-
-    // Log the raw request for debugging
+    // Log the incoming request for debugging
     await supabase
       .from("ezyparts_logs")
       .insert({
@@ -55,69 +56,109 @@ serve(async (req) => {
           method: req.method,
           url: req.url,
           userId: userId,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          headers: Object.fromEntries(req.headers.entries())
         }
       });
 
-    // Handle different content types
+    // Handle different content types and methods
     const contentType = req.headers.get("content-type") || "";
     let payload = null;
 
-    if (contentType.includes("application/json")) {
-      const jsonData = await req.json();
-      console.log("JSON data received:", jsonData);
-      payload = jsonData;
-    } else if (contentType.includes("application/x-www-form-urlencoded")) {
-      const formData = await req.formData();
-      console.log("Form data received:", Object.fromEntries(formData.entries()));
-      
-      const quoteData = formData.get("quoteData") || formData.get("payload");
-      if (quoteData) {
-        try {
-          payload = JSON.parse(quoteData.toString());
-        } catch (e) {
-          console.error("Error parsing form data as JSON:", e);
+    // Handle GET requests (for testing)
+    if (req.method === "GET") {
+      console.log("GET request received - returning test response");
+      return new Response(
+        createTestPage(userId),
+        { 
+          status: 200,
+          headers: { 
+            ...corsHeaders,
+            "Content-Type": "text/html"
+          } 
         }
-      }
-    } else {
-      // Handle HTML content with embedded JSON
-      const htmlContent = await req.text();
-      console.log("HTML content received, length:", htmlContent.length);
+      );
+    }
+
+    // Handle POST requests with data
+    if (req.method === "POST") {
+      console.log("POST request received, content-type:", contentType);
       
-      // Extract quote payload using multiple strategies
-      const payloadMatch = htmlContent.match(/id=["']quotePayload["'][^>]*>(.*?)<\/div>/s);
-      if (payloadMatch && payloadMatch[1]) {
-        try {
-          const rawPayload = payloadMatch[1].trim();
-          console.log("Found quotePayload div, content:", rawPayload.substring(0, 200));
-          
-          // Try various parsing methods
-          try {
-            payload = JSON.parse(rawPayload);
-          } catch {
+      if (contentType.includes("application/json")) {
+        const jsonData = await req.json();
+        console.log("JSON data received:", jsonData);
+        payload = jsonData;
+      } else if (contentType.includes("application/x-www-form-urlencoded")) {
+        const formData = await req.formData();
+        console.log("Form data received:", Object.fromEntries(formData.entries()));
+        
+        // Look for common field names that might contain the quote data
+        const possibleFields = ['quoteData', 'payload', 'data', 'quote', 'parts'];
+        for (const field of possibleFields) {
+          const fieldData = formData.get(field);
+          if (fieldData) {
             try {
-              const decodedPayload = decodeURIComponent(rawPayload);
-              payload = JSON.parse(decodedPayload);
-            } catch {
-              const htmlDecoded = rawPayload
-                .replace(/&quot;/g, '"')
-                .replace(/&amp;/g, '&')
-                .replace(/&lt;/g, '<')
-                .replace(/&gt;/g, '>')
-                .replace(/&#39;/g, "'");
-              payload = JSON.parse(htmlDecoded);
+              payload = JSON.parse(fieldData.toString());
+              console.log("Successfully parsed payload from field:", field);
+              break;
+            } catch (e) {
+              console.log("Failed to parse field", field, "as JSON:", e);
             }
           }
-        } catch (parseError) {
-          console.error("Error parsing quotePayload div content:", parseError);
+        }
+      } else {
+        // Handle HTML content or plain text
+        const textContent = await req.text();
+        console.log("Text content received, length:", textContent.length);
+        console.log("First 500 chars:", textContent.substring(0, 500));
+        
+        // Try to extract JSON from various HTML patterns
+        const patterns = [
+          /id=["']quotePayload["'][^>]*>(.*?)<\/div>/s,
+          /quoteData\s*=\s*['"](.+?)['"]/ ,
+          /data-quote=['"](.+?)['"]/ ,
+          /"quoteData":\s*"(.+?)"/,
+          /quotePayload['"]\s*:\s*['"](.+?)['"]/
+        ];
+        
+        for (const pattern of patterns) {
+          const match = textContent.match(pattern);
+          if (match && match[1]) {
+            try {
+              console.log("Found potential payload with pattern:", pattern.source);
+              let rawPayload = match[1].trim();
+              
+              // Try different decoding methods
+              const decodingMethods = [
+                (str: string) => JSON.parse(str),
+                (str: string) => JSON.parse(decodeURIComponent(str)),
+                (str: string) => JSON.parse(str.replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#39;/g, "'")),
+              ];
+              
+              for (const method of decodingMethods) {
+                try {
+                  payload = method(rawPayload);
+                  console.log("Successfully decoded payload with method");
+                  break;
+                } catch (e) {
+                  // Try next method
+                }
+              }
+              
+              if (payload) break;
+            } catch (e) {
+              console.log("Failed to parse with pattern:", pattern.source, e);
+            }
+          }
         }
       }
     }
 
-    console.log("Extracted payload:", !!payload);
+    console.log("Final payload status:", !!payload);
+    console.log("Payload preview:", payload ? JSON.stringify(payload).substring(0, 200) : "null");
 
     if (payload && payload.headers && payload.parts) {
-      console.log("Valid payload found:", {
+      console.log("Valid EzyParts payload found:", {
         vehicle: `${payload.headers?.make || 'Unknown'} ${payload.headers?.model || 'Unknown'}`,
         parts: payload.parts?.length || 0,
         customer: payload.headers?.customerName || 'Unknown'
@@ -144,12 +185,14 @@ serve(async (req) => {
       const inventoryResult = await processPartsToInventory(supabase, payload, userId);
       
       if (inventoryResult.success) {
+        console.log("Successfully processed", inventoryResult.addedCount, "parts to inventory");
+        
         // Log successful processing
         await supabase
           .from("ezyparts_logs")
           .insert({
             level: "info",
-            message: "Quote processed successfully",
+            message: "Quote processed and parts added to inventory",
             data: {
               quoteId: quoteData[0].id,
               userId: userId,
@@ -160,28 +203,36 @@ serve(async (req) => {
             }
           });
 
-        return createInventoryRedirectResponse(quoteData[0].id);
+        return createSuccessRedirectResponse(inventoryResult.addedCount);
       } else {
         throw new Error(inventoryResult.error || "Failed to add parts to inventory");
       }
       
     } else {
       console.error("No valid quote payload found in request");
+      console.log("Request details for debugging:");
+      console.log("- Content-Type:", contentType);
+      console.log("- Method:", req.method);
+      console.log("- Has payload:", !!payload);
+      console.log("- Has headers:", payload?.headers ? "yes" : "no");
+      console.log("- Has parts:", payload?.parts ? "yes" : "no");
       
       await supabase
         .from("ezyparts_logs")
         .insert({
           level: "error",
-          message: "No quote payload found",
+          message: "No valid quote payload found",
           data: {
             userId: userId,
             contentType,
+            method: req.method,
+            hasPayload: !!payload,
             timestamp: new Date().toISOString()
           }
         });
 
       return new Response(
-        createErrorPage("No quote data found in the request. Please make sure you clicked 'Send to WMS' in EzyParts."),
+        createErrorPage("No quote data received from EzyParts. Please ensure you clicked 'Send to WMS' after selecting parts."),
         { 
           status: 200,
           headers: { 
@@ -217,13 +268,13 @@ async function processPartsToInventory(supabase: any, payload: any, userId: stri
 
     // Convert EzyParts parts to user inventory items format
     const inventoryItems = payload.parts.map((part: any) => {
-      const code = `EP-${part.sku.toUpperCase()}-${Math.random().toString(36).substring(2, 8)}`;
+      const code = part.partNumber || part.sku || `EP-${Math.random().toString(36).substring(2, 8)}`;
       
       return {
         user_id: userId,
-        code,
+        code: code.toUpperCase(),
         name: part.partDescription || 'Unknown Part',
-        description: `${part.partDescription || 'Unknown Part'} - Brand: ${part.brand || 'Unknown'}`,
+        description: `${part.partDescription || 'Unknown Part'} - Brand: ${part.brand || 'Unknown'} - SKU: ${part.sku}`,
         category: part.productCategory || 'Auto Parts',
         supplier: 'Burson Auto Parts',
         supplier_id: 'ezyparts-burson',
@@ -231,17 +282,19 @@ async function processPartsToInventory(supabase: any, payload: any, userId: stri
         min_stock: 5,
         price: parseFloat(part.nettPriceEach) || 0,
         location: 'Main Warehouse',
-        status: 'normal'
+        status: 'normal',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
     });
 
-    console.log("Prepared inventory items:", inventoryItems.length);
+    console.log("Prepared inventory items for insertion:", inventoryItems.length);
 
-    // Add to user inventory items
+    // Insert into user inventory items with error handling
     const { data, error } = await supabase
       .from('user_inventory_items')
       .insert(inventoryItems)
-      .select('id');
+      .select('id, name');
 
     if (error) {
       console.error("Error adding parts to user inventory:", error);
@@ -249,6 +302,7 @@ async function processPartsToInventory(supabase: any, payload: any, userId: stri
     }
     
     console.log(`Successfully added ${inventoryItems.length} parts to user inventory`);
+    console.log("Added items:", data?.map(item => item.name) || []);
     
     return {
       success: true,
@@ -267,7 +321,7 @@ async function processPartsToInventory(supabase: any, payload: any, userId: stri
   }
 }
 
-function createInventoryRedirectResponse(quoteId: string): Response {
+function createSuccessRedirectResponse(partsCount: number): Response {
   const baseUrl = 'https://app.workshopbase.com.au';
   const successUrl = `${baseUrl}/inventory?tab=inventory&ezyparts_products=added`;
   
@@ -295,11 +349,20 @@ function createInventoryRedirectResponse(quoteId: string): Response {
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             border-left: 4px solid #10b981;
+            max-width: 500px;
           }
           .success-icon {
             color: #10b981;
             font-size: 48px;
             margin-bottom: 16px;
+          }
+          .loading {
+            display: inline-block;
+            animation: spin 1s linear infinite;
+          }
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
           }
         </style>
       </head>
@@ -307,9 +370,10 @@ function createInventoryRedirectResponse(quoteId: string): Response {
         <div class="container">
           <div class="success-icon">✅</div>
           <h2>Parts Successfully Added!</h2>
-          <p>Your selected parts from EzyParts have been added to your inventory and are ready for job invoicing.</p>
-          <p>You will be redirected to your inventory in 3 seconds.</p>
-          <p><a href="${successUrl}">Click here to view your inventory now</a></p>
+          <p><strong>${partsCount} parts</strong> from EzyParts have been added to your WorkshopBase inventory.</p>
+          <p>You can now use these parts when creating invoices for your jobs.</p>
+          <p><span class="loading">⟳</span> Redirecting to your inventory in 3 seconds...</p>
+          <p><a href="${successUrl}" style="color: #2563eb; text-decoration: none;">Click here to view your inventory now →</a></p>
         </div>
         <script>
           setTimeout(function() {
@@ -328,13 +392,59 @@ function createInventoryRedirectResponse(quoteId: string): Response {
   );
 }
 
+function createTestPage(userId: string): string {
+  return `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>EzyParts Webhook Test</title>
+        <style>
+          body { 
+            font-family: Arial, sans-serif; 
+            padding: 2rem;
+            background-color: #f8f9fa;
+          }
+          .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+          }
+          .status {
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+            background-color: #d1ecf1;
+            border-left: 4px solid #17a2b8;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <h1>EzyParts Webhook Test</h1>
+          <div class="status">
+            <strong>Status:</strong> Webhook is accessible and working<br>
+            <strong>User ID:</strong> ${userId}<br>
+            <strong>Time:</strong> ${new Date().toISOString()}<br>
+            <strong>Environment:</strong> ${Deno.env.get("EZYPARTS_ENVIRONMENT") || "staging"}
+          </div>
+          <p>This endpoint is ready to receive EzyParts quote data.</p>
+          <p>When you click "Send to WMS" in EzyParts, the parts will be automatically added to your inventory.</p>
+        </div>
+      </body>
+    </html>
+  `;
+}
+
 function createErrorPage(message: string): string {
   return `
     <!DOCTYPE html>
     <html>
       <head>
-        <title>EzyParts Integration Error</title>
-        <meta http-equiv="refresh" content="5; url=https://app.workshopbase.com.au/ezyparts">
+        <title>EzyParts Integration Issue</title>
+        <meta http-equiv="refresh" content="8; url=https://app.workshopbase.com.au/ezyparts">
         <style>
           body { 
             font-family: Arial, sans-serif; 
@@ -352,6 +462,7 @@ function createErrorPage(message: string): string {
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             border-left: 4px solid #ef4444;
+            max-width: 500px;
           }
           .error-icon {
             color: #ef4444;
@@ -365,13 +476,20 @@ function createErrorPage(message: string): string {
           <div class="error-icon">⚠️</div>
           <h2>EzyParts Integration Issue</h2>
           <p>${message}</p>
-          <p>You will be redirected to EzyParts dashboard in 5 seconds.</p>
-          <p><a href="https://app.workshopbase.com.au/ezyparts">Click here to return to EzyParts dashboard</a></p>
+          <p><strong>Next steps:</strong></p>
+          <ol style="text-align: left;">
+            <li>Return to WorkshopBase EzyParts dashboard</li>
+            <li>Search for your vehicle again</li>
+            <li>Select your parts in EzyParts</li>
+            <li>Click "Send to WMS" to send them to your inventory</li>
+          </ol>
+          <p><em>You will be redirected to EzyParts dashboard in 8 seconds.</em></p>
+          <p><a href="https://app.workshopbase.com.au/ezyparts" style="color: #2563eb; text-decoration: none;">Click here to return to EzyParts dashboard now →</a></p>
         </div>
         <script>
           setTimeout(function() {
             window.location.href = "https://app.workshopbase.com.au/ezyparts";
-          }, 5000);
+          }, 8000);
         </script>
       </body>
     </html>
