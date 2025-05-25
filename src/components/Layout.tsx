@@ -8,6 +8,21 @@ import {
   secondaryNavSections,
   settingsNavSections 
 } from "@/config/navigation";
+import {
+  LayoutDashboard,
+  Calendar,
+  FileText,
+  Mail,
+  MessageSquare,
+  Package,
+  Users,
+  BarChart3,
+  Clock,
+  FileCode,
+  Wrench,
+  Settings,
+  HelpCircle
+} from "lucide-react";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -18,6 +33,23 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Icon mapping
+  const iconMap: Record<string, React.ReactElement> = {
+    LayoutDashboard: <LayoutDashboard className="h-5 w-5" />,
+    Calendar: <Calendar className="h-5 w-5" />,
+    FileText: <FileText className="h-5 w-5" />,
+    Mail: <Mail className="h-5 w-5" />,
+    MessageSquare: <MessageSquare className="h-5 w-5" />,
+    Package: <Package className="h-5 w-5" />,
+    Users: <Users className="h-5 w-5" />,
+    BarChart3: <BarChart3 className="h-5 w-5" />,
+    Clock: <Clock className="h-5 w-5" />,
+    FileCode: <FileCode className="h-5 w-5" />,
+    Wrench: <Wrench className="h-5 w-5" />,
+    Settings: <Settings className="h-5 w-5" />,
+    HelpCircle: <HelpCircle className="h-5 w-5" />
+  };
 
   // Always declare ALL hooks before any conditional logic or returns
   useEffect(() => {
@@ -89,7 +121,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   }`}
                 >
                   <span className="flex items-center justify-center">
-                    {section.icon}
+                    {iconMap[section.icon]}
                   </span>
                   <span 
                     className={`ml-4 transition-opacity whitespace-nowrap ${
@@ -124,7 +156,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   }`}
                 >
                   <span className="flex items-center justify-center">
-                    {section.icon}
+                    {iconMap[section.icon]}
                   </span>
                   <span 
                     className={`ml-4 transition-opacity whitespace-nowrap ${
