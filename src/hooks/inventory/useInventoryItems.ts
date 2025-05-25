@@ -31,12 +31,12 @@ export const useInventoryItems = () => {
       // Transform Supabase data to match our InventoryItem interface
       const transformedItems: InventoryItem[] = (data || []).map(item => ({
         id: item.id,
-        code: item.id.substring(0, 8).toUpperCase(), // Generate code from ID since code field doesn't exist
+        code: item.code || item.id.substring(0, 8).toUpperCase(),
         name: item.name,
-        description: `${item.name} - ${item.category || 'General'}`, // Generate description since it doesn't exist
+        description: item.description || `${item.name} - ${item.category || 'General'}`,
         category: item.category || 'General',
         supplier: item.supplier || 'Unknown',
-        supplierId: 'unknown', // We'll need to map this properly
+        supplierId: item.supplier_id || 'unknown',
         inStock: item.in_stock,
         minStock: item.min_stock,
         price: Number(item.price || 0),
@@ -96,9 +96,12 @@ export const useInventoryItems = () => {
         .from('user_inventory_items')
         .insert({
           user_id: user.id,
+          code: newItem.code,
           name: newItem.name,
+          description: newItem.description,
           category: newItem.category,
           supplier: newItem.supplier,
+          supplier_id: newItem.supplierId,
           in_stock: newItem.inStock,
           min_stock: newItem.minStock,
           price: newItem.price,
@@ -137,9 +140,12 @@ export const useInventoryItems = () => {
 
     try {
       const updatedItem = {
+        code: updatedData.code,
         name: updatedData.name,
+        description: updatedData.description,
         category: updatedData.category,
         supplier: updatedData.supplier,
+        supplier_id: updatedData.supplierId,
         in_stock: updatedData.inStock,
         min_stock: updatedData.minStock,
         price: updatedData.price,

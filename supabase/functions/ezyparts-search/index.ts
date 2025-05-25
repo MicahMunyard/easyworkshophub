@@ -27,18 +27,10 @@ serve(async (req) => {
       throw new Error("User ID is required");
     }
 
-    // Get OAuth credentials from Supabase secrets (these are the only ones we need)
-    const { data: clientId } = await supabase.functions.invoke('get-secret', { 
-      body: { name: 'BURSONS_OAUTH_NAME' } 
-    });
-    
-    const { data: clientSecret } = await supabase.functions.invoke('get-secret', { 
-      body: { name: 'BURSONS_OAUTH_SECRET' } 
-    });
-    
-    const { data: environment } = await supabase.functions.invoke('get-secret', { 
-      body: { name: 'EZYPARTS_ENVIRONMENT' } 
-    });
+    // Get OAuth credentials from Supabase secrets
+    const clientId = Deno.env.get("BURSONS_OAUTH_NAME");
+    const clientSecret = Deno.env.get("BURSONS_OAUTH_SECRET");
+    const environment = Deno.env.get("EZYPARTS_ENVIRONMENT");
 
     if (!clientId || !clientSecret) {
       throw new Error("EzyParts OAuth credentials not configured. Please contact your administrator.");
@@ -49,9 +41,9 @@ serve(async (req) => {
       ? 'https://ezyparts.burson.com.au/burson/auth'
       : 'https://ezypartsqa.burson.com.au/burson/auth';
 
-    // Construct webhook URL
-    const baseUrl = req.headers.get('origin') || 'https://app.workshopbase.com.au';
-    const webhookUrl = `${baseUrl}/functions/v1/ezyparts-quote?user_id=${user_id}`;
+    // Construct webhook URL - Use the Supabase function URL directly
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const webhookUrl = `${supabaseUrl}/functions/v1/ezyparts-quote?user_id=${user_id}`;
 
     // For the web form, we use the OAuth credentials as account credentials
     const formData = {
@@ -59,7 +51,7 @@ serve(async (req) => {
       username: clientId,
       password: clientSecret,
       quoteUrl: webhookUrl,
-      returnUrl: `${baseUrl}/inventory`,
+      returnUrl: `https://app.workshopbase.com.au/inventory`,
       userAgent: 'Mozilla/5.0',
       ...(search_params.registration && {
         regoNumber: search_params.registration,

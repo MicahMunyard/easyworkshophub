@@ -1120,7 +1120,9 @@ export type Database = {
       user_inventory_items: {
         Row: {
           category: string | null
+          code: string | null
           created_at: string | null
+          description: string | null
           id: string
           in_stock: number
           last_order: string | null
@@ -1130,12 +1132,15 @@ export type Database = {
           price: number | null
           status: string | null
           supplier: string | null
+          supplier_id: string | null
           updated_at: string | null
           user_id: string
         }
         Insert: {
           category?: string | null
+          code?: string | null
           created_at?: string | null
+          description?: string | null
           id?: string
           in_stock?: number
           last_order?: string | null
@@ -1145,12 +1150,15 @@ export type Database = {
           price?: number | null
           status?: string | null
           supplier?: string | null
+          supplier_id?: string | null
           updated_at?: string | null
           user_id: string
         }
         Update: {
           category?: string | null
+          code?: string | null
           created_at?: string | null
+          description?: string | null
           id?: string
           in_stock?: number
           last_order?: string | null
@@ -1160,6 +1168,7 @@ export type Database = {
           price?: number | null
           status?: string | null
           supplier?: string | null
+          supplier_id?: string | null
           updated_at?: string | null
           user_id?: string
         }
