@@ -29,7 +29,7 @@ const VehicleSearch: React.FC = () => {
   const handleSearch = (searchData: any) => {
     setIsSearching(true);
     
-    // Include user ID in the webhook URL for EzyParts
+    // Construct the webhook URL with proper Supabase function endpoint and user ID
     const webhookUrl = `https://qyjjbpyqxwrluhymvshn.supabase.co/functions/v1/ezyparts-quote?user_id=${user.id}`;
     
     // Construct the EzyParts URL with search parameters and webhook URL
@@ -54,6 +54,8 @@ const VehicleSearch: React.FC = () => {
     ezyPartsUrl += params.toString();
     
     console.log('Opening EzyParts with URL:', ezyPartsUrl);
+    console.log('Webhook URL being passed:', webhookUrl);
+    console.log('User ID:', user.id);
     
     // Open EzyParts in a new window
     window.open(ezyPartsUrl, '_blank', 'width=1200,height=800');
@@ -106,6 +108,17 @@ const VehicleSearch: React.FC = () => {
           After searching, select the parts you need in EzyParts and click "Send to WMS" to add them to your WorkshopBase inventory.
         </AlertDescription>
       </Alert>
+      
+      {/* Debug information for development */}
+      {import.meta.env.DEV && (
+        <Alert>
+          <AlertDescription>
+            <strong>Debug Info:</strong><br/>
+            User ID: {user.id}<br/>
+            Webhook URL: {`https://qyjjbpyqxwrluhymvshn.supabase.co/functions/v1/ezyparts-quote?user_id=${user.id}`}
+          </AlertDescription>
+        </Alert>
+      )}
     </div>
   );
 };

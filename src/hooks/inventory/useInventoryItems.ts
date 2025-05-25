@@ -31,9 +31,9 @@ export const useInventoryItems = () => {
       // Transform Supabase data to match our InventoryItem interface
       const transformedItems: InventoryItem[] = (data || []).map(item => ({
         id: item.id,
-        code: item.code || item.id.substring(0, 8).toUpperCase(),
+        code: item.id.substring(0, 8).toUpperCase(), // Generate code from ID since code field doesn't exist
         name: item.name,
-        description: item.description || `${item.name} - ${item.category || 'General'}`,
+        description: `${item.name} - ${item.category || 'General'}`, // Generate description since it doesn't exist
         category: item.category || 'General',
         supplier: item.supplier || 'Unknown',
         supplierId: 'unknown', // We'll need to map this properly
@@ -96,9 +96,7 @@ export const useInventoryItems = () => {
         .from('user_inventory_items')
         .insert({
           user_id: user.id,
-          code: newItem.code,
           name: newItem.name,
-          description: newItem.description,
           category: newItem.category,
           supplier: newItem.supplier,
           in_stock: newItem.inStock,
@@ -106,7 +104,7 @@ export const useInventoryItems = () => {
           price: newItem.price,
           location: newItem.location,
           status: newItem.status,
-          last_order: newItem.lastOrder ? new Date(newItem.lastOrder) : null
+          last_order: newItem.lastOrder ? newItem.lastOrder : null
         })
         .select()
         .single();
@@ -139,16 +137,14 @@ export const useInventoryItems = () => {
 
     try {
       const updatedItem = {
-        code: updatedData.code,
         name: updatedData.name,
-        description: updatedData.description,
         category: updatedData.category,
         supplier: updatedData.supplier,
         in_stock: updatedData.inStock,
         min_stock: updatedData.minStock,
         price: updatedData.price,
         location: updatedData.location,
-        last_order: updatedData.lastOrder ? new Date(updatedData.lastOrder) : null
+        last_order: updatedData.lastOrder ? updatedData.lastOrder : null
       };
 
       const { error } = await supabase
