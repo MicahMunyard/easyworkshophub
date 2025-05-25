@@ -1,230 +1,102 @@
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Settings, CheckCircle, AlertCircle } from 'lucide-react';
 import { Supplier } from '@/types/inventory';
-import { Link, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
-import { useEzyParts } from '@/contexts/EzyPartsContext';
-import { useToast } from '@/hooks/use-toast';
 
 interface ApiSupplierCardProps {
   supplier: Supplier;
+  onEdit: (supplier: Supplier) => void;
+  onDelete: (supplier: Supplier) => void;
 }
 
-const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({ supplier }) => {
-  const { credentials, isProduction } = useEzyParts();
-  const { toast } = useToast();
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [connectionError, setConnectionError] = useState<string | null>(null);
-  const [supabaseUrl, setSupabaseUrl] = useState<string>('');
-  
-  // Check credentials when component mounts or when they change
-  useEffect(() => {
-    // Reset connection error state when credentials change
-    setConnectionError(null);
-    
-    // Extract the Supabase URL from the client - using the URL directly to avoid protected property access
-    const url = "https://qyjjbpyqxwrluhymvshn.supabase.co";
-    console.log('Supabase URL detected:', url);
-    setSupabaseUrl(url);
-    
-    // Check credentials on mount and when they change
-    if (!credentials.accountId || !credentials.username || !credentials.password) {
-      console.warn('Credentials not fully configured:', {
-        accountId: credentials.accountId ? 'set' : 'not set',
-        username: credentials.username ? 'set' : 'not set',
-        password: credentials.password ? 'set' : 'not set'
-      });
-    }
-  }, [credentials]);
-
-  const handleConnect = () => {
-    if (supplier.apiConfig?.type === 'bursons') {
-      setIsConnecting(true);
-      setConnectionError(null);
-      
-      // Debug credentials to console
-      console.log('EzyParts credentials check:', {
-        accountId: credentials.accountId ? 'set' : 'not set',
-        username: credentials.username ? 'set' : 'not set',
-        password: credentials.password ? 'set' : 'not set'
-      });
-      
-      if (!credentials.accountId || !credentials.username || !credentials.password) {
-        const missingFields = [];
-        if (!credentials.accountId) missingFields.push('Account ID');
-        if (!credentials.username) missingFields.push('Username');
-        if (!credentials.password) missingFields.push('Password');
-        
-        const errorMessage = `Missing OAuth credentials: ${missingFields.join(', ')}. Please check that BURSONS_OAUTH_NAME and BURSONS_OAUTH_SECRET are correctly set in your Supabase secrets.`;
-        console.error(errorMessage);
-        
-        toast({
-          title: 'Configuration Required',
-          description: 'Missing OAuth credentials. Please check that BURSONS_OAUTH_NAME and BURSONS_OAUTH_SECRET are set in Supabase secrets.',
-          variant: 'destructive'
-        });
-        
-        setConnectionError(errorMessage);
-        setIsConnecting(false);
-        return;
-      }
-
-      try {
-        // Get environment-appropriate URL base
-        const baseUrl = isProduction ? 
-          'https://ezyparts.burson.com.au/burson/auth' : 
-          'https://ezypartsqa.burson.com.au/burson/auth';
-        
-        // Current origin for return URL
-        const origin = window.location.origin;
-        const returnUrl = `${origin}/ezyparts/quote`;
-        
-        // Use the correct Supabase Edge Function URL format
-        const quoteUrl = `${supabaseUrl}/functions/v1/ezyparts-quote`;
-        console.log('Using Supabase Edge Function URL:', quoteUrl);
-        
-        // Open a popup window for EzyParts
-        const ezyPartsWindow = window.open('', 'ezyPartsWindow', 'width=1024,height=768');
-        if (!ezyPartsWindow) {
-          toast({
-            title: 'Popup Blocked',
-            description: 'Please allow popups for this site to connect to EzyParts.',
-            variant: 'destructive'
-          });
-          setIsConnecting(false);
-          return;
-        }
-        
-        // Create a form to submit directly to EzyParts authentication endpoint
-        const ezyPartsForm = document.createElement('form');
-        ezyPartsForm.method = 'POST';
-        ezyPartsForm.action = baseUrl;
-        ezyPartsForm.target = 'ezyPartsWindow'; // Target the popup window
-
-        // Add required fields
-        const fields = {
-          accountId: credentials.accountId,
-          username: credentials.username,
-          password: credentials.password,
-          quoteUrl: quoteUrl,
-          returnUrl: returnUrl,
-          userAgent: 'Mozilla/5.0'
-        };
-
-        // Add all fields to the form
-        Object.entries(fields).forEach(([name, value]) => {
-          if (value) {
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = name;
-            input.value = value.toString();
-            ezyPartsForm.appendChild(input);
-          }
-        });
-
-        // Add the form to the body, submit it
-        document.body.appendChild(ezyPartsForm);
-        ezyPartsForm.submit();
-        
-        // Remove the form after submission
-        setTimeout(() => {
-          document.body.removeChild(ezyPartsForm);
-          setIsConnecting(false);
-        }, 100);
-        
-        console.log('Submitting form to EzyParts with credentials:', 
-          { accountId: credentials.accountId ? 'set' : 'not set' });
-        
-        // Show a toast to inform the user
-        toast({
-          title: 'Connecting to EzyParts',
-          description: 'EzyParts will open in a new window. Please check your browser if it doesn\'t appear.'
-        });
-        
-      } catch (error) {
-        console.error('Failed to connect to EzyParts:', error);
-        toast({
-          title: 'Connection Failed',
-          description: 'Unable to connect to EzyParts. Please check your configuration.',
-          variant: 'destructive'
-        });
-        setConnectionError(`Connection error: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        setIsConnecting(false);
-      }
-    }
-  };
+const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({
+  supplier,
+  onEdit,
+  onDelete
+}) => {
+  const isConnected = supplier.apiConfig?.isConnected || false;
 
   return (
-    <Card className="flex flex-col">
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            {supplier.apiConfig?.isConnected && (
-              <div className="absolute top-2 left-2">
-                <span className="text-green-600 text-xs font-medium flex items-center">
-                  <CheckCircle className="h-3 w-3 mr-1" /> Connected
-                </span>
-              </div>
-            )}
-            {supplier.name === "Burson Auto Parts" ? (
-              <div className="w-32 h-24 relative">
-                <img 
-                  src="/lovable-uploads/0ece5982-0f75-4154-ab1c-2d19e00f09a4.png" 
-                  alt="Burson Auto Parts"
-                  className="w-full h-full object-contain"
-                />
-              </div>
-            ) : supplier.logoUrl ? (
+    <Card className="relative">
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            {supplier.logoUrl ? (
               <img 
                 src={supplier.logoUrl} 
-                alt={supplier.name} 
-                className="w-16 h-12 object-contain"
+                alt={`${supplier.name} logo`}
+                className="w-12 h-12 object-contain rounded"
               />
-            ) : null}
+            ) : (
+              <div className="w-12 h-12 bg-gray-100 rounded flex items-center justify-center">
+                <Settings className="h-6 w-6 text-gray-400" />
+              </div>
+            )}
             <div>
-              <h3 className="font-medium">{supplier.name}</h3>
-              <p className="text-sm text-muted-foreground">{supplier.category}</p>
+              <CardTitle className="text-lg">{supplier.name}</CardTitle>
+              <div className="flex items-center gap-2 mt-1">
+                <Badge variant="outline">{supplier.category}</Badge>
+                <Badge 
+                  variant={isConnected ? "default" : "secondary"}
+                  className={`flex items-center gap-1 ${
+                    isConnected ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
+                  }`}
+                >
+                  {isConnected ? (
+                    <CheckCircle className="h-3 w-3" />
+                  ) : (
+                    <AlertCircle className="h-3 w-3" />
+                  )}
+                  {isConnected ? "Connected" : "Not Connected"}
+                </Badge>
+              </div>
             </div>
           </div>
-          <Button 
-            variant={supplier.apiConfig?.isConnected ? "outline" : "default"}
-            onClick={handleConnect}
-            disabled={isConnecting || !credentials.accountId || !credentials.password}
-            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white"
-          >
-            {isConnecting ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Connecting...
-              </>
-            ) : (
-              <>
-                <Link className="h-4 w-4" />
-                {supplier.apiConfig?.isConnected ? 'Login' : 'Connect'}
-              </>
-            )}
-          </Button>
         </div>
-        
-        <div className="text-sm space-y-2 mt-4">
-          <p>{supplier.notes}</p>
-          {!credentials.accountId || !credentials.password ? (
-            <p className="text-amber-600 flex items-center gap-1 text-xs">
-              <AlertCircle className="h-3 w-3" />
-              OAuth credentials not configured. Check Supabase secrets: BURSONS_OAUTH_NAME and BURSONS_OAUTH_SECRET.
-            </p>
-          ) : connectionError ? (
-            <p className="text-red-500 flex items-center gap-1 text-xs">
-              <AlertCircle className="h-3 w-3" />
-              {connectionError}
-            </p>
-          ) : null}
-          {supplier.apiConfig?.isConnected && (
-            <p className="text-green-600 font-medium">
-              ✓ Integration active
-            </p>
-          )}
+      </CardHeader>
+      
+      <CardContent className="space-y-3">
+        <div className="text-sm">
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <span className="text-muted-foreground">Contact:</span>
+              <p className="font-medium">{supplier.contactPerson}</p>
+            </div>
+            <div>
+              <span className="text-muted-foreground">Email:</span>
+              <p className="font-medium text-sm">{supplier.email}</p>
+            </div>
+          </div>
+        </div>
+
+        {supplier.apiConfig && (
+          <div className="text-sm">
+            <span className="text-muted-foreground">API Type:</span>
+            <p className="font-medium capitalize">{supplier.apiConfig.type}</p>
+          </div>
+        )}
+
+        <div className="flex gap-2 pt-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => onEdit(supplier)}
+            className="flex-1"
+          >
+            <Settings className="h-4 w-4 mr-2" />
+            Configure
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => onDelete(supplier)}
+            className="text-red-600 hover:text-red-700"
+          >
+            Delete
+          </Button>
         </div>
       </CardContent>
     </Card>

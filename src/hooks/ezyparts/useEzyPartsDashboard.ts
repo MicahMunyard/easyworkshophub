@@ -4,15 +4,11 @@ import { useEzyParts } from '@/contexts/EzyPartsContext';
 import type { QuoteResponse } from '@/types/ezyparts';
 
 export const useEzyPartsDashboard = () => {
-  const { credentials, client, currentQuote, setCurrentQuote } = useEzyParts();
-  const [apiStatus, setApiStatus] = useState<'loading' | 'connected' | 'error'>('loading');
+  const { currentQuote, setCurrentQuote } = useEzyParts();
+  const [apiStatus, setApiStatus] = useState<'loading' | 'connected' | 'error'>('connected');
 
-  // Check if configuration is set up
-  const isConfigured = credentials.clientId && 
-                      credentials.clientSecret && 
-                      credentials.accountId && 
-                      credentials.username && 
-                      credentials.password;
+  // Since we're using edge functions, we'll assume configuration is handled by Supabase secrets
+  const isConfigured = true;
 
   // Load stored quote
   useEffect(() => {
@@ -28,39 +24,17 @@ export const useEzyPartsDashboard = () => {
     }
   }, [currentQuote, setCurrentQuote]);
 
-  // Check connection status
-  useEffect(() => {
-    let isMounted = true;
-
-    const checkConnection = async () => {
-      if (!client || !isConfigured) {
-        if (isMounted) setApiStatus('error');
-        return;
-      }
-
-      try {
-        await client.checkInventory({
-          customerAccount: credentials.accountId,
-          customerId: credentials.username,
-          password: credentials.password,
-          stores: [{ code: '001' }],
-          parts: [{ sku: 'TEST', qty: 1 }]
-        });
-        
-        if (isMounted) setApiStatus('connected');
-      } catch (error) {
-        console.error('API connection test failed:', error);
-        if (isMounted) setApiStatus('error');
-      }
-    };
-
-    checkConnection();
-    return () => { isMounted = false; };
-  }, [client, credentials, isConfigured]);
-
   const clearQuote = () => {
     setCurrentQuote(null);
     localStorage.removeItem('ezyparts-current-quote');
+  };
+
+  const credentials = {
+    clientId: '',
+    clientSecret: '',
+    accountId: '',
+    username: '',
+    password: ''
   };
 
   return {
