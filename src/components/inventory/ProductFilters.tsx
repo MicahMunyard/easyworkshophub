@@ -1,24 +1,28 @@
 
 import React from 'react';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Search, DollarSign } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
+import { Search, Filter, DollarSign } from 'lucide-react';
 
-interface ProductFiltersProps {
+type ProductFiltersProps = {
   searchTerm: string;
   onSearchChange: (value: string) => void;
   categoryFilter: string;
-  setCategoryFilter: (category: string) => void;
+  setCategoryFilter: (value: string) => void;
   supplierFilter: string;
-  setSupplierFilter: (supplierId: string) => void;
+  setSupplierFilter: (value: string) => void;
+  brandFilter?: string;
+  setBrandFilter?: (value: string) => void;
   priceRange: [number, number];
-  setPriceRange: (range: [number, number]) => void;
+  setPriceRange: (value: [number, number]) => void;
   maxPrice: number;
   categories: string[];
   uniqueSuppliers: string[];
+  uniqueBrands?: string[];
   getSupplierName: (supplierId: string) => string;
-}
+};
 
 const ProductFilters: React.FC<ProductFiltersProps> = ({
   searchTerm,
@@ -27,75 +31,109 @@ const ProductFilters: React.FC<ProductFiltersProps> = ({
   setCategoryFilter,
   supplierFilter,
   setSupplierFilter,
+  brandFilter = 'all',
+  setBrandFilter,
   priceRange,
   setPriceRange,
   maxPrice,
   categories,
   uniqueSuppliers,
-  getSupplierName
+  uniqueBrands = [],
+  getSupplierName,
 }) => {
   return (
-    <div className="flex flex-col space-y-4">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="relative w-full sm:w-auto">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search products..."
-            className="pl-8 w-full sm:w-[300px]"
-            value={searchTerm}
-            onChange={(e) => onSearchChange(e.target.value)}
-          />
-        </div>
+    <div className="space-y-4">
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+        <Input
+          placeholder="Search products by name, code, or description..."
+          value={searchTerm}
+          onChange={(e) => onSearchChange(e.target.value)}
+          className="pl-10"
+        />
       </div>
-      
-      <div className="flex flex-col space-y-4">
-        <div className="flex flex-wrap gap-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-medium">Category:</span>
-            {categories.map(category => (
-              <Badge 
-                key={category} 
-                variant={categoryFilter === category ? "default" : "outline"}
-                className="cursor-pointer"
-                onClick={() => setCategoryFilter(category === categoryFilter ? 'all' : category)}
-              >
-                {category === 'all' ? 'All Categories' : category}
-              </Badge>
-            ))}
-          </div>
-          
-          <div className="flex flex-wrap items-center gap-2 mt-2 sm:mt-0">
-            <span className="text-sm font-medium">Supplier:</span>
-            {uniqueSuppliers.map(supplierId => (
-              <Badge 
-                key={supplierId} 
-                variant={supplierFilter === supplierId ? "default" : "outline"}
-                className="cursor-pointer"
-                onClick={() => setSupplierFilter(supplierId === supplierFilter ? 'all' : supplierId)}
-              >
-                {supplierId === 'all' 
-                  ? 'All Suppliers' 
-                  : getSupplierName(supplierId)}
-              </Badge>
-            ))}
-          </div>
+
+      {/* Filter Row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Category Filter */}
+        <div className="space-y-2">
+          <Label className="flex items-center gap-2 text-sm font-medium">
+            <Filter className="h-4 w-4" /> Category
+          </Label>
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger>
+              <SelectValue placeholder="All categories" />
+            </SelectTrigger>
+            <SelectContent>
+              {categories.map(category => (
+                <SelectItem key={category} value={category}>
+                  {category === 'all' ? 'All Categories' : category}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium">Price Range: ${priceRange[0]} - ${priceRange[1]}</span>
+        {/* Brand Filter */}
+        {setBrandFilter && (
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2 text-sm font-medium">
+              <Filter className="h-4 w-4" /> Brand
+            </Label>
+            <Select value={brandFilter} onValueChange={setBrandFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="All brands" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Brands</SelectItem>
+                {uniqueBrands.map(brand => (
+                  <SelectItem key={brand} value={brand}>
+                    {brand}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <Slider
-            defaultValue={[0, maxPrice]}
-            value={priceRange}
-            min={0}
-            max={maxPrice}
-            step={1}
-            onValueChange={(value) => setPriceRange(value as [number, number])}
-            className="w-full"
-          />
+        )}
+
+        {/* Supplier Filter */}
+        <div className="space-y-2">
+          <Label className="flex items-center gap-2 text-sm font-medium">
+            <Filter className="h-4 w-4" /> Supplier
+          </Label>
+          <Select value={supplierFilter} onValueChange={setSupplierFilter}>
+            <SelectTrigger>
+              <SelectValue placeholder="All suppliers" />
+            </SelectTrigger>
+            <SelectContent>
+              {uniqueSuppliers.map(supplierId => (
+                <SelectItem key={supplierId} value={supplierId}>
+                  {supplierId === 'all' ? 'All Suppliers' : getSupplierName(supplierId)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Price Range Filter */}
+        <div className="space-y-2">
+          <Label className="flex items-center gap-2 text-sm font-medium">
+            <DollarSign className="h-4 w-4" /> Price Range
+          </Label>
+          <div className="px-2">
+            <Slider
+              value={priceRange}
+              onValueChange={(value) => setPriceRange(value as [number, number])}
+              max={maxPrice}
+              step={1}
+              className="w-full"
+            />
+            <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <span>${priceRange[0]}</span>
+              <span>${priceRange[1]}</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>

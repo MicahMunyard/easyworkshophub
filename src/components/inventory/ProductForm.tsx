@@ -22,13 +22,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { InventoryItem, Supplier } from '@/types/inventory';
-import { Barcode, FileText, ShoppingBag, DollarSign, MapPin, Hash, ImageIcon } from 'lucide-react';
+import { Barcode, FileText, ShoppingBag, DollarSign, MapPin, Hash, ImageIcon, Tag } from 'lucide-react';
 
 const formSchema = z.object({
   code: z.string().min(1, { message: 'Product code is required' }),
   name: z.string().min(1, { message: 'Product name is required' }),
   description: z.string().min(1, { message: 'Description is required' }),
   category: z.string().min(1, { message: 'Category is required' }),
+  brand: z.string().optional(),
   supplierId: z.string().min(1, { message: 'Supplier is required' }),
   inStock: z.coerce.number().min(0, { message: 'Stock cannot be negative' }),
   minStock: z.coerce.number().min(0, { message: 'Minimum stock cannot be negative' }),
@@ -54,6 +55,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ item, suppliers, onSubmit, on
       name: item?.name || '',
       description: item?.description || '',
       category: item?.category || '',
+      brand: item?.brand || '',
       supplierId: item?.supplierId || '',
       inStock: item?.inStock || 0,
       minStock: item?.minStock || 0,
@@ -142,7 +144,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ item, suppliers, onSubmit, on
           )}
         />
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <FormField
             control={form.control}
             name="category"
@@ -151,6 +153,22 @@ const ProductForm: React.FC<ProductFormProps> = ({ item, suppliers, onSubmit, on
                 <FormLabel>Category</FormLabel>
                 <FormControl>
                   <Input placeholder="Product category" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="brand"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center gap-2">
+                  <Tag className="h-4 w-4" /> Brand
+                </FormLabel>
+                <FormControl>
+                  <Input placeholder="Brand name" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

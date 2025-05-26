@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -280,12 +279,15 @@ async function processPartsToInventory(supabase: any, payload: any, userId: stri
     const inventoryItems = payload.parts.map((part: any) => {
       const code = part.partNumber || part.sku || `EP-${Math.random().toString(36).substring(2, 8)}`;
       
-      // Determine proper category based on part data
-      let category = 'Auto Parts'; // Default category
-      if (part.productCategory && part.productCategory !== 'WEB') {
+      // Improved category determination based on EzyParts documentation
+      let category = 'General Parts'; // Default category
+      
+      // First try productCategory (this should be the main category)
+      if (part.productCategory && part.productCategory !== 'WEB' && part.productCategory.trim() !== '') {
         category = part.productCategory;
-      } else if (part.partGroup) {
-        // Try to derive category from part group
+      } 
+      // Fall back to partGroup if productCategory is not useful
+      else if (part.partGroup && part.partGroup.trim() !== '') {
         const partGroup = part.partGroup.toLowerCase();
         if (partGroup.includes('oil') || partGroup.includes('lubric')) {
           category = 'Oil & Lubricants';
@@ -298,7 +300,7 @@ async function processPartsToInventory(supabase: any, payload: any, userId: stri
         } else if (partGroup.includes('electric')) {
           category = 'Electrical';
         } else {
-          category = 'General Parts';
+          category = part.partGroup;
         }
       }
 
@@ -315,7 +317,7 @@ async function processPartsToInventory(supabase: any, payload: any, userId: stri
         user_id: userId,
         code: code.toUpperCase(),
         name: part.partDescription || 'Unknown Part',
-        description: `${part.partDescription || 'Unknown Part'} - Brand: ${part.brand || 'Unknown'} - SKU: ${part.sku || part.partNumber} - Vehicle: ${vehicleInfo.make} ${vehicleInfo.model}`,
+        description: `${part.partDescription || 'Unknown Part'} - SKU: ${part.sku || part.partNumber} - Vehicle: ${vehicleInfo.make} ${vehicleInfo.model}`,
         category: category,
         supplier: 'Burson Auto Parts',
         supplier_id: 'burson-auto-parts',

@@ -21,6 +21,7 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ onAddToOrder }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [supplierFilter, setSupplierFilter] = useState<string>('all');
+  const [brandFilter, setBrandFilter] = useState<string>('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | undefined>(undefined);
 
@@ -39,17 +40,22 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ onAddToOrder }) => {
   // Extract unique suppliers
   const uniqueSuppliers = ['all', ...new Set(inventoryItems.map(item => item.supplierId))];
 
+  // Extract unique brands
+  const uniqueBrands = [...new Set(inventoryItems.map(item => item.brand).filter(Boolean))].sort();
+
   const filteredItems = inventoryItems.filter(item => {
     const matchesSearch = 
       item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.description.toLowerCase().includes(searchTerm.toLowerCase());
+      item.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.brand && item.brand.toLowerCase().includes(searchTerm.toLowerCase()));
     
     const matchesCategory = categoryFilter === 'all' || item.category === categoryFilter;
     const matchesSupplier = supplierFilter === 'all' || item.supplierId === supplierFilter;
+    const matchesBrand = brandFilter === 'all' || item.brand === brandFilter;
     const matchesPriceRange = item.price >= priceRange[0] && item.price <= priceRange[1];
     
-    return matchesSearch && matchesCategory && matchesSupplier && matchesPriceRange;
+    return matchesSearch && matchesCategory && matchesSupplier && matchesBrand && matchesPriceRange;
   });
 
   const handleOpenDialog = (item?: InventoryItem) => {
@@ -115,11 +121,14 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ onAddToOrder }) => {
               setCategoryFilter={setCategoryFilter}
               supplierFilter={supplierFilter}
               setSupplierFilter={setSupplierFilter}
+              brandFilter={brandFilter}
+              setBrandFilter={setBrandFilter}
               priceRange={priceRange}
               setPriceRange={setPriceRange}
               maxPrice={maxPrice}
               categories={categories}
               uniqueSuppliers={uniqueSuppliers}
+              uniqueBrands={uniqueBrands}
               getSupplierName={getSupplierName}
             />
           </div>

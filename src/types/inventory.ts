@@ -27,6 +27,12 @@ export interface VehicleFitmentTag {
   created_at: string;
 }
 
+export interface ProductSpecification {
+  name: string;
+  value: string;
+  unit?: string;
+}
+
 export interface InventoryItem {
   id: string;
   code: string;
@@ -44,6 +50,10 @@ export interface InventoryItem {
   imageUrl?: string;
   brand?: string;
   vehicleFitment?: VehicleFitmentTag[];
+  specifications?: ProductSpecification[];
+  partGroup?: string;
+  barcode?: string;
+  retailPrice?: number;
 }
 
 export interface OrderItem {
