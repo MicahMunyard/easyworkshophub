@@ -271,7 +271,6 @@ async function processPartsToInventory(supabase: any, payload: any, userId: stri
       const code = part.partNumber || part.sku || `EP-${Math.random().toString(36).substring(2, 8)}`;
       
       // Generate a product image URL based on the SKU or part number
-      // Burson's might have a standard pattern for product images
       const imageUrl = generateProductImageUrl(part.sku || part.partNumber, part.brand);
       
       return {
@@ -288,18 +287,20 @@ async function processPartsToInventory(supabase: any, payload: any, userId: stri
         location: 'Main Warehouse',
         status: 'normal',
         image_url: imageUrl,
+        brand: part.brand || 'Unknown',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
     });
 
     console.log("Prepared inventory items for insertion:", inventoryItems.length);
+    console.log("Sample inventory item:", inventoryItems[0]);
 
     // Insert into user inventory items with error handling
     const { data, error } = await supabase
       .from('user_inventory_items')
       .insert(inventoryItems)
-      .select('id, name');
+      .select('id, name, brand, image_url, supplier');
 
     if (error) {
       console.error("Error adding parts to user inventory:", error);
@@ -307,7 +308,12 @@ async function processPartsToInventory(supabase: any, payload: any, userId: stri
     }
     
     console.log(`Successfully added ${inventoryItems.length} parts to user inventory`);
-    console.log("Added items:", data?.map(item => item.name) || []);
+    console.log("Added items:", data?.map(item => ({ 
+      name: item.name, 
+      brand: item.brand, 
+      supplier: item.supplier,
+      hasImage: !!item.image_url 
+    })) || []);
     
     return {
       success: true,
