@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { InventoryItem } from '@/types/inventory';
+import { InventoryItem, VehicleFitmentTag } from '@/types/inventory';
 import { v4 as uuidv4 } from 'uuid';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,7 +12,7 @@ export const useInventoryItems = () => {
   const { toast } = useToast();
   const { user } = useAuth();
 
-  // Load inventory items from Supabase
+  // Load inventory items from Supabase with vehicle fitment data
   const loadInventoryItems = async () => {
     if (!user) {
       setIsLoading(false);
@@ -20,16 +20,60 @@ export const useInventoryItems = () => {
     }
 
     try {
-      const { data, error } = await supabase
+      // First, get inventory items
+      const { data: inventoryData, error: inventoryError } = await supabase
         .from('user_inventory_items')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (inventoryError) throw inventoryError;
+
+      if (!inventoryData || inventoryData.length === 0) {
+        setInventoryItems([]);
+        setIsLoading(false);
+        return;
+      }
+
+      // Get vehicle fitment data for these inventory items
+      const inventoryIds = inventoryData.map(item => item.id);
+      
+      const { data: fitmentData, error: fitmentError } = await supabase
+        .from('inventory_vehicle_fitment')
+        .select(`
+          inventory_item_id,
+          vehicle_fitment_tags (
+            id,
+            make,
+            model,
+            year_from,
+            year_to,
+            engine_size,
+            fuel_type,
+            body_type,
+            created_at
+          )
+        `)
+        .in('inventory_item_id', inventoryIds);
+
+      if (fitmentError) {
+        console.error('Error loading vehicle fitment data:', fitmentError);
+        // Continue without fitment data
+      }
+
+      // Create a map of inventory item ID to vehicle fitment tags
+      const fitmentMap = new Map<string, VehicleFitmentTag[]>();
+      if (fitmentData) {
+        fitmentData.forEach(item => {
+          if (item.vehicle_fitment_tags) {
+            const existingTags = fitmentMap.get(item.inventory_item_id) || [];
+            fitmentMap.set(item.inventory_item_id, [...existingTags, item.vehicle_fitment_tags as VehicleFitmentTag]);
+          }
+        });
+      }
 
       // Transform Supabase data to match our InventoryItem interface
-      const transformedItems: InventoryItem[] = (data || []).map(item => ({
+      const transformedItems: InventoryItem[] = inventoryData.map(item => ({
         id: item.id,
         code: item.code || item.id.substring(0, 8).toUpperCase(),
         name: item.name,
@@ -44,7 +88,8 @@ export const useInventoryItems = () => {
         lastOrder: item.last_order?.toString() || '',
         status: item.status as 'normal' | 'low' | 'critical',
         imageUrl: item.image_url || undefined,
-        brand: item.brand || undefined
+        brand: item.brand || undefined,
+        vehicleFitment: fitmentMap.get(item.id) || []
       }));
 
       setInventoryItems(transformedItems);

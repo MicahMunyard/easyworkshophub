@@ -566,6 +566,42 @@ export type Database = {
         }
         Relationships: []
       }
+      inventory_vehicle_fitment: {
+        Row: {
+          created_at: string | null
+          id: string
+          inventory_item_id: string
+          vehicle_fitment_tag_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          inventory_item_id: string
+          vehicle_fitment_tag_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          inventory_item_id?: string
+          vehicle_fitment_tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_vehicle_fitment_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: false
+            referencedRelation: "user_inventory_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_vehicle_fitment_vehicle_fitment_tag_id_fkey"
+            columns: ["vehicle_fitment_tag_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_fitment_tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       jobs: {
         Row: {
           assigned_to: string
@@ -1565,6 +1601,42 @@ export type Database = {
           tech_code?: string | null
           updated_at?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      vehicle_fitment_tags: {
+        Row: {
+          body_type: string | null
+          created_at: string | null
+          engine_size: string | null
+          fuel_type: string | null
+          id: string
+          make: string
+          model: string
+          year_from: number | null
+          year_to: number | null
+        }
+        Insert: {
+          body_type?: string | null
+          created_at?: string | null
+          engine_size?: string | null
+          fuel_type?: string | null
+          id?: string
+          make: string
+          model: string
+          year_from?: number | null
+          year_to?: number | null
+        }
+        Update: {
+          body_type?: string | null
+          created_at?: string | null
+          engine_size?: string | null
+          fuel_type?: string | null
+          id?: string
+          make?: string
+          model?: string
+          year_from?: number | null
+          year_to?: number | null
         }
         Relationships: []
       }

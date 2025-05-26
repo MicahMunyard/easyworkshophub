@@ -15,6 +15,18 @@ export interface Supplier {
   apiConfig?: ApiSupplierConfig;
 }
 
+export interface VehicleFitmentTag {
+  id: string;
+  make: string;
+  model: string;
+  year_from?: number;
+  year_to?: number;
+  engine_size?: string;
+  fuel_type?: string;
+  body_type?: string;
+  created_at: string;
+}
+
 export interface InventoryItem {
   id: string;
   code: string;
@@ -31,6 +43,7 @@ export interface InventoryItem {
   status: 'normal' | 'low' | 'critical';
   imageUrl?: string;
   brand?: string;
+  vehicleFitment?: VehicleFitmentTag[];
 }
 
 export interface OrderItem {

@@ -181,7 +181,7 @@ serve(async (req) => {
       
       console.log("Quote stored successfully with ID:", quoteData[0].id);
 
-      // Process parts and add to inventory
+      // Process parts and add to inventory with vehicle fitment
       const inventoryResult = await processPartsToInventory(supabase, payload, userId);
       
       if (inventoryResult.success) {
@@ -199,11 +199,12 @@ serve(async (req) => {
               vehicle: `${payload.headers?.make} ${payload.headers?.model}`,
               partsCount: payload.parts?.length,
               partsAddedToInventory: inventoryResult.addedCount,
+              vehicleFitmentAdded: inventoryResult.vehicleFitmentCount,
               timestamp: new Date().toISOString()
             }
           });
 
-        return createSuccessRedirectResponse(inventoryResult.addedCount);
+        return createSuccessRedirectResponse(inventoryResult.addedCount, inventoryResult.vehicleFitmentCount);
       } else {
         throw new Error(inventoryResult.error || "Failed to add parts to inventory");
       }
@@ -266,19 +267,56 @@ async function processPartsToInventory(supabase: any, payload: any, userId: stri
       throw new Error("No parts found in payload");
     }
 
+    // Extract vehicle information for fitment tags
+    const vehicleInfo = {
+      make: payload.headers?.make || '',
+      model: payload.headers?.model || '',
+      rego: payload.headers?.rego || ''
+    };
+
+    console.log("Vehicle info extracted:", vehicleInfo);
+
     // Convert EzyParts parts to user inventory items format
     const inventoryItems = payload.parts.map((part: any) => {
       const code = part.partNumber || part.sku || `EP-${Math.random().toString(36).substring(2, 8)}`;
       
-      // Generate a product image URL based on the SKU or part number
-      const imageUrl = generateProductImageUrl(part.sku || part.partNumber, part.brand);
+      // Determine proper category based on part data
+      let category = 'Auto Parts'; // Default category
+      if (part.productCategory && part.productCategory !== 'WEB') {
+        category = part.productCategory;
+      } else if (part.partGroup) {
+        // Try to derive category from part group
+        const partGroup = part.partGroup.toLowerCase();
+        if (partGroup.includes('oil') || partGroup.includes('lubric')) {
+          category = 'Oil & Lubricants';
+        } else if (partGroup.includes('filter')) {
+          category = 'Filters';
+        } else if (partGroup.includes('brake')) {
+          category = 'Brake Parts';
+        } else if (partGroup.includes('engine')) {
+          category = 'Engine Parts';
+        } else if (partGroup.includes('electric')) {
+          category = 'Electrical';
+        } else {
+          category = 'General Parts';
+        }
+      }
+
+      // Try to get actual product image from EzyParts if available
+      let imageUrl = '';
+      if (part.imageUrl) {
+        imageUrl = part.imageUrl;
+      } else if (part.sku) {
+        // Generate potential image URLs based on common patterns
+        imageUrl = generateProductImageUrl(part.sku, part.brand);
+      }
       
       return {
         user_id: userId,
         code: code.toUpperCase(),
         name: part.partDescription || 'Unknown Part',
-        description: `${part.partDescription || 'Unknown Part'} - Brand: ${part.brand || 'Unknown'} - SKU: ${part.sku || part.partNumber}`,
-        category: part.productCategory || 'Auto Parts',
+        description: `${part.partDescription || 'Unknown Part'} - Brand: ${part.brand || 'Unknown'} - SKU: ${part.sku || part.partNumber} - Vehicle: ${vehicleInfo.make} ${vehicleInfo.model}`,
+        category: category,
         supplier: 'Burson Auto Parts',
         supplier_id: 'burson-auto-parts',
         in_stock: part.qty || 1,
@@ -286,7 +324,7 @@ async function processPartsToInventory(supabase: any, payload: any, userId: stri
         price: parseFloat(part.nettPriceEach) || 0,
         location: 'Main Warehouse',
         status: 'normal',
-        image_url: imageUrl,
+        image_url: imageUrl || null,
         brand: part.brand || 'Unknown',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -297,7 +335,7 @@ async function processPartsToInventory(supabase: any, payload: any, userId: stri
     console.log("Sample inventory item:", inventoryItems[0]);
 
     // Insert into user inventory items with error handling
-    const { data, error } = await supabase
+    const { data: inventoryData, error } = await supabase
       .from('user_inventory_items')
       .insert(inventoryItems)
       .select('id, name, brand, image_url, supplier');
@@ -308,17 +346,24 @@ async function processPartsToInventory(supabase: any, payload: any, userId: stri
     }
     
     console.log(`Successfully added ${inventoryItems.length} parts to user inventory`);
-    console.log("Added items:", data?.map(item => ({ 
+    console.log("Added items:", inventoryData?.map(item => ({ 
       name: item.name, 
       brand: item.brand, 
       supplier: item.supplier,
       hasImage: !!item.image_url 
     })) || []);
+
+    // Now add vehicle fitment tags if we have vehicle information
+    let vehicleFitmentCount = 0;
+    if (vehicleInfo.make && vehicleInfo.model && inventoryData && inventoryData.length > 0) {
+      vehicleFitmentCount = await addVehicleFitmentTags(supabase, inventoryData, vehicleInfo);
+    }
     
     return {
       success: true,
       addedCount: inventoryItems.length,
-      items: data
+      vehicleFitmentCount: vehicleFitmentCount,
+      items: inventoryData
     };
 
   } catch (error) {
@@ -327,8 +372,76 @@ async function processPartsToInventory(supabase: any, payload: any, userId: stri
     return {
       success: false,
       error: error.message,
-      addedCount: 0
+      addedCount: 0,
+      vehicleFitmentCount: 0
     };
+  }
+}
+
+async function addVehicleFitmentTags(supabase: any, inventoryItems: any[], vehicleInfo: any) {
+  try {
+    console.log("Adding vehicle fitment tags for:", vehicleInfo);
+
+    // First, check if the vehicle fitment tag already exists
+    const { data: existingTag, error: selectError } = await supabase
+      .from('vehicle_fitment_tags')
+      .select('id')
+      .eq('make', vehicleInfo.make.toUpperCase())
+      .eq('model', vehicleInfo.model.toUpperCase())
+      .maybeSingle();
+
+    if (selectError) {
+      console.error("Error checking existing vehicle fitment tag:", selectError);
+      return 0;
+    }
+
+    let vehicleTagId;
+
+    if (existingTag) {
+      vehicleTagId = existingTag.id;
+      console.log("Using existing vehicle fitment tag:", vehicleTagId);
+    } else {
+      // Create new vehicle fitment tag
+      const { data: newTag, error: insertError } = await supabase
+        .from('vehicle_fitment_tags')
+        .insert({
+          make: vehicleInfo.make.toUpperCase(),
+          model: vehicleInfo.model.toUpperCase()
+        })
+        .select('id')
+        .single();
+
+      if (insertError) {
+        console.error("Error creating vehicle fitment tag:", insertError);
+        return 0;
+      }
+
+      vehicleTagId = newTag.id;
+      console.log("Created new vehicle fitment tag:", vehicleTagId);
+    }
+
+    // Link all inventory items to this vehicle fitment tag
+    const fitmentLinks = inventoryItems.map(item => ({
+      inventory_item_id: item.id,
+      vehicle_fitment_tag_id: vehicleTagId
+    }));
+
+    const { data: fitmentData, error: fitmentError } = await supabase
+      .from('inventory_vehicle_fitment')
+      .insert(fitmentLinks)
+      .select('id');
+
+    if (fitmentError) {
+      console.error("Error creating vehicle fitment links:", fitmentError);
+      return 0;
+    }
+
+    console.log(`Successfully linked ${fitmentData?.length || 0} parts to vehicle ${vehicleInfo.make} ${vehicleInfo.model}`);
+    return fitmentData?.length || 0;
+
+  } catch (error) {
+    console.error("Error in addVehicleFitmentTags:", error);
+    return 0;
   }
 }
 
@@ -351,9 +464,11 @@ function generateProductImageUrl(sku: string, brand: string): string {
   return possibleImageUrls[0];
 }
 
-function createSuccessRedirectResponse(partsCount: number): Response {
+function createSuccessRedirectResponse(partsCount: number, vehicleFitmentCount: number = 0): Response {
   const baseUrl = 'https://app.workshopbase.com.au';
   const successUrl = `${baseUrl}/inventory?tab=inventory&ezyparts_products=added`;
+  
+  const vehicleText = vehicleFitmentCount > 0 ? ` with vehicle fitment data for ${vehicleFitmentCount} items` : '';
   
   return new Response(
     `
@@ -400,8 +515,8 @@ function createSuccessRedirectResponse(partsCount: number): Response {
         <div class="container">
           <div class="success-icon">✅</div>
           <h2>Parts Successfully Added!</h2>
-          <p><strong>${partsCount} part${partsCount !== 1 ? 's' : ''}</strong> from Burson Auto Parts have been added to your WorkshopBase inventory.</p>
-          <p>Product images and brand information have been included for easy identification.</p>
+          <p><strong>${partsCount} part${partsCount !== 1 ? 's' : ''}</strong> from Burson Auto Parts have been added to your WorkshopBase inventory${vehicleText}.</p>
+          <p>Product categories, brand information, and vehicle fitment tags have been included for easy filtering and identification.</p>
           <p><span class="loading">⟳</span> Redirecting to your inventory in 3 seconds...</p>
           <p><a href="${successUrl}" style="color: #2563eb; text-decoration: none;">Click here to view your inventory now →</a></p>
         </div>
@@ -463,9 +578,10 @@ function createTestPage(userId: string): string {
           <p>This endpoint is ready to receive EzyParts quote data.</p>
           <p>When you click "Send to WMS" in EzyParts, the parts will be automatically added to your inventory with:</p>
           <ul>
-            <li>Product images from Burson Auto Parts</li>
-            <li>Brand information (${new Date().getFullYear()} brands supported)</li>
-            <li>Proper supplier designation as "Burson Auto Parts"</li>
+            <li>Proper product categories (Filters, Oil & Lubricants, etc.)</li>
+            <li>Product images from Burson Auto Parts (when available)</li>
+            <li>Brand information and supplier details</li>
+            <li>Vehicle fitment tags for easy filtering</li>
           </ul>
         </div>
       </body>
