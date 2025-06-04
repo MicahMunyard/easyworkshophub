@@ -14,7 +14,8 @@ import {
   Search,
   Car,
   FileCode,
-  HelpCircle
+  HelpCircle,
+  Megaphone
 } from "lucide-react"
 
 export const dashboardConfig = {
@@ -135,7 +136,7 @@ export const mainNavSections = [
   {
     name: "Marketing",
     path: "/marketing",
-    icon: "BarChart3"
+    icon: "Megaphone"
   },
   {
     name: "Reports",

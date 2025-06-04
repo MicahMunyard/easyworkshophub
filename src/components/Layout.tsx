@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import Navbar from "./navbar";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -21,7 +20,8 @@ import {
   FileCode,
   Wrench,
   Settings,
-  HelpCircle
+  HelpCircle,
+  Megaphone
 } from "lucide-react";
 
 interface LayoutProps {
@@ -48,7 +48,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     FileCode: <FileCode className="h-5 w-5" />,
     Wrench: <Wrench className="h-5 w-5" />,
     Settings: <Settings className="h-5 w-5" />,
-    HelpCircle: <HelpCircle className="h-5 w-5" />
+    HelpCircle: <HelpCircle className="h-5 w-5" />,
+    Megaphone: <Megaphone className="h-5 w-5" />
   };
 
   // Always declare ALL hooks before any conditional logic or returns
