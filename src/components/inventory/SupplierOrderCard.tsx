@@ -26,7 +26,7 @@ const SupplierOrderCard: React.FC<SupplierOrderCardProps> = ({
   const handleOrderClick = async () => {
     if (supplier.connectionType === 'api') {
       // Check if this is Burson Auto Parts
-      if (supplier.name === 'Burson Auto Parts' || supplier.supplierId === 'burson-auto-parts') {
+      if (supplier.name === 'Burson Auto Parts') {
         try {
           // Generate the EzyParts auth URL with form submission
           const authForm = EzyPartsClient.generateEzyPartsUrl({

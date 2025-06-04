@@ -57,7 +57,7 @@ const SupplierManagement: React.FC = () => {
   const handleStartApiOrder = (supplier: Supplier) => {
     // This is now handled in the SupplierOrderCard component
     // For non-EzyParts API suppliers, we can show a generic message
-    if (supplier.name !== 'Burson Auto Parts' && supplier.supplierId !== 'burson-auto-parts') {
+    if (supplier.name !== 'Burson Auto Parts') {
       toast({
         title: "API Integration",
         description: `Connecting to ${supplier.name} API for ordering. This integration is not yet configured.`,
