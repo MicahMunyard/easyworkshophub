@@ -65,7 +65,7 @@ const VideoCarousel: React.FC<VideoCarouselProps> = ({
           <CarouselContent>
             {videos.map((video) => (
               <CarouselItem key={video.id} className={isMobile ? "basis-full" : "basis-1/2"}>
-                <div className="relative w-full bg-black/90 rounded-lg aspect-video md:h-[190px] h-[160px] flex items-center justify-center overflow-hidden">
+                <div className="relative w-full bg-black/90 rounded-lg aspect-video md:h-[280px] h-[200px] flex items-center justify-center overflow-hidden">
                   {playing === video.id ? (
                     <iframe 
                       className="w-full h-full" 
