@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import Navbar from "./navbar";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -70,7 +71,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     if (path.includes('/reports')) return 'reports';
     if (path.includes('/timesheets')) return 'timesheets';
     if (path.includes('/workshop')) return 'workshop';
-    if (path.includes('/ezyparts')) return 'ezyparts';
     if (path.includes('/technician-portal')) return 'technician';
     return 'dashboard';
   };

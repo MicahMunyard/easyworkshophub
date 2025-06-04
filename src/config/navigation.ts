@@ -147,11 +147,6 @@ export const mainNavSections = [
     name: "Timesheets",
     path: "/timesheets",
     icon: "Clock"
-  },
-  {
-    name: "EzyParts",
-    path: "/ezyparts",
-    icon: "FileCode"
   }
 ];
 
@@ -173,10 +168,6 @@ export const secondaryNavSections: Record<string, { name: string; path: string }
   timesheets: [
     { name: "Timesheet Overview", path: "/timesheets" },
     { name: "Time Entries", path: "/timesheets/entries" }
-  ],
-  ezyparts: [
-    { name: "Dashboard", path: "/ezyparts" },
-    { name: "Search", path: "/ezyparts/search" }
   ]
 };
 
