@@ -6,7 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { InventoryItem } from '@/types/inventory';
-import { Barcode, Copy, Edit, Package, ShoppingCart, Trash2 } from 'lucide-react';
+import { Barcode, Copy, Edit, Package, ShoppingCart, Trash2, Tag } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,6 +39,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
           <TableRow>
             <TableHead>Product</TableHead>
             <TableHead>Code</TableHead>
+            <TableHead>Brand</TableHead>
             <TableHead className="hidden md:table-cell">Supplier</TableHead>
             <TableHead>Price</TableHead>
             <TableHead>Stock</TableHead>
@@ -48,7 +49,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
         <TableBody>
           {items.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+              <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                 No products found. Add your first product to get started.
               </TableCell>
             </TableRow>
@@ -84,6 +85,12 @@ const ProductTable: React.FC<ProductTableProps> = ({
                     <div className="flex items-center gap-1.5">
                       <Barcode className="h-3.5 w-3.5 text-muted-foreground" />
                       <span className="text-sm">{item.code}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1.5">
+                      <Tag className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-sm">{item.brand || 'N/A'}</span>
                     </div>
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
