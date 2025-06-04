@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import * as crypto from "https://deno.land/std@0.177.0/crypto/mod.ts";
@@ -24,10 +23,35 @@ serve(async (req) => {
     // Create Supabase client
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     
+    // Get auth URL endpoint
+    if (path === "get-auth-url") {
+      console.log("[DEBUG] Processing get-auth-url request");
+      
+      if (!XERO_CLIENT_ID) {
+        console.error("[ERROR] XERO_CLIENT_ID is not set!");
+        return new Response(
+          JSON.stringify({ error: "XERO_CLIENT_ID environment variable is not set" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      const scopes = "offline_access accounting.transactions accounting.contacts accounting.settings";
+      const state = crypto.randomUUID();
+      
+      const authUrl = `https://login.xero.com/identity/connect/authorize?response_type=code&client_id=${XERO_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(scopes)}&state=${state}`;
+      
+      console.log("[DEBUG] Generated Xero auth URL:", authUrl);
+      
+      return new Response(
+        JSON.stringify({ authUrl }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
     // OAuth callback handling
     if (path === "oauth-callback") {
-      const params = url.searchParams;
-      const code = params.get("code");
+      const params = await req.json();
+      const code = params.code;
       
       if (!code) {
         return new Response(
@@ -107,7 +131,7 @@ serve(async (req) => {
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-    
+
     // Webhook handling
     if (path === "webhook") {
       // Get the webhook signature from the headers

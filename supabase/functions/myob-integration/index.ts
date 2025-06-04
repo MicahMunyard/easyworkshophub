@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import * as crypto from "https://deno.land/std@0.177.0/crypto/mod.ts";
@@ -9,7 +8,7 @@ const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") as string;
 const MYOB_CLIENT_ID = Deno.env.get("MYOB_CLIENT_ID") as string;
 const MYOB_CLIENT_SECRET = Deno.env.get("MYOB_CLIENT_SECRET") as string;
 const MYOB_WEBHOOK_KEY = Deno.env.get("MYOB_WEBHOOK_KEY") || "";
-const REDIRECT_URI = "https://app.workshopbase.com.au/integrations/myob/oauth";
+const REDIRECT_URI = "https://app.workshopbase.com/integrations/myob/oauth";
 const MYOB_AUTH_URL = "https://secure.myob.com/oauth2/account/authorize";
 const MYOB_TOKEN_URL = "https://secure.myob.com/oauth2/v1/authorize";
 const MYOB_API_BASE_URL = "https://api.myob.com/accountright/";
@@ -34,7 +33,6 @@ serve(async (req) => {
     if (path === "get-auth-url") {
       console.log("[DEBUG] Processing get-auth-url request");
       
-      // Debug environment variables
       console.log("[DEBUG] MYOB_CLIENT_ID exists:", !!MYOB_CLIENT_ID);
       console.log("[DEBUG] MYOB_CLIENT_ID length:", MYOB_CLIENT_ID?.length || 0);
       console.log("[DEBUG] MYOB_CLIENT_ID value:", MYOB_CLIENT_ID ? `${MYOB_CLIENT_ID.substring(0, 8)}...` : "NOT SET");
@@ -68,7 +66,7 @@ serve(async (req) => {
       
       const params = await req.json();
       const code = params.code;
-      const businessId = params.businessId; // This is the company file ID
+      const businessId = params.businessId;
       
       console.log("[DEBUG] OAuth callback params:", { code: !!code, businessId });
       
@@ -80,7 +78,6 @@ serve(async (req) => {
         );
       }
       
-      // Debug environment variables for token exchange
       console.log("[DEBUG] Token exchange - CLIENT_ID exists:", !!MYOB_CLIENT_ID);
       console.log("[DEBUG] Token exchange - CLIENT_SECRET exists:", !!MYOB_CLIENT_SECRET);
       console.log("[DEBUG] Token exchange - REDIRECT_URI:", REDIRECT_URI);
@@ -206,7 +203,6 @@ serve(async (req) => {
         const errorText = await refreshResponse.text();
         console.error("[ERROR] Error refreshing token:", errorText);
         
-        // Update status to disconnected if refresh fails
         await supabase
           .from("accounting_integrations")
           .update({ 
@@ -224,7 +220,6 @@ serve(async (req) => {
       
       const tokenData = await refreshResponse.json();
       
-      // Update the tokens in the database
       const { error: updateError } = await supabase
         .from("accounting_integrations")
         .update({
@@ -284,7 +279,6 @@ serve(async (req) => {
           throw new Error(`Provider ${provider} not supported`);
         }
   
-        // Get user ID from the request
         const authHeader = req.headers.get("Authorization");
         if (!authHeader) {
           console.error("[ERROR] No authorization header in sync request");
@@ -307,7 +301,6 @@ serve(async (req) => {
   
         console.log("[DEBUG] User authenticated for sync:", user.id);
         
-        // Retrieve the MYOB access token and business ID from the database
         const { data: integration, error: integrationError } = await supabase
           .from('accounting_integrations')
           .select('*')
@@ -343,19 +336,16 @@ serve(async (req) => {
           tokenLength: myobAccessToken?.length
         });
   
-        // Create Base64 encoded username:password for cftoken header
-        // In a real scenario, you would use actual credentials from the user
         const cfTokenValue = btoa("administrator:");
         console.log('[DEBUG] Created cftoken header');
   
-        // Map WorkshopBase invoice to MYOB invoice format
         const myobInvoice = {
           Number: invoice.invoiceNumber,
           Date: invoice.date,
           DueDate: invoice.dueDate,
           Customer: {
             Name: invoice.customerName,
-            UID: invoice.customerId // Assuming this is the UID in MYOB
+            UID: invoice.customerId
           },
           Lines: invoice.items.map(item => ({
             Description: item.description,
@@ -366,14 +356,12 @@ serve(async (req) => {
           Subtotal: invoice.subtotal,
           TotalTax: invoice.taxTotal,
           TotalAmount: invoice.total,
-          Status: "Open" // Adjust based on MYOB status options
+          Status: "Open"
         };
         
         console.log('[DEBUG] Mapped invoice data to MYOB format');
         console.log('[DEBUG] MYOB API URL:', `${MYOB_API_BASE_URL}${businessId}/Sale/Invoice`);
   
-        // Call the MYOB API to create the invoice with correct headers
-        // Updated headers based on the MYOB documentation
         console.log('[DEBUG] Sending request to MYOB API');
         const myobResponse = await fetch(`${MYOB_API_BASE_URL}${businessId}/Sale/Invoice`, {
           method: 'POST',
@@ -421,7 +409,6 @@ serve(async (req) => {
       }
     }
     
-    // Default response for unsupported paths
     console.log(`[DEBUG] Unsupported path: ${path}`);
     return new Response(
       JSON.stringify({ error: "Unsupported path" }),
