@@ -56,7 +56,7 @@ serve(async (req) => {
       throw new Error('EzyParts OAuth credentials not configured');
     }
 
-    // Determine API endpoints based on environment
+    // Determine API endpoints based on environment - FIXED URLs
     const endpoints = environment === 'production' ? {
       auth: 'https://api.ezyparts.burson.com.au/authorizationserver/oauth/token',
       api: 'https://api.ezyparts.burson.com.au/bapcorocc/v2/EzyParts/gms'
@@ -139,7 +139,7 @@ serve(async (req) => {
 
     console.log('Submitting order to EzyParts:', JSON.stringify(orderRequest, null, 2));
 
-    // Step 3: Submit order to EzyParts
+    // Step 3: Submit order to EzyParts using correct endpoint
     const orderResponse = await fetch(endpoints.api, {
       method: 'POST',
       headers: {
@@ -150,13 +150,22 @@ serve(async (req) => {
       body: JSON.stringify(orderRequest)
     });
 
+    const responseText = await orderResponse.text();
+    console.log('Raw API response:', responseText);
+
     if (!orderResponse.ok) {
-      const errorText = await orderResponse.text();
-      console.error('Order submission failed:', errorText);
-      throw new Error(`Order submission failed: ${orderResponse.status} ${orderResponse.statusText}`);
+      console.error('Order submission failed:', responseText);
+      throw new Error(`Order submission failed: ${orderResponse.status} ${orderResponse.statusText} - ${responseText}`);
     }
 
-    const orderResult = await orderResponse.json();
+    let orderResult;
+    try {
+      orderResult = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('Failed to parse response JSON:', parseError);
+      throw new Error(`Invalid JSON response from EzyParts API: ${responseText}`);
+    }
+
     console.log('Order submission response:', JSON.stringify(orderResult, null, 2));
 
     // Process the response according to EzyParts API specification
