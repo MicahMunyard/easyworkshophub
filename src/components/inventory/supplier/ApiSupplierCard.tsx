@@ -3,7 +3,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Settings, CheckCircle, AlertCircle } from 'lucide-react';
+import { Settings, CheckCircle, Edit } from 'lucide-react';
 import { Supplier } from '@/types/inventory';
 
 interface ApiSupplierCardProps {
@@ -35,23 +35,19 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({
                 <Settings className="h-6 w-6 text-gray-400" />
               </div>
             )}
-            <div>
+            <div className="flex-1 min-w-0">
               <CardTitle className="text-lg">{supplier.name}</CardTitle>
               <div className="flex items-center gap-2 mt-1">
                 <Badge variant="outline">{supplier.category}</Badge>
-                <Badge 
-                  variant={isConnected ? "default" : "secondary"}
-                  className={`flex items-center gap-1 ${
-                    isConnected ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
-                  }`}
-                >
-                  {isConnected ? (
+                {isConnected && (
+                  <Badge 
+                    variant="default"
+                    className="flex items-center gap-1 bg-green-100 text-green-800"
+                  >
                     <CheckCircle className="h-3 w-3" />
-                  ) : (
-                    <AlertCircle className="h-3 w-3" />
-                  )}
-                  {isConnected ? "Connected" : "Not Connected"}
-                </Badge>
+                    Connected
+                  </Badge>
+                )}
               </div>
             </div>
           </div>
@@ -60,14 +56,14 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({
       
       <CardContent className="space-y-3">
         <div className="text-sm">
-          <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-2">
             <div>
               <span className="text-muted-foreground">Contact:</span>
               <p className="font-medium">{supplier.contactPerson}</p>
             </div>
             <div>
               <span className="text-muted-foreground">Email:</span>
-              <p className="font-medium text-sm">{supplier.email}</p>
+              <p className="font-medium text-sm break-words">{supplier.email}</p>
             </div>
           </div>
         </div>
@@ -86,16 +82,8 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({
             onClick={() => onEdit(supplier)}
             className="flex-1"
           >
-            <Settings className="h-4 w-4 mr-2" />
-            Configure
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => onDelete(supplier)}
-            className="text-red-600 hover:text-red-700"
-          >
-            Delete
+            <Edit className="h-4 w-4 mr-2" />
+            Edit
           </Button>
         </div>
       </CardContent>
