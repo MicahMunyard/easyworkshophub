@@ -1,63 +1,33 @@
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+};
 
-interface OrderSubmissionRequest {
-  inputMetaData: {
-    checkCurrentPosition: boolean;
-  };
-  headers: {
-    customerAccount: string;
-    customerId: string;
-    password: string;
-    locationId?: string;
-    locationName?: string;
-    customerName: string;
-    customerAddress: string;
-    customerSuburb?: string;
-    purchaseOrderNumber?: string;
-    dateServed: string;
-    repId?: string;
-    encryptedVehicleId?: number;
-    rego?: string;
-    make?: string;
-    model?: string;
-    deliveryType: string;
-    note?: string;
-    host?: string;
-    userAgent?: string;
-    salesOrderSalesAuditList?: Array<{
-      salesAuditFieldNumber: string;
-      salesAuditValue: string;
-    }>;
-  };
+interface OrderSubmissionData {
   parts: Array<{
     qty: number;
     sku: string;
     nettPriceEach: number;
     retailPriceEa?: number;
   }>;
-}
-
-interface OrderSubmissionResponse {
-  failOrderLines: Array<{
-    qty: number;
-    sku: string;
-    nettPriceEach: number;
-    retailPriceEa: number;
-    reason: string;
-  }>;
-  headers: any;
-  successOrderLines: Array<{
-    qty: number;
-    sku: string;
-  }>;
-  salesOrderNumber: string;
+  customerName?: string;
+  customerAddress?: string;
+  customerSuburb?: string;
+  purchaseOrder?: string;
+  orderNotes?: string;
+  deliveryType?: '1' | '2';
+  forceOrder?: boolean;
+  locationId?: string;
+  locationName?: string;
+  vehicleData?: {
+    encryptedVehicleId?: number;
+    rego?: string;
+    make?: string;
+    model?: string;
+  };
 }
 
 serve(async (req) => {
@@ -67,114 +37,113 @@ serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-    )
+    console.log('=== EzyParts Order Submission Function Called ===');
+    
+    const { user_id, order_data } = await req.json() as {
+      user_id: string;
+      order_data: OrderSubmissionData;
+    };
 
-    const { user_id, order_data } = await req.json();
+    console.log('Processing order for user:', user_id);
+    console.log('Order data:', JSON.stringify(order_data, null, 2));
 
-    if (!user_id || !order_data) {
-      return new Response(
-        JSON.stringify({ error: 'Missing required parameters' }),
-        { status: 400, headers: corsHeaders }
-      );
+    // Get EzyParts configuration from secrets
+    const environment = Deno.env.get('EZYPARTS_ENVIRONMENT') || 'staging';
+    const clientId = Deno.env.get('BURSONS_OAUTH_NAME');
+    const clientSecret = Deno.env.get('BURSONS_OAUTH_SECRET');
+
+    if (!clientId || !clientSecret) {
+      throw new Error('EzyParts OAuth credentials not configured');
     }
 
-    // Get EzyParts credentials from Supabase secrets
-    const clientId = Deno.env.get('EZYPARTS_CLIENT_ID');
-    const clientSecret = Deno.env.get('EZYPARTS_CLIENT_SECRET');
-    const accountId = Deno.env.get('EZYPARTS_ACCOUNT_ID');
-    const username = Deno.env.get('EZYPARTS_USERNAME');
-    const password = Deno.env.get('EZYPARTS_PASSWORD');
-    const isProduction = Deno.env.get('EZYPARTS_ENVIRONMENT') === 'production';
+    // Determine API endpoints based on environment
+    const endpoints = environment === 'production' ? {
+      auth: 'https://api.ezyparts.burson.com.au/authorizationserver/oauth/token',
+      api: 'https://api.ezyparts.burson.com.au/bapcorocc/v2/EzyParts/gms'
+    } : {
+      auth: 'https://api.ezypartsqa.burson.com.au/authorizationserver/oauth/token',
+      api: 'https://api.ezypartsqa.burson.com.au/bapcorocc/v2/EzyParts/gms'
+    };
 
-    if (!clientId || !clientSecret || !accountId || !username || !password) {
-      console.error('Missing EzyParts credentials');
-      return new Response(
-        JSON.stringify({ error: 'EzyParts integration not configured' }),
-        { status: 500, headers: corsHeaders }
-      );
-    }
+    console.log('Using environment:', environment);
+    console.log('Auth endpoint:', endpoints.auth);
+    console.log('API endpoint:', endpoints.api);
 
-    // First, get OAuth token
-    const authUrl = isProduction 
-      ? 'https://api.ezyparts.burson.com.au/authorizationserver/oauth/token'
-      : 'https://api.ezypartsqa.burson.com.au/authorizationserver/oauth/token';
+    // Step 1: Get OAuth token
+    console.log('Requesting OAuth token...');
+    const tokenParams = new URLSearchParams();
+    tokenParams.append('grant_type', 'client_credentials');
+    tokenParams.append('client_id', clientId);
+    tokenParams.append('client_secret', clientSecret);
 
-    const authParams = new URLSearchParams();
-    authParams.append('grant_type', 'client_credentials');
-    authParams.append('client_id', clientId);
-    authParams.append('client_secret', clientSecret);
-
-    console.log('Getting OAuth token for order submission...');
-
-    const authResponse = await fetch(authUrl, {
+    const tokenResponse = await fetch(endpoints.auth, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
         'Accept': 'application/json'
       },
-      body: authParams.toString()
+      body: tokenParams.toString()
     });
 
-    if (!authResponse.ok) {
-      console.error('Auth failed:', await authResponse.text());
-      throw new Error('Failed to authenticate with EzyParts');
+    if (!tokenResponse.ok) {
+      const errorText = await tokenResponse.text();
+      console.error('Token request failed:', errorText);
+      throw new Error(`Failed to get OAuth token: ${tokenResponse.status} ${tokenResponse.statusText}`);
     }
 
-    const authData = await authResponse.json();
-    const accessToken = authData.access_token;
+    const tokenData = await tokenResponse.json();
+    console.log('OAuth token obtained successfully');
 
-    // Prepare order submission request
-    const orderRequest: OrderSubmissionRequest = {
+    // Step 2: Prepare order submission request according to EzyParts API spec
+    const currentDate = new Date();
+    const dateServed = currentDate.toLocaleDateString('en-AU', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+
+    // Build the order request payload exactly as specified in the documentation
+    const orderRequest = {
       inputMetaData: {
-        checkCurrentPosition: order_data.forceOrder ? false : true
+        checkCurrentPosition: !order_data.forceOrder // Force order indicator (inverted)
       },
       headers: {
-        customerAccount: accountId,
-        customerId: username,
-        password: password,
-        locationId: order_data.locationId || '',
-        locationName: order_data.locationName || '',
-        customerName: order_data.customerName || 'Workshop Customer',
-        customerAddress: order_data.customerAddress || 'Workshop Address',
-        customerSuburb: order_data.customerSuburb || '',
-        purchaseOrderNumber: order_data.purchaseOrder || '',
-        dateServed: new Date().toLocaleString('en-AU', {
-          day: '2-digit',
-          month: '2-digit', 
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-          hour12: false
-        }).replace(/(\d{2})\/(\d{2})\/(\d{4}), (\d{2}):(\d{2}):(\d{2})/, '$1/$2/$3 $4:$5:$6'),
-        deliveryType: order_data.deliveryType || '1',
-        note: order_data.orderNotes || '',
-        host: 'workshopbase.com',
-        userAgent: 'Mozilla/5.0',
-        ...(order_data.vehicleData && {
-          encryptedVehicleId: order_data.vehicleData.encryptedVehicleId,
-          rego: order_data.vehicleData.rego,
-          make: order_data.vehicleData.make,
-          model: order_data.vehicleData.model
-        })
+        customerAccount: "400022", // Default account from staging
+        customerId: "400022_workshopbase", // Default customer ID
+        password: "Burson2023", // Default password for staging
+        locationId: order_data.locationId || "",
+        locationName: order_data.locationName || "",
+        customerName: order_data.customerName || "WorkshopBase Customer",
+        customerAddress: order_data.customerAddress || "",
+        customerSuburb: order_data.customerSuburb || "",
+        purchaseOrderNumber: order_data.purchaseOrder || "",
+        dateServed: dateServed,
+        repId: "",
+        encryptedVehicleId: order_data.vehicleData?.encryptedVehicleId || null,
+        rego: order_data.vehicleData?.rego || "",
+        make: order_data.vehicleData?.make || "",
+        model: order_data.vehicleData?.model || "",
+        deliveryType: order_data.deliveryType || "1",
+        note: order_data.orderNotes || "",
+        host: "workshopbase.com",
+        userAgent: "Mozilla/5.0",
+        salesOrderSalesAuditList: []
       },
-      parts: order_data.parts || []
+      parts: order_data.parts.map(part => ({
+        qty: part.qty,
+        sku: part.sku,
+        nettPriceEach: part.nettPriceEach,
+        retailPriceEa: part.retailPriceEa || part.nettPriceEach * 1.2 // Default 20% markup if not provided
+      }))
     };
 
     console.log('Submitting order to EzyParts:', JSON.stringify(orderRequest, null, 2));
 
-    // Submit order to EzyParts
-    const orderUrl = isProduction 
-      ? 'https://api.ezyparts.burson.com.au/bapcorocc/v2/EzyParts/gms'
-      : 'https://api.ezypartsqa.burson.com.au/bapcorocc/v2/EzyParts/gms';
-
-    const orderResponse = await fetch(orderUrl, {
+    // Step 3: Submit order to EzyParts
+    const orderResponse = await fetch(endpoints.api, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${accessToken}`,
+        'Authorization': `Bearer ${tokenData.access_token}`,
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       },
@@ -184,45 +153,41 @@ serve(async (req) => {
     if (!orderResponse.ok) {
       const errorText = await orderResponse.text();
       console.error('Order submission failed:', errorText);
-      throw new Error(`Order submission failed: ${orderResponse.status} ${orderText}`);
+      throw new Error(`Order submission failed: ${orderResponse.status} ${orderResponse.statusText}`);
     }
 
-    const orderResult: OrderSubmissionResponse = await orderResponse.json();
-    
+    const orderResult = await orderResponse.json();
     console.log('Order submission response:', JSON.stringify(orderResult, null, 2));
 
-    // Log the order submission
-    await supabase.from('ezyparts_logs').insert({
-      level: 'info',
-      message: 'Order submitted successfully',
-      data: {
-        user_id,
-        sales_order_number: orderResult.salesOrderNumber,
-        success_items: orderResult.successOrderLines.length,
-        failed_items: orderResult.failOrderLines.length
-      }
+    // Process the response according to EzyParts API specification
+    const response = {
+      success: true,
+      salesOrderNumber: orderResult.salesOrderNumber,
+      successItems: orderResult.successOrderLines || [],
+      failedItems: orderResult.failOrderLines || [],
+      headers: orderResult.headers,
+      message: orderResult.failOrderLines && orderResult.failOrderLines.length > 0 
+        ? `Order submitted with ${orderResult.failOrderLines.length} discrepancies`
+        : 'Order submitted successfully'
+    };
+
+    console.log('Processed response:', JSON.stringify(response, null, 2));
+
+    return new Response(JSON.stringify(response), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200
     });
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        salesOrderNumber: orderResult.salesOrderNumber,
-        successItems: orderResult.successOrderLines,
-        failedItems: orderResult.failOrderLines,
-        message: `Order ${orderResult.salesOrderNumber} submitted successfully`
-      }),
-      { status: 200, headers: corsHeaders }
-    );
-
   } catch (error) {
-    console.error('Error in ezyparts-order function:', error);
+    console.error('Error in EzyParts order submission:', error);
     
-    return new Response(
-      JSON.stringify({ 
-        error: error instanceof Error ? error.message : 'Unknown error occurred',
-        success: false 
-      }),
-      { status: 500, headers: corsHeaders }
-    );
+    return new Response(JSON.stringify({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred',
+      message: 'Failed to submit order to EzyParts'
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 500
+    });
   }
 });
