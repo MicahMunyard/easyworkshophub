@@ -12,6 +12,7 @@ import SupplierForm from './SupplierForm';
 import SupplierList from './supplier/SupplierList';
 import ManualOrderForm from './ManualOrderForm';
 import EzyPartsOrderModal from './EzyPartsOrderModal';
+import VehicleSearch from '../ezyparts/vehicle-search/VehicleSearch';
 
 const SupplierManagement: React.FC = () => {
   const { suppliers, addSupplier, updateSupplier, deleteSupplier } = useSuppliers();
@@ -20,6 +21,7 @@ const SupplierManagement: React.FC = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isManualOrderOpen, setIsManualOrderOpen] = useState(false);
   const [isEzyPartsOrderOpen, setIsEzyPartsOrderOpen] = useState(false);
+  const [isEzyPartsSearchOpen, setIsEzyPartsSearchOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | undefined>(undefined);
   const [selectedSupplierForOrder, setSelectedSupplierForOrder] = useState<Supplier | null>(null);
 
@@ -58,8 +60,8 @@ const SupplierManagement: React.FC = () => {
 
   const handleGetQuote = (supplier: Supplier) => {
     if (supplier.name === 'Burson Auto Parts') {
-      // Navigate to EzyParts dashboard for quote functionality
-      navigate('/ezyparts');
+      // Open the EzyParts search/auth flow directly
+      setIsEzyPartsSearchOpen(true);
     } else {
       toast({
         title: "Quote System",
@@ -95,6 +97,10 @@ const SupplierManagement: React.FC = () => {
   const handleCloseEzyPartsOrder = () => {
     setIsEzyPartsOrderOpen(false);
     setSelectedSupplierForOrder(null);
+  };
+
+  const handleCloseEzyPartsSearch = () => {
+    setIsEzyPartsSearchOpen(false);
   };
 
   return (
@@ -164,6 +170,16 @@ const SupplierManagement: React.FC = () => {
           onClose={handleCloseEzyPartsOrder}
         />
       )}
+
+      {/* EzyParts Search/Quote Modal */}
+      <Dialog open={isEzyPartsSearchOpen} onOpenChange={setIsEzyPartsSearchOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>EzyParts - Get Quote</DialogTitle>
+          </DialogHeader>
+          <VehicleSearch onClose={handleCloseEzyPartsSearch} />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
