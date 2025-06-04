@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -177,7 +176,7 @@ const SupplierManagement: React.FC = () => {
           <DialogHeader>
             <DialogTitle>EzyParts - Get Quote</DialogTitle>
           </DialogHeader>
-          <VehicleSearch onClose={handleCloseEzyPartsSearch} />
+          <VehicleSearch />
         </DialogContent>
       </Dialog>
     </div>
