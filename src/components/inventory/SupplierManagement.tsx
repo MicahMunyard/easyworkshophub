@@ -2,17 +2,24 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Package } from 'lucide-react';
+import { Plus, Package, ShoppingCart } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Supplier } from '@/types/inventory';
 import { useSuppliers } from '@/hooks/inventory/useSuppliers';
+import { useToast } from '@/components/ui/use-toast';
 import SupplierForm from './SupplierForm';
 import SupplierList from './supplier/SupplierList';
+import OrderSelectionModal from './OrderSelectionModal';
+import ManualOrderForm from './ManualOrderForm';
 
 const SupplierManagement: React.FC = () => {
   const { suppliers, addSupplier, updateSupplier, deleteSupplier } = useSuppliers();
+  const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+  const [isManualOrderOpen, setIsManualOrderOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | undefined>(undefined);
+  const [selectedSupplierForOrder, setSelectedSupplierForOrder] = useState<Supplier | null>(null);
 
   const handleOpenDialog = (supplier?: Supplier) => {
     setEditingSupplier(supplier);
@@ -47,6 +54,27 @@ const SupplierManagement: React.FC = () => {
     }
   };
 
+  const handleStartApiOrder = (supplier: Supplier) => {
+    // For API suppliers, we would initiate their authentication flow
+    // For now, we'll show a toast indicating this would connect to their API
+    toast({
+      title: "API Integration",
+      description: `Connecting to ${supplier.name} API for ordering. This would normally initiate their authentication flow.`,
+    });
+    setIsOrderModalOpen(false);
+  };
+
+  const handleStartManualOrder = (supplier: Supplier) => {
+    setSelectedSupplierForOrder(supplier);
+    setIsOrderModalOpen(false);
+    setIsManualOrderOpen(true);
+  };
+
+  const handleCloseManualOrder = () => {
+    setIsManualOrderOpen(false);
+    setSelectedSupplierForOrder(null);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -54,9 +82,14 @@ const SupplierManagement: React.FC = () => {
           <h2 className="text-2xl font-bold">Supplier Management</h2>
           <p className="text-muted-foreground">Manage your parts suppliers and connections</p>
         </div>
-        <Button onClick={() => handleOpenDialog()}>
-          <Plus className="h-4 w-4 mr-2" /> Add Supplier
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setIsOrderModalOpen(true)}>
+            <ShoppingCart className="h-4 w-4 mr-2" /> New Order
+          </Button>
+          <Button onClick={() => handleOpenDialog()}>
+            <Plus className="h-4 w-4 mr-2" /> Add Supplier
+          </Button>
+        </div>
       </div>
 
       {suppliers.length === 0 ? (
@@ -80,6 +113,7 @@ const SupplierManagement: React.FC = () => {
         />
       )}
 
+      {/* Add/Edit Supplier Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -94,6 +128,24 @@ const SupplierManagement: React.FC = () => {
           />
         </DialogContent>
       </Dialog>
+
+      {/* Order Selection Modal */}
+      <OrderSelectionModal
+        isOpen={isOrderModalOpen}
+        onClose={() => setIsOrderModalOpen(false)}
+        suppliers={suppliers}
+        onStartApiOrder={handleStartApiOrder}
+        onStartManualOrder={handleStartManualOrder}
+      />
+
+      {/* Manual Order Form */}
+      {selectedSupplierForOrder && (
+        <ManualOrderForm
+          isOpen={isManualOrderOpen}
+          onClose={handleCloseManualOrder}
+          supplier={selectedSupplierForOrder}
+        />
+      )}
     </div>
   );
 };
