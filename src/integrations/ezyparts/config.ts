@@ -1,12 +1,12 @@
 
 export const EZYPARTS_CONFIG = {
   PRODUCTION: {
-    BASE: 'https://api.ezyparts.burson.com.au/bapcorocc/v2/EzyParts/gms',
+    BASE: 'https://api.ezyparts.burson.com.au/bapcorocc/v2/EzyParts/orderSubmission',
     AUTH: 'https://api.ezyparts.burson.com.au/authorizationserver/oauth/token',
     WEB: 'https://ezyparts.burson.com.au/burson'
   },
   STAGING: {
-    BASE: 'https://api.ezypartsqa.burson.com.au/bapcorocc/v2/EzyParts/gms',
+    BASE: 'https://api.ezypartsqa.burson.com.au/bapcorocc/v2/EzyParts/orderSubmission',
     AUTH: 'https://api.ezypartsqa.burson.com.au/authorizationserver/oauth/token',
     WEB: 'https://ezypartsqa.burson.com.au/burson'
   }

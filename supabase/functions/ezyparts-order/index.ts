@@ -56,13 +56,13 @@ serve(async (req) => {
       throw new Error('EzyParts OAuth credentials not configured');
     }
 
-    // Determine API endpoints based on environment - FIXED URLs
+    // Determine API endpoints based on environment - CORRECTED ENDPOINTS
     const endpoints = environment === 'production' ? {
       auth: 'https://api.ezyparts.burson.com.au/authorizationserver/oauth/token',
-      api: 'https://api.ezyparts.burson.com.au/bapcorocc/v2/EzyParts/gms'
+      api: 'https://api.ezyparts.burson.com.au/bapcorocc/v2/EzyParts/orderSubmission'
     } : {
       auth: 'https://api.ezypartsqa.burson.com.au/authorizationserver/oauth/token',
-      api: 'https://api.ezypartsqa.burson.com.au/bapcorocc/v2/EzyParts/gms'
+      api: 'https://api.ezypartsqa.burson.com.au/bapcorocc/v2/EzyParts/orderSubmission'
     };
 
     console.log('Using environment:', environment);
