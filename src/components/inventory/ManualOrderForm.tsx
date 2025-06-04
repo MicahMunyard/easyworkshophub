@@ -146,7 +146,8 @@ const ManualOrderForm: React.FC<ManualOrderFormProps> = ({
         { email: supplier.email, name: supplier.contactPerson || supplier.name },
         {
           subject: emailSubject,
-          html: emailContent
+          html: emailContent,
+          text: emailContent.replace(/<[^>]*>/g, '') // Strip HTML for text version
         }
       );
 
