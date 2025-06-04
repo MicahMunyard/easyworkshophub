@@ -1,4 +1,3 @@
-
 import React from "react";
 import { 
   Gauge, 
@@ -60,8 +59,8 @@ const Dashboard: React.FC = () => {
         </h1>
       </div>
       
-      {/* Video carousel with proper height to contain the videos */}
-      <div className="w-full h-[320px] md:h-[320px]">
+      {/* Video carousel with increased height to prevent overlap */}
+      <div className="w-full h-[380px] md:h-[380px]">
         <VideoCarousel videos={DASHBOARD_VIDEOS} />
       </div>
       
