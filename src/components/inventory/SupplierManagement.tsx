@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,20 +8,21 @@ import { Supplier } from '@/types/inventory';
 import { useSuppliers } from '@/hooks/inventory/useSuppliers';
 import { useToast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import SupplierForm from './SupplierForm';
 import SupplierList from './supplier/SupplierList';
 import ManualOrderForm from './ManualOrderForm';
 import EzyPartsOrderModal from './EzyPartsOrderModal';
-import VehicleSearch from '../ezyparts/vehicle-search/VehicleSearch';
 
 const SupplierManagement: React.FC = () => {
   const { suppliers, addSupplier, updateSupplier, deleteSupplier } = useSuppliers();
   const { toast } = useToast();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isManualOrderOpen, setIsManualOrderOpen] = useState(false);
   const [isEzyPartsOrderOpen, setIsEzyPartsOrderOpen] = useState(false);
-  const [isEzyPartsSearchOpen, setIsEzyPartsSearchOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | undefined>(undefined);
   const [selectedSupplierForOrder, setSelectedSupplierForOrder] = useState<Supplier | null>(null);
 
@@ -57,10 +59,70 @@ const SupplierManagement: React.FC = () => {
     }
   };
 
-  const handleGetQuote = (supplier: Supplier) => {
+  const handleGetQuote = async (supplier: Supplier) => {
     if (supplier.name === 'Burson Auto Parts') {
-      // Open the EzyParts search/auth flow directly
-      setIsEzyPartsSearchOpen(true);
+      if (!user) {
+        toast({
+          title: "Authentication Required",
+          description: "Please log in to access EzyParts.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      try {
+        // Call the EzyParts search function directly to start auth flow
+        const { data, error } = await supabase.functions.invoke('ezyparts-search', {
+          body: {
+            user_id: user.id,
+            search_params: {} // Empty params will show the general EzyParts interface
+          }
+        });
+
+        if (error) throw error;
+
+        if (data.redirect_url) {
+          // Handle data URL by converting to blob and opening
+          if (data.redirect_url.startsWith('data:text/html;base64,')) {
+            const base64Data = data.redirect_url.split(',')[1];
+            const htmlContent = atob(base64Data);
+            
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const blobUrl = URL.createObjectURL(blob);
+            
+            const newWindow = window.open(blobUrl, '_blank', 'width=1200,height=800');
+            
+            setTimeout(() => {
+              URL.revokeObjectURL(blobUrl);
+            }, 1000);
+            
+            if (newWindow) {
+              toast({
+                title: "EzyParts Opened",
+                description: "Log in to EzyParts to search for parts and get quotes.",
+              });
+            } else {
+              throw new Error('Popup blocked. Please allow popups for this site.');
+            }
+          } else {
+            window.open(data.redirect_url, '_blank', 'width=1200,height=800');
+            
+            toast({
+              title: "EzyParts Opened",
+              description: "Log in to EzyParts to search for parts and get quotes.",
+            });
+          }
+        } else {
+          throw new Error(data.error || 'Failed to generate EzyParts URL');
+        }
+      } catch (error) {
+        console.error('EzyParts auth error:', error);
+        toast({
+          title: "Failed to Open EzyParts",
+          description: error instanceof Error ? error.message : "Failed to open EzyParts authentication.",
+          variant: "destructive"
+        });
+      }
     } else {
       toast({
         title: "Quote System",
@@ -96,10 +158,6 @@ const SupplierManagement: React.FC = () => {
   const handleCloseEzyPartsOrder = () => {
     setIsEzyPartsOrderOpen(false);
     setSelectedSupplierForOrder(null);
-  };
-
-  const handleCloseEzyPartsSearch = () => {
-    setIsEzyPartsSearchOpen(false);
   };
 
   return (
@@ -169,16 +227,6 @@ const SupplierManagement: React.FC = () => {
           onClose={handleCloseEzyPartsOrder}
         />
       )}
-
-      {/* EzyParts Search/Quote Modal */}
-      <Dialog open={isEzyPartsSearchOpen} onOpenChange={setIsEzyPartsSearchOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>EzyParts - Get Quote</DialogTitle>
-          </DialogHeader>
-          <VehicleSearch />
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
