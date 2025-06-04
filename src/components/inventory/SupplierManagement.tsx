@@ -55,12 +55,14 @@ const SupplierManagement: React.FC = () => {
   };
 
   const handleStartApiOrder = (supplier: Supplier) => {
-    // For API suppliers, we would initiate their authentication flow
-    // For now, we'll show a toast indicating this would connect to their API
-    toast({
-      title: "API Integration",
-      description: `Connecting to ${supplier.name} API for ordering. This would normally initiate their authentication flow.`,
-    });
+    // This is now handled in the SupplierOrderCard component
+    // For non-EzyParts API suppliers, we can show a generic message
+    if (supplier.name !== 'Burson Auto Parts' && supplier.supplierId !== 'burson-auto-parts') {
+      toast({
+        title: "API Integration",
+        description: `Connecting to ${supplier.name} API for ordering. This integration is not yet configured.`,
+      });
+    }
     setIsOrderModalOpen(false);
   };
 
