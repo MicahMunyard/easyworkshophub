@@ -56,13 +56,13 @@ serve(async (req) => {
       throw new Error('EzyParts OAuth credentials not configured');
     }
 
-    // Determine API endpoints based on environment - CORRECTED ENDPOINTS
+    // Determine API endpoints based on environment - CORRECT /gms ENDPOINTS FROM DOCUMENTATION
     const endpoints = environment === 'production' ? {
       auth: 'https://api.ezyparts.burson.com.au/authorizationserver/oauth/token',
-      api: 'https://api.ezyparts.burson.com.au/bapcorocc/v2/EzyParts/orderSubmission'
+      api: 'https://api.ezyparts.burson.com.au/bapcorocc/v2/EzyParts/gms'
     } : {
       auth: 'https://api.ezypartsqa.burson.com.au/authorizationserver/oauth/token',
-      api: 'https://api.ezypartsqa.burson.com.au/bapcorocc/v2/EzyParts/orderSubmission'
+      api: 'https://api.ezypartsqa.burson.com.au/bapcorocc/v2/EzyParts/gms'
     };
 
     console.log('Using environment:', environment);
@@ -139,7 +139,7 @@ serve(async (req) => {
 
     console.log('Submitting order to EzyParts:', JSON.stringify(orderRequest, null, 2));
 
-    // Step 3: Submit order to EzyParts using correct endpoint
+    // Step 3: Submit order to EzyParts using correct /gms endpoint
     const orderResponse = await fetch(endpoints.api, {
       method: 'POST',
       headers: {
