@@ -48,9 +48,18 @@ serve(async (req) => {
         );
       }
       
-      const scopes = "CompanyFile.Read CompanyFile.Write Invoice.Read Invoice.Write";
+      // Updated scopes based on documentation
+      const scopes = "sme-company-settings sme-sales";
       
-      const authUrl = `${MYOB_AUTH_URL}?client_id=${MYOB_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=${encodeURIComponent(scopes)}`;
+      // Build auth URL with proper encoding - based on MYOB documentation
+      const authParams = new URLSearchParams({
+        client_id: MYOB_CLIENT_ID,
+        redirect_uri: REDIRECT_URI,
+        response_type: "code",
+        scope: scopes
+      });
+      
+      const authUrl = `${MYOB_AUTH_URL}?${authParams.toString()}`;
       
       console.log("[DEBUG] Generated auth URL:", authUrl);
       
@@ -83,23 +92,24 @@ serve(async (req) => {
       console.log("[DEBUG] Token exchange - REDIRECT_URI:", REDIRECT_URI);
       console.log("[DEBUG] Token exchange - TOKEN_URL:", MYOB_TOKEN_URL);
       
-      // Exchange code for access token
-      const formData = new URLSearchParams();
-      formData.append("client_id", MYOB_CLIENT_ID);
-      formData.append("client_secret", MYOB_CLIENT_SECRET);
-      formData.append("scope", "CompanyFile.Read CompanyFile.Write Invoice.Read Invoice.Write");
-      formData.append("code", code);
-      formData.append("redirect_uri", REDIRECT_URI);
-      formData.append("grant_type", "authorization_code");
+      // Exchange code for access token using proper parameters from documentation
+      const tokenParams = new URLSearchParams({
+        client_id: MYOB_CLIENT_ID,
+        client_secret: MYOB_CLIENT_SECRET,
+        scope: "sme-company-settings sme-sales",
+        code: code,
+        redirect_uri: REDIRECT_URI,
+        grant_type: "authorization_code"
+      });
       
-      console.log("[DEBUG] Form data for token exchange:", Object.fromEntries(formData.entries()));
+      console.log("[DEBUG] Token request params:", Object.fromEntries(tokenParams.entries()));
       
       const tokenResponse = await fetch(MYOB_TOKEN_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
         },
-        body: formData.toString()
+        body: tokenParams.toString()
       });
       
       console.log("[DEBUG] Token response status:", tokenResponse.status);
@@ -185,18 +195,19 @@ serve(async (req) => {
         );
       }
       
-      const formData = new URLSearchParams();
-      formData.append("client_id", MYOB_CLIENT_ID);
-      formData.append("client_secret", MYOB_CLIENT_SECRET);
-      formData.append("refresh_token", refreshToken);
-      formData.append("grant_type", "refresh_token");
+      const refreshParams = new URLSearchParams({
+        client_id: MYOB_CLIENT_ID,
+        client_secret: MYOB_CLIENT_SECRET,
+        refresh_token: refreshToken,
+        grant_type: "refresh_token"
+      });
       
       const refreshResponse = await fetch(MYOB_TOKEN_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
         },
-        body: formData.toString()
+        body: refreshParams.toString()
       });
       
       if (!refreshResponse.ok) {
@@ -336,6 +347,7 @@ serve(async (req) => {
           tokenLength: myobAccessToken?.length
         });
   
+        // Create cftoken based on documentation
         const cfTokenValue = btoa("administrator:");
         console.log('[DEBUG] Created cftoken header');
   
