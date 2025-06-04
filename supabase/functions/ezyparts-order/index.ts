@@ -47,16 +47,21 @@ serve(async (req) => {
     console.log('Processing order for user:', user_id);
     console.log('Order data:', JSON.stringify(order_data, null, 2));
 
-    // Get EzyParts configuration from secrets
+    // Get EzyParts configuration from secrets with validation
     const environment = Deno.env.get('EZYPARTS_ENVIRONMENT') || 'staging';
     const clientId = Deno.env.get('BURSONS_OAUTH_NAME');
     const clientSecret = Deno.env.get('BURSONS_OAUTH_SECRET');
+
+    console.log('Environment variables check:');
+    console.log('- EZYPARTS_ENVIRONMENT:', environment);
+    console.log('- BURSONS_OAUTH_NAME exists:', !!clientId);
+    console.log('- BURSONS_OAUTH_SECRET exists:', !!clientSecret);
 
     if (!clientId || !clientSecret) {
       throw new Error('EzyParts OAuth credentials not configured');
     }
 
-    // Determine API endpoints based on environment - CORRECT /gms ENDPOINTS FROM DOCUMENTATION
+    // Determine API endpoints based on environment
     const endpoints = environment === 'production' ? {
       auth: 'https://api.ezyparts.burson.com.au/authorizationserver/oauth/token',
       api: 'https://api.ezyparts.burson.com.au/bapcorocc/v2/EzyParts/gms'
@@ -68,6 +73,20 @@ serve(async (req) => {
     console.log('Using environment:', environment);
     console.log('Auth endpoint:', endpoints.auth);
     console.log('API endpoint:', endpoints.api);
+
+    // Validate required fields
+    if (!order_data.parts || !Array.isArray(order_data.parts) || order_data.parts.length === 0) {
+      throw new Error('Order must contain at least one part');
+    }
+
+    // Validate each part has required fields
+    for (const part of order_data.parts) {
+      if (!part.sku || !part.qty || part.nettPriceEach === undefined) {
+        throw new Error('Each part must have sku, qty, and nettPriceEach');
+      }
+    }
+
+    console.log('Input validation passed for', order_data.parts.length, 'parts');
 
     // Step 1: Get OAuth token
     console.log('Requesting OAuth token...');
@@ -88,7 +107,9 @@ serve(async (req) => {
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text();
       console.error('Token request failed:', errorText);
-      throw new Error(`Failed to get OAuth token: ${tokenResponse.status} ${tokenResponse.statusText}`);
+      console.error('Token response status:', tokenResponse.status);
+      console.error('Token response headers:', Object.fromEntries(tokenResponse.headers.entries()));
+      throw new Error(`Failed to get OAuth token: ${tokenResponse.status} ${tokenResponse.statusText} - ${errorText}`);
     }
 
     const tokenData = await tokenResponse.json();
@@ -100,7 +121,9 @@ serve(async (req) => {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric'
-    });
+    }).replace(/\//g, '/'); // Ensure dd/mm/yyyy format
+
+    console.log('Date served formatted as:', dateServed);
 
     // Build the order request payload exactly as specified in the documentation
     const orderRequest = {
@@ -152,10 +175,24 @@ serve(async (req) => {
 
     const responseText = await orderResponse.text();
     console.log('Raw API response:', responseText);
+    console.log('Response status:', orderResponse.status);
+    console.log('Response headers:', Object.fromEntries(orderResponse.headers.entries()));
 
     if (!orderResponse.ok) {
       console.error('Order submission failed:', responseText);
-      throw new Error(`Order submission failed: ${orderResponse.status} ${orderResponse.statusText} - ${responseText}`);
+      
+      // Try to parse error response for better error handling
+      let errorDetails = responseText;
+      try {
+        const errorJson = JSON.parse(responseText);
+        if (errorJson.errors && Array.isArray(errorJson.errors)) {
+          errorDetails = errorJson.errors.map(e => e.message).join(', ');
+        }
+      } catch (parseError) {
+        console.log('Could not parse error response as JSON, using raw text');
+      }
+      
+      throw new Error(`Order submission failed: ${orderResponse.status} ${orderResponse.statusText} - ${errorDetails}`);
     }
 
     let orderResult;
