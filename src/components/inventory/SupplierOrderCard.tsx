@@ -5,9 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Supplier } from '@/types/inventory';
 import { ShoppingCart, Package, Mail, Phone } from 'lucide-react';
-import { EzyPartsClient } from '@/integrations/ezyparts/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface SupplierOrderCardProps {
   supplier: Supplier;
@@ -27,34 +27,70 @@ const SupplierOrderCard: React.FC<SupplierOrderCardProps> = ({
     if (supplier.connectionType === 'api') {
       // Check if this is Burson Auto Parts
       if (supplier.name === 'Burson Auto Parts') {
+        if (!user) {
+          toast({
+            title: "Authentication Required",
+            description: "Please log in to access EzyParts.",
+            variant: "destructive"
+          });
+          return;
+        }
+
         try {
-          // Generate the EzyParts auth URL with form submission
-          const authForm = EzyPartsClient.generateEzyPartsUrl({
-            accountId: 'your-account-id', // This should come from supplier config
-            username: 'your-username', // This should come from supplier config
-            password: 'your-password', // This should come from supplier config
-            quoteUrl: `${window.location.origin}/ezyparts/callback`,
-            returnUrl: `${window.location.origin}/inventory`,
-            isProduction: false // Use staging for now
+          // Use the same EzyParts search function as the dashboard
+          const { data, error } = await supabase.functions.invoke('ezyparts-search', {
+            body: {
+              user_id: user.id,
+              search_params: {} // Empty params will show the general search interface
+            }
           });
 
-          // Create a new window/tab with the form
-          const newWindow = window.open('about:blank', '_blank');
-          if (newWindow) {
-            newWindow.document.write(authForm);
-            newWindow.document.close();
+          if (error) throw error;
+
+          if (data.redirect_url) {
+            // Handle data URL by converting to blob and opening
+            if (data.redirect_url.startsWith('data:text/html;base64,')) {
+              // Decode the base64 HTML
+              const base64Data = data.redirect_url.split(',')[1];
+              const htmlContent = atob(base64Data);
+              
+              // Create a blob and open it
+              const blob = new Blob([htmlContent], { type: 'text/html' });
+              const blobUrl = URL.createObjectURL(blob);
+              
+              // Open the blob URL in a new window
+              const newWindow = window.open(blobUrl, '_blank', 'width=1200,height=800');
+              
+              // Clean up the blob URL after a short delay
+              setTimeout(() => {
+                URL.revokeObjectURL(blobUrl);
+              }, 1000);
+              
+              if (newWindow) {
+                toast({
+                  title: "EzyParts Opened",
+                  description: "Search for parts and click 'Send to WMS' to add them to your inventory.",
+                });
+              } else {
+                throw new Error('Popup blocked. Please allow popups for this site.');
+              }
+            } else {
+              // Regular URL - open directly
+              window.open(data.redirect_url, '_blank', 'width=1200,height=800');
+              
+              toast({
+                title: "EzyParts Opened",
+                description: "Search for parts and click 'Send to WMS' to add them to your inventory.",
+              });
+            }
           } else {
-            toast({
-              title: "Pop-up Blocked",
-              description: "Please allow pop-ups for this site to connect to EzyParts.",
-              variant: "destructive"
-            });
+            throw new Error(data.error || 'Failed to generate EzyParts URL');
           }
         } catch (error) {
           console.error('Error initiating EzyParts auth:', error);
           toast({
             title: "Connection Error",
-            description: "Failed to initiate EzyParts connection. Please try again.",
+            description: error instanceof Error ? error.message : "Failed to initiate EzyParts connection. Please try again.",
             variant: "destructive"
           });
         }
@@ -86,7 +122,7 @@ const SupplierOrderCard: React.FC<SupplierOrderCardProps> = ({
           
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Mail className="h-4 w-4" />
-            <span>{supplier.email}</span>
+            <span className="truncate">{supplier.email}</span>
           </div>
           
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
