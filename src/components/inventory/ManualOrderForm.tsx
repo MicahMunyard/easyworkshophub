@@ -17,6 +17,8 @@ interface OrderLineItem {
   itemId: string;
   itemName: string;
   quantity: number;
+  price: number;
+  total: number;
   notes?: string;
 }
 
@@ -35,17 +37,24 @@ const ManualOrderForm: React.FC<ManualOrderFormProps> = ({
   const { toast } = useToast();
   const [orderItems, setOrderItems] = useState<OrderLineItem[]>([]);
   const [orderNotes, setOrderNotes] = useState('');
+  const [capricornNumber, setCapricornNumber] = useState('');
+  const [poNumber, setPoNumber] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Filter items for this supplier
   const supplierItems = inventoryItems.filter(item => item.supplierId === supplier.id);
+
+  // Calculate total order price
+  const orderTotal = orderItems.reduce((sum, item) => sum + item.total, 0);
 
   const addOrderItem = () => {
     const newItem: OrderLineItem = {
       id: Date.now().toString(),
       itemId: '',
       itemName: '',
-      quantity: 1
+      quantity: 1,
+      price: 0,
+      total: 0
     };
     setOrderItems([...orderItems, newItem]);
   };
@@ -55,13 +64,24 @@ const ManualOrderForm: React.FC<ManualOrderFormProps> = ({
       if (item.id === id) {
         if (field === 'itemId' && typeof value === 'string') {
           const selectedItem = supplierItems.find(i => i.id === value);
-          return {
+          const updatedItem = {
             ...item,
             [field]: value,
-            itemName: selectedItem?.name || ''
+            itemName: selectedItem?.name || '',
+            price: selectedItem?.price || 0
           };
+          updatedItem.total = updatedItem.quantity * updatedItem.price;
+          return updatedItem;
         }
-        return { ...item, [field]: value };
+        
+        const updatedItem = { ...item, [field]: value };
+        
+        // Recalculate total if quantity or price changed
+        if (field === 'quantity' || field === 'price') {
+          updatedItem.total = updatedItem.quantity * updatedItem.price;
+        }
+        
+        return updatedItem;
       }
       return item;
     }));
@@ -101,16 +121,21 @@ const ManualOrderForm: React.FC<ManualOrderFormProps> = ({
           product: item.itemName,
           code: inventoryItem?.code || 'N/A',
           quantity: item.quantity,
+          price: item.price.toFixed(2),
+          total: item.total.toFixed(2),
           notes: item.notes || ''
         };
       });
 
       // Create email content
-      const emailSubject = `New Parts Order from WorkshopBase`;
+      const emailSubject = `New Parts Order from WorkshopBase${poNumber ? ` - PO: ${poNumber}` : ''}`;
       const emailContent = `
         <h2>New Parts Order Request</h2>
         <p>Dear ${supplier.contactPerson || supplier.name},</p>
         <p>We would like to place the following order:</p>
+        
+        ${poNumber ? `<p><strong>Purchase Order Number:</strong> ${poNumber}</p>` : ''}
+        ${capricornNumber ? `<p><strong>Capricorn Number:</strong> ${capricornNumber}</p>` : ''}
         
         <table style="border-collapse: collapse; width: 100%; margin: 20px 0;">
           <thead>
@@ -118,6 +143,8 @@ const ManualOrderForm: React.FC<ManualOrderFormProps> = ({
               <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Product</th>
               <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Code</th>
               <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Quantity</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Price</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Total</th>
               <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Notes</th>
             </tr>
           </thead>
@@ -126,11 +153,20 @@ const ManualOrderForm: React.FC<ManualOrderFormProps> = ({
               <tr>
                 <td style="border: 1px solid #ddd; padding: 8px;">${item.product}</td>
                 <td style="border: 1px solid #ddd; padding: 8px;">${item.code}</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">${item.quantity}</td>
+                <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${item.quantity}</td>
+                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">$${item.price}</td>
+                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">$${item.total}</td>
                 <td style="border: 1px solid #ddd; padding: 8px;">${item.notes}</td>
               </tr>
             `).join('')}
           </tbody>
+          <tfoot>
+            <tr style="background-color: #f5f5f5; font-weight: bold;">
+              <td colspan="4" style="border: 1px solid #ddd; padding: 8px; text-align: right;">Total Order Value:</td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">$${orderTotal.toFixed(2)}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;"></td>
+            </tr>
+          </tfoot>
         </table>
         
         ${orderNotes ? `<p><strong>Additional Notes:</strong><br>${orderNotes.replace(/\n/g, '<br>')}</p>` : ''}
@@ -161,6 +197,8 @@ const ManualOrderForm: React.FC<ManualOrderFormProps> = ({
         // Reset form and close
         setOrderItems([]);
         setOrderNotes('');
+        setCapricornNumber('');
+        setPoNumber('');
         onClose();
       } else {
         throw new Error(result.error?.message || 'Failed to send order');
@@ -179,12 +217,35 @@ const ManualOrderForm: React.FC<ManualOrderFormProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create Order - {supplier.name}</DialogTitle>
         </DialogHeader>
         
         <div className="space-y-4">
+          {/* Order Reference Fields */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg bg-gray-50">
+            <div className="space-y-2">
+              <Label htmlFor="poNumber">Purchase Order Number</Label>
+              <Input
+                id="poNumber"
+                placeholder="Enter PO number"
+                value={poNumber}
+                onChange={(e) => setPoNumber(e.target.value)}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="capricornNumber">Capricorn Number</Label>
+              <Input
+                id="capricornNumber"
+                placeholder="Enter Capricorn number"
+                value={capricornNumber}
+                onChange={(e) => setCapricornNumber(e.target.value)}
+              />
+            </div>
+          </div>
+
           {/* Order Items */}
           <div className="space-y-3">
             <div className="flex justify-between items-center">
@@ -203,7 +264,7 @@ const ManualOrderForm: React.FC<ManualOrderFormProps> = ({
               <div className="space-y-3">
                 {orderItems.map((item) => (
                   <div key={item.id} className="grid grid-cols-1 md:grid-cols-12 gap-3 p-4 border rounded-lg">
-                    <div className="md:col-span-4">
+                    <div className="md:col-span-3">
                       <Label className="text-sm">Product</Label>
                       <Select 
                         value={item.itemId} 
@@ -232,10 +293,31 @@ const ManualOrderForm: React.FC<ManualOrderFormProps> = ({
                       />
                     </div>
                     
-                    <div className="md:col-span-5">
+                    <div className="md:col-span-2">
+                      <Label className="text-sm">Price</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={item.price}
+                        onChange={(e) => updateOrderItem(item.id, 'price', parseFloat(e.target.value) || 0)}
+                      />
+                    </div>
+                    
+                    <div className="md:col-span-2">
+                      <Label className="text-sm">Total</Label>
+                      <Input
+                        type="text"
+                        value={`$${item.total.toFixed(2)}`}
+                        readOnly
+                        className="bg-gray-100"
+                      />
+                    </div>
+                    
+                    <div className="md:col-span-2">
                       <Label className="text-sm">Notes (Optional)</Label>
                       <Input
-                        placeholder="Special requirements, specifications..."
+                        placeholder="Special requirements..."
                         value={item.notes || ''}
                         onChange={(e) => updateOrderItem(item.id, 'notes', e.target.value)}
                       />
@@ -252,6 +334,15 @@ const ManualOrderForm: React.FC<ManualOrderFormProps> = ({
                     </div>
                   </div>
                 ))}
+                
+                {/* Order Total */}
+                {orderItems.length > 0 && (
+                  <div className="flex justify-end p-4 bg-gray-50 rounded-lg">
+                    <div className="text-right">
+                      <Label className="text-lg font-semibold">Order Total: ${orderTotal.toFixed(2)}</Label>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
