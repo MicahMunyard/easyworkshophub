@@ -3,19 +3,23 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Settings, CheckCircle, Edit } from 'lucide-react';
+import { Settings, CheckCircle, Edit, FileText, ShoppingCart } from 'lucide-react';
 import { Supplier } from '@/types/inventory';
 
 interface ApiSupplierCardProps {
   supplier: Supplier;
   onEdit: (supplier: Supplier) => void;
   onDelete: (supplier: Supplier) => void;
+  onGetQuote: (supplier: Supplier) => void;
+  onNewOrder: (supplier: Supplier) => void;
 }
 
 const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({
   supplier,
   onEdit,
-  onDelete
+  onDelete,
+  onGetQuote,
+  onNewOrder
 }) => {
   const isConnected = supplier.apiConfig?.isConnected || false;
 
@@ -75,15 +79,35 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({
           </div>
         )}
 
-        <div className="flex gap-2 pt-2">
+        <div className="flex flex-col gap-2 pt-2">
           <Button 
             variant="outline" 
             size="sm" 
             onClick={() => onEdit(supplier)}
-            className="flex-1"
+            className="w-full"
           >
             <Edit className="h-4 w-4 mr-2" />
             Edit
+          </Button>
+          
+          {/* Get Quote button for API suppliers */}
+          <Button 
+            onClick={() => onGetQuote(supplier)}
+            className="w-full"
+            variant="outline"
+          >
+            <FileText className="h-4 w-4 mr-2" />
+            Get Quote
+          </Button>
+          
+          {/* New Order button for API suppliers (EzyParts flow) */}
+          <Button 
+            onClick={() => onNewOrder(supplier)}
+            className="w-full"
+            variant="default"
+          >
+            <ShoppingCart className="h-4 w-4 mr-2" />
+            New Order
           </Button>
         </div>
       </CardContent>

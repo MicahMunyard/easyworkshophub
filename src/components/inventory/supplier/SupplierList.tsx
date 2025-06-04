@@ -8,12 +8,16 @@ interface SupplierListProps {
   suppliers: Supplier[];
   onEdit: (supplier: Supplier) => void;
   onDelete: (supplier: Supplier) => void;
+  onGetQuote?: (supplier: Supplier) => void;
+  onNewOrder: (supplier: Supplier) => void;
 }
 
 const SupplierList: React.FC<SupplierListProps> = ({
   suppliers,
   onEdit,
-  onDelete
+  onDelete,
+  onGetQuote,
+  onNewOrder
 }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -25,6 +29,8 @@ const SupplierList: React.FC<SupplierListProps> = ({
               supplier={supplier}
               onEdit={onEdit}
               onDelete={onDelete}
+              onGetQuote={onGetQuote || (() => {})}
+              onNewOrder={onNewOrder}
             />
           );
         }
@@ -35,6 +41,7 @@ const SupplierList: React.FC<SupplierListProps> = ({
             supplier={supplier}
             onEdit={onEdit}
             onDelete={onDelete}
+            onNewOrder={onNewOrder}
           />
         );
       })}

@@ -3,19 +3,21 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Edit, Trash2, Phone, Mail, MapPin } from 'lucide-react';
+import { Edit, Trash2, Phone, Mail, MapPin, ShoppingCart } from 'lucide-react';
 import { Supplier } from '@/types/inventory';
 
 interface SupplierCardProps {
   supplier: Supplier;
   onEdit: (supplier: Supplier) => void;
   onDelete: (supplier: Supplier) => void;
+  onNewOrder: (supplier: Supplier) => void;
 }
 
 const SupplierCard: React.FC<SupplierCardProps> = ({
   supplier,
   onEdit,
-  onDelete
+  onDelete,
+  onNewOrder
 }) => {
   return (
     <Card className="relative">
@@ -66,23 +68,35 @@ const SupplierCard: React.FC<SupplierCardProps> = ({
           </div>
         )}
 
-        <div className="flex gap-2 pt-2">
+        <div className="flex flex-col gap-2 pt-2">
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => onEdit(supplier)}
+              className="flex-1"
+            >
+              <Edit className="h-4 w-4 mr-2" />
+              Edit
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => onDelete(supplier)}
+              className="text-red-600 hover:text-red-700"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+          
+          {/* New Order button for manual suppliers */}
           <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => onEdit(supplier)}
-            className="flex-1"
+            onClick={() => onNewOrder(supplier)}
+            className="w-full"
+            variant="default"
           >
-            <Edit className="h-4 w-4 mr-2" />
-            Edit
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => onDelete(supplier)}
-            className="text-red-600 hover:text-red-700"
-          >
-            <Trash2 className="h-4 w-4" />
+            <ShoppingCart className="h-4 w-4 mr-2" />
+            New Order
           </Button>
         </div>
       </CardContent>

@@ -2,22 +2,24 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Package, ShoppingCart } from 'lucide-react';
+import { Plus, Package } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Supplier } from '@/types/inventory';
 import { useSuppliers } from '@/hooks/inventory/useSuppliers';
 import { useToast } from '@/components/ui/use-toast';
+import { useNavigate } from 'react-router-dom';
 import SupplierForm from './SupplierForm';
 import SupplierList from './supplier/SupplierList';
-import OrderSelectionModal from './OrderSelectionModal';
 import ManualOrderForm from './ManualOrderForm';
+import EzyPartsOrderModal from './EzyPartsOrderModal';
 
 const SupplierManagement: React.FC = () => {
   const { suppliers, addSupplier, updateSupplier, deleteSupplier } = useSuppliers();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [isManualOrderOpen, setIsManualOrderOpen] = useState(false);
+  const [isEzyPartsOrderOpen, setIsEzyPartsOrderOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | undefined>(undefined);
   const [selectedSupplierForOrder, setSelectedSupplierForOrder] = useState<Supplier | null>(null);
 
@@ -54,26 +56,44 @@ const SupplierManagement: React.FC = () => {
     }
   };
 
-  const handleStartApiOrder = (supplier: Supplier) => {
-    // This is now handled in the SupplierOrderCard component
-    // For non-EzyParts API suppliers, we can show a generic message
-    if (supplier.name !== 'Burson Auto Parts') {
+  const handleGetQuote = (supplier: Supplier) => {
+    if (supplier.name === 'Burson Auto Parts') {
+      // Navigate to EzyParts dashboard for quote functionality
+      navigate('/ezyparts');
+    } else {
       toast({
-        title: "API Integration",
-        description: `Connecting to ${supplier.name} API for ordering. This integration is not yet configured.`,
+        title: "Quote System",
+        description: `Quote functionality for ${supplier.name} is not yet configured.`,
       });
     }
-    setIsOrderModalOpen(false);
   };
 
-  const handleStartManualOrder = (supplier: Supplier) => {
-    setSelectedSupplierForOrder(supplier);
-    setIsOrderModalOpen(false);
-    setIsManualOrderOpen(true);
+  const handleNewOrder = (supplier: Supplier) => {
+    if (supplier.connectionType === 'api') {
+      if (supplier.name === 'Burson Auto Parts') {
+        // Open EzyParts order modal
+        setSelectedSupplierForOrder(supplier);
+        setIsEzyPartsOrderOpen(true);
+      } else {
+        toast({
+          title: "API Integration",
+          description: `Order integration for ${supplier.name} is not yet configured.`,
+        });
+      }
+    } else {
+      // Open manual order form for manual suppliers
+      setSelectedSupplierForOrder(supplier);
+      setIsManualOrderOpen(true);
+    }
   };
 
   const handleCloseManualOrder = () => {
     setIsManualOrderOpen(false);
+    setSelectedSupplierForOrder(null);
+  };
+
+  const handleCloseEzyPartsOrder = () => {
+    setIsEzyPartsOrderOpen(false);
     setSelectedSupplierForOrder(null);
   };
 
@@ -84,14 +104,9 @@ const SupplierManagement: React.FC = () => {
           <h2 className="text-2xl font-bold">Supplier Management</h2>
           <p className="text-muted-foreground">Manage your parts suppliers and connections</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setIsOrderModalOpen(true)}>
-            <ShoppingCart className="h-4 w-4 mr-2" /> New Order
-          </Button>
-          <Button onClick={() => handleOpenDialog()}>
-            <Plus className="h-4 w-4 mr-2" /> Add Supplier
-          </Button>
-        </div>
+        <Button onClick={() => handleOpenDialog()}>
+          <Plus className="h-4 w-4 mr-2" /> Add Supplier
+        </Button>
       </div>
 
       {suppliers.length === 0 ? (
@@ -112,6 +127,8 @@ const SupplierManagement: React.FC = () => {
           suppliers={suppliers}
           onEdit={handleOpenDialog}
           onDelete={handleDelete}
+          onGetQuote={handleGetQuote}
+          onNewOrder={handleNewOrder}
         />
       )}
 
@@ -131,21 +148,20 @@ const SupplierManagement: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Order Selection Modal */}
-      <OrderSelectionModal
-        isOpen={isOrderModalOpen}
-        onClose={() => setIsOrderModalOpen(false)}
-        suppliers={suppliers}
-        onStartApiOrder={handleStartApiOrder}
-        onStartManualOrder={handleStartManualOrder}
-      />
-
       {/* Manual Order Form */}
-      {selectedSupplierForOrder && (
+      {selectedSupplierForOrder && selectedSupplierForOrder.connectionType === 'manual' && (
         <ManualOrderForm
           isOpen={isManualOrderOpen}
           onClose={handleCloseManualOrder}
           supplier={selectedSupplierForOrder}
+        />
+      )}
+
+      {/* EzyParts Order Modal */}
+      {selectedSupplierForOrder && selectedSupplierForOrder.connectionType === 'api' && (
+        <EzyPartsOrderModal 
+          isOpen={isEzyPartsOrderOpen}
+          onClose={handleCloseEzyPartsOrder}
         />
       )}
     </div>
