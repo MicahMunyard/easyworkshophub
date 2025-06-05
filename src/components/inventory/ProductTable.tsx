@@ -6,7 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { InventoryItem } from '@/types/inventory';
-import { Barcode, Copy, Edit, Package, ShoppingCart, Trash2, Tag } from 'lucide-react';
+import { Barcode, Copy, Edit, ShoppingCart, Trash2, Tag } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,6 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { getCategoryIcon, getCategoryColor, getCategoryById } from './config/productCategories';
 
 interface ProductTableProps {
   items: InventoryItem[];
@@ -56,27 +57,27 @@ const ProductTable: React.FC<ProductTableProps> = ({
           ) : (
             items.map((item) => {
               const stockPercentage = (item.inStock / Math.max(item.minStock, 1)) * 100;
+              const CategoryIcon = getCategoryIcon(item.category);
+              const categoryColor = getCategoryColor(item.category);
+              const category = getCategoryById(item.category);
+              
               return (
                 <TableRow key={item.id}>
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      {item.imageUrl ? (
-                        <div className="h-10 w-10 rounded-md overflow-hidden bg-muted">
-                          <img 
-                            src={item.imageUrl} 
-                            alt={item.name} 
-                            className="h-full w-full object-cover"
-                          />
-                        </div>
-                      ) : (
-                        <div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center">
-                          <Package className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                      )}
+                      <div 
+                        className="h-10 w-10 rounded-md flex items-center justify-center"
+                        style={{ backgroundColor: `${categoryColor}20`, border: `1px solid ${categoryColor}40` }}
+                      >
+                        <CategoryIcon 
+                          className="h-5 w-5" 
+                          style={{ color: categoryColor }} 
+                        />
+                      </div>
                       <div>
                         <div className="font-medium">{item.name}</div>
                         <div className="text-sm text-muted-foreground hidden md:block">
-                          {item.category}
+                          {category?.name || item.category}
                         </div>
                       </div>
                     </div>

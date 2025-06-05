@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/select';
 import { InventoryItem, Supplier } from '@/types/inventory';
 import { Barcode, FileText, ShoppingBag, DollarSign, MapPin, Hash, ImageIcon, Tag } from 'lucide-react';
+import CategorySelector from './CategorySelector';
 
 const formSchema = z.object({
   code: z.string().min(1, { message: 'Product code is required' }),
@@ -152,7 +153,10 @@ const ProductForm: React.FC<ProductFormProps> = ({ item, suppliers, onSubmit, on
               <FormItem>
                 <FormLabel>Category</FormLabel>
                 <FormControl>
-                  <Input placeholder="Product category" {...field} />
+                  <CategorySelector
+                    value={field.value}
+                    onChange={field.onChange}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
