@@ -1,6 +1,5 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { 
   Card, 
   CardContent, 
@@ -29,10 +28,8 @@ import {
   Clock, 
   Car, 
   Package, 
-  Search, 
   FileText, 
-  ShoppingBag,
-  ArrowRightToLine
+  ShoppingBag
 } from 'lucide-react';
 import { getSavedQuotes } from '@/utils/inventory/ezyPartsIntegration';
 import { format } from 'date-fns';
@@ -40,7 +37,6 @@ import { useInventoryItems } from '@/hooks/inventory/useInventoryItems';
 import { QuoteResponse } from '@/types/ezyparts';
 
 const EzyPartsHistoryView: React.FC = () => {
-  const navigate = useNavigate();
   const { inventoryItems } = useInventoryItems();
   const [savedQuotes, setSavedQuotes] = useState<any[]>([]);
   const [selectedQuote, setSelectedQuote] = useState<QuoteResponse | null>(null);
@@ -84,10 +80,10 @@ const EzyPartsHistoryView: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
-            EzyParts Quote History
+            Quote History
           </CardTitle>
           <CardDescription>
-            Previous vehicle quotes from EzyParts
+            Previous vehicle quotes from connected suppliers
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -96,15 +92,8 @@ const EzyPartsHistoryView: React.FC = () => {
               <Clock className="h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium">No Quote History</h3>
               <p className="text-muted-foreground max-w-md mt-2">
-                You haven't saved any EzyParts quotes yet. Search for a vehicle to get started.
+                You haven't saved any supplier quotes yet. Get quotes from connected suppliers to see them here.
               </p>
-              <Button 
-                className="mt-4" 
-                onClick={() => navigate('/ezyparts/search')}
-              >
-                <Search className="mr-2 h-4 w-4" />
-                Search Vehicle
-              </Button>
             </div>
           ) : (
             <div className="rounded-md border">
@@ -163,14 +152,10 @@ const EzyPartsHistoryView: React.FC = () => {
             </div>
           )}
         </CardContent>
-        <CardFooter className="justify-between border-t p-4">
+        <CardFooter className="justify-center border-t p-4">
           <div className="text-sm text-muted-foreground">
             {savedQuotes.length} saved quote{savedQuotes.length !== 1 ? 's' : ''}
           </div>
-          <Button variant="outline" onClick={() => navigate('/ezyparts/dashboard')}>
-            <ArrowRightToLine className="mr-2 h-4 w-4" />
-            Go to EzyParts
-          </Button>
         </CardFooter>
       </Card>
 
@@ -260,15 +245,6 @@ const EzyPartsHistoryView: React.FC = () => {
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
               Close
-            </Button>
-            <Button 
-              onClick={() => {
-                setIsDialogOpen(false);
-                navigate('/ezyparts/quote');
-              }}
-            >
-              <ShoppingBag className="mr-2 h-4 w-4" />
-              Go to Quote
             </Button>
           </DialogFooter>
         </DialogContent>
