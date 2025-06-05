@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/dialog';
 import { Plus } from 'lucide-react';
 import { DEFAULT_CATEGORIES, ProductCategory, getCategoryById } from './config/productCategories';
+import { useUserCategories } from '@/hooks/inventory/useUserCategories';
 
 interface CategorySelectorProps {
   value: string;
@@ -32,25 +33,19 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
 }) => {
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
-  const [customCategories, setCustomCategories] = useState<ProductCategory[]>([]);
+  const { userCategories, addUserCategory } = useUserCategories();
 
-  const allCategories = [...DEFAULT_CATEGORIES, ...customCategories];
-  const selectedCategory = getCategoryById(value);
+  const allCategories = [...DEFAULT_CATEGORIES, ...userCategories];
+  const selectedCategory = allCategories.find(cat => cat.id === value) || getCategoryById(value);
 
-  const handleAddCategory = () => {
+  const handleAddCategory = async () => {
     if (newCategoryName.trim()) {
-      const newCategory: ProductCategory = {
-        id: newCategoryName.toLowerCase().replace(/\s+/g, '-'),
-        name: newCategoryName.trim(),
-        icon: DEFAULT_CATEGORIES[DEFAULT_CATEGORIES.length - 1].icon, // Default to Package icon
-        color: '#778899',
-        description: `Custom category: ${newCategoryName.trim()}`
-      };
-      
-      setCustomCategories(prev => [...prev, newCategory]);
-      onChange(newCategory.id);
-      setNewCategoryName('');
-      setIsAddingCategory(false);
+      const newCategory = await addUserCategory(newCategoryName.trim());
+      if (newCategory) {
+        onChange(newCategory.id);
+        setNewCategoryName('');
+        setIsAddingCategory(false);
+      }
     }
   };
 
@@ -84,10 +79,10 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
                   </div>
                 </SelectItem>
               ))}
-              {customCategories.length > 0 && (
+              {userCategories.length > 0 && (
                 <>
                   <div className="border-t my-1" />
-                  {customCategories.map((category) => (
+                  {userCategories.map((category) => (
                     <SelectItem key={category.id} value={category.id}>
                       <div className="flex items-center gap-2">
                         <category.icon 

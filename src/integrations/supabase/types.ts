@@ -1153,6 +1153,39 @@ export type Database = {
         }
         Relationships: []
       }
+      user_inventory_categories: {
+        Row: {
+          color: string
+          created_at: string | null
+          description: string | null
+          icon_name: string
+          id: string
+          name: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string | null
+          description?: string | null
+          icon_name?: string
+          id?: string
+          name: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string | null
+          description?: string | null
+          icon_name?: string
+          id?: string
+          name?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_inventory_items: {
         Row: {
           brand: string | null

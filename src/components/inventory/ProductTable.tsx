@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { getCategoryIcon, getCategoryColor, getCategoryById } from './config/productCategories';
+import { useUserCategories } from '@/hooks/inventory/useUserCategories';
 
 interface ProductTableProps {
   items: InventoryItem[];
@@ -33,6 +34,37 @@ const ProductTable: React.FC<ProductTableProps> = ({
   onAddToOrder,
   getSupplierName
 }) => {
+  const { userCategories } = useUserCategories();
+
+  const getCategoryInfo = (categoryId: string) => {
+    // First check user categories
+    const userCategory = userCategories.find(cat => cat.id === categoryId);
+    if (userCategory) {
+      return {
+        icon: userCategory.icon,
+        color: userCategory.color,
+        name: userCategory.name
+      };
+    }
+
+    // Fall back to default categories
+    const defaultCategory = getCategoryById(categoryId);
+    if (defaultCategory) {
+      return {
+        icon: defaultCategory.icon,
+        color: defaultCategory.color,
+        name: defaultCategory.name
+      };
+    }
+
+    // Ultimate fallback
+    return {
+      icon: getCategoryIcon(categoryId),
+      color: getCategoryColor(categoryId),
+      name: categoryId
+    };
+  };
+
   return (
     <ScrollArea className="h-[calc(100vh-320px)]">
       <Table>
@@ -57,9 +89,8 @@ const ProductTable: React.FC<ProductTableProps> = ({
           ) : (
             items.map((item) => {
               const stockPercentage = (item.inStock / Math.max(item.minStock, 1)) * 100;
-              const CategoryIcon = getCategoryIcon(item.category);
-              const categoryColor = getCategoryColor(item.category);
-              const category = getCategoryById(item.category);
+              const categoryInfo = getCategoryInfo(item.category);
+              const CategoryIcon = categoryInfo.icon;
               
               return (
                 <TableRow key={item.id}>
@@ -67,17 +98,17 @@ const ProductTable: React.FC<ProductTableProps> = ({
                     <div className="flex items-center gap-3">
                       <div 
                         className="h-10 w-10 rounded-md flex items-center justify-center"
-                        style={{ backgroundColor: `${categoryColor}20`, border: `1px solid ${categoryColor}40` }}
+                        style={{ backgroundColor: `${categoryInfo.color}20`, border: `1px solid ${categoryInfo.color}40` }}
                       >
                         <CategoryIcon 
                           className="h-5 w-5" 
-                          style={{ color: categoryColor }} 
+                          style={{ color: categoryInfo.color }} 
                         />
                       </div>
                       <div>
                         <div className="font-medium">{item.name}</div>
                         <div className="text-sm text-muted-foreground hidden md:block">
-                          {category?.name || item.category}
+                          {categoryInfo.name}
                         </div>
                       </div>
                     </div>
