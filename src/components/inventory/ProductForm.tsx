@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { InventoryItem, Supplier } from '@/types/inventory';
-import { Barcode, FileText, ShoppingBag, DollarSign, MapPin, Hash, ImageIcon, Tag } from 'lucide-react';
+import { Barcode, FileText, ShoppingBag, DollarSign, MapPin, Hash, ImageIcon, Tag, Trash2 } from 'lucide-react';
 import CategorySelector from './CategorySelector';
 
 const formSchema = z.object({
@@ -44,9 +44,10 @@ type ProductFormProps = {
   suppliers: Supplier[];
   onSubmit: (data: z.infer<typeof formSchema> & { supplier: string }) => void;
   onCancel: () => void;
+  onDelete?: (id: string, name: string) => void;
 };
 
-const ProductForm: React.FC<ProductFormProps> = ({ item, suppliers, onSubmit, onCancel }) => {
+const ProductForm: React.FC<ProductFormProps> = ({ item, suppliers, onSubmit, onCancel, onDelete }) => {
   const [imagePreview, setImagePreview] = useState<string | null>(item?.imageUrl || null);
   
   const form = useForm<z.infer<typeof formSchema>>({
@@ -86,6 +87,12 @@ const ProductForm: React.FC<ProductFormProps> = ({ item, suppliers, onSubmit, on
       ...data,
       supplier: selectedSupplier?.name || 'Unknown Supplier'
     });
+  };
+
+  const handleDelete = () => {
+    if (item && onDelete && window.confirm(`Are you sure you want to delete product: ${item.name}?`)) {
+      onDelete(item.id, item.name);
+    }
   };
 
   return (
@@ -302,13 +309,28 @@ const ProductForm: React.FC<ProductFormProps> = ({ item, suppliers, onSubmit, on
           )}
         />
         
-        <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="outline" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button type="submit">
-            {item ? 'Update Product' : 'Add Product'}
-          </Button>
+        <div className="flex justify-between items-center pt-2">
+          <div>
+            {item && onDelete && (
+              <Button 
+                type="button" 
+                variant="destructive" 
+                onClick={handleDelete}
+                className="flex items-center gap-2"
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete Product
+              </Button>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Cancel
+            </Button>
+            <Button type="submit">
+              {item ? 'Update Product' : 'Add Product'}
+            </Button>
+          </div>
         </div>
       </form>
     </Form>

@@ -78,9 +78,8 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ onAddToOrder }) => {
   };
 
   const handleDeleteItem = (id: string, name: string) => {
-    if (window.confirm(`Are you sure you want to delete product: ${name}?`)) {
-      deleteInventoryItem(id);
-    }
+    deleteInventoryItem(id);
+    handleCloseDialog();
   };
 
   const handleDuplicateItem = (item: InventoryItem) => {
@@ -156,7 +155,8 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ onAddToOrder }) => {
             item={editingItem} 
             suppliers={suppliers}
             onSubmit={handleSubmit} 
-            onCancel={handleCloseDialog} 
+            onCancel={handleCloseDialog}
+            onDelete={handleDeleteItem}
           />
         </DialogContent>
       </Dialog>

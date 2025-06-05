@@ -6,14 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { InventoryItem } from '@/types/inventory';
-import { Barcode, Copy, Edit, ShoppingCart, Trash2, Tag } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { Barcode, Copy, Edit, ShoppingCart, Tag } from 'lucide-react';
 import { getCategoryIcon, getCategoryColor, getCategoryById } from './config/productCategories';
 import { useUserCategories } from '@/hooks/inventory/useUserCategories';
 
@@ -172,22 +165,14 @@ const ProductTable: React.FC<ProductTableProps> = ({
                       >
                         <Copy className="h-4 w-4" />
                       </Button>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => onEdit(item)}>
-                            <Edit className="h-4 w-4 mr-2" /> Edit Product
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => onDelete(item.id, item.name)}>
-                            <Trash2 className="h-4 w-4 mr-2" /> Delete Product
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <Button 
+                        variant="outline" 
+                        size="icon"
+                        onClick={() => onEdit(item)}
+                        title="Edit product"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
