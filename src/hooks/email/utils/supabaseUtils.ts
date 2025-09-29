@@ -3,7 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 
 // Helper function to get Supabase Edge Function URL
 export const getEdgeFunctionUrl = (functionName: string): string => {
-  const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
+  // Use the Supabase project URL directly since VITE_ env vars aren't available in production
+  const supabaseUrl = 'https://qyjjbpyqxwrluhymvshn.supabase.co';
   return `${supabaseUrl}/functions/v1/${functionName}`;
 };
 
