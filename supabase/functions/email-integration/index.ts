@@ -564,15 +564,19 @@ async function handleSendReplyEndpoint(req: Request) {
 }
 
 // Updated refreshAccessToken function that handles both Google and Microsoft tokens
-async function refreshAccessToken(connection: any): Promise<any | null> {
+async function refreshAccessToken(connection: any, supabaseClient: any): Promise<any | null> {
+  console.log("Attempting to refresh access token for provider:", connection.provider);
+  
   if (!connection.refresh_token) {
-    console.error("No refresh token available");
+    console.error("No refresh token available for user:", connection.user_id);
     return null;
   }
   
   try {
+    let newTokens = null;
+    
     if (connection.provider === 'google' || connection.provider === 'gmail') {
-      // Existing Google implementation
+      // Google token refresh
       const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID');
       const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET');
       
@@ -581,6 +585,7 @@ async function refreshAccessToken(connection: any): Promise<any | null> {
         return null;
       }
       
+      console.log("Refreshing Google access token...");
       const response = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
         headers: {
@@ -595,13 +600,28 @@ async function refreshAccessToken(connection: any): Promise<any | null> {
       });
       
       if (!response.ok) {
-        console.error("Failed to refresh token:", response.status);
+        const errorText = await response.text();
+        console.error("Failed to refresh Google token:", response.status, errorText);
+        
+        // If refresh token is invalid, mark connection as disconnected
+        if (response.status === 400 || response.status === 401) {
+          await supabaseClient
+            .from('email_connections')
+            .update({
+              status: 'disconnected',
+              last_error: 'Refresh token expired or invalid. Please reconnect.',
+              updated_at: new Date().toISOString()
+            })
+            .eq('user_id', connection.user_id);
+        }
         return null;
       }
       
-      return await response.json();
+      newTokens = await response.json();
+      console.log("Google token refreshed successfully");
+      
     } else if (connection.provider === 'microsoft' || connection.provider === 'outlook') {
-      // Microsoft implementation
+      // Microsoft token refresh
       const microsoftClientId = Deno.env.get('MICROSOFT_CLIENT_ID');
       const microsoftClientSecret = Deno.env.get('MICROSOFT_CLIENT_SECRET');
       
@@ -610,6 +630,7 @@ async function refreshAccessToken(connection: any): Promise<any | null> {
         return null;
       }
       
+      console.log("Refreshing Microsoft access token...");
       const tokenUrl = 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
       const response = await fetch(tokenUrl, {
         method: 'POST',
@@ -626,15 +647,57 @@ async function refreshAccessToken(connection: any): Promise<any | null> {
       });
       
       if (!response.ok) {
-        console.error("Failed to refresh Microsoft token:", response.status);
+        const errorText = await response.text();
+        console.error("Failed to refresh Microsoft token:", response.status, errorText);
+        
+        // If refresh token is invalid, mark connection as disconnected
+        if (response.status === 400 || response.status === 401) {
+          await supabaseClient
+            .from('email_connections')
+            .update({
+              status: 'disconnected',
+              last_error: 'Refresh token expired or invalid. Please reconnect.',
+              updated_at: new Date().toISOString()
+            })
+            .eq('user_id', connection.user_id);
+        }
         return null;
       }
       
-      return await response.json();
+      newTokens = await response.json();
+      console.log("Microsoft token refreshed successfully");
+    } else {
+      console.error("Unsupported provider for token refresh:", connection.provider);
+      return null;
     }
     
-    // Unsupported provider
-    console.error("Unsupported provider for token refresh:", connection.provider);
+    // Update the database with new tokens
+    if (newTokens) {
+      const expiresAt = newTokens.expires_in 
+        ? new Date(Date.now() + (newTokens.expires_in * 1000)).toISOString()
+        : null;
+      
+      const { error: updateError } = await supabaseClient
+        .from('email_connections')
+        .update({
+          access_token: newTokens.access_token,
+          refresh_token: newTokens.refresh_token || connection.refresh_token, // Keep old refresh token if new one not provided
+          token_expires_at: expiresAt,
+          status: 'connected',
+          last_error: null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', connection.user_id);
+      
+      if (updateError) {
+        console.error("Error updating tokens in database:", updateError);
+        return null;
+      }
+      
+      console.log("Tokens updated in database successfully");
+      return newTokens;
+    }
+    
     return null;
   } catch (error) {
     console.error("Error refreshing access token:", error);
@@ -1060,7 +1123,7 @@ async function handleMainEndpoint(req: Request) {
     // Check if token is expired and needs refresh
     if (emailConnection.token_expires_at && new Date(emailConnection.token_expires_at) <= new Date()) {
       console.log("Access token expired, refreshing...");
-      const newTokens = await refreshAccessToken(emailConnection);
+      const newTokens = await refreshAccessToken(emailConnection, supabaseClient);
       
       if (!newTokens) {
         return new Response(
@@ -1072,29 +1135,7 @@ async function handleMainEndpoint(req: Request) {
         );
       }
       
-      // Update connection with new tokens
-      const { error: updateError } = await supabaseClient
-        .from('email_connections')
-        .update({
-          access_token: newTokens.access_token,
-          refresh_token: newTokens.refresh_token || emailConnection.refresh_token,
-          token_expires_at: new Date(Date.now() + (newTokens.expires_in * 1000)).toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', user.id);
-        
-      if (updateError) {
-        console.error("Error updating tokens:", updateError);
-        return new Response(
-          JSON.stringify({ 
-            error: 'Failed to update access tokens',
-            details: updateError.message
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-        );
-      }
-      
-      // Use updated access token
+      // Use updated access token (token already updated in refreshAccessToken function)
       emailConnection.access_token = newTokens.access_token;
     }
     

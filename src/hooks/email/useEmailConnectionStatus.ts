@@ -4,11 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
 
 export const useEmailConnectionStatus = (user: User | null) => {
-  const [connectionStatus, setConnectionStatus] = useState("disconnected");
+  const [connectionStatus, setConnectionStatus] = useState<"connected" | "connecting" | "disconnected" | "error" | "token_expired">("disconnected");
   const [lastError, setLastError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const updateConnectionStatus = async (status: string, errorMessage?: string) => {
+  const updateConnectionStatus = async (status: "connected" | "connecting" | "disconnected" | "error" | "token_expired", errorMessage?: string) => {
     if (!user) return;
     
     const updateData: any = {

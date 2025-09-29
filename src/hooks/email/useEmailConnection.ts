@@ -10,7 +10,7 @@ export const useEmailConnection = () => {
   const [emailAddress, setEmailAddress] = useState("");
   const [password, setPassword] = useState("");
   const [isConnected, setIsConnected] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<"connected" | "disconnected" | "connecting" | "error">("disconnected");
+  const [connectionStatus, setConnectionStatus] = useState<"connected" | "disconnected" | "connecting" | "error" | "token_expired">("disconnected");
   const [isLoading, setIsLoading] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
   const [autoCreateBookings, setAutoCreateBookings] = useState(false);
@@ -77,11 +77,25 @@ export const useEmailConnection = () => {
       // Update state with connection data
       setProvider(data.provider as any);
       setEmailAddress(data.email_address || "");
-      setIsConnected(data.status === "connected");
-      setConnectionStatus(data.status as any);
       setAutoCreateBookings(data.auto_create_bookings || false);
       
-      return data.status === "connected";
+      // Check if token is expired and update status if needed
+      const isTokenExpired = data.token_expires_at && 
+        new Date(data.token_expires_at) <= new Date();
+      
+      if (isTokenExpired && data.status === 'connected') {
+        console.log("Token expired, connection needs refresh");
+        setConnectionStatus('token_expired');
+        setLastError('Access token expired. Please reconnect your email account.');
+        setIsConnected(false);
+        return false;
+      }
+      
+      const isConnected = data.status === "connected" && !isTokenExpired;
+      setIsConnected(isConnected);
+      setConnectionStatus(data.status as any);
+      
+      return isConnected;
       
     } catch (error: any) {
       console.error("Error checking connection:", error);
