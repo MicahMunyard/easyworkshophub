@@ -32,6 +32,7 @@ import Settings from "./pages/Settings";
 import EmailDesignerPage from './pages/EmailDesignerPage';
 import EzyPartsDashboard from './pages/EzyPartsDashboard';
 import VehicleSearch from './components/ezyparts/vehicle-search/VehicleSearch';
+import EmailCallback from './pages/email/callback';
 
 const App = () => {
   const { user } = useAuth();
@@ -74,6 +75,9 @@ const App = () => {
           
           {/* Route for EmailDesignerPage */}
           <Route path="/email-designer/:mode/:id?" element={<EmailDesignerPage />} />
+          
+          {/* Email OAuth callback route */}
+          <Route path="/email/callback" element={<EmailCallback />} />
           
           {/* Redirect any unmatched routes to dashboard */}
           <Route path="*" element={<Navigate to="/" replace />} />
