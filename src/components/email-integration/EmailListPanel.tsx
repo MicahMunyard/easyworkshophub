@@ -3,7 +3,8 @@ import React from "react";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, CheckCircle, AlertCircle, Mail } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Loader2, CheckCircle, AlertCircle, Mail, PenSquare } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { EmailType } from "@/types/email";
 
@@ -18,6 +19,7 @@ interface EmailListPanelProps {
   setSelectedEmail: (email: EmailType) => void;
   processingEmailId: string | null;
   refreshEmails: () => void;
+  onCompose: () => void;
 }
 
 const FOLDERS = [
@@ -37,6 +39,7 @@ const EmailListPanel: React.FC<EmailListPanelProps> = ({
   setSelectedEmail,
   processingEmailId,
   refreshEmails,
+  onCompose,
 }) => {
   const filteredEmails = emails.filter(email =>
     email.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -79,7 +82,17 @@ const EmailListPanel: React.FC<EmailListPanelProps> = ({
   return (
     <Card className="md:col-span-1">
       <CardHeader className="px-4 py-3">
-        <CardTitle className="text-sm font-medium">Inbox</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-medium">Inbox</CardTitle>
+          <Button
+            size="sm"
+            onClick={onCompose}
+            className="h-8"
+          >
+            <PenSquare className="h-4 w-4 mr-1" />
+            Compose
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="p-0">
         <div className="flex items-center gap-2 px-4 py-2">
