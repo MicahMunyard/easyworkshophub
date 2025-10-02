@@ -52,8 +52,33 @@ export const useFacebookAuth = () => {
   }, []);
 
   const handleFacebookLogin = async () => {
-    if (typeof window !== 'undefined' && window.FB) {
+    console.log('handleFacebookLogin called');
+    
+    if (typeof window === 'undefined') {
+      console.error('Window is undefined');
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Cannot access Facebook SDK."
+      });
+      return;
+    }
+    
+    if (!window.FB) {
+      console.error('Facebook SDK not loaded');
+      toast({
+        variant: "destructive",
+        title: "Facebook SDK Not Loaded",
+        description: "Please refresh the page and try again."
+      });
+      return;
+    }
+    
+    console.log('Initiating Facebook login...');
+    
+    try {
       window.FB.login(async (response: FacebookLoginStatus) => {
+        console.log('Facebook login callback received:', response);
         if (response.status === 'connected') {
           setFbStatus(response);
           
@@ -100,6 +125,13 @@ export const useFacebookAuth = () => {
           });
         }
       }, { scope: 'public_profile,pages_messaging,pages_show_list,pages_manage_metadata' });
+    } catch (error) {
+      console.error('Error in Facebook login:', error);
+      toast({
+        variant: "destructive",
+        title: "Login Error",
+        description: "An error occurred during Facebook login."
+      });
     }
   };
 
