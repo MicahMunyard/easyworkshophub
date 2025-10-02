@@ -1761,7 +1761,9 @@ export type Database = {
       }
       check_facebook_connection: {
         Args: { user_id_param: string }
-        Returns: Json
+        Returns: {
+          has_connection: boolean
+        }[]
       }
       create_ezyparts_diagnostic_tables: {
         Args: Record<PropertyKey, never>
