@@ -14,21 +14,20 @@ interface FacebookLoginStatus {
   };
 }
 
-// Define a type for social connections
-interface SocialConnection {
+export interface FacebookPage {
   id: string;
-  platform: string;
-  status: string;
-  page_id?: string;
-  user_id: string;
+  name: string;
+  access_token: string;
 }
 
 
 export const useFacebookAuth = () => {
   const [fbStatus, setFbStatus] = useState<FacebookLoginStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [availablePages, setAvailablePages] = useState<FacebookPage[]>([]);
+  const [showPageSelector, setShowPageSelector] = useState(false);
+  const [userAccessToken, setUserAccessToken] = useState<string>('');
   const { toast } = useToast();
-  const [hasReRequested, setHasReRequested] = useState(false);
 
   const checkLoginStatus = () => {
     if (typeof window !== 'undefined' && window.FB) {
@@ -77,79 +76,123 @@ export const useFacebookAuth = () => {
     }
     
     console.log('Initiating Facebook login...');
-    try {
-      setIsLoading(true);
-      window.FB.login(async (response: FacebookLoginStatus) => {
-        console.log('Facebook login callback received:', response);
-        if (response.status === 'connected') {
-          setFbStatus(response);
+    setIsLoading(true);
+    
+    window.FB.login(async (response: FacebookLoginStatus) => {
+      console.log('Facebook login callback received:', response);
+      
+      if (response.status === 'connected' && response.authResponse?.accessToken) {
+        setFbStatus(response);
+        const accessToken = response.authResponse.accessToken;
+        setUserAccessToken(accessToken);
+        
+        try {
+          // Fetch the user's managed pages
+          console.log('Fetching managed pages...');
+          const pagesResponse = await fetch(
+            `https://graph.facebook.com/v17.0/me/accounts?access_token=${accessToken}`
+          );
           
-          try {
-            // Save the user's access token to Supabase
-            const { error } = await supabase.functions.invoke('facebook-token-exchange', {
-              body: { 
-                userAccessToken: response.authResponse?.accessToken 
-              }
-            });
-            
-            if (error) {
-              console.error('Error exchanging token:', error);
-              toast({
-                variant: "destructive",
-                title: "Connection Error",
-                description: "Could not complete Facebook connection."
-              });
-              setIsLoading(false);
-              return;
-            }
-            
-            toast({
-              title: "Facebook Connected",
-              description: "Successfully connected to Facebook. Your page conversations will appear soon.",
-            });
-            
-            // Reload the page after a short delay to refresh conversations
-            setTimeout(() => {
-              window.location.reload();
-            }, 2000);
-          } catch (error) {
-            console.error('Error processing Facebook login:', error);
-            toast({
-              variant: "destructive",
-              title: "Connection Failed",
-              description: "Could not connect to Facebook."
-            });
-            setIsLoading(false);
+          if (!pagesResponse.ok) {
+            throw new Error('Failed to fetch Facebook pages');
           }
-          } else if (response.status === 'not_authorized' && !hasReRequested) {
-            setHasReRequested(true);
-            console.warn('Not authorized, re-requesting permissions...');
-            window.FB.login(() => {}, { auth_type: 'rerequest', scope: 'public_profile,pages_show_list,pages_manage_metadata,pages_messaging,pages_read_engagement,pages_manage_engagement' } as any);
+          
+          const pagesData = await pagesResponse.json();
+          console.log('Pages fetched:', pagesData);
+          
+          if (pagesData.data && pagesData.data.length > 0) {
+            setAvailablePages(pagesData.data);
+            setShowPageSelector(true);
             setIsLoading(false);
           } else {
-            const status = response?.status || 'unknown';
-            if (status === 'not_authorized') {
-              toast({
-                variant: "destructive",
-                title: "Facebook not authorized",
-                description: "Add your Facebook account as a tester or make the app Live, then try again."
-              });
-            } else {
-              toast({
-                variant: "destructive",
-                title: "Facebook login blocked",
-                description: "Ensure pop-ups are allowed and you're logged into facebook.com, then retry."
-              });
-            }
+            toast({
+              variant: "destructive",
+              title: "No Pages Found",
+              description: "You don't manage any Facebook Pages. Please create or get access to a Page first."
+            });
             setIsLoading(false);
           }
-      }, { scope: 'public_profile,pages_show_list,pages_manage_metadata,pages_messaging,pages_read_engagement,pages_manage_engagement', auth_type: 'rerequest', display: 'popup' } as any);
-    } catch (error) {
-      console.error('Error in Facebook login:', error);
+        } catch (error) {
+          console.error('Error fetching pages:', error);
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Could not fetch your Facebook Pages."
+          });
+          setIsLoading(false);
+        }
+      } else if (response.status === 'not_authorized') {
+        toast({
+          variant: "destructive",
+          title: "Authorization Required",
+          description: "Please authorize the app to manage your Facebook Pages."
+        });
+        setIsLoading(false);
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Login Failed",
+          description: "Could not connect to Facebook. Please ensure pop-ups are allowed and try again."
+        });
+        setIsLoading(false);
+      }
+    }, { 
+      scope: 'pages_show_list,pages_manage_metadata,pages_messaging,pages_read_engagement,pages_manage_engagement',
+      display: 'popup'
+    } as any);
+  };
+
+  const handlePageSelection = async (selectedPageIds: string[]) => {
+    if (selectedPageIds.length === 0 || !userAccessToken) {
       toast({
         variant: "destructive",
-        title: "Login Error",
-        description: "An error occurred during Facebook login."
+        title: "Error",
+        description: "Please select at least one page."
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    
+    try {
+      console.log('Exchanging token for selected pages...');
+      
+      // Exchange token with our backend
+      const { error } = await supabase.functions.invoke('facebook-token-exchange', {
+        body: { 
+          userAccessToken,
+          selectedPageIds
+        }
+      });
+      
+      if (error) {
+        console.error('Error exchanging token:', error);
+        toast({
+          variant: "destructive",
+          title: "Connection Error",
+          description: "Could not complete Facebook connection."
+        });
+        setIsLoading(false);
+        return;
+      }
+      
+      toast({
+        title: "Facebook Connected",
+        description: `Successfully connected ${selectedPageIds.length} Facebook Page${selectedPageIds.length > 1 ? 's' : ''}!`,
+      });
+      
+      setShowPageSelector(false);
+      
+      // Reload to refresh conversations
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (error) {
+      console.error('Error processing page selection:', error);
+      toast({
+        variant: "destructive",
+        title: "Connection Failed",
+        description: "Could not connect to Facebook."
       });
       setIsLoading(false);
     }
@@ -186,6 +229,10 @@ export const useFacebookAuth = () => {
     fbStatus,
     isLoading,
     handleFacebookLogin,
-    handleFacebookLogout
+    handleFacebookLogout,
+    availablePages,
+    showPageSelector,
+    setShowPageSelector,
+    handlePageSelection
   };
 };

@@ -16,7 +16,7 @@ serve(async (req) => {
 
   try {
     // Get the request body
-    const { userAccessToken } = await req.json();
+    const { userAccessToken, selectedPageIds } = await req.json();
     
     if (!userAccessToken) {
       return new Response(
@@ -95,8 +95,15 @@ serve(async (req) => {
     
     const pagesData = await pagesResponse.json();
     
+    // Filter pages based on user selection if provided
+    const pagesToStore = selectedPageIds && selectedPageIds.length > 0
+      ? pagesData.data.filter(page => selectedPageIds.includes(page.id))
+      : pagesData.data;
+    
+    console.log(`Storing ${pagesToStore.length} selected page(s)...`);
+    
     // Store the connections in our database
-    for (const page of pagesData.data) {
+    for (const page of pagesToStore) {
       // Check if this page connection already exists
       const { data: existingPage } = await supabase
         .from('social_connections')
@@ -138,7 +145,9 @@ serve(async (req) => {
         .from('facebook_page_tokens')
         .upsert({
           page_id: page.id,
+          page_name: page.name,
           access_token: page.access_token,
+          user_id: user.id,
           updated_at: new Date().toISOString()
         }, {
           onConflict: 'page_id'

@@ -1,16 +1,27 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Facebook } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useFacebookAuth } from "@/hooks/facebook/useFacebookAuth";
 import { Loader2 } from "lucide-react";
+import FacebookPageSelector from "./FacebookPageSelector";
 
 const FacebookIntegration: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { fbStatus, isLoading, handleFacebookLogin, handleFacebookLogout } = useFacebookAuth();
+  const { 
+    fbStatus, 
+    isLoading, 
+    handleFacebookLogin, 
+    handleFacebookLogout,
+    availablePages,
+    showPageSelector,
+    setShowPageSelector,
+    handlePageSelection
+  } = useFacebookAuth();
+  const [selectedPages, setSelectedPages] = useState<string[]>([]);
 
   const handleConnect = () => {
     if (!user) {
@@ -47,16 +58,45 @@ const FacebookIntegration: React.FC = () => {
     );
   }
 
+  const handlePageToggle = (pageId: string) => {
+    setSelectedPages(prev => 
+      prev.includes(pageId) 
+        ? prev.filter(id => id !== pageId)
+        : [...prev, pageId]
+    );
+  };
+
+  const handleConfirmSelection = () => {
+    handlePageSelection(selectedPages);
+  };
+
+  const handleCancelSelection = () => {
+    setShowPageSelector(false);
+    setSelectedPages([]);
+  };
+
   return (
-    <Button
-      variant="outline"
-      className="flex items-center gap-2"
-      onClick={handleConnect}
-      disabled={!user}
-    >
-      <Facebook className="h-5 w-5 text-blue-600" />
-      Connect Facebook Page
-    </Button>
+    <>
+      <Button
+        variant="outline"
+        className="flex items-center gap-2"
+        onClick={handleConnect}
+        disabled={!user}
+      >
+        <Facebook className="h-5 w-5 text-blue-600" />
+        Connect Facebook Page
+      </Button>
+
+      <FacebookPageSelector
+        isOpen={showPageSelector}
+        pages={availablePages}
+        selectedPages={selectedPages}
+        onPageToggle={handlePageToggle}
+        onConfirm={handleConfirmSelection}
+        onCancel={handleCancelSelection}
+        isLoading={isLoading}
+      />
+    </>
   );
 };
 
