@@ -23,10 +23,12 @@ interface SocialConnection {
   user_id: string;
 }
 
+
 export const useFacebookAuth = () => {
   const [fbStatus, setFbStatus] = useState<FacebookLoginStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const [hasReRequested, setHasReRequested] = useState(false);
 
   const checkLoginStatus = () => {
     if (typeof window !== 'undefined' && window.FB) {
@@ -75,8 +77,8 @@ export const useFacebookAuth = () => {
     }
     
     console.log('Initiating Facebook login...');
-    
     try {
+      setIsLoading(true);
       window.FB.login(async (response: FacebookLoginStatus) => {
         console.log('Facebook login callback received:', response);
         if (response.status === 'connected') {
@@ -97,6 +99,7 @@ export const useFacebookAuth = () => {
                 title: "Connection Error",
                 description: "Could not complete Facebook connection."
               });
+              setIsLoading(false);
               return;
             }
             
@@ -116,15 +119,31 @@ export const useFacebookAuth = () => {
               title: "Connection Failed",
               description: "Could not connect to Facebook."
             });
+            setIsLoading(false);
           }
-        } else {
-          toast({
-            variant: "destructive",
-            title: "Connection Failed",
-            description: "Could not connect to Facebook."
-          });
-        }
-      }, { scope: 'public_profile,pages_messaging,pages_show_list,pages_manage_metadata' });
+          } else if (response.status === 'not_authorized' && !hasReRequested) {
+            setHasReRequested(true);
+            console.warn('Not authorized, re-requesting permissions...');
+            window.FB.login(() => {}, { auth_type: 'rerequest', scope: 'public_profile,pages_show_list,pages_manage_metadata,pages_messaging,pages_read_engagement,pages_manage_engagement' } as any);
+            setIsLoading(false);
+          } else {
+            const status = response?.status || 'unknown';
+            if (status === 'not_authorized') {
+              toast({
+                variant: "destructive",
+                title: "Facebook not authorized",
+                description: "Add your Facebook account as a tester or make the app Live, then try again."
+              });
+            } else {
+              toast({
+                variant: "destructive",
+                title: "Facebook login blocked",
+                description: "Ensure pop-ups are allowed and you're logged into facebook.com, then retry."
+              });
+            }
+            setIsLoading(false);
+          }
+      }, { scope: 'public_profile,pages_show_list,pages_manage_metadata,pages_messaging,pages_read_engagement,pages_manage_engagement', auth_type: 'rerequest', display: 'popup' } as any);
     } catch (error) {
       console.error('Error in Facebook login:', error);
       toast({
@@ -132,6 +151,7 @@ export const useFacebookAuth = () => {
         title: "Login Error",
         description: "An error occurred during Facebook login."
       });
+      setIsLoading(false);
     }
   };
 

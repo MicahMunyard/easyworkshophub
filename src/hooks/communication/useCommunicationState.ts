@@ -43,8 +43,9 @@ export const useCommunicationState = () => {
         }
         
         // Cast to unknown first, then to our expected type to avoid TypeScript errors
-        const connectionData = data as unknown as FacebookConnectionResponse;
-        setHasFacebookConnection(connectionData && connectionData.has_connection);
+         const asJson = data as unknown as FacebookConnectionResponse | FacebookConnectionResponse[] | null;
+         const hasConn = Array.isArray(asJson) ? Boolean((asJson as FacebookConnectionResponse[])[0]?.has_connection) : Boolean((asJson as FacebookConnectionResponse)?.has_connection);
+         setHasFacebookConnection(hasConn);
       } catch (error) {
         console.error("Error checking Facebook connection:", error);
       }
