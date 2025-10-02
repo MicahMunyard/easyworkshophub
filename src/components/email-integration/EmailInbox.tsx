@@ -27,8 +27,12 @@ const EmailInbox = () => {
 
   // Automatically fetch emails when component mounts or folder changes
   useEffect(() => {
-    refreshEmails();
-  }, [folder, refreshEmails]);
+    const loadEmails = async () => {
+      const fetchedEmails = await fetchEmailsByFolder(folder);
+      // Update the emails state if needed through a refresh
+    };
+    loadEmails();
+  }, [folder, fetchEmailsByFolder]);
 
   const handleCreateBooking = async (email: EmailType) => {
     const success = await createBookingFromEmail(email);
@@ -48,14 +52,29 @@ const EmailInbox = () => {
 
   const handleSendNewEmail = async (to: string, subject: string, body: string) => {
     try {
+      console.log('Sending email to:', to, 'subject:', subject);
       const { supabase } = await import('@/integrations/supabase/client');
+      const { data: sessionData } = await supabase.auth.getSession();
       
-      const response = await supabase.functions.invoke('email-integration/send', {
-        body: { to, subject, body }
-      });
+      if (!sessionData.session) {
+        throw new Error('No active session');
+      }
+      
+      const response = await fetch(
+        `https://qyjjbpyqxwrluhymvshn.supabase.co/functions/v1/email-integration/send`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionData.session.access_token}`,
+          },
+          body: JSON.stringify({ to, subject, body })
+        }
+      );
 
-      if (response.error) {
-        throw new Error(response.error.message || 'Failed to send email');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to send email');
       }
 
       toast({
@@ -93,7 +112,7 @@ const EmailInbox = () => {
           selectedEmail={selectedEmail}
           setSelectedEmail={setSelectedEmail}
           processingEmailId={processingEmailId}
-          refreshEmails={refreshEmails}
+          refreshEmails={() => refreshEmails(folder)}
           onCompose={() => setShowComposeForm(true)}
         />
         <EmailDetailPanel

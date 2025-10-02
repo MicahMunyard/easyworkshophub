@@ -15,8 +15,9 @@ export const useEmailIntegration = () => {
   const { processingEmailId, createBookingFromEmail } = useEmailBooking();
   const { fetchConversationThread } = useEmailConversation();
 
-  const refreshEmails = useCallback(async () => {
-    const fetchedEmails = await fetchEmailsByFolder("inbox");
+  const refreshEmails = useCallback(async (folder: "inbox" | "sent" | "junk" = "inbox") => {
+    console.log("Refreshing emails for folder:", folder);
+    const fetchedEmails = await fetchEmailsByFolder(folder);
     setEmails(fetchedEmails);
   }, [fetchEmailsByFolder]);
   
