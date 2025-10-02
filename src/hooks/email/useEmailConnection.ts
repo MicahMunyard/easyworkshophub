@@ -79,16 +79,48 @@ export const useEmailConnection = () => {
       setEmailAddress(data.email_address || "");
       setAutoCreateBookings(data.auto_create_bookings || false);
       
-      // Check if token is expired and update status if needed
+      // Check if token is expired and attempt auto-refresh
       const isTokenExpired = data.token_expires_at && 
         new Date(data.token_expires_at) <= new Date();
       
       if (isTokenExpired && data.status === 'connected') {
-        console.log("Token expired, connection needs refresh");
-        setConnectionStatus('token_expired');
-        setLastError('Access token expired. Please reconnect your email account.');
-        setIsConnected(false);
-        return false;
+        console.log("Token expired, attempting automatic refresh...");
+        
+        try {
+          // Attempt to refresh the token by fetching emails
+          // The edge function will automatically refresh the token if needed
+          const { data: sessionData } = await supabase.auth.getSession();
+          if (sessionData.session) {
+            const { error: refreshError } = await supabase.functions.invoke('email-integration', {
+              method: 'POST',
+              body: { folder: 'inbox' },
+              headers: {
+                Authorization: `Bearer ${sessionData.session.access_token}`,
+              }
+            });
+            
+            if (refreshError) {
+              console.error("Token refresh failed:", refreshError);
+              setConnectionStatus('token_expired');
+              setLastError('Access token expired. Please reconnect your email account.');
+              setIsConnected(false);
+              return false;
+            }
+            
+            // Token refresh successful, update connection status
+            console.log("Token refreshed successfully");
+            setIsConnected(true);
+            setConnectionStatus('connected');
+            setLastError(null);
+            return true;
+          }
+        } catch (error) {
+          console.error("Error refreshing token:", error);
+          setConnectionStatus('token_expired');
+          setLastError('Access token expired. Please reconnect your email account.');
+          setIsConnected(false);
+          return false;
+        }
       }
       
       const isConnected = data.status === "connected" && !isTokenExpired;
