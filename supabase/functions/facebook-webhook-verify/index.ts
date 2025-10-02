@@ -14,40 +14,41 @@ serve(async (req) => {
   }
 
   try {
-    const url = new URL(req.url);
-    
-    // Handle GET requests for webhook verification
+    // Handle GET requests (webhook verification)
     if (req.method === 'GET') {
+      const url = new URL(req.url);
       const mode = url.searchParams.get('hub.mode');
       const token = url.searchParams.get('hub.verify_token');
       const challenge = url.searchParams.get('hub.challenge');
-      
+
       console.log('Webhook verification request:', { mode, token, challenge });
-      
-      if (mode === 'subscribe' && token === VERIFY_TOKEN) {
-        console.log('Webhook verified successfully');
-        return new Response(challenge, { 
-          headers: { ...corsHeaders, 'Content-Type': 'text/plain' } 
-        });
-      } else {
-        console.error('Verification failed - token mismatch');
-        return new Response('Forbidden', { 
-          status: 403,
-          headers: corsHeaders 
-        });
+
+      // Check if a token and mode were sent
+      if (mode && token) {
+        // Check the mode and token sent are correct
+        if (mode === 'subscribe' && token === VERIFY_TOKEN) {
+          // Respond with 200 OK and challenge token from the request
+          console.log('Webhook verified successfully');
+          return new Response(challenge, {
+            status: 200,
+            headers: { 'Content-Type': 'text/plain' }
+          });
+        } else {
+          // Responds with '403 Forbidden' if verify tokens do not match
+          console.error('Verification token mismatch');
+          return new Response('Forbidden', { status: 403 });
+        }
       }
     }
     
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+    // Handle unsupported methods
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), { 
       status: 405,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
     
   } catch (error) {
-    console.error('Error in webhook verify:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
+    console.error('Error in webhook verification:', error);
+    return new Response('Internal Server Error', { status: 500 });
   }
 });

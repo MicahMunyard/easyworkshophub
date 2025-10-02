@@ -13,147 +13,176 @@ serve(async (req) => {
   }
 
   try {
-    const { conversation_id, content } = await req.json();
-    
-    if (!conversation_id || !content) {
+    // Get the authorization header
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
       return new Response(
-        JSON.stringify({ error: 'Missing conversation_id or content' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Missing authorization header' }), 
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    
+
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL') as string;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') as string;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    
-    // Get JWT token from request
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'Missing authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    // Verify user is authenticated
-    const jwt = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: userError } = await supabase.auth.getUser(jwt);
-    
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      global: {
+        headers: { Authorization: authHeader }
+      }
+    });
+
+    // Verify the user
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
+      console.error('Authentication error:', userError);
       return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
+        JSON.stringify({ error: 'Unauthorized' }), 
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    
-    // Get conversation details
-    const { data: conversation, error: convError } = await supabase
-      .from('social_conversations')
-      .select('external_id, platform, user_id')
-      .eq('id', conversation_id)
-      .single();
-      
-    if (convError || !conversation) {
-      console.error('Error fetching conversation:', convError);
+
+    // Parse request body
+    const { conversation_id, message_content } = await req.json();
+
+    if (!conversation_id || !message_content) {
       return new Response(
-        JSON.stringify({ error: 'Conversation not found' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    // Verify user owns this conversation
-    if (conversation.user_id !== user.id) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    // Only process Facebook messages
-    if (conversation.platform !== 'facebook') {
-      return new Response(
-        JSON.stringify({ error: 'This function only handles Facebook messages' }),
+        JSON.stringify({ error: 'Missing required fields: conversation_id and message_content' }), 
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    
-    // Get page access token for this user
-    const { data: connections, error: connError } = await supabase
+
+    console.log('Sending message to conversation:', conversation_id);
+
+    // Get conversation details
+    const { data: conversation, error: convError } = await supabase
+      .from('social_conversations')
+      .select('external_id, user_id, platform')
+      .eq('id', conversation_id)
+      .single();
+
+    if (convError || !conversation) {
+      console.error('Conversation not found:', convError);
+      return new Response(
+        JSON.stringify({ error: 'Conversation not found' }), 
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Verify user owns this conversation
+    if (conversation.user_id !== user.id) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }), 
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Verify it's a Facebook conversation
+    if (conversation.platform !== 'facebook') {
+      return new Response(
+        JSON.stringify({ error: 'Only Facebook messages are supported' }), 
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const recipientId = conversation.external_id;
+
+    // Get the page connection to find which page to send from
+    const { data: pageConnection, error: pageError } = await supabase
       .from('social_connections')
-      .select('page_id, page_access_token')
+      .select('page_id')
       .eq('user_id', user.id)
       .eq('platform', 'facebook')
       .eq('status', 'active')
-      .limit(1);
-      
-    if (connError || !connections || connections.length === 0) {
-      console.error('Error fetching page token:', connError);
+      .single();
+
+    if (pageError || !pageConnection) {
+      console.error('No active Facebook page connection:', pageError);
       return new Response(
-        JSON.stringify({ error: 'No active Facebook connection found' }),
+        JSON.stringify({ error: 'No active Facebook page connection found' }), 
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    
-    const pageAccessToken = connections[0].page_access_token;
-    
-    if (!pageAccessToken) {
+
+    // Get page access token
+    const { data: tokenData, error: tokenError } = await supabase
+      .from('facebook_page_tokens')
+      .select('access_token')
+      .eq('user_id', user.id)
+      .eq('page_id', pageConnection.page_id)
+      .single();
+
+    if (tokenError || !tokenData) {
+      console.error('Page access token not found:', tokenError);
       return new Response(
-        JSON.stringify({ error: 'Page access token not found' }),
+        JSON.stringify({ error: 'Page access token not found' }), 
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    
+
+    const pageAccessToken = tokenData.access_token;
+
     // Send message via Facebook Graph API
-    const senderId = conversation.external_id;
-    const graphApiUrl = `https://graph.facebook.com/v17.0/me/messages`;
-    
+    const graphApiUrl = 'https://graph.facebook.com/v17.0/me/messages';
     const messagePayload = {
-      recipient: { id: senderId },
-      message: { text: content.trim() }
+      recipient: { id: recipientId },
+      message: { text: message_content },
+      messaging_type: 'RESPONSE'
     };
-    
-    console.log('Sending Facebook message:', { senderId, messageLength: content.length });
-    
-    const fbResponse = await fetch(graphApiUrl, {
+
+    console.log('Sending to Facebook Graph API:', { recipientId, messageLength: message_content.length });
+
+    const fbResponse = await fetch(`${graphApiUrl}?access_token=${pageAccessToken}`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        ...messagePayload,
-        access_token: pageAccessToken
-      })
+      body: JSON.stringify(messagePayload)
     });
-    
+
     if (!fbResponse.ok) {
-      const errorText = await fbResponse.text();
-      console.error('Facebook API error:', errorText);
+      const errorData = await fbResponse.json();
+      console.error('Facebook API error:', errorData);
+      
+      // Check if token expired
+      if (errorData.error?.code === 190) {
+        // Update connection status to expired
+        await supabase
+          .from('social_connections')
+          .update({ status: 'expired' })
+          .eq('user_id', user.id)
+          .eq('page_id', pageConnection.page_id);
+          
+        return new Response(
+          JSON.stringify({ error: 'Facebook access token expired. Please reconnect your Facebook page.' }), 
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
       return new Response(
-        JSON.stringify({ error: 'Failed to send message via Facebook', details: errorText }),
+        JSON.stringify({ error: 'Failed to send message to Facebook', details: errorData }), 
         { status: fbResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    
+
     const fbData = await fbResponse.json();
-    console.log('Facebook message sent:', fbData);
-    
-    // Store the message in database
+    console.log('Facebook API response:', fbData);
+
+    // Store the sent message in database
     const { error: msgError } = await supabase
       .from('social_messages')
       .insert({
-        conversation_id,
+        conversation_id: conversation_id,
         sender_type: 'user',
-        content: content.trim(),
+        content: message_content,
         sent_at: new Date().toISOString()
       });
-      
+
     if (msgError) {
       console.error('Error storing message:', msgError);
-      // Message was sent but not stored - not critical
+      // Don't fail the request since message was sent successfully
     }
-    
-    // Update conversation timestamp
+
+    // Update conversation timestamp and mark as read
     await supabase
       .from('social_conversations')
       .update({
@@ -161,16 +190,16 @@ serve(async (req) => {
         unread: false
       })
       .eq('id', conversation_id);
-    
+
     return new Response(
-      JSON.stringify({ success: true, facebook_response: fbData }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ success: true, message_id: fbData.message_id }), 
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-    
+
   } catch (error) {
-    console.error('Error in facebook-send-message:', error);
+    console.error('Error sending Facebook message:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error.message || 'Internal server error' }), 
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

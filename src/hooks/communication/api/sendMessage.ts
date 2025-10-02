@@ -15,39 +15,38 @@ export const sendMessage = async (conversationId: string, content: string): Prom
       return true;
     }
     
-    // Get conversation to check platform
-    const { data: conversation, error: convError } = await supabase
+    // Check if this is a Facebook conversation
+    const { data: conversation } = await supabase
       .from('social_conversations')
       .select('platform')
       .eq('id', conversationId)
       .single();
-      
-    if (convError) {
-      throw convError;
-    }
     
     // For Facebook conversations, use the edge function to send via Graph API
     if (conversation?.platform === 'facebook') {
+      console.log('Sending Facebook message via edge function');
+      
       const { data, error } = await supabase.functions.invoke('facebook-send-message', {
         body: {
           conversation_id: conversationId,
-          content: content
+          message_content: content.trim()
         }
       });
       
       if (error) {
-        console.error('Error calling facebook-send-message:', error);
-        throw new Error('Failed to send Facebook message');
+        console.error('Error calling facebook-send-message function:', error);
+        throw new Error(error.message || 'Failed to send Facebook message');
       }
       
       if (!data?.success) {
-        throw new Error('Facebook message send failed');
+        throw new Error(data?.error || 'Failed to send message');
       }
       
+      console.log('Facebook message sent successfully:', data);
       return true;
     }
     
-    // For other platforms, just store in database
+    // For other platforms, add to database directly
     const { error } = await supabase
       .from('social_messages')
       .insert({
@@ -76,7 +75,7 @@ export const sendMessage = async (conversationId: string, content: string): Prom
     toast({
       variant: "destructive",
       title: "Failed to send message",
-      description: "Your message could not be sent. Please try again."
+      description: error instanceof Error ? error.message : "Your message could not be sent. Please try again."
     });
     return false;
   }
