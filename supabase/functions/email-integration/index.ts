@@ -44,6 +44,8 @@ serve(async (req) => {
         return await handleOAuthCallbackEndpoint(req);
       case 'send-reply':
         return await handleSendReplyEndpoint(req);
+      case 'send':
+        return await handleSendEmailEndpoint(req);
       default:
         return await handleMainEndpoint(req);
     }
@@ -546,6 +548,223 @@ async function handleOAuthCallbackEndpoint(req: Request) {
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
+  }
+}
+
+// Handle send email endpoint (for composing new emails)
+async function handleSendEmailEndpoint(req: Request) {
+  console.log("Email integration send endpoint called");
+  
+  // Make sure environment variables are available
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  
+  if (!supabaseUrl || !supabaseServiceRoleKey) {
+    console.error("Missing Supabase environment variables");
+    return new Response(
+      JSON.stringify({ error: 'Server configuration error: Missing Supabase configuration' }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+    );
+  }
+
+  // Create Supabase client with Admin key for API operations
+  const supabaseClient = createClient(
+    supabaseUrl,
+    supabaseServiceRoleKey
+  );
+
+  // Get Authorization header from request
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return new Response(
+      JSON.stringify({ error: 'Missing or invalid authorization header' }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+    );
+  }
+
+  // Get the JWT token from the Authorization header
+  const jwt = authHeader.substring(7);
+  
+  try {
+    // Verify user authentication
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(jwt);
+    
+    if (userError || !user) {
+      console.error("Auth error:", userError);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized - Invalid token' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      );
+    }
+    
+    // Parse request body
+    const { to, subject, body } = await req.json();
+    
+    if (!to || !subject || !body) {
+      return new Response(
+        JSON.stringify({ error: 'Missing required fields: to, subject, body' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+    
+    console.log("Sending email to:", to);
+    
+    // Get user's email connection
+    const { data: emailConnection, error: connectionError } = await supabaseClient
+      .from('email_connections')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('status', 'connected')
+      .single();
+      
+    if (connectionError || !emailConnection) {
+      console.error("No email connection found:", connectionError);
+      return new Response(
+        JSON.stringify({ error: 'No email connection found. Please connect your email first.' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+    
+    // Check if token is expired and needs refresh
+    if (emailConnection.token_expires_at && new Date(emailConnection.token_expires_at) <= new Date()) {
+      console.log("Access token expired, refreshing...");
+      const newTokens = await refreshAccessToken(emailConnection, supabaseClient);
+      
+      if (!newTokens) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Failed to refresh access token',
+            details: 'The refresh token may have expired or be invalid'
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+        );
+      }
+      
+      emailConnection.access_token = newTokens.access_token;
+    }
+    
+    // Send email based on provider
+    let success = false;
+    
+    if (emailConnection.provider === 'google' || emailConnection.provider === 'gmail') {
+      success = await sendGmailEmail(emailConnection.access_token, to, subject, body);
+    } else if (emailConnection.provider === 'microsoft' || emailConnection.provider === 'outlook') {
+      success = await sendOutlookEmail(emailConnection.access_token, to, subject, body);
+    } else {
+      return new Response(
+        JSON.stringify({ error: 'Unsupported email provider' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+    
+    if (success) {
+      return new Response(
+        JSON.stringify({ success: true, message: 'Email sent successfully' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    } else {
+      return new Response(
+        JSON.stringify({ error: 'Failed to send email' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
+    }
+    
+  } catch (error) {
+    console.error("Error in send endpoint:", error);
+    return new Response(
+      JSON.stringify({ 
+        error: 'Internal server error', 
+        details: error instanceof Error ? error.message : String(error)
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+    );
+  }
+}
+
+// Helper function to send email via Gmail API
+async function sendGmailEmail(accessToken: string, to: string, subject: string, body: string): Promise<boolean> {
+  try {
+    // Construct the email in RFC 2822 format
+    const email = [
+      `To: ${to}`,
+      `Subject: ${subject}`,
+      'Content-Type: text/plain; charset=utf-8',
+      '',
+      body
+    ].join('\r\n');
+    
+    // Encode the email in base64url format
+    const encodedEmail = btoa(email)
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+    
+    // Send via Gmail API
+    const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        raw: encodedEmail
+      })
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Gmail send error:", response.status, errorText);
+      return false;
+    }
+    
+    console.log("Email sent successfully via Gmail");
+    return true;
+  } catch (error) {
+    console.error("Error sending Gmail email:", error);
+    return false;
+  }
+}
+
+// Helper function to send email via Outlook API
+async function sendOutlookEmail(accessToken: string, to: string, subject: string, body: string): Promise<boolean> {
+  try {
+    const message = {
+      message: {
+        subject: subject,
+        body: {
+          contentType: 'Text',
+          content: body
+        },
+        toRecipients: [
+          {
+            emailAddress: {
+              address: to
+            }
+          }
+        ]
+      }
+    };
+    
+    const response = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(message)
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Outlook send error:", response.status, errorText);
+      return false;
+    }
+    
+    console.log("Email sent successfully via Outlook");
+    return true;
+  } catch (error) {
+    console.error("Error sending Outlook email:", error);
+    return false;
   }
 }
 
