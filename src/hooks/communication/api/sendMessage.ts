@@ -15,7 +15,39 @@ export const sendMessage = async (conversationId: string, content: string): Prom
       return true;
     }
     
-    // For real conversations, add to database
+    // Get conversation to check platform
+    const { data: conversation, error: convError } = await supabase
+      .from('social_conversations')
+      .select('platform')
+      .eq('id', conversationId)
+      .single();
+      
+    if (convError) {
+      throw convError;
+    }
+    
+    // For Facebook conversations, use the edge function to send via Graph API
+    if (conversation?.platform === 'facebook') {
+      const { data, error } = await supabase.functions.invoke('facebook-send-message', {
+        body: {
+          conversation_id: conversationId,
+          content: content
+        }
+      });
+      
+      if (error) {
+        console.error('Error calling facebook-send-message:', error);
+        throw new Error('Failed to send Facebook message');
+      }
+      
+      if (!data?.success) {
+        throw new Error('Facebook message send failed');
+      }
+      
+      return true;
+    }
+    
+    // For other platforms, just store in database
     const { error } = await supabase
       .from('social_messages')
       .insert({

@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { connectSocialPlatform } from "@/hooks/communication/api/connectSocialPlatform";
 import FacebookIntegration from "./FacebookIntegration";
+import FacebookWebhookSetup from "./FacebookWebhookSetup";
 
 const SocialConnections: React.FC = () => {
   const { user } = useAuth();
@@ -105,6 +106,8 @@ const SocialConnections: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+      
+      <FacebookWebhookSetup />
     </div>
   );
 };
