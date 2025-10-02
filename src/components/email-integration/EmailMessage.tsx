@@ -9,6 +9,7 @@ import { useEmailIntegration } from "@/hooks/email/useEmailIntegration";
 import EmailStatusBadge from "./email-message/EmailStatusBadge";
 import BookingDetails from "./email-message/BookingDetails";
 import ConversationThread from "./email-message/ConversationThread";
+import EmailAttachments from "./EmailAttachments";
 import DOMPurify from "dompurify";
 import { useToast } from "@/hooks/use-toast";
 
@@ -130,6 +131,11 @@ const EmailMessage: React.FC<EmailMessageProps> = ({
         <div 
           className="prose prose-sm max-w-none" 
           dangerouslySetInnerHTML={{ __html: sanitizedEmailContent }}
+        />
+        
+        <EmailAttachments 
+          attachments={email.attachments || []} 
+          messageId={email.id}
         />
       </CardContent>
       

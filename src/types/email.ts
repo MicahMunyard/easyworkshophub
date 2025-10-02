@@ -1,4 +1,12 @@
 
+export interface EmailAttachment {
+  filename: string;
+  mimeType: string;
+  size: number;
+  attachmentId: string;
+  messageId: string;
+}
+
 export interface EmailType {
   id: string;
   subject: string;
@@ -10,6 +18,7 @@ export interface EmailType {
   booking_created: boolean;
   processing_status?: 'pending' | 'processing' | 'completed' | 'failed';
   extracted_details?: ExtractedDetails;
+  attachments?: EmailAttachment[];
 }
 
 export interface ExtractedDetails {

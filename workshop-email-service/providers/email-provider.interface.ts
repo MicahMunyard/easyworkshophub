@@ -1,4 +1,12 @@
 
+export interface EmailAttachment {
+  filename: string;
+  mimeType: string;
+  size: number;
+  attachmentId: string;
+  messageId: string;
+}
+
 export interface EmailMessage {
   id: string;
   subject: string;
@@ -17,6 +25,7 @@ export interface EmailMessage {
     service: string | null;
     vehicle: string | null;
   };
+  attachments?: EmailAttachment[];
 }
 
 export interface EmailProviderInterface {

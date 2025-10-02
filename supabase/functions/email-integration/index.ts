@@ -46,6 +46,8 @@ serve(async (req) => {
         return await handleSendReplyEndpoint(req);
       case 'send':
         return await handleSendEmailEndpoint(req);
+      case 'attachment':
+        return await handleAttachmentDownloadEndpoint(req);
       default:
         return await handleMainEndpoint(req);
     }
@@ -782,6 +784,147 @@ async function handleSendReplyEndpoint(req: Request) {
   );
 }
 
+// Handle attachment download endpoint
+async function handleAttachmentDownloadEndpoint(req: Request) {
+  console.log("Email integration attachment download endpoint called");
+  
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  
+  if (!supabaseUrl || !supabaseServiceRoleKey) {
+    console.error("Missing Supabase environment variables");
+    return new Response(
+      JSON.stringify({ error: 'Server configuration error' }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+    );
+  }
+
+  const supabaseClient = createClient(supabaseUrl, supabaseServiceRoleKey);
+  const authHeader = req.headers.get('Authorization');
+  
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return new Response(
+      JSON.stringify({ error: 'Missing or invalid authorization header' }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+    );
+  }
+
+  const jwt = authHeader.substring(7);
+  
+  try {
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(jwt);
+    
+    if (userError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      );
+    }
+    
+    const { messageId, attachmentId } = await req.json();
+    
+    if (!messageId || !attachmentId) {
+      return new Response(
+        JSON.stringify({ error: 'Missing messageId or attachmentId' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+    
+    // Get user's email connection
+    const { data: emailConnection, error: connectionError } = await supabaseClient
+      .from('email_connections')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('status', 'connected')
+      .single();
+      
+    if (connectionError || !emailConnection) {
+      return new Response(
+        JSON.stringify({ error: 'No email connection found' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+    
+    // Check if token is expired
+    if (emailConnection.token_expires_at && new Date(emailConnection.token_expires_at) <= new Date()) {
+      const newTokens = await refreshAccessToken(emailConnection, supabaseClient);
+      if (!newTokens) {
+        return new Response(
+          JSON.stringify({ error: 'Failed to refresh access token' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+        );
+      }
+      emailConnection.access_token = newTokens.access_token;
+    }
+    
+    // Download attachment based on provider
+    if (emailConnection.provider === 'google' || emailConnection.provider === 'gmail') {
+      const response = await fetch(
+        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}/attachments/${attachmentId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${emailConnection.access_token}`
+          }
+        }
+      );
+      
+      if (!response.ok) {
+        throw new Error('Failed to download attachment from Gmail');
+      }
+      
+      const data = await response.json();
+      const attachmentData = data.data.replace(/-/g, '+').replace(/_/g, '/');
+      const binaryData = Uint8Array.from(atob(attachmentData), c => c.charCodeAt(0));
+      
+      return new Response(binaryData, {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/octet-stream',
+          'Content-Disposition': 'attachment'
+        }
+      });
+      
+    } else if (emailConnection.provider === 'microsoft' || emailConnection.provider === 'outlook') {
+      const response = await fetch(
+        `https://graph.microsoft.com/v1.0/me/messages/${messageId}/attachments/${attachmentId}/$value`,
+        {
+          headers: {
+            'Authorization': `Bearer ${emailConnection.access_token}`
+          }
+        }
+      );
+      
+      if (!response.ok) {
+        throw new Error('Failed to download attachment from Outlook');
+      }
+      
+      const blob = await response.blob();
+      return new Response(blob, {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/octet-stream',
+          'Content-Disposition': 'attachment'
+        }
+      });
+    } else {
+      return new Response(
+        JSON.stringify({ error: 'Unsupported email provider' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+    
+  } catch (error) {
+    console.error("Error downloading attachment:", error);
+    return new Response(
+      JSON.stringify({ 
+        error: 'Internal server error', 
+        details: error instanceof Error ? error.message : String(error)
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+    );
+  }
+}
+
 // Updated refreshAccessToken function that handles both Google and Microsoft tokens
 async function refreshAccessToken(connection: any, supabaseClient: any): Promise<any | null> {
   console.log("Attempting to refresh access token for provider:", connection.provider);
@@ -1006,42 +1149,55 @@ function processGmailMessage(message: any): any {
   const nameMatch = from.match(/^"?([^"<]+)"?\s*(?:<.*>)?$/);
   const senderName = nameMatch ? nameMatch[1].trim() : from.replace(/<.*>/, '').trim();
   
-  // Extract message body
+  // Extract message body and attachments
   let content = '';
+  const attachments: any[] = [];
   
-  // Try to get plain text part first
-  if (message.payload.parts) {
-    const textPart = message.payload.parts.find((part: any) => 
-      part.mimeType === 'text/plain' && part.body && part.body.data
-    );
+  // Recursive function to extract parts
+  function extractParts(parts: any[], messageId: string) {
+    if (!parts) return;
     
-    if (textPart && textPart.body.data) {
-      content = atob(textPart.body.data.replace(/-/g, '+').replace(/_/g, '/'));
-    } else {
-      // Try HTML part if no plain text
-      const htmlPart = message.payload.parts.find((part: any) => 
-        part.mimeType === 'text/html' && part.body && part.body.data
-      );
+    for (const part of parts) {
+      // Check if this part has attachments
+      if (part.filename && part.body?.attachmentId) {
+        attachments.push({
+          filename: part.filename,
+          mimeType: part.mimeType,
+          size: part.body.size || 0,
+          attachmentId: part.body.attachmentId,
+          messageId: messageId
+        });
+      }
       
-      if (htmlPart && htmlPart.body.data) {
-        const htmlContent = atob(htmlPart.body.data.replace(/-/g, '+').replace(/_/g, '/'));
-        // Simple HTML to text conversion
+      // Extract text content
+      if (part.mimeType === 'text/plain' && part.body?.data && !content) {
+        content = atob(part.body.data.replace(/-/g, '+').replace(/_/g, '/'));
+      } else if (part.mimeType === 'text/html' && part.body?.data && !content) {
+        const htmlContent = atob(part.body.data.replace(/-/g, '+').replace(/_/g, '/'));
         content = htmlContent.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
       }
+      
+      // Recursively process nested parts
+      if (part.parts) {
+        extractParts(part.parts, messageId);
+      }
     }
+  }
+  
+  // Try to get content from parts
+  if (message.payload.parts) {
+    extractParts(message.payload.parts, message.id);
   } else if (message.payload.body && message.payload.body.data) {
     // Handle single-part messages
     content = atob(message.payload.body.data.replace(/-/g, '+').replace(/_/g, '/'));
   }
   
   // Analyze if this might be a booking request
-  // This is a simple heuristic - in a real system you might use NLP
   const bookingKeywords = ['book', 'appointment', 'schedule', 'service', 'reservation'];
   const lowerContent = content.toLowerCase();
   const isBookingEmail = bookingKeywords.some(keyword => lowerContent.includes(keyword));
   
   // Simple extraction of potential booking details
-  // In a real system, this would use proper NLP
   let extractedDetails = null;
   if (isBookingEmail) {
     extractedDetails = {
@@ -1063,7 +1219,8 @@ function processGmailMessage(message: any): any {
     content,
     is_booking_email: isBookingEmail,
     booking_created: false,
-    extracted_details: extractedDetails
+    extracted_details: extractedDetails,
+    attachments: attachments.length > 0 ? attachments : undefined
   };
 }
 
@@ -1120,14 +1277,28 @@ function processOutlookMessage(message: any): any {
   // Clean up content and convert HTML if needed
   const content = message.body?.content || '';
   
+  // Extract attachments
+  const attachments: any[] = [];
+  if (message.hasAttachments && message.attachments) {
+    for (const attachment of message.attachments) {
+      if (!attachment.isInline) {
+        attachments.push({
+          filename: attachment.name,
+          mimeType: attachment.contentType,
+          size: attachment.size || 0,
+          attachmentId: attachment.id,
+          messageId: message.id
+        });
+      }
+    }
+  }
+  
   // Analyze if this might be a booking request
-  // This is a simple heuristic - in a real system you might use NLP
   const bookingKeywords = ['book', 'appointment', 'schedule', 'service', 'reservation'];
   const lowerContent = content.toLowerCase();
   const isBookingEmail = bookingKeywords.some(keyword => lowerContent.includes(keyword));
   
   // Simple extraction of potential booking details
-  // In a real system, this would use proper NLP
   let extractedDetails = null;
   if (isBookingEmail) {
     extractedDetails = {
@@ -1149,7 +1320,8 @@ function processOutlookMessage(message: any): any {
     content: content,
     is_booking_email: isBookingEmail,
     booking_created: false,
-    extracted_details: extractedDetails
+    extracted_details: extractedDetails,
+    attachments: attachments.length > 0 ? attachments : undefined
   };
 }
 
