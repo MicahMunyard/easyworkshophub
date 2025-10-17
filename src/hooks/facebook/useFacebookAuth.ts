@@ -90,51 +90,71 @@ export const useFacebookAuth = () => {
     }
 
     console.log('✅ Facebook SDK available, initiating login...');
+    console.log('🔍 Facebook SDK object:', window.FB);
     setIsLoading(true);
 
     try {
-      window.FB.login(async (response: FacebookLoginStatus) => {
+      console.log('📞 Calling FB.login()...');
+      
+      window.FB.login((response: FacebookLoginStatus) => {
         console.log('📬 Facebook login callback received:', response);
+        console.log('📊 Response status:', response.status);
+        console.log('📊 Response authResponse:', response.authResponse);
         
         if (response.status === 'connected' && response.authResponse?.accessToken) {
           setFbStatus(response);
           const accessToken = response.authResponse.accessToken;
           setUserAccessToken(accessToken);
           
-          try {
-            console.log('📄 Fetching managed pages...');
-            const pagesResponse = await fetch(
-              `https://graph.facebook.com/v17.0/me/accounts?access_token=${accessToken}`
-            );
-            
-            if (!pagesResponse.ok) {
-              throw new Error('Failed to fetch Facebook pages');
-            }
-            
-            const pagesData = await pagesResponse.json();
-            console.log('📋 Pages fetched:', pagesData);
-            
-            if (pagesData.data && pagesData.data.length > 0) {
-              setAvailablePages(pagesData.data);
-              setShowPageSelector(true);
-              setIsLoading(false);
-            } else {
+          console.log('✅ User authenticated successfully');
+          console.log('🔑 Access token received (length):', accessToken.length);
+          
+          (async () => {
+            try {
+              console.log('📄 Fetching managed pages...');
+              const pagesResponse = await fetch(
+                `https://graph.facebook.com/v17.0/me/accounts?access_token=${accessToken}`
+              );
+              
+              console.log('📊 Pages API response status:', pagesResponse.status);
+              
+              if (!pagesResponse.ok) {
+                const errorText = await pagesResponse.text();
+                console.error('❌ Pages API error:', errorText);
+                throw new Error(`Failed to fetch Facebook pages: ${pagesResponse.status}`);
+              }
+              
+              const pagesData = await pagesResponse.json();
+              console.log('📋 Pages fetched:', pagesData);
+              
+              if (pagesData.data && pagesData.data.length > 0) {
+                console.log(`✅ Found ${pagesData.data.length} pages`);
+                setAvailablePages(pagesData.data);
+                setShowPageSelector(true);
+                setIsLoading(false);
+              } else {
+                console.warn('⚠️ No pages found for this account');
+                toast({
+                  variant: "destructive",
+                  title: "No Pages Found",
+                  description: "You don't manage any Facebook Pages. Please create or get access to a Page first."
+                });
+                setIsLoading(false);
+              }
+            } catch (error) {
+              console.error('💥 Error fetching pages:', error);
+              if (error instanceof Error) {
+                console.error('💥 Error message:', error.message);
+                console.error('💥 Error stack:', error.stack);
+              }
               toast({
                 variant: "destructive",
-                title: "No Pages Found",
-                description: "You don't manage any Facebook Pages. Please create or get access to a Page first."
+                title: "Error Fetching Pages",
+                description: error instanceof Error ? error.message : "Could not fetch your Facebook Pages."
               });
               setIsLoading(false);
             }
-          } catch (error) {
-            console.error('💥 Error fetching pages:', error);
-            toast({
-              variant: "destructive",
-              title: "Error",
-              description: "Could not fetch your Facebook Pages."
-            });
-            setIsLoading(false);
-          }
+          })();
         } else if (response.status === 'not_authorized') {
           console.log('❌ User not authorized');
           toast({
@@ -144,11 +164,11 @@ export const useFacebookAuth = () => {
           });
           setIsLoading(false);
         } else {
-          console.log('❌ Login cancelled or failed:', response);
+          console.log('❌ Login cancelled or failed. Full response:', JSON.stringify(response));
           toast({
             variant: "destructive",
             title: "Login Cancelled",
-            description: "Facebook login was cancelled. Please ensure pop-ups are allowed and try again."
+            description: "Facebook login was cancelled or failed. Please ensure pop-ups are allowed and try again."
           });
           setIsLoading(false);
         }
@@ -156,12 +176,19 @@ export const useFacebookAuth = () => {
         scope: 'pages_show_list,pages_manage_metadata,pages_messaging,pages_read_engagement,pages_manage_engagement',
         display: 'popup'
       } as any);
+      
+      console.log('✅ FB.login() called successfully, waiting for callback...');
     } catch (error) {
       console.error('💥 Exception during Facebook login:', error);
+      if (error instanceof Error) {
+        console.error('💥 Error name:', error.name);
+        console.error('💥 Error message:', error.message);
+        console.error('💥 Error stack:', error.stack);
+      }
       toast({
         variant: "destructive",
         title: "Connection Error",
-        description: "An error occurred while connecting to Facebook. Please try again."
+        description: error instanceof Error ? `${error.name}: ${error.message}` : "An error occurred while connecting to Facebook. Please try again."
       });
       setIsLoading(false);
     }
