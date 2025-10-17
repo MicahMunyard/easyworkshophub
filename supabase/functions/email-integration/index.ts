@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { oauthConfig } from "../_shared/oauth.config.ts";
+import { testImapConnection, encryptPassword, decryptPassword, getProviderImapConfig } from "../_shared/imap-utils.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -70,87 +71,149 @@ async function handleConnectEndpoint(req: Request) {
   console.log("Email integration connect endpoint called");
   
   try {
-    // Create a debug object with more information
-    const debugInfo = {
-      environmentVariables: {
-        GOOGLE_CLIENT_ID: Deno.env.get('GOOGLE_CLIENT_ID') ? 'Set' : 'Not set',
-        GOOGLE_CLIENT_SECRET: Deno.env.get('GOOGLE_CLIENT_SECRET') ? 'Set' : 'Not set',
-        MICROSOFT_CLIENT_ID: Deno.env.get('MICROSOFT_CLIENT_ID') ? 'Set' : 'Not set',
-        MICROSOFT_CLIENT_SECRET: Deno.env.get('MICROSOFT_CLIENT_SECRET') ? 'Set' : 'Not set',
-        SUPABASE_URL: Deno.env.get('SUPABASE_URL') ? 'Set' : 'Not set',
-        SUPABASE_SERVICE_ROLE_KEY: Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ? 'Set' : 'Not set',
-      },
-      requestInfo: {
-        method: req.method,
-        url: req.url,
-        hasAuthHeader: req.headers.has('Authorization'),
+    const body = await req.json();
+    const { provider, email, password, host, port } = body;
+
+    console.log('Connect request for provider:', provider);
+
+    // Handle IMAP-based providers (Yahoo, Other)
+    if (provider === 'yahoo' || provider === 'other') {
+      console.log('Handling IMAP-based connection');
+
+      // Validate required fields
+      if (!email || !password) {
+        return new Response(
+          JSON.stringify({ error: 'Email and password are required for IMAP providers' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        );
       }
-    };
-    
-    console.log("Debug information:", JSON.stringify(debugInfo, null, 2));
-    
-    // Parse request body
-    let provider;
-    try {
-      const body = await req.json();
-      provider = body.provider;
-      console.log("Request body parsed successfully, provider:", provider);
-    } catch (error) {
-      console.error("Error parsing request body:", error);
+
+      // Get provider configuration
+      const imapConfig = provider === 'other' && host && port
+        ? { host, port: parseInt(port), secure: true }
+        : getProviderImapConfig(provider);
+
+      console.log('Testing IMAP connection to:', imapConfig.host);
+
+      // Test IMAP connection
+      const testResult = await testImapConnection({
+        ...imapConfig,
+        email,
+        password
+      });
+
+      if (!testResult.success) {
+        console.error('IMAP connection test failed:', testResult.error);
+        return new Response(
+          JSON.stringify({
+            error: 'Connection test failed',
+            details: testResult.details || testResult.error
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        );
+      }
+
+      console.log('IMAP connection test successful');
+
+      // Get authenticated user
+      const authHeader = req.headers.get('Authorization');
+      if (!authHeader) {
+        return new Response(
+          JSON.stringify({ error: 'No authorization header' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+        );
+      }
+
+      const supabaseClient = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+        { global: { headers: { Authorization: authHeader } } }
+      );
+
+      const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+      
+      if (userError || !user) {
+        console.error('Failed to get user:', userError);
+        return new Response(
+          JSON.stringify({ error: 'Unauthorized' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+        );
+      }
+
+      console.log('Encrypting password for user:', user.id);
+
+      // Generate encryption key
+      const encryptionKey = crypto.randomUUID();
+
+      // Encrypt password
+      const encryptedPassword = await encryptPassword(password, encryptionKey);
+
+      // Store connection in database
+      const { error: dbError } = await supabaseClient
+        .from('email_connections')
+        .upsert({
+          user_id: user.id,
+          provider,
+          email_address: email,
+          access_token: encryptedPassword,
+          encryption_key: encryptionKey,
+          status: 'connected',
+          connected_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id,provider'
+        });
+
+      if (dbError) {
+        console.error('Database error:', dbError);
+        return new Response(
+          JSON.stringify({ error: 'Failed to save connection' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        );
+      }
+
+      console.log('IMAP connection saved successfully');
+
       return new Response(
-        JSON.stringify({ 
-          error: 'Invalid request body', 
-          details: 'Could not parse JSON body',
-          debug: debugInfo
+        JSON.stringify({
+          success: true,
+          provider,
+          email_address: email
         }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // OAuth-based providers (Gmail, Outlook) - existing logic
+    if (!provider || (provider !== 'gmail' && provider !== 'outlook' && provider !== 'google' && provider !== 'microsoft')) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid provider. Must be gmail, outlook, yahoo, or other' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       );
     }
-    
-    if (!provider) {
-      return new Response(
-        JSON.stringify({ 
-          error: 'Missing required field: provider',
-          debug: debugInfo 
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      );
-    }
-    
-    // Generate OAuth URL for the specified provider
-    let authUrl;
-    
+
+    // Check for Google OAuth configuration
     if (provider === 'gmail' || provider === 'google') {
-      // Check for Google OAuth configuration
       const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID');
       const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET');
       
-      // If the Google environment variables are missing, return a specific error for Google
       if (!googleClientId || !googleClientSecret) {
         console.error("Missing Google OAuth configuration");
         return new Response(
           JSON.stringify({ 
             error: 'Server configuration error: Missing Google OAuth configuration',
-            details: 'The Google client ID or client secret is not configured in environment variables.',
-            debug: debugInfo,
-            manualConfig: {
-              GOOGLE_CLIENT_ID: '736177477108-a7cfbd4dcv3pqfk2jaolbm3j4fse0s9h.apps.googleusercontent.com',
-              GOOGLE_CLIENT_SECRET_LENGTH: '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'.length,
-            }
+            details: 'The Google client ID or client secret is not configured in environment variables.'
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
         );
       }
       
-      // *** IMPORTANT: Update the redirectUri to match what's configured in Google Cloud Console ***
       const redirectUri = 'https://app.workshopbase.com.au/email/callback';
       
       console.log("Google OAuth configuration:");
       console.log("- Client ID:", googleClientId ? 'Available' : 'Missing');
-      console.log("- Client Secret:", googleClientSecret ? 'Available' : 'Missing');
       console.log("- Redirect URI:", redirectUri);
       
-      // Create Google OAuth URL with the configured redirect URI
       const scopes = [
         'https://www.googleapis.com/auth/gmail.readonly',
         'https://www.googleapis.com/auth/gmail.send',
@@ -160,15 +223,24 @@ async function handleConnectEndpoint(req: Request) {
         'https://www.googleapis.com/auth/userinfo.profile'
       ];
       
-      authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(googleClientId)}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes.join(' '))}&access_type=offline&prompt=consent&state=${provider}`;
-      console.log("Generated Google auth URL:", authUrl.substring(0, 100) + '...');
+      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(googleClientId)}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes.join(' '))}&access_type=offline&prompt=consent&state=${provider}`;
+      console.log("Generated Google auth URL");
       
-    } else if (provider === 'microsoft' || provider === 'outlook') {
-      // Check for Microsoft OAuth configuration
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          auth_url: authUrl,
+          message: 'OAuth authentication URL generated' 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Microsoft OAuth
+    if (provider === 'outlook' || provider === 'microsoft') {
       const microsoftClientId = Deno.env.get('MICROSOFT_CLIENT_ID');
       const microsoftClientSecret = Deno.env.get('MICROSOFT_CLIENT_SECRET');
       
-      // If the Microsoft environment variables are missing, return a specific error
       if (!microsoftClientId || !microsoftClientSecret) {
         console.error("Missing Microsoft OAuth configuration");
         return new Response(
@@ -180,15 +252,12 @@ async function handleConnectEndpoint(req: Request) {
         );
       }
       
-      // Update the redirectUri to match what's configured in Azure portal
       const redirectUri = 'https://app.workshopbase.com.au/email/callback';
       
       console.log("Microsoft OAuth configuration:");
       console.log("- Client ID:", microsoftClientId ? 'Available' : 'Missing');
-      console.log("- Client Secret:", microsoftClientSecret ? 'Available' : 'Missing');
       console.log("- Redirect URI:", redirectUri);
       
-      // Create Microsoft OAuth URL with the configured redirect URI
       const scopes = [
         'offline_access',
         'User.Read',
@@ -196,24 +265,22 @@ async function handleConnectEndpoint(req: Request) {
         'Mail.Send'
       ];
       
-      // Microsoft uses a different OAuth flow than Google
-      authUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${encodeURIComponent(microsoftClientId)}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes.join(' '))}&response_mode=query&state=${provider}`;
-      console.log("Generated Microsoft auth URL:", authUrl.substring(0, 100) + '...');
-    } else {
+      const authUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${encodeURIComponent(microsoftClientId)}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes.join(' '))}&response_mode=query&state=${provider}`;
+      console.log("Generated Microsoft auth URL");
+      
       return new Response(
-        JSON.stringify({ error: 'Unsupported provider' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        JSON.stringify({ 
+          success: true, 
+          auth_url: authUrl,
+          message: 'OAuth authentication URL generated' 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    
-    // Return the authentication URL
+
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        auth_url: authUrl,
-        message: 'OAuth authentication URL generated' 
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ error: 'Unsupported provider' }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
     );
     
   } catch (error: any) {

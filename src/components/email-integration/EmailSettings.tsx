@@ -26,6 +26,10 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({
     setEmailAddress,
     password,
     setPassword,
+    customHost,
+    setCustomHost,
+    customPort,
+    setCustomPort,
     connectionStatus,
     isLoading,
     lastError,
@@ -181,10 +185,48 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({
                     />
                     {provider === 'yahoo' && (
                       <p className="text-sm text-muted-foreground">
-                        For Yahoo Mail, you need to generate an App Password in your Yahoo account settings.
+                        For Yahoo Mail, you need to generate an App Password in your{' '}
+                        <a 
+                          href="https://login.yahoo.com/account/security" 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-primary underline"
+                        >
+                          Yahoo Account Security settings
+                        </a>
                       </p>
                     )}
                   </div>
+
+                  {/* Custom IMAP settings for "Other" provider */}
+                  {provider === 'other' && (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="imap-host">IMAP Server Host</Label>
+                        <Input
+                          id="imap-host"
+                          type="text"
+                          placeholder="imap.example.com"
+                          value={customHost}
+                          onChange={(e) => setCustomHost(e.target.value)}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="imap-port">IMAP Port</Label>
+                        <Input
+                          id="imap-port"
+                          type="number"
+                          placeholder="993"
+                          value={customPort}
+                          onChange={(e) => setCustomPort(e.target.value)}
+                        />
+                        <p className="text-sm text-muted-foreground">
+                          Usually 993 for SSL/TLS or 143 for STARTTLS
+                        </p>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
 

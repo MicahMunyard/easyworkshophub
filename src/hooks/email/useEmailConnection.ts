@@ -9,6 +9,8 @@ export const useEmailConnection = () => {
   const [provider, setProvider] = useState<"gmail" | "outlook" | "yahoo" | "other">("gmail");
   const [emailAddress, setEmailAddress] = useState("");
   const [password, setPassword] = useState("");
+  const [customHost, setCustomHost] = useState("");
+  const [customPort, setCustomPort] = useState("");
   const [isConnected, setIsConnected] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<"connected" | "disconnected" | "connecting" | "error" | "token_expired">("disconnected");
   const [isLoading, setIsLoading] = useState(false);
@@ -153,6 +155,88 @@ export const useEmailConnection = () => {
         throw new Error("No active session found");
       }
       
+      // Handle IMAP-based providers (Yahoo, Other)
+      if (provider === 'yahoo' || provider === 'other') {
+        console.log('Connecting IMAP provider:', provider);
+
+        if (!emailAddress || !password) {
+          toast({
+            title: "Missing credentials",
+            description: "Please enter your email address and password",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return false;
+        }
+
+        // For custom provider, validate host and port
+        if (provider === 'other' && (!customHost || !customPort)) {
+          toast({
+            title: "Missing server details",
+            description: "Please enter IMAP server host and port",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return false;
+        }
+
+        const payload: any = {
+          provider,
+          email: emailAddress,
+          password: password
+        };
+
+        if (provider === 'other') {
+          payload.host = customHost;
+          payload.port = customPort;
+        }
+
+        const { data, error: functionError } = await supabase.functions.invoke(
+          'email-integration/connect',
+          {
+            body: payload
+          }
+        );
+
+        if (functionError) {
+          console.error('IMAP connection error:', functionError);
+          const errorMessage = functionError.message || 'Failed to connect email account';
+          toast({
+            title: "Connection failed",
+            description: errorMessage,
+            variant: "destructive",
+          });
+          setLastError(errorMessage);
+          setIsLoading(false);
+          return false;
+        }
+
+        if (data?.error) {
+          console.error('IMAP connection error:', data.error);
+          toast({
+            title: "Connection failed",
+            description: data.details || data.error,
+            variant: "destructive",
+          });
+          setLastError(data.error);
+          setIsLoading(false);
+          return false;
+        }
+
+        console.log('IMAP connection successful:', data);
+        setIsConnected(true);
+        setConnectionStatus("connected");
+        setEmailAddress(data.email_address);
+        
+        toast({
+          title: "Email connected",
+          description: `Successfully connected ${data.email_address}`,
+        });
+
+        setIsLoading(false);
+        return true;
+      }
+
       // For OAuth providers (Gmail, Outlook), we call the edge function to get the OAuth URL
       if (provider === "gmail" || provider === "outlook") {
         console.info("Connecting to edge function for OAuth URL");
@@ -180,7 +264,7 @@ export const useEmailConnection = () => {
           // For OAuth flow, we redirect to the auth URL
           if (data.auth_url) {
             window.location.href = data.auth_url;
-            return true; // Return true as we're redirecting
+            return true;
           }
         } catch (error: any) {
           console.error("Error invoking edge function:", error);
@@ -200,7 +284,7 @@ export const useEmailConnection = () => {
             user_id: user.id,
             email_address: emailAddress,
             provider: provider,
-            status: 'connected', // Set as connected for non-OAuth providers
+            status: 'connected',
             updated_at: new Date().toISOString(),
             auto_create_bookings: autoCreateBookings
           }, {
@@ -211,7 +295,6 @@ export const useEmailConnection = () => {
           throw new Error(`Database error: ${error.message}`);
         }
         
-        // Update local state
         setIsConnected(true);
         setConnectionStatus("connected");
         
@@ -318,6 +401,10 @@ export const useEmailConnection = () => {
     setEmailAddress,
     password,
     setPassword,
+    customHost,
+    setCustomHost,
+    customPort,
+    setCustomPort,
     provider,
     setProvider,
     isConnected,
