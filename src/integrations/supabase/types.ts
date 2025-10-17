@@ -1820,7 +1820,11 @@ export type Database = {
         Returns: string
       }
       update_social_connection_status: {
-        Args: { new_status: string; platform_name: string }
+        Args: {
+          new_status: string
+          platform_name: string
+          user_id_param: string
+        }
         Returns: undefined
       }
       update_technician_email: {

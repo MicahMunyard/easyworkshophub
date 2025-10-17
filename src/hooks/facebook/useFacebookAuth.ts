@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Define the type locally since we're having issues with the global declaration
 interface FacebookLoginStatus {
@@ -28,6 +29,7 @@ export const useFacebookAuth = () => {
   const [showPageSelector, setShowPageSelector] = useState(false);
   const [userAccessToken, setUserAccessToken] = useState<string>('');
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const checkLoginStatus = () => {
     console.log('🔍 Checking Facebook SDK status...');
@@ -251,29 +253,86 @@ export const useFacebookAuth = () => {
   };
 
   const handleFacebookLogout = async () => {
-    if (typeof window !== 'undefined' && window.FB) {
+    if (typeof window === 'undefined' || !window.FB) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Facebook SDK not available."
+      });
+      return;
+    }
+
+    console.log('🚪 Starting Facebook logout...');
+    setIsLoading(true);
+
+    try {
       window.FB.logout(async (response) => {
+        console.log('📤 Facebook SDK logout response:', response);
         setFbStatus(null);
         
-        try {
-          // Use the custom RPC to update social connection status
-          const { error } = await supabase.rpc('update_social_connection_status', {
-            platform_name: 'facebook',
-            new_status: 'disconnected'
-          });
-            
-          if (error) {
-            console.error('Error disconnecting Facebook:', error);
-          }
-        } catch (error) {
-          console.error('Error processing Facebook logout:', error);
+        if (!user?.id) {
+          console.error('❌ No user ID available for logout');
+          setIsLoading(false);
+          return;
         }
-        
-        toast({
-          title: "Logged Out",
-          description: "Disconnected from Facebook."
-        });
+
+        try {
+          // Delete social connections
+          const { error: connectionError } = await supabase
+            .from('social_connections')
+            .delete()
+            .eq('platform', 'facebook')
+            .eq('user_id', user.id);
+
+          if (connectionError) {
+            console.error('❌ Error deleting social connection:', connectionError);
+          } else {
+            console.log('✅ Deleted social connection');
+          }
+
+          // Delete page tokens
+          const { error: tokenError } = await supabase
+            .from('facebook_page_tokens')
+            .delete()
+            .eq('user_id', user.id);
+
+          if (tokenError) {
+            console.error('❌ Error deleting page tokens:', tokenError);
+          } else {
+            console.log('✅ Deleted page tokens');
+          }
+
+          console.log('✅ Successfully disconnected from Facebook');
+          
+          toast({
+            title: "Disconnected",
+            description: "Successfully disconnected from Facebook."
+          });
+
+          // Reload to refresh UI state
+          setTimeout(() => {
+            window.location.reload();
+          }, 1000);
+
+        } catch (error) {
+          console.error('💥 Error during database cleanup:', error);
+          toast({
+            variant: "destructive",
+            title: "Disconnect Error",
+            description: "Could not fully disconnect. Please try again."
+          });
+        } finally {
+          setIsLoading(false);
+        }
       });
+    } catch (error) {
+      console.error('💥 Error initiating logout:', error);
+      toast({
+        variant: "destructive",
+        title: "Logout Error",
+        description: "Could not disconnect from Facebook."
+      });
+      setIsLoading(false);
     }
   };
 
