@@ -79,7 +79,7 @@ verify_jwt = true
 [functions.ezyparts-order]
 verify_jwt = true
 
-[functions.facebook-webhook-verify]
+[functions.facebook-webhook]
 verify_jwt = false
 
 [functions.facebook-send-message]

@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Copy, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-const WEBHOOK_URL = "https://qyjjbpyqxwrluhymvshn.supabase.co/functions/v1/facebook-webhook-verify";
+const WEBHOOK_URL = "https://qyjjbpyqxwrluhymvshn.supabase.co/functions/v1/facebook-webhook";
 const VERIFY_TOKEN = "wsb_fb_hook_a7d93bf52c14e9f8";
 
 const FacebookWebhookSetup: React.FC = () => {

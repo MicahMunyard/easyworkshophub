@@ -7,12 +7,37 @@ import {
   createErrorResponse
 } from "../_shared/response-utils.ts";
 
+const VERIFY_TOKEN = 'wsb_fb_hook_a7d93bf52c14e9f8';
+
 serve(async (req) => {
   // Handle CORS preflight requests
   const corsResponse = handleCors(req);
   if (corsResponse) return corsResponse;
 
   try {
+    // Handle GET requests (webhook verification)
+    if (req.method === 'GET') {
+      const url = new URL(req.url);
+      const mode = url.searchParams.get('hub.mode');
+      const token = url.searchParams.get('hub.verify_token');
+      const challenge = url.searchParams.get('hub.challenge');
+
+      console.log('Facebook webhook verification request:', { mode, token, challenge });
+
+      if (mode && token) {
+        if (mode === 'subscribe' && token === VERIFY_TOKEN) {
+          console.log('✅ Webhook verified successfully');
+          return new Response(challenge, {
+            status: 200,
+            headers: { 'Content-Type': 'text/plain' }
+          });
+        } else {
+          console.error('❌ Verification failed - token mismatch');
+          return new Response('Forbidden', { status: 403 });
+        }
+      }
+    }
+    
     // Handle POST requests (incoming messages)
     if (req.method === 'POST') {
       const body = await req.json();
