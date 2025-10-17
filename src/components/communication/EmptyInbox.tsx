@@ -45,9 +45,7 @@ const EmptyInbox: React.FC<EmptyInboxProps> = ({
             <Button 
               size="lg" 
               onClick={onSwitchToConnections}
-              className="flex items-center gap-2"
             >
-              <Facebook className="h-4 w-4" />
               Connect Social Accounts
             </Button>
           ) : (

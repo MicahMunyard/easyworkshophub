@@ -30,22 +30,25 @@ export const useFacebookAuth = () => {
   const { toast } = useToast();
 
   const checkLoginStatus = () => {
+    console.log('🔍 Checking Facebook SDK status...');
+    console.log('window.FB available:', typeof window !== 'undefined' && !!window.FB);
+    
     if (typeof window !== 'undefined' && window.FB) {
-      // Set a timeout fallback to prevent infinite loading
+      console.log('✅ Facebook SDK loaded, checking login status...');
+      
       const timeoutId = setTimeout(() => {
-        console.warn('Facebook status check timed out after 5 seconds');
+        console.warn('⏱️ Facebook status check timed out after 5 seconds');
         setIsLoading(false);
       }, 5000);
       
       window.FB.getLoginStatus((response: FacebookLoginStatus) => {
-        clearTimeout(timeoutId); // Clear timeout if callback fires
-        console.log('Facebook login status:', response);
+        clearTimeout(timeoutId);
+        console.log('📊 Facebook login status response:', response);
         setFbStatus(response);
         setIsLoading(false);
       });
     } else {
-      // If FB SDK not available, don't stay in loading state
-      console.warn('Facebook SDK not available');
+      console.warn('❌ Facebook SDK not available');
       setIsLoading(false);
     }
   };
@@ -64,10 +67,10 @@ export const useFacebookAuth = () => {
   }, []);
 
   const handleFacebookLogin = async () => {
-    console.log('handleFacebookLogin called');
+    console.log('🚀 handleFacebookLogin called');
     
     if (typeof window === 'undefined') {
-      console.error('Window is undefined');
+      console.error('❌ Window is undefined');
       toast({
         variant: "destructive",
         title: "Error",
@@ -77,80 +80,91 @@ export const useFacebookAuth = () => {
     }
     
     if (!window.FB) {
-      console.error('Facebook SDK not loaded');
+      console.error('❌ Facebook SDK not loaded');
       toast({
         variant: "destructive",
-        title: "Facebook SDK Not Loaded",
-        description: "Please refresh the page and try again."
+        title: "Facebook SDK Not Available",
+        description: "The Facebook SDK failed to load. Please check your internet connection and try refreshing the page.",
       });
       return;
     }
-    
-    console.log('Initiating Facebook login...');
+
+    console.log('✅ Facebook SDK available, initiating login...');
     setIsLoading(true);
-    
-    window.FB.login(async (response: FacebookLoginStatus) => {
-      console.log('Facebook login callback received:', response);
-      
-      if (response.status === 'connected' && response.authResponse?.accessToken) {
-        setFbStatus(response);
-        const accessToken = response.authResponse.accessToken;
-        setUserAccessToken(accessToken);
+
+    try {
+      window.FB.login(async (response: FacebookLoginStatus) => {
+        console.log('📬 Facebook login callback received:', response);
         
-        try {
-          // Fetch the user's managed pages
-          console.log('Fetching managed pages...');
-          const pagesResponse = await fetch(
-            `https://graph.facebook.com/v17.0/me/accounts?access_token=${accessToken}`
-          );
+        if (response.status === 'connected' && response.authResponse?.accessToken) {
+          setFbStatus(response);
+          const accessToken = response.authResponse.accessToken;
+          setUserAccessToken(accessToken);
           
-          if (!pagesResponse.ok) {
-            throw new Error('Failed to fetch Facebook pages');
-          }
-          
-          const pagesData = await pagesResponse.json();
-          console.log('Pages fetched:', pagesData);
-          
-          if (pagesData.data && pagesData.data.length > 0) {
-            setAvailablePages(pagesData.data);
-            setShowPageSelector(true);
-            setIsLoading(false);
-          } else {
+          try {
+            console.log('📄 Fetching managed pages...');
+            const pagesResponse = await fetch(
+              `https://graph.facebook.com/v17.0/me/accounts?access_token=${accessToken}`
+            );
+            
+            if (!pagesResponse.ok) {
+              throw new Error('Failed to fetch Facebook pages');
+            }
+            
+            const pagesData = await pagesResponse.json();
+            console.log('📋 Pages fetched:', pagesData);
+            
+            if (pagesData.data && pagesData.data.length > 0) {
+              setAvailablePages(pagesData.data);
+              setShowPageSelector(true);
+              setIsLoading(false);
+            } else {
+              toast({
+                variant: "destructive",
+                title: "No Pages Found",
+                description: "You don't manage any Facebook Pages. Please create or get access to a Page first."
+              });
+              setIsLoading(false);
+            }
+          } catch (error) {
+            console.error('💥 Error fetching pages:', error);
             toast({
               variant: "destructive",
-              title: "No Pages Found",
-              description: "You don't manage any Facebook Pages. Please create or get access to a Page first."
+              title: "Error",
+              description: "Could not fetch your Facebook Pages."
             });
             setIsLoading(false);
           }
-        } catch (error) {
-          console.error('Error fetching pages:', error);
+        } else if (response.status === 'not_authorized') {
+          console.log('❌ User not authorized');
           toast({
             variant: "destructive",
-            title: "Error",
-            description: "Could not fetch your Facebook Pages."
+            title: "Authorization Required",
+            description: "Please authorize the app to manage your Facebook Pages."
+          });
+          setIsLoading(false);
+        } else {
+          console.log('❌ Login cancelled or failed:', response);
+          toast({
+            variant: "destructive",
+            title: "Login Cancelled",
+            description: "Facebook login was cancelled. Please ensure pop-ups are allowed and try again."
           });
           setIsLoading(false);
         }
-      } else if (response.status === 'not_authorized') {
-        toast({
-          variant: "destructive",
-          title: "Authorization Required",
-          description: "Please authorize the app to manage your Facebook Pages."
-        });
-        setIsLoading(false);
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Login Failed",
-          description: "Could not connect to Facebook. Please ensure pop-ups are allowed and try again."
-        });
-        setIsLoading(false);
-      }
-    }, { 
-      scope: 'pages_show_list,pages_manage_metadata,pages_messaging,pages_read_engagement,pages_manage_engagement',
-      display: 'popup'
-    } as any);
+      }, { 
+        scope: 'pages_show_list,pages_manage_metadata,pages_messaging,pages_read_engagement,pages_manage_engagement',
+        display: 'popup'
+      } as any);
+    } catch (error) {
+      console.error('💥 Exception during Facebook login:', error);
+      toast({
+        variant: "destructive",
+        title: "Connection Error",
+        description: "An error occurred while connecting to Facebook. Please try again."
+      });
+      setIsLoading(false);
+    }
   };
 
   const handlePageSelection = async (selectedPageIds: string[]) => {
