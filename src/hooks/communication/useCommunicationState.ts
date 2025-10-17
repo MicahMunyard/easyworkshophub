@@ -54,11 +54,11 @@ export const useCommunicationState = () => {
     checkFacebookConnection();
   }, [user]);
 
-  // Clean up demo conversations when real connections exist
+  // Clean up demo conversations on mount
   useEffect(() => {
-    if (!user || !hasFacebookConnection) return;
+    if (!user) return;
     
-    // Clean up demo conversations since we have a real connection
+    // Always clean up demo conversations on mount
     const cleanup = async () => {
       await cleanupDemoConversations(user.id);
       // Refresh conversations after cleanup
@@ -66,7 +66,7 @@ export const useCommunicationState = () => {
     };
     
     cleanup();
-  }, [user, hasFacebookConnection]);
+  }, [user]);
 
   // Set up conversation real-time updates
   useEffect(() => {

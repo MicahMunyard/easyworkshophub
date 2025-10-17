@@ -31,11 +31,22 @@ export const useFacebookAuth = () => {
 
   const checkLoginStatus = () => {
     if (typeof window !== 'undefined' && window.FB) {
+      // Set a timeout fallback to prevent infinite loading
+      const timeoutId = setTimeout(() => {
+        console.warn('Facebook status check timed out after 5 seconds');
+        setIsLoading(false);
+      }, 5000);
+      
       window.FB.getLoginStatus((response: FacebookLoginStatus) => {
+        clearTimeout(timeoutId); // Clear timeout if callback fires
         console.log('Facebook login status:', response);
         setFbStatus(response);
         setIsLoading(false);
       });
+    } else {
+      // If FB SDK not available, don't stay in loading state
+      console.warn('Facebook SDK not available');
+      setIsLoading(false);
     }
   };
 

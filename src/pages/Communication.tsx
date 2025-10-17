@@ -66,6 +66,7 @@ const Communication = () => {
             addMessage={addMessage}
             hasFacebookConnection={hasFacebookConnection}
             fetchConversations={fetchConversations}
+            onSwitchToConnections={() => setActiveTab("connections")}
           />
         </TabsContent>
         

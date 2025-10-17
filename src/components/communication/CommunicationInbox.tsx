@@ -25,6 +25,7 @@ interface CommunicationInboxProps {
   addMessage: (message: Message) => void;
   hasFacebookConnection?: boolean;
   fetchConversations?: () => void;
+  onSwitchToConnections?: () => void;
 }
 
 const CommunicationInbox: React.FC<CommunicationInboxProps> = ({
@@ -41,7 +42,8 @@ const CommunicationInbox: React.FC<CommunicationInboxProps> = ({
   addContactToCustomers,
   addMessage,
   hasFacebookConnection,
-  fetchConversations
+  fetchConversations,
+  onSwitchToConnections
 }) => {
   const isMobile = useIsMobile();
 
@@ -50,7 +52,13 @@ const CommunicationInbox: React.FC<CommunicationInboxProps> = ({
   }
 
   if (conversations.length === 0) {
-    return <EmptyInbox hasFacebookConnection={hasFacebookConnection} onRefresh={fetchConversations} />;
+    return (
+      <EmptyInbox 
+        hasFacebookConnection={hasFacebookConnection} 
+        onRefresh={fetchConversations}
+        onSwitchToConnections={onSwitchToConnections}
+      />
+    );
   }
 
   // Mobile layout
