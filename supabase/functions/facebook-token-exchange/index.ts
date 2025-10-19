@@ -180,6 +180,21 @@ serve(async (req) => {
         }, {
           onConflict: 'page_id'
         });
+      
+      // Subscribe webhook to this page for messages
+      try {
+        const subscribeUrl = `https://graph.facebook.com/v17.0/${page.id}/subscribed_apps?subscribed_fields=messages,messaging_postbacks&access_token=${page.access_token}`;
+        const subscribeResponse = await fetch(subscribeUrl, { method: 'POST' });
+        
+        if (!subscribeResponse.ok) {
+          const errorText = await subscribeResponse.text();
+          console.error(`Failed to subscribe webhook to page ${page.id}:`, errorText);
+        } else {
+          console.log(`✅ Webhook subscribed to page ${page.id} (${page.name})`);
+        }
+      } catch (subscribeError) {
+        console.error(`Error subscribing webhook to page ${page.id}:`, subscribeError);
+      }
     }
     
     // Return success
