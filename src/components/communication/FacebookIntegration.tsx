@@ -13,6 +13,10 @@ import { FacebookConnectionDebug } from "./FacebookConnectionDebug";
 const FacebookIntegration: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [selectedPages, setSelectedPages] = useState<string[]>([]);
+  const [showManualDialog, setShowManualDialog] = useState(false);
+  const [manualUserToken, setManualUserToken] = useState("");
+  
   const { 
     fbStatus, 
     isLoading, 
@@ -22,10 +26,13 @@ const FacebookIntegration: React.FC = () => {
     showPageSelector,
     setShowPageSelector,
     handlePageSelection
-  } = useFacebookAuth();
-  const [selectedPages, setSelectedPages] = useState<string[]>([]);
-  const [showManualDialog, setShowManualDialog] = useState(false);
-  const [manualUserToken, setManualUserToken] = useState("");
+  } = useFacebookAuth({
+    onNoPages: (userAccessToken) => {
+      console.log('🔧 No pages found, opening manual dialog');
+      setManualUserToken(userAccessToken);
+      setShowManualDialog(true);
+    }
+  });
 
   const handleConnect = () => {
     if (!user) {

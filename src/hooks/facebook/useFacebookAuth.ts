@@ -21,8 +21,12 @@ export interface FacebookPage {
   access_token: string;
 }
 
+interface UseFacebookAuthProps {
+  onNoPages?: (userAccessToken: string) => void;
+}
 
-export const useFacebookAuth = () => {
+export const useFacebookAuth = (props?: UseFacebookAuthProps) => {
+  const { onNoPages } = props || {};
   const [fbStatus, setFbStatus] = useState<FacebookLoginStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [availablePages, setAvailablePages] = useState<FacebookPage[]>([]);
@@ -152,14 +156,14 @@ export const useFacebookAuth = () => {
                     description: "Please select the pages you want to connect."
                   });
                 } else {
-                  console.warn('⚠️ No pages found');
-                  toast({
-                    variant: "destructive",
-                    title: "No Pages Found",
-                    description: "No pages found. You can connect manually using your Page ID."
-                  });
-                  setShowPageSelector(true); // Will trigger manual dialog
+                  console.warn('⚠️ No pages found, triggering manual connection');
                   setAvailablePages([]);
+                  setIsLoading(false);
+                  
+                  // Trigger manual connection directly
+                  if (onNoPages) {
+                    onNoPages(accessToken);
+                  }
                 }
                 setIsLoading(false);
               }
