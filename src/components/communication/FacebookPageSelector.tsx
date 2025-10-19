@@ -30,6 +30,13 @@ const FacebookPageSelector: React.FC<FacebookPageSelectorProps> = ({
   onCancel,
   isLoading = false
 }) => {
+  const handleConfirm = () => {
+    if (selectedPages.length > 0) {
+      console.log('📤 Confirming page selection:', selectedPages);
+      onConfirm();
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onCancel()}>
       <DialogContent className="sm:max-w-[500px]">
@@ -77,7 +84,7 @@ const FacebookPageSelector: React.FC<FacebookPageSelectorProps> = ({
             Cancel
           </Button>
           <Button 
-            onClick={onConfirm} 
+            onClick={handleConfirm} 
             disabled={selectedPages.length === 0 || isLoading}
           >
             {isLoading ? "Connecting..." : `Connect ${selectedPages.length} Page${selectedPages.length !== 1 ? 's' : ''}`}

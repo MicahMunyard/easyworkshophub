@@ -1,192 +1,152 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.23.0";
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.23.0';
-import {
-  handleCors,
-  createJsonResponse,
-  createErrorResponse
-} from "../_shared/response-utils.ts";
-
-const VERIFY_TOKEN = 'wsb_fb_hook_a7d93bf52c14e9f8';
+// CORS headers for browser requests
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
 serve(async (req) => {
   // Handle CORS preflight requests
-  const corsResponse = handleCors(req);
-  if (corsResponse) return corsResponse;
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
 
   try {
-    // Handle GET requests (webhook verification)
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') as string;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') as string;
+    const verifyToken = Deno.env.get('FACEBOOK_VERIFY_TOKEN') as string;
+    
+    console.log('📞 Webhook request received:', req.method);
+    
+    // Handle GET requests (Facebook webhook verification)
     if (req.method === 'GET') {
       const url = new URL(req.url);
       const mode = url.searchParams.get('hub.mode');
       const token = url.searchParams.get('hub.verify_token');
       const challenge = url.searchParams.get('hub.challenge');
-
-      console.log('Facebook webhook verification request:', { mode, token, challenge });
-
-      if (mode && token) {
-        if (mode === 'subscribe' && token === VERIFY_TOKEN) {
-          console.log('✅ Webhook verified successfully');
-          return new Response(challenge, {
-            status: 200,
-            headers: { 'Content-Type': 'text/plain' }
-          });
-        } else {
-          console.error('❌ Verification failed - token mismatch');
-          return new Response('Forbidden', { status: 403 });
-        }
+      
+      console.log('🔐 Verification request:', { mode, token: token?.substring(0, 10) + '...', challenge: challenge?.substring(0, 10) + '...' });
+      
+      if (mode === 'subscribe' && token === verifyToken) {
+        console.log('✅ Webhook verified successfully');
+        return new Response(challenge, { 
+          status: 200,
+          headers: { 'Content-Type': 'text/plain' }
+        });
       }
+      
+      console.error('❌ Verification failed: invalid token or mode');
+      return new Response('Forbidden', { status: 403 });
     }
     
     // Handle POST requests (incoming messages)
     if (req.method === 'POST') {
-      const body = await req.json();
-      console.log('Processing webhook data:', JSON.stringify(body));
-      
-      // Initialize Supabase client
-      const supabaseUrl = Deno.env.get('SUPABASE_URL') as string;
-      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') as string;
       const supabase = createClient(supabaseUrl, supabaseKey);
+      const body = await req.json();
       
-      // Process Facebook webhook events
+      console.log('📨 Webhook POST body:', JSON.stringify(body, null, 2));
+      
+      // Process each entry in the webhook payload
       if (body.object === 'page') {
-        for (const entry of body.entry) {
+        for (const entry of body.entry || []) {
+          const pageId = entry.id;
+          console.log('📄 Processing entry for page:', pageId);
+          
+          // Find the user who owns this page
+          const { data: pageToken, error: pageError } = await supabase
+            .from('facebook_page_tokens')
+            .select('user_id, page_name')
+            .eq('page_id', pageId)
+            .maybeSingle();
+          
+          if (pageError || !pageToken) {
+            console.error('❌ Page not found in database:', pageId, pageError);
+            continue;
+          }
+          
+          console.log('👤 Found page owner:', pageToken.user_id);
+          
+          // Process messaging events
           for (const messaging of entry.messaging || []) {
-            const senderId = messaging.sender.id;
-            const pageId = messaging.recipient.id;
+            console.log('💬 Processing messaging event:', JSON.stringify(messaging, null, 2));
             
-            // Get the associated user for this page
-            const { data: pageData, error: pageError } = await supabase
-              .from('social_connections')
-              .select('user_id')
-              .eq('page_id', pageId)
-              .eq('platform', 'facebook')
-              .eq('status', 'active')
+            const senderId = messaging.sender.id;
+            const recipientId = messaging.recipient.id;
+            const messageText = messaging.message?.text || '';
+            const timestamp = new Date(messaging.timestamp);
+            
+            // Determine if this is from customer or sent by page
+            const isFromCustomer = senderId !== pageId;
+            const contactId = isFromCustomer ? senderId : recipientId;
+            
+            console.log('📧 Message details:', {
+              from: senderId,
+              to: recipientId,
+              isFromCustomer,
+              contactId,
+              text: messageText.substring(0, 50) + '...'
+            });
+            
+            // Upsert conversation
+            const externalId = `facebook-${contactId}`;
+            const { data: conversation, error: convError } = await supabase
+              .from('social_conversations')
+              .upsert({
+                user_id: pageToken.user_id,
+                platform: 'facebook',
+                external_id: externalId,
+                contact_handle: contactId,
+                contact_name: `Facebook User ${contactId.substring(0, 8)}`,
+                last_message_at: timestamp.toISOString(),
+                unread: isFromCustomer
+              }, {
+                onConflict: 'user_id,external_id',
+                ignoreDuplicates: false
+              })
+              .select()
               .single();
-              
-            if (pageError || !pageData) {
-              console.error('Error finding page connection:', pageError);
+            
+            if (convError) {
+              console.error('❌ Error upserting conversation:', convError);
               continue;
             }
             
-            const userId = pageData.user_id;
+            console.log('✅ Conversation upserted:', conversation.id);
             
-            // Check if a conversation already exists
-            const { data: existingConv, error: convError } = await supabase
-              .from('social_conversations')
-              .select('id')
-              .eq('user_id', userId)
-              .eq('platform', 'facebook')
-              .eq('external_id', senderId)
-              .single();
-              
-            let conversationId;
+            // Insert message
+            const { error: msgError } = await supabase
+              .from('social_messages')
+              .insert({
+                conversation_id: conversation.id,
+                sender_type: isFromCustomer ? 'customer' : 'business',
+                content: messageText,
+                sent_at: timestamp.toISOString()
+              });
             
-            if (convError || !existingConv) {
-              // Create a new conversation
-              try {
-                // Fetch sender profile from Facebook
-                const pageAccessToken = await getPageAccessToken(supabase, pageId);
-                const profile = await fetchSenderProfile(senderId, pageAccessToken);
-                
-                const { data: newConv, error: createError } = await supabase
-                  .from('social_conversations')
-                  .insert({
-                    user_id: userId,
-                    platform: 'facebook',
-                    external_id: senderId,
-                    contact_name: profile.name || 'Facebook User',
-                    profile_picture_url: profile.profile_pic || null,
-                    last_message_at: new Date().toISOString(),
-                    unread: true
-                  })
-                  .select('id')
-                  .single();
-                  
-                if (createError) {
-                  console.error('Error creating conversation:', createError);
-                  continue;
-                }
-                
-                conversationId = newConv.id;
-              } catch (error) {
-                console.error('Error creating conversation:', error);
-                continue;
-              }
-            } else {
-              conversationId = existingConv.id;
-              
-              // Update conversation to mark as unread with new timestamp
-              await supabase
-                .from('social_conversations')
-                .update({
-                  last_message_at: new Date().toISOString(),
-                  unread: true
-                })
-                .eq('id', conversationId);
+            if (msgError) {
+              console.error('❌ Error inserting message:', msgError);
+              continue;
             }
             
-            // Store the message
-            if (messaging.message) {
-              const { error: msgError } = await supabase
-                .from('social_messages')
-                .insert({
-                  conversation_id: conversationId,
-                  sender_type: 'contact',
-                  content: messaging.message.text || '(Media or attachment)',
-                  attachment_url: messaging.message.attachments?.[0]?.payload?.url || null,
-                  sent_at: new Date().toISOString()
-                });
-                
-              if (msgError) {
-                console.error('Error storing message:', msgError);
-              }
-            }
+            console.log('✅ Message inserted successfully');
           }
         }
       }
       
-      // Always return a 200 OK to Facebook promptly
-      return createJsonResponse({ success: true });
+      return new Response(JSON.stringify({ success: true }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
     
-    // Handle unsupported methods
-    return createJsonResponse({ error: 'Method not allowed' }, 405);
-    
+    return new Response('Method not allowed', { status: 405 });
   } catch (error) {
-    return createErrorResponse(error);
+    console.error('❌ Webhook error:', error);
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   }
 });
-
-// Helper function to get page access token
-async function getPageAccessToken(supabase: any, pageId: string) {
-  const { data, error } = await supabase
-    .from('facebook_page_tokens')
-    .select('access_token')
-    .eq('page_id', pageId)
-    .single();
-    
-  if (error || !data) {
-    throw new Error(`Page access token not found for page ${pageId}`);
-  }
-  
-  return data.access_token;
-}
-
-// Helper function to fetch sender profile from Facebook
-async function fetchSenderProfile(senderId: string, pageAccessToken: string) {
-  try {
-    const response = await fetch(
-      `https://graph.facebook.com/v17.0/${senderId}?fields=name,profile_pic&access_token=${pageAccessToken}`
-    );
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch profile: ${await response.text()}`);
-    }
-    
-    return await response.json();
-  } catch (error) {
-    console.error('Error fetching sender profile:', error);
-    return { name: 'Facebook User', profile_pic: null };
-  }
-}

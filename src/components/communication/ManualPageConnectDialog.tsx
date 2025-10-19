@@ -57,14 +57,19 @@ const ManualPageConnectDialog: React.FC<ManualPageConnectDialogProps> = ({
         throw new Error(response.error.message || "Failed to connect page");
       }
 
+      console.log('✅ Page connected successfully');
+      
       toast({
         title: "Page Connected",
         description: "Your Facebook page has been connected successfully."
       });
 
-      onSuccess();
-      onClose();
-      setPageId("");
+      // Wait a moment for data to persist before triggering refresh
+      setTimeout(() => {
+        onSuccess();
+        onClose();
+        setPageId("");
+      }, 1000);
     } catch (error: any) {
       console.error("Error connecting page manually:", error);
       toast({
