@@ -204,15 +204,28 @@ export const useFacebookAuth = () => {
     setIsLoading(true);
     
     try {
-      console.log('Exchanging token for selected pages...');
+      console.log('Exchanging token for selected pages:', selectedPageIds);
+      
+      // Get current session for auth
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Not authenticated');
+      }
+      
+      console.log('Calling token-exchange edge function...');
       
       // Exchange token with our backend
-      const { error } = await supabase.functions.invoke('facebook-token-exchange', {
+      const { data, error } = await supabase.functions.invoke('facebook-token-exchange', {
         body: { 
           userAccessToken,
           selectedPageIds
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
         }
       });
+      
+      console.log('Token exchange response:', { data, error });
       
       if (error) {
         console.error('Error exchanging token:', error);

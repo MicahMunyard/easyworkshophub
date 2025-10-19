@@ -8,6 +8,7 @@ import { useFacebookAuth } from "@/hooks/facebook/useFacebookAuth";
 import { Loader2 } from "lucide-react";
 import FacebookPageSelector from "./FacebookPageSelector";
 import ManualPageConnectDialog from "./ManualPageConnectDialog";
+import { FacebookConnectionDebug } from "./FacebookConnectionDebug";
 
 const FacebookIntegration: React.FC = () => {
   const { user } = useAuth();
@@ -91,7 +92,7 @@ const FacebookIntegration: React.FC = () => {
   };
 
   return (
-    <>
+    <div className="space-y-4">
       <Button
         variant="outline"
         className="flex items-center gap-2"
@@ -118,7 +119,10 @@ const FacebookIntegration: React.FC = () => {
         onSuccess={handleManualSuccess}
         userAccessToken={manualUserToken}
       />
-    </>
+
+      {/* Debug component to see connection status */}
+      <FacebookConnectionDebug />
+    </div>
   );
 };
 
