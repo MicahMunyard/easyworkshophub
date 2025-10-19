@@ -16,7 +16,7 @@ serve(async (req) => {
 
   try {
     // Get the request body
-    const { userAccessToken, selectedPageIds } = await req.json();
+    const { userAccessToken, selectedPageIds, manualPageId } = await req.json();
     
     if (!userAccessToken) {
       return new Response(
@@ -80,25 +80,53 @@ serve(async (req) => {
     const tokenData = await fbResponse.json();
     const longLivedToken = tokenData.access_token;
     
-    // Get the user's managed pages
-    const pagesUrl = `https://graph.facebook.com/v17.0/me/accounts?access_token=${longLivedToken}`;
-    const pagesResponse = await fetch(pagesUrl);
+    let pagesToStore = [];
     
-    if (!pagesResponse.ok) {
-      const errorText = await pagesResponse.text();
-      console.error("Facebook Pages API error:", errorText);
-      return new Response(
-        JSON.stringify({ error: "Could not fetch Facebook pages" }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // Handle manual page ID flow
+    if (manualPageId) {
+      const pageUrl = `https://graph.facebook.com/v17.0/${manualPageId}?fields=id,name,access_token&access_token=${longLivedToken}`;
+      const pageResponse = await fetch(pageUrl);
+      
+      if (!pageResponse.ok) {
+        const errorText = await pageResponse.text();
+        console.error("Facebook Page API error:", errorText);
+        return new Response(
+          JSON.stringify({ error: "Could not fetch page details. Please verify the Page ID and your permissions." }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      const pageData = await pageResponse.json();
+      
+      if (!pageData.access_token) {
+        return new Response(
+          JSON.stringify({ error: "No access token for this page. You may need Full Control access." }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      pagesToStore = [pageData];
+    } else {
+      // Get the user's managed pages
+      const pagesUrl = `https://graph.facebook.com/v17.0/me/accounts?access_token=${longLivedToken}`;
+      const pagesResponse = await fetch(pagesUrl);
+      
+      if (!pagesResponse.ok) {
+        const errorText = await pagesResponse.text();
+        console.error("Facebook Pages API error:", errorText);
+        return new Response(
+          JSON.stringify({ error: "Could not fetch Facebook pages" }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      const pagesData = await pagesResponse.json();
+      
+      // Filter pages based on user selection if provided
+      pagesToStore = selectedPageIds && selectedPageIds.length > 0
+        ? pagesData.data.filter(page => selectedPageIds.includes(page.id))
+        : pagesData.data;
     }
-    
-    const pagesData = await pagesResponse.json();
-    
-    // Filter pages based on user selection if provided
-    const pagesToStore = selectedPageIds && selectedPageIds.length > 0
-      ? pagesData.data.filter(page => selectedPageIds.includes(page.id))
-      : pagesData.data;
     
     console.log(`Storing ${pagesToStore.length} selected page(s)...`);
     

@@ -92,105 +92,100 @@ export const useFacebookAuth = () => {
     }
 
     console.log('✅ Facebook SDK available, initiating login...');
-    console.log('🔍 Facebook SDK object:', window.FB);
     setIsLoading(true);
 
     try {
-      console.log('📞 Calling FB.login()...');
-      
       window.FB.login((response: FacebookLoginStatus) => {
-        console.log('📬 Facebook login callback received:', response);
-        console.log('📊 Response status:', response.status);
-        console.log('📊 Response authResponse:', response.authResponse);
+        console.log('📬 Facebook login response:', response);
+        console.log('🔑 Granted scopes:', (response.authResponse as any)?.grantedScopes);
         
         if (response.status === 'connected' && response.authResponse?.accessToken) {
-          setFbStatus(response);
           const accessToken = response.authResponse.accessToken;
+          setFbStatus(response);
           setUserAccessToken(accessToken);
           
-          console.log('✅ User authenticated successfully');
-          console.log('🔑 Access token received (length):', accessToken.length);
-          
-          (async () => {
-            try {
-              console.log('📄 Fetching managed pages...');
-              const pagesResponse = await fetch(
-                `https://graph.facebook.com/v17.0/me/accounts?access_token=${accessToken}`
-              );
-              
-              console.log('📊 Pages API response status:', pagesResponse.status);
-              
-              if (!pagesResponse.ok) {
-                const errorText = await pagesResponse.text();
-                console.error('❌ Pages API error:', errorText);
-                throw new Error(`Failed to fetch Facebook pages: ${pagesResponse.status}`);
-              }
-              
-              const pagesData = await pagesResponse.json();
-              console.log('📋 Pages fetched:', pagesData);
-              
-              if (pagesData.data && pagesData.data.length > 0) {
-                console.log(`✅ Found ${pagesData.data.length} pages`);
-                setAvailablePages(pagesData.data);
-                setShowPageSelector(true);
-                setIsLoading(false);
-              } else {
-                console.warn('⚠️ No pages found for this account');
-                toast({
-                  variant: "destructive",
-                  title: "No Pages Found",
-                  description: "You don't manage any Facebook Pages. Please create or get access to a Page first."
-                });
-                setIsLoading(false);
-              }
-            } catch (error) {
-              console.error('💥 Error fetching pages:', error);
-              if (error instanceof Error) {
-                console.error('💥 Error message:', error.message);
-                console.error('💥 Error stack:', error.stack);
-              }
+          // Verify permissions
+          (window.FB as any).api('/me/permissions', (permissionsResponse: any) => {
+            console.log('📋 Permissions response:', permissionsResponse);
+            
+            const hasPagesList = permissionsResponse?.data?.some(
+              (p: any) => p.permission === 'pages_show_list' && p.status === 'granted'
+            );
+
+            if (!hasPagesList) {
               toast({
                 variant: "destructive",
-                title: "Error Fetching Pages",
-                description: error instanceof Error ? error.message : "Could not fetch your Facebook Pages."
+                title: "Permission Required",
+                description: "Please accept the Pages permission to continue."
               });
               setIsLoading(false);
+              return;
             }
-          })();
-        } else if (response.status === 'not_authorized') {
-          console.log('❌ User not authorized');
-          toast({
-            variant: "destructive",
-            title: "Authorization Required",
-            description: "Please authorize the app to manage your Facebook Pages."
+
+            // Fetch pages with detailed fields
+            (window.FB as any).api(
+              '/me/accounts',
+              { 
+                access_token: accessToken,
+                fields: 'id,name,access_token,tasks'
+              },
+              (pagesResponse: any) => {
+                console.log('📄 Pages response:', pagesResponse);
+
+                if (pagesResponse?.error) {
+                  console.error('❌ Graph API error:', pagesResponse.error);
+                  toast({
+                    variant: "destructive",
+                    title: "Error Fetching Pages",
+                    description: pagesResponse.error.message || "Could not fetch your Facebook pages."
+                  });
+                  setIsLoading(false);
+                  return;
+                }
+
+                if (pagesResponse?.data && pagesResponse.data.length > 0) {
+                  console.log(`✅ Found ${pagesResponse.data.length} pages`);
+                  setAvailablePages(pagesResponse.data);
+                  setShowPageSelector(true);
+                  toast({
+                    title: "Facebook Connected",
+                    description: "Please select the pages you want to connect."
+                  });
+                } else {
+                  console.warn('⚠️ No pages found');
+                  toast({
+                    variant: "destructive",
+                    title: "No Pages Found",
+                    description: "No pages found. You can connect manually using your Page ID."
+                  });
+                  setShowPageSelector(true); // Will trigger manual dialog
+                  setAvailablePages([]);
+                }
+                setIsLoading(false);
+              }
+            );
           });
-          setIsLoading(false);
         } else {
-          console.log('❌ Login cancelled or failed. Full response:', JSON.stringify(response));
+          console.log('❌ Login cancelled or failed');
           toast({
             variant: "destructive",
             title: "Login Cancelled",
-            description: "Facebook login was cancelled or failed. Please ensure pop-ups are allowed and try again."
+            description: "Facebook login was cancelled. Please try again."
           });
           setIsLoading(false);
         }
       }, { 
         scope: 'pages_show_list,pages_manage_metadata,pages_messaging,pages_read_engagement,pages_manage_engagement',
+        return_scopes: true,
+        auth_type: 'rerequest',
         display: 'popup'
       } as any);
-      
-      console.log('✅ FB.login() called successfully, waiting for callback...');
     } catch (error) {
       console.error('💥 Exception during Facebook login:', error);
-      if (error instanceof Error) {
-        console.error('💥 Error name:', error.name);
-        console.error('💥 Error message:', error.message);
-        console.error('💥 Error stack:', error.stack);
-      }
       toast({
         variant: "destructive",
         title: "Connection Error",
-        description: error instanceof Error ? `${error.name}: ${error.message}` : "An error occurred while connecting to Facebook. Please try again."
+        description: error instanceof Error ? error.message : "An error occurred while connecting to Facebook."
       });
       setIsLoading(false);
     }
@@ -253,11 +248,11 @@ export const useFacebookAuth = () => {
   };
 
   const handleFacebookLogout = async () => {
-    if (typeof window === 'undefined' || !window.FB) {
+    if (!user?.id) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Facebook SDK not available."
+        description: "No user found. Please refresh the page."
       });
       return;
     }
@@ -266,71 +261,69 @@ export const useFacebookAuth = () => {
     setIsLoading(true);
 
     try {
-      window.FB.logout(async (response) => {
-        console.log('📤 Facebook SDK logout response:', response);
-        setFbStatus(null);
-        
-        if (!user?.id) {
-          console.error('❌ No user ID available for logout');
-          setIsLoading(false);
-          return;
-        }
+      // Attempt Facebook SDK logout with timeout
+      const logoutPromise = new Promise<void>((resolve) => {
+        if (window.FB) {
+          const timeoutId = setTimeout(() => {
+            console.warn('⏱️ Facebook SDK logout timed out');
+            resolve();
+          }, 5000);
 
-        try {
-          // Delete social connections
-          const { error: connectionError } = await supabase
-            .from('social_connections')
-            .delete()
-            .eq('platform', 'facebook')
-            .eq('user_id', user.id);
-
-          if (connectionError) {
-            console.error('❌ Error deleting social connection:', connectionError);
-          } else {
-            console.log('✅ Deleted social connection');
-          }
-
-          // Delete page tokens
-          const { error: tokenError } = await supabase
-            .from('facebook_page_tokens')
-            .delete()
-            .eq('user_id', user.id);
-
-          if (tokenError) {
-            console.error('❌ Error deleting page tokens:', tokenError);
-          } else {
-            console.log('✅ Deleted page tokens');
-          }
-
-          console.log('✅ Successfully disconnected from Facebook');
-          
-          toast({
-            title: "Disconnected",
-            description: "Successfully disconnected from Facebook."
+          window.FB.logout((response: any) => {
+            clearTimeout(timeoutId);
+            console.log('📤 Facebook SDK logout response:', response);
+            resolve();
           });
-
-          // Reload to refresh UI state
-          setTimeout(() => {
-            window.location.reload();
-          }, 1000);
-
-        } catch (error) {
-          console.error('💥 Error during database cleanup:', error);
-          toast({
-            variant: "destructive",
-            title: "Disconnect Error",
-            description: "Could not fully disconnect. Please try again."
-          });
-        } finally {
-          setIsLoading(false);
+        } else {
+          console.warn('⚠️ Facebook SDK not available, proceeding with DB cleanup only');
+          resolve();
         }
       });
+
+      await logoutPromise;
+
+      // Always perform database cleanup
+      console.log('🗑️ Cleaning up database records...');
+      
+      const { error: connectionError } = await supabase
+        .from('social_connections')
+        .delete()
+        .eq('platform', 'facebook')
+        .eq('user_id', user.id);
+
+      if (connectionError) {
+        console.error('❌ Error deleting social connection:', connectionError);
+        throw new Error(`Database cleanup failed: ${connectionError.message}`);
+      }
+
+      const { error: tokenError } = await supabase
+        .from('facebook_page_tokens')
+        .delete()
+        .eq('user_id', user.id);
+
+      if (tokenError) {
+        console.error('❌ Error deleting page tokens:', tokenError);
+        throw new Error(`Database cleanup failed: ${tokenError.message}`);
+      }
+
+      console.log('✅ Successfully disconnected from Facebook');
+      setFbStatus(null);
+      
+      toast({
+        title: "Disconnected",
+        description: "Successfully disconnected from Facebook."
+      });
+
+      // Reload to refresh UI state
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
     } catch (error) {
-      console.error('💥 Error initiating logout:', error);
+      console.error('💥 Error during logout:', error);
       toast({
         variant: "destructive",
-        title: "Logout Error",
-        description: "Could not disconnect from Facebook."
+        title: "Disconnect Error",
+        description: error instanceof Error ? error.message : "Could not disconnect from Facebook."
       });
       setIsLoading(false);
     }

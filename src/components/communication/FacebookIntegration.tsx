@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useFacebookAuth } from "@/hooks/facebook/useFacebookAuth";
 import { Loader2 } from "lucide-react";
 import FacebookPageSelector from "./FacebookPageSelector";
+import ManualPageConnectDialog from "./ManualPageConnectDialog";
 
 const FacebookIntegration: React.FC = () => {
   const { user } = useAuth();
@@ -22,6 +23,8 @@ const FacebookIntegration: React.FC = () => {
     handlePageSelection
   } = useFacebookAuth();
   const [selectedPages, setSelectedPages] = useState<string[]>([]);
+  const [showManualDialog, setShowManualDialog] = useState(false);
+  const [manualUserToken, setManualUserToken] = useState("");
 
   const handleConnect = () => {
     if (!user) {
@@ -73,6 +76,18 @@ const FacebookIntegration: React.FC = () => {
   const handleCancelSelection = () => {
     setShowPageSelector(false);
     setSelectedPages([]);
+    
+    // If no pages, offer manual connection
+    if (availablePages.length === 0 && fbStatus?.authResponse?.accessToken) {
+      setManualUserToken(fbStatus.authResponse.accessToken);
+      setShowManualDialog(true);
+    }
+  };
+
+  const handleManualSuccess = () => {
+    setShowManualDialog(false);
+    setManualUserToken("");
+    window.location.reload();
   };
 
   return (
@@ -88,13 +103,20 @@ const FacebookIntegration: React.FC = () => {
       </Button>
 
       <FacebookPageSelector
-        isOpen={showPageSelector}
+        isOpen={showPageSelector && availablePages.length > 0}
         pages={availablePages}
         selectedPages={selectedPages}
         onPageToggle={handlePageToggle}
         onConfirm={handleConfirmSelection}
         onCancel={handleCancelSelection}
         isLoading={isLoading}
+      />
+
+      <ManualPageConnectDialog
+        isOpen={showManualDialog}
+        onClose={() => setShowManualDialog(false)}
+        onSuccess={handleManualSuccess}
+        userAccessToken={manualUserToken}
       />
     </>
   );

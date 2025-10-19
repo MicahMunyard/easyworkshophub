@@ -6,6 +6,7 @@ interface FacebookLoginStatus {
     expiresIn: string;
     signedRequest: string;
     userID: string;
+    grantedScopes?: string;
   };
 }
 
@@ -17,8 +18,10 @@ interface FacebookSDK {
     version: string;
   }): void;
   getLoginStatus(callback: (response: FacebookLoginStatus) => void): void;
-  login(callback: (response: FacebookLoginStatus) => void, options?: { scope: string }): void;
+  login(callback: (response: FacebookLoginStatus) => void, options?: any): void;
   logout(callback: (response: any) => void): void;
+  api(path: string, callback: (response: any) => void): void;
+  api(path: string, params: Record<string, any>, callback: (response: any) => void): void;
   AppEvents: {
     logPageView(): void;
   };
