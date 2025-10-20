@@ -637,6 +637,81 @@ export type Database = {
           },
         ]
       }
+      job_parts_requests: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string | null
+          denied_reason: string | null
+          id: string
+          inventory_item_id: string | null
+          job_id: string
+          notes: string | null
+          part_code: string | null
+          part_name: string
+          quantity: number
+          requested_at: string | null
+          requested_by: string
+          status: string
+          total_cost: number | null
+          unit_cost: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          denied_reason?: string | null
+          id?: string
+          inventory_item_id?: string | null
+          job_id: string
+          notes?: string | null
+          part_code?: string | null
+          part_name: string
+          quantity: number
+          requested_at?: string | null
+          requested_by: string
+          status?: string
+          total_cost?: number | null
+          unit_cost?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          denied_reason?: string | null
+          id?: string
+          inventory_item_id?: string | null
+          job_id?: string
+          notes?: string | null
+          part_code?: string | null
+          part_name?: string
+          quantity?: number
+          requested_at?: string | null
+          requested_by?: string
+          status?: string
+          total_cost?: number | null
+          unit_cost?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_parts_requests_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: false
+            referencedRelation: "user_inventory_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_parts_requests_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       jobs: {
         Row: {
           assigned_to: string

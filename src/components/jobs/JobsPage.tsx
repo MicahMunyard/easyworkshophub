@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { 
   Card
 } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useJobs } from "@/hooks/useJobs";
 
 // Importing the components
@@ -16,6 +17,7 @@ import JobDetailsModal from "./modals/JobDetailsModal";
 import EditJobModal from "./modals/EditJobModal";
 import ReassignJobModal from "./modals/ReassignJobModal";
 import CancelJobDialog from "./modals/CancelJobDialog";
+import { PendingPartsRequests } from "@/components/admin/PendingPartsRequests";
 
 const JobsPage = () => {
   const {
@@ -106,29 +108,42 @@ const JobsPage = () => {
         />
       )}
 
-      <div className="flex flex-col md:flex-row gap-4">
-        <Card className="w-full">
-          <JobsTable 
-            filteredJobs={filteredJobs}
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            isLoading={isLoading}
-            onViewDetails={handleViewDetails}
-            onEditJob={handleEditJob}
-            onReassignJob={handleReassignJob}
-            onCancelJob={handleCancelJobClick}
-          />
-        </Card>
-      </div>
+      <Tabs defaultValue="jobs" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="jobs">Jobs</TabsTrigger>
+          <TabsTrigger value="parts-requests">Parts Requests</TabsTrigger>
+        </TabsList>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <JobsStats />
-        <div className="col-span-2">
-          <QuickActions onNewJobClick={() => setIsNewJobModalOpen(true)} />
-        </div>
-      </div>
+        <TabsContent value="jobs" className="space-y-6">
+          <div className="flex flex-col md:flex-row gap-4">
+            <Card className="w-full">
+              <JobsTable 
+                filteredJobs={filteredJobs}
+                activeTab={activeTab}
+                setActiveTab={setActiveTab}
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+                isLoading={isLoading}
+                onViewDetails={handleViewDetails}
+                onEditJob={handleEditJob}
+                onReassignJob={handleReassignJob}
+                onCancelJob={handleCancelJobClick}
+              />
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <JobsStats />
+            <div className="col-span-2">
+              <QuickActions onNewJobClick={() => setIsNewJobModalOpen(true)} />
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="parts-requests">
+          <PendingPartsRequests />
+        </TabsContent>
+      </Tabs>
 
       <NewJobModal
         isOpen={isNewJobModalOpen}

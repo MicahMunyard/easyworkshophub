@@ -34,7 +34,7 @@ export const useTechnicianJobs = (technicianId: string | null) => {
     setActiveJobId
   );
   const uploadJobPhoto = useUploadJobPhoto(setJobs, setOfflineOperations);
-  const requestJobParts = useRequestJobParts(setJobs, setOfflineOperations);
+  const requestJobParts = useRequestJobParts(setJobs, setOfflineOperations, technicianId);
 
   const refreshJobs = useCallback(async () => {
     if (fetchInProgress.current) {

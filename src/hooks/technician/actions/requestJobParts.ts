@@ -1,5 +1,4 @@
 
-import { v4 as uuidv4 } from "uuid";
 import { supabase } from "@/integrations/supabase/client";
 import { TechnicianJob, PartRequest } from "@/types/technician";
 import { useToast } from "@/hooks/use-toast";
@@ -8,14 +7,24 @@ import { OfflineOperation } from "../types/offlineTypes";
 
 export const useRequestJobParts = (
   setJobs: React.Dispatch<React.SetStateAction<TechnicianJob[]>>,
-  setOfflineOperations: React.Dispatch<React.SetStateAction<OfflineOperation[]>>
+  setOfflineOperations: React.Dispatch<React.SetStateAction<OfflineOperation[]>>,
+  technicianId: string | null
 ) => {
   const { toast } = useToast();
 
   const requestJobParts = async (jobId: string, parts: { name: string, quantity: number }[]): Promise<void> => {
+    if (!technicianId) {
+      toast({
+        title: "Error",
+        description: "Technician ID not found",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (!navigator.onLine) {
       // Store operation for later sync
-      const offlineOp = createOfflineOperation('parts_request', { jobId, parts });
+      const offlineOp = createOfflineOperation('parts_request', { jobId, parts, technicianId });
       setOfflineOperations(prev => [...prev, offlineOp]);
       
       toast({
@@ -26,22 +35,37 @@ export const useRequestJobParts = (
     }
     
     try {
-      // In a real implementation, we would save this to a parts_requests table
-      // For now, we'll just update our local state
+      // Save parts requests to database
+      const requests = parts.map(part => ({
+        job_id: jobId,
+        part_name: part.name,
+        quantity: part.quantity,
+        requested_by: technicianId,
+        status: 'pending'
+      }));
+
+      const { data, error } = await supabase
+        .from('job_parts_requests')
+        .insert(requests)
+        .select();
+
+      if (error) throw error;
+
+      // Update local state with new parts from database
       setJobs(prev => prev.map(job => {
         if (job.id === jobId) {
-          const newParts: PartRequest[] = parts.map(part => ({
-            id: uuidv4(),
-            name: part.name,
+          const newParts: PartRequest[] = (data || []).map(part => ({
+            id: part.id,
+            name: part.part_name,
             quantity: part.quantity,
-            status: 'pending',
-            requested_at: new Date().toISOString()
+            status: part.status as any,
+            requested_at: part.requested_at
           }));
           
           return {
             ...job,
             partsRequested: [
-              ...job.partsRequested,
+              ...(job.partsRequested || []),
               ...newParts
             ]
           };
@@ -51,7 +75,7 @@ export const useRequestJobParts = (
       
       toast({
         title: "Parts requested",
-        description: `${parts.length} parts have been requested.`,
+        description: `${parts.length} part${parts.length > 1 ? 's have' : ' has'} been requested.`,
       });
     } catch (error) {
       console.error('Error requesting parts:', error);
