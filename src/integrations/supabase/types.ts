@@ -637,10 +637,26 @@ export type Database = {
           },
         ]
       }
+      job_id_mapping: {
+        Row: {
+          new_booking_id: string
+          old_job_id: string
+        }
+        Insert: {
+          new_booking_id: string
+          old_job_id: string
+        }
+        Update: {
+          new_booking_id?: string
+          old_job_id?: string
+        }
+        Relationships: []
+      }
       job_parts_requests: {
         Row: {
           approved_at: string | null
           approved_by: string | null
+          booking_id: string | null
           created_at: string | null
           denied_reason: string | null
           id: string
@@ -660,6 +676,7 @@ export type Database = {
         Insert: {
           approved_at?: string | null
           approved_by?: string | null
+          booking_id?: string | null
           created_at?: string | null
           denied_reason?: string | null
           id?: string
@@ -679,6 +696,7 @@ export type Database = {
         Update: {
           approved_at?: string | null
           approved_by?: string | null
+          booking_id?: string | null
           created_at?: string | null
           denied_reason?: string | null
           id?: string
@@ -696,6 +714,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_job_parts_requests_booking"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "user_bookings"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "job_parts_requests_inventory_item_id_fkey"
             columns: ["inventory_item_id"]
@@ -1131,6 +1156,7 @@ export type Database = {
           approval_status: string
           approved_at: string | null
           approved_by: string | null
+          booking_id: string | null
           created_at: string | null
           date: string
           duration: number | null
@@ -1147,6 +1173,7 @@ export type Database = {
           approval_status?: string
           approved_at?: string | null
           approved_by?: string | null
+          booking_id?: string | null
           created_at?: string | null
           date: string
           duration?: number | null
@@ -1163,6 +1190,7 @@ export type Database = {
           approval_status?: string
           approved_at?: string | null
           approved_by?: string | null
+          booking_id?: string | null
           created_at?: string | null
           date?: string
           duration?: number | null
@@ -1175,7 +1203,15 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_time_entries_booking"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "user_bookings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_bookings: {
         Row: {
@@ -1191,10 +1227,13 @@ export type Database = {
           duration: number
           id: string
           notes: string | null
+          priority: string | null
           service: string
           service_id: string | null
           status: string | null
           technician_id: string | null
+          time_estimate: string | null
+          total_time: number | null
           updated_at: string | null
           user_id: string
         }
@@ -1211,10 +1250,13 @@ export type Database = {
           duration: number
           id?: string
           notes?: string | null
+          priority?: string | null
           service: string
           service_id?: string | null
           status?: string | null
           technician_id?: string | null
+          time_estimate?: string | null
+          total_time?: number | null
           updated_at?: string | null
           user_id: string
         }
@@ -1231,10 +1273,13 @@ export type Database = {
           duration?: number
           id?: string
           notes?: string | null
+          priority?: string | null
           service?: string
           service_id?: string | null
           status?: string | null
           technician_id?: string | null
+          time_estimate?: string | null
+          total_time?: number | null
           updated_at?: string | null
           user_id?: string
         }
