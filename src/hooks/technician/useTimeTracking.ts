@@ -125,7 +125,7 @@ export const useTimeTracking = (jobId: string, technicianId: string) => {
 
       setIsTimerRunning(false);
       setCurrentEntry(null);
-      setElapsedTime(0);
+      // Don't reset elapsedTime - keep it visible when paused
       
       toast({
         title: "Timer Paused",

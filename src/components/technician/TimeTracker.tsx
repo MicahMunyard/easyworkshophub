@@ -41,15 +41,13 @@ const TimeTracker: React.FC<TimeTrackerProps> = ({ jobId, technicianId }) => {
         </Button>
       )}
       
-      {isTimerRunning && (
-        <div className="text-center text-lg font-mono font-semibold">
-          ⏱️ {formatTime(elapsedTime)}
-        </div>
-      )}
+      <div className="text-center text-lg font-mono font-semibold">
+        ⏱️ {formatTime(elapsedTime)}
+      </div>
       
       {!isTimerRunning && totalTime > 0 && (
         <div className="text-center text-sm text-muted-foreground">
-          Total: {formatTime(totalTime)}
+          Total Logged: {formatTime(totalTime)}
         </div>
       )}
     </div>
