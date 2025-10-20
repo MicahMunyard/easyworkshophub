@@ -1412,12 +1412,15 @@ export type Database = {
       user_inventory_suppliers: {
         Row: {
           address: string | null
+          apiconfig: Json | null
           category: string
+          connectiontype: string | null
           contactperson: string
           created_at: string
           email: string
           id: string
           isdefault: boolean | null
+          logourl: string | null
           name: string
           notes: string | null
           phone: string
@@ -1427,12 +1430,15 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          apiconfig?: Json | null
           category: string
+          connectiontype?: string | null
           contactperson: string
           created_at?: string
           email: string
           id?: string
           isdefault?: boolean | null
+          logourl?: string | null
           name: string
           notes?: string | null
           phone: string
@@ -1442,12 +1448,15 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          apiconfig?: Json | null
           category?: string
+          connectiontype?: string | null
           contactperson?: string
           created_at?: string
           email?: string
           id?: string
           isdefault?: boolean | null
+          logourl?: string | null
           name?: string
           notes?: string | null
           phone?: string

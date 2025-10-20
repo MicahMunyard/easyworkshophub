@@ -17,7 +17,7 @@ export const convertEzyPartsToInventoryItems = (
 
   // Get supplier info from the headers
   const supplierName = 'Burson Auto Parts';
-  const supplierId = 'burson-auto-parts'; // Updated to match the webhook
+  const supplierId = '145eeddc-5b99-42d1-b413-e513cf014c7d'; // Standardized Burson supplier UUID
 
   // Map each part from the EzyParts quote to an inventory item
   return quote.parts.map(part => {
