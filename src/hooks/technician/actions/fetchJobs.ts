@@ -97,10 +97,35 @@ export const useFetchJobs = (
       }
       
       // Transform and combine job data
-      const transformedJobs = [
+      let transformedJobs = [
         ...(jobsData ? transformJobsData(jobsData) : []),
         ...(bookingsData ? transformBookingsData(bookingsData) : [])
       ];
+
+      // Fetch parts requests for these jobs
+      if (transformedJobs.length > 0) {
+        const jobIds = transformedJobs.map(j => j.id);
+        const { data: partsData } = await supabase
+          .from('job_parts_requests')
+          .select('*')
+          .in('job_id', jobIds);
+        
+        if (partsData && partsData.length > 0) {
+          // Map parts to jobs
+          transformedJobs = transformedJobs.map(job => ({
+            ...job,
+            partsRequested: partsData
+              .filter(p => p.job_id === job.id)
+              .map(p => ({
+                id: p.id,
+                name: p.part_name,
+                quantity: p.quantity,
+                status: p.status as any,
+                requested_at: p.requested_at
+              }))
+          }));
+        }
+      }
       
       if (transformedJobs.length === 0) {
         console.log("No jobs or bookings found for this technician");
