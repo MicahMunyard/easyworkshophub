@@ -109,7 +109,7 @@ export const useTimeTracking = (jobId: string, technicianId: string) => {
     }
   }, [jobId, technicianId, user, toast]);
 
-  const stopTimer = useCallback(async () => {
+  const pauseTimer = useCallback(async () => {
     if (!currentEntry || !user) return;
 
     try {
@@ -128,22 +128,45 @@ export const useTimeTracking = (jobId: string, technicianId: string) => {
       setElapsedTime(0);
       
       toast({
-        title: "Timer Stopped",
-        description: "Time entry has been recorded"
+        title: "Timer Paused",
+        description: "Time entry has been saved"
       });
     } catch (error) {
-      console.error('Error stopping timer:', error);
+      console.error('Error pausing timer:', error);
       toast({
         title: "Error",
-        description: "Failed to stop timer",
+        description: "Failed to pause timer",
         variant: "destructive"
       });
     }
   }, [currentEntry, user, toast]);
 
+  const stopTimer = useCallback(async () => {
+    if (!currentEntry || !user) return;
+
+    try {
+      const { error } = await supabase
+        .from('time_entries')
+        .update({
+          end_time: new Date().toISOString()
+        })
+        .eq('id', currentEntry.id)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      setIsTimerRunning(false);
+      setCurrentEntry(null);
+      setElapsedTime(0);
+    } catch (error) {
+      console.error('Error stopping timer:', error);
+    }
+  }, [currentEntry, user]);
+
   return {
     isTimerRunning,
     startTimer,
+    pauseTimer,
     stopTimer,
     currentEntry,
     elapsedTime,

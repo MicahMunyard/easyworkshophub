@@ -17,27 +17,29 @@ const formatTime = (seconds: number): string => {
 };
 
 const TimeTracker: React.FC<TimeTrackerProps> = ({ jobId, technicianId }) => {
-  const { isTimerRunning, startTimer, stopTimer, elapsedTime, totalTime } = useTimeTracking(jobId, technicianId);
+  const { isTimerRunning, startTimer, pauseTimer, elapsedTime, totalTime } = useTimeTracking(jobId, technicianId);
 
   return (
     <div className="flex flex-col gap-2">
-      <Button
-        onClick={isTimerRunning ? stopTimer : startTimer}
-        variant={isTimerRunning ? "destructive" : "default"}
-        className="gap-2"
-      >
-        {isTimerRunning ? (
-          <>
-            <Timer className="h-4 w-4 animate-pulse" />
-            Stop Timer
-          </>
-        ) : (
-          <>
-            <Timer className="h-4 w-4" />
-            Start Timer
-          </>
-        )}
-      </Button>
+      {isTimerRunning ? (
+        <Button
+          onClick={pauseTimer}
+          variant="secondary"
+          className="gap-2"
+        >
+          <Timer className="h-4 w-4" />
+          Pause Timer
+        </Button>
+      ) : (
+        <Button
+          onClick={startTimer}
+          variant="default"
+          className="gap-2"
+        >
+          <Timer className="h-4 w-4" />
+          {totalTime > 0 ? 'Resume Timer' : 'Start Timer'}
+        </Button>
+      )}
       
       {isTimerRunning && (
         <div className="text-center text-lg font-mono font-semibold">
