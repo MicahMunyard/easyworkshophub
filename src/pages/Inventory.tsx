@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { EzyPartsProvider } from "@/contexts/EzyPartsContext";
-import AddBrakeCleanerProduct from "@/components/inventory/AddBrakeCleanerProduct";
+import { useAuth } from "@/contexts/AuthContext";
+import { useDefaultInventorySync } from "@/hooks/inventory/useDefaultInventorySync";
 import InventoryPageHeader from "@/components/inventory/InventoryPageHeader";
 import InventoryTabs from "@/components/inventory/InventoryTabs";
 import { useSuppliers } from "@/hooks/inventory/useSuppliers";
@@ -15,10 +16,12 @@ import { Supplier } from "@/types/inventory";
 const Inventory = () => {
   const { suppliers } = useSuppliers();
   const { refreshInventoryItems } = useInventoryItems();
+  const { user } = useAuth();
+  const { syncing } = useDefaultInventorySync(user?.id);
+  
   const [activeTab, setActiveTab] = useState("inventory");
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   const [isOrderMode, setIsOrderMode] = useState(false);
-  const [productAdded, setProductAdded] = useState(false);
   const [showEzyPartsSuccess, setShowEzyPartsSuccess] = useState(false);
   
   const location = useLocation();
@@ -56,13 +59,6 @@ const Inventory = () => {
     }
   }, [location, navigate, refreshInventoryItems]);
 
-  // This effect will run once when the component mounts
-  useEffect(() => {
-    if (!productAdded) {
-      setProductAdded(true);
-    }
-  }, [productAdded]);
-
   const handleStartOrder = (supplier: Supplier) => {
     setSelectedSupplier(supplier);
     setIsOrderMode(true);
@@ -86,8 +82,6 @@ const Inventory = () => {
   return (
     <EzyPartsProvider>
       <div className="space-y-6 animate-fadeIn">
-        {!productAdded && <AddBrakeCleanerProduct />}
-        
         {showEzyPartsSuccess && (
           <Alert className="bg-green-50 border-green-200">
             <FileCheck className="h-4 w-4 text-green-500" />

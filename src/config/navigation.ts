@@ -157,8 +157,7 @@ export const secondaryNavSections: Record<string, { name: string; path: string }
     { name: "Jobs", path: "/jobs" }
   ],
   inventory: [
-    { name: "Inventory", path: "/inventory" },
-    { name: "Suppliers", path: "/suppliers" }
+    { name: "Inventory", path: "/inventory" }
   ],
   marketing: [
     { name: "Marketing", path: "/marketing" },

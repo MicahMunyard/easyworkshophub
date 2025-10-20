@@ -25,7 +25,6 @@ import Reports from "./pages/Reports";
 import Timesheets from "./pages/Timesheets";
 import EmailMarketing from "./pages/EmailMarketing";
 import Reviews from "./pages/Reviews";
-import Suppliers from "./pages/Suppliers";
 import WorkshopSetup from "./pages/WorkshopSetup";
 import TechnicianPortal from "./pages/TechnicianPortal";
 import Settings from "./pages/Settings";
@@ -63,7 +62,6 @@ const App = () => {
           <Route path="/timesheets" element={<ProtectedRoute><Timesheets /></ProtectedRoute>} />
           <Route path="/timesheets/entries" element={<ProtectedRoute><Timesheets /></ProtectedRoute>} />
           <Route path="/workshop" element={<ProtectedRoute><Workshop /></ProtectedRoute>} />
-          <Route path="/suppliers" element={<ProtectedRoute><Suppliers /></ProtectedRoute>} />
           <Route path="/workshop-setup" element={<ProtectedRoute><WorkshopSetup /></ProtectedRoute>} />
           <Route path="/technician-portal" element={<TechnicianPortal />} /> 
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
