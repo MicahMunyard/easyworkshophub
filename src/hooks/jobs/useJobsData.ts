@@ -25,7 +25,7 @@ export const useJobsData = () => {
       }
       
       const { data, error } = await supabase
-        .from('jobs')
+        .from('user_bookings')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
@@ -35,19 +35,25 @@ export const useJobsData = () => {
       }
       
       if (data) {
-        console.log(`Fetched ${data.length} jobs for user ${user.id}`);
+        console.log(`Fetched ${data.length} bookings for user ${user.id}`);
         // Transform to match JobType interface
-        const transformedJobs = data.map(job => ({
-          id: job.id,
-          customer: job.customer,
-          vehicle: job.vehicle,
-          service: job.service,
-          status: job.status as "pending" | "inProgress" | "working" | "completed" | "cancelled",
-          assignedTo: job.assigned_to,
-          date: job.date,
-          time: job.time || '', // Properly handle the time field and provide a default empty string
-          timeEstimate: job.time_estimate,
-          priority: job.priority
+        const transformedJobs = data.map(booking => ({
+          id: booking.id,
+          customer: booking.customer_name,
+          vehicle: booking.car,
+          service: booking.service,
+          status: booking.status as "pending" | "confirmed" | "inProgress" | "working" | "completed" | "cancelled",
+          assignedTo: booking.technician_id || '',
+          date: booking.booking_date,
+          time: booking.booking_time || '',
+          timeEstimate: booking.time_estimate || '1 hour',
+          priority: booking.priority || 'Medium',
+          cost: booking.cost ? Number(booking.cost) : undefined,
+          duration: booking.duration,
+          customerPhone: booking.customer_phone,
+          customerEmail: booking.customer_email,
+          notes: booking.notes,
+          totalTime: booking.total_time || 0
         })) as JobType[];
         
         setJobs(transformedJobs);
@@ -74,28 +80,9 @@ export const useJobsData = () => {
     console.log("Setting up real-time subscriptions for jobs");
     fetchJobs();
     
-    // Set up real-time subscription to jobs changes
-    const jobsChannel = supabase
-      .channel('jobs-changes')
-      .on('postgres_changes', 
-        { 
-          event: '*', 
-          schema: 'public', 
-          table: 'jobs',
-          filter: `user_id=eq.${user.id}`
-        }, 
-        (payload) => {
-          console.log("Jobs table change detected:", payload);
-          fetchJobs();
-        }
-      )
-      .subscribe((status) => {
-        console.log("Jobs subscription status:", status);
-      });
-      
-    // Also listen to user_bookings changes since bookings affect jobs
+    // Set up real-time subscription to user_bookings changes
     const bookingsChannel = supabase
-      .channel('bookings-jobs-sync')
+      .channel('bookings-changes')
       .on('postgres_changes', 
         { 
           event: '*', 
@@ -109,13 +96,12 @@ export const useJobsData = () => {
         }
       )
       .subscribe((status) => {
-        console.log("User bookings subscription status:", status);
+        console.log("Bookings subscription status:", status);
       });
     
-    // Clean up subscriptions
+    // Clean up subscription
     return () => {
-      console.log("Cleaning up Supabase channels");
-      supabase.removeChannel(jobsChannel);
+      console.log("Cleaning up Supabase channel");
       supabase.removeChannel(bookingsChannel);
     };
   }, [user]);

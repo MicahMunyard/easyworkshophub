@@ -1,45 +1,12 @@
 
 import { TechnicianJob, JobStatus, JobNote } from "@/types/technician";
 
-/**
- * Transform jobs data from the jobs table to match TechnicianJob interface
- */
-export const transformJobsData = (jobsData: any[]): TechnicianJob[] => {
-  if (!jobsData || jobsData.length === 0) {
-    return [];
-  }
-  
-  console.log(`Found ${jobsData.length} jobs in jobs table`);
-  
-  return jobsData.map(job => {
-    // Create a more robust job object with explicit typing
-    const transformedJob: TechnicianJob = {
-      id: job.id,
-      title: job.service || 'Unnamed Job',
-      description: `Customer: ${job.customer || 'Unknown'}, Vehicle: ${job.vehicle || 'Unknown'}`,
-      customer: job.customer || 'Unknown',
-      vehicle: job.vehicle || 'Unknown',
-      service: job.service || 'General Service',
-      status: (job.status as JobStatus) || 'pending',
-      assignedTo: job.created_at || new Date().toISOString(),
-      scheduledFor: job.date || null,
-      estimatedTime: job.time_estimate || 'Not specified',
-      priority: job.priority || 'Medium',
-      partsRequested: job.parts_requested || [],
-      photos: job.photos || [],
-      notes: job.notes || [],
-      isActive: false,
-      timeLogged: job.total_time || 0,
-      date: job.date || new Date().toISOString(),
-      technicianId: job.assigned_to || null
-    };
-    
-    return transformedJob;
-  });
-};
+// NOTE: The old jobs table is being deprecated in favor of user_bookings
+// This function is no longer needed but kept for reference during migration
 
 /**
  * Transform bookings data from the user_bookings table to match TechnicianJob interface
+ * This is now the primary data source for all jobs
  */
 export const transformBookingsData = (bookingsData: any[]): TechnicianJob[] => {
   if (!bookingsData || bookingsData.length === 0) {
@@ -60,10 +27,7 @@ export const transformBookingsData = (bookingsData: any[]): TechnicianJob[] => {
       : [];
       
     // Map booking status to our job status format
-    let status: JobStatus = 'pending';
-    if (booking.status === 'confirmed') status = 'pending';
-    else if (booking.status === 'completed') status = 'completed';
-    else if (booking.status === 'cancelled') status = 'cancelled';
+    let status: JobStatus = booking.status as JobStatus;
     
     const transformedJob: TechnicianJob = {
       id: booking.id,
@@ -75,13 +39,13 @@ export const transformBookingsData = (bookingsData: any[]): TechnicianJob[] => {
       status: status,
       assignedTo: booking.created_at || new Date().toISOString(),
       scheduledFor: booking.booking_date || null,
-      estimatedTime: booking.duration ? `${booking.duration} minutes` : 'Not specified',
-      priority: 'Medium',
+      estimatedTime: booking.time_estimate || (booking.duration ? `${booking.duration} minutes` : 'Not specified'),
+      priority: booking.priority || 'Medium',
       partsRequested: [],
       photos: [],
       notes: notesArray,
       isActive: false,
-      timeLogged: 0,
+      timeLogged: booking.total_time || 0,
       date: booking.booking_date || new Date().toISOString(),
       technicianId: booking.technician_id || null
     };

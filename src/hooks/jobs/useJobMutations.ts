@@ -20,20 +20,24 @@ export const useJobMutations = (fetchJobs: () => Promise<void>) => {
         return false;
       }
 
-      // Insert into Supabase
+      // Insert into user_bookings table
       const { data, error } = await supabase
-        .from('jobs')
+        .from('user_bookings')
         .insert([{
-          id: newJob.id,
-          customer: newJob.customer,
-          vehicle: newJob.vehicle,
+          customer_name: newJob.customer,
+          customer_phone: newJob.customerPhone || '',
+          customer_email: newJob.customerEmail || null,
+          car: newJob.vehicle,
           service: newJob.service,
           status: newJob.status,
-          assigned_to: newJob.assignedTo,
-          date: newJob.date,
-          time: newJob.time || null,
+          technician_id: newJob.assignedTo || null,
+          booking_date: newJob.date,
+          booking_time: newJob.time || '09:00',
+          duration: newJob.duration || 60,
           time_estimate: newJob.timeEstimate,
           priority: newJob.priority,
+          cost: newJob.cost || null,
+          notes: newJob.notes || null,
           user_id: user.id
         }])
         .select();
@@ -72,27 +76,32 @@ export const useJobMutations = (fetchJobs: () => Promise<void>) => {
         return false;
       }
 
-      // Get the current job to check if the status is being changed to "completed"
+      // Get the current booking to check if the status is being changed to "completed"
       const { data: currentJob } = await supabase
-        .from('jobs')
+        .from('user_bookings')
         .select('*')
         .eq('id', updatedJob.id)
         .eq('user_id', user.id)
         .single();
       
-      // Update in Supabase
+      // Update in user_bookings table
       const { error } = await supabase
-        .from('jobs')
+        .from('user_bookings')
         .update({
-          customer: updatedJob.customer,
-          vehicle: updatedJob.vehicle,
+          customer_name: updatedJob.customer,
+          customer_phone: updatedJob.customerPhone || '',
+          customer_email: updatedJob.customerEmail || null,
+          car: updatedJob.vehicle,
           service: updatedJob.service,
           status: updatedJob.status,
-          assigned_to: updatedJob.assignedTo,
-          date: updatedJob.date,
-          time: updatedJob.time || null,
+          technician_id: updatedJob.assignedTo || null,
+          booking_date: updatedJob.date,
+          booking_time: updatedJob.time || '09:00',
+          duration: updatedJob.duration || 60,
           time_estimate: updatedJob.timeEstimate,
-          priority: updatedJob.priority
+          priority: updatedJob.priority,
+          cost: updatedJob.cost || null,
+          notes: updatedJob.notes || null
         })
         .eq('id', updatedJob.id)
         .eq('user_id', user.id);
@@ -147,11 +156,11 @@ export const useJobMutations = (fetchJobs: () => Promise<void>) => {
         return false;
       }
 
-      // Update in Supabase
+      // Update in user_bookings table
       const { error } = await supabase
-        .from('jobs')
+        .from('user_bookings')
         .update({
-          assigned_to: newTechnician
+          technician_id: newTechnician || null
         })
         .eq('id', job.id)
         .eq('user_id', user.id);
@@ -190,9 +199,9 @@ export const useJobMutations = (fetchJobs: () => Promise<void>) => {
         return false;
       }
 
-      // Update job status to 'cancelled' in Supabase
+      // Update job status to 'cancelled' in user_bookings table
       const { error } = await supabase
-        .from('jobs')
+        .from('user_bookings')
         .update({
           status: 'cancelled'
         })

@@ -21,7 +21,7 @@ export const useTimeTracking = (jobId: string, technicianId: string) => {
       const { data } = await supabase
         .from('time_entries')
         .select('*')
-        .eq('job_id', jobId)
+        .eq('booking_id', jobId) // Now using booking_id
         .eq('technician_id', technicianId)
         .eq('user_id', user.id)
         .is('end_time', null)
@@ -48,7 +48,7 @@ export const useTimeTracking = (jobId: string, technicianId: string) => {
       const { data } = await supabase
         .from('time_entries')
         .select('duration')
-        .eq('job_id', jobId)
+        .eq('booking_id', jobId) // Now using booking_id
         .eq('user_id', user.id)
         .not('duration', 'is', null);
 
@@ -81,7 +81,8 @@ export const useTimeTracking = (jobId: string, technicianId: string) => {
       const { data, error } = await supabase
         .from('time_entries')
         .insert({
-          job_id: jobId,
+          job_id: jobId, // Keep for backwards compatibility temporarily
+          booking_id: jobId, // New column pointing to user_bookings
           technician_id: technicianId,
           start_time: new Date().toISOString(),
           date: new Date().toISOString().split('T')[0],

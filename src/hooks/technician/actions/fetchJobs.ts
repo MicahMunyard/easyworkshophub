@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { TechnicianJob } from "@/types/technician";
 import { useToast } from "@/hooks/use-toast";
 import { loadCachedJobs, cacheJobs, getLastFetchTime, setLastFetchTime } from "../utils/jobCacheUtils";
-import { transformJobsData, transformBookingsData } from "../utils/jobTransformUtils";
+import { transformBookingsData } from "../utils/jobTransformUtils";
 
 export const useFetchJobs = (
   technicianId: string | null,
@@ -70,20 +70,7 @@ export const useFetchJobs = (
       
       console.log(`Fetching jobs for technician ${technicianId} and user ${userId}`);
       
-      // Fetch jobs from the jobs table
-      const { data: jobsData, error: jobsError } = await supabase
-        .from('jobs')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('assigned_to', technicianId)
-        .order('date', { ascending: false });
-      
-      if (jobsError) {
-        console.error("Error fetching from jobs table:", jobsError);
-        throw jobsError;
-      }
-      
-      // Fetch bookings from the user_bookings table
+      // Fetch all jobs from user_bookings table (now the single source of truth)
       const { data: bookingsData, error: bookingsError } = await supabase
         .from('user_bookings')
         .select('*')
@@ -96,26 +83,23 @@ export const useFetchJobs = (
         throw bookingsError;
       }
       
-      // Transform and combine job data
-      let transformedJobs = [
-        ...(jobsData ? transformJobsData(jobsData) : []),
-        ...(bookingsData ? transformBookingsData(bookingsData) : [])
-      ];
+      // Transform booking data to job format
+      let transformedJobs = bookingsData ? transformBookingsData(bookingsData) : [];
 
-      // Fetch parts requests for these jobs
+      // Fetch parts requests for these jobs using the new booking_id column
       if (transformedJobs.length > 0) {
         const jobIds = transformedJobs.map(j => j.id);
         const { data: partsData } = await supabase
           .from('job_parts_requests')
           .select('*')
-          .in('job_id', jobIds);
+          .in('booking_id', jobIds);
         
         if (partsData && partsData.length > 0) {
-          // Map parts to jobs
+          // Map parts to jobs using the new booking_id
           transformedJobs = transformedJobs.map(job => ({
             ...job,
             partsRequested: partsData
-              .filter(p => p.job_id === job.id)
+              .filter(p => p.booking_id === job.id)
               .map(p => ({
                 id: p.id,
                 name: p.part_name,

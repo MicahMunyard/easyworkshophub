@@ -35,9 +35,10 @@ export const useRequestJobParts = (
     }
     
     try {
-      // Save parts requests to database
+      // Save parts requests to database using both job_id and booking_id during transition
       const requests = parts.map(part => ({
-        job_id: jobId,
+        job_id: jobId, // Keep for backwards compatibility temporarily
+        booking_id: jobId, // New column pointing to user_bookings
         part_name: part.name,
         quantity: part.quantity,
         requested_by: technicianId,

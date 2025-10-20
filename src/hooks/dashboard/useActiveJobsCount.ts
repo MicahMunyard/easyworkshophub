@@ -4,9 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 export const useActiveJobsCount = () => {
   const fetchActiveJobsCount = async (userId: string): Promise<number> => {
     try {
-      // Get active jobs (in progress or working status)
+      // Get active jobs (in progress or working status) from user_bookings
       const { data: activeJobsData, error: activeJobsError } = await supabase
-        .from('user_jobs')
+        .from('user_bookings')
         .select('*')
         .in('status', ['inProgress', 'working'])
         .eq('user_id', userId);
