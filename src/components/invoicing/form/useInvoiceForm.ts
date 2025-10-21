@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { Invoice, InvoiceStatus, InvoiceItem } from "@/types/invoice";
 import { format } from "date-fns";
 import { JobType } from "@/types/job";
+import { useJobParts } from "@/hooks/invoicing/useJobParts";
 
 const invoiceSchema = z.object({
   invoiceNumber: z.string().min(1, { message: "Invoice number is required" }),
@@ -33,6 +34,9 @@ const invoiceSchema = z.object({
 export type InvoiceFormValues = z.infer<typeof invoiceSchema>;
 
 export const useInvoiceForm = (completedJobs: JobType[]) => {
+  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
+  const { parts: approvedParts } = useJobParts(selectedBookingId);
+  
   const form = useForm<InvoiceFormValues>({
     resolver: zodResolver(invoiceSchema),
     defaultValues: {
@@ -92,6 +96,7 @@ export const useInvoiceForm = (completedJobs: JobType[]) => {
   const handleJobChange = (jobId: string) => {
     const selectedJob = completedJobs.find(job => job.id === jobId);
     if (selectedJob) {
+      setSelectedBookingId(jobId);
       form.setValue('customerName', selectedJob.customer);
       
       const jobWithContact = selectedJob as JobType & { customerEmail?: string, customerPhone?: string };
@@ -113,7 +118,8 @@ export const useInvoiceForm = (completedJobs: JobType[]) => {
         jobCost = isNaN(parsedCost) ? 0 : parsedCost;
       }
       
-      form.setValue('items', [
+      // Start with the service item
+      const invoiceItems = [
         {
           id: `item-${Date.now()}`,
           description: selectedJob.service,
@@ -121,9 +127,35 @@ export const useInvoiceForm = (completedJobs: JobType[]) => {
           unitPrice: jobCost,
           total: jobCost
         }
-      ]);
+      ];
+      
+      form.setValue('items', invoiceItems);
     }
   };
+
+  // Update invoice items when approved parts are loaded
+  useEffect(() => {
+    if (approvedParts.length > 0 && selectedBookingId) {
+      const currentItems = form.getValues().items;
+      
+      // Keep only the first item (service) and add parts
+      const serviceItem = currentItems[0];
+      const partItems = approvedParts.map(part => {
+        const unitPrice = part.unit_cost || (part.inventory_item as any)?.price || 0;
+        const total = part.total_cost || (unitPrice * part.quantity);
+        
+        return {
+          id: `part-${part.id}`,
+          description: part.part_code ? `${part.part_name} (${part.part_code})` : part.part_name,
+          quantity: part.quantity,
+          unitPrice: unitPrice,
+          total: total
+        };
+      });
+      
+      form.setValue('items', [serviceItem, ...partItems]);
+    }
+  }, [approvedParts, selectedBookingId]);
 
   const formatInvoiceForSubmission = (data: InvoiceFormValues) => {
     return {
