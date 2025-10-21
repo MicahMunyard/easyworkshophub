@@ -47,19 +47,19 @@ export const transformJobCost = (job: JobFromDB): number => {
 };
 
 export const transformCompletedJob = (
-  job: JobFromDB, 
+  job: any, 
   customerEmail: string, 
   customerPhone: string
 ): CompletedJobWithCustomer => {
   return {
     id: job.id,
-    customer: job.customer,
-    vehicle: job.vehicle,
+    customer: job.customer_name || job.customer,
+    vehicle: job.car || job.vehicle,
     service: job.service,
     status: job.status as "pending" | "inProgress" | "working" | "completed" | "cancelled",
-    assignedTo: job.assigned_to,
-    date: job.date,
-    time: job.time || '',
+    assignedTo: job.technician_id || job.assigned_to,
+    date: job.booking_date || job.date,
+    time: job.booking_time || job.time || '',
     timeEstimate: job.time_estimate,
     priority: job.priority,
     cost: transformJobCost(job),

@@ -24,7 +24,7 @@ export const useCompletedJobs = () => {
           let customerPhone = '';
           
           try {
-            const { data: bookingData, error: bookingError } = await fetchCustomerInfoForJob(job.customer, user.id);
+            const { data: bookingData, error: bookingError } = await fetchCustomerInfoForJob(job.customer_name, user.id);
               
             if (bookingData && !bookingError) {
               customerEmail = bookingData.customer_email || '';

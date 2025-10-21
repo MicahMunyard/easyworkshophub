@@ -4,12 +4,12 @@ import { CreateInvoiceParams } from '../types';
 import { InvoiceStatus } from '@/types/invoice';
 
 export const fetchFinishedJobsData = async (userId: string) => {
-  // Changed from status='completed' to status='finished'
   return await supabase
-    .from('jobs')
+    .from('user_bookings')
     .select('*')
-    .eq('status', 'finished')
-    .eq('user_id', userId);
+    .eq('status', 'completed')
+    .eq('user_id', userId)
+    .order('booking_date', { ascending: false });
 };
 
 export const fetchCustomerInfoForJob = async (customerName: string, userId: string) => {
@@ -21,6 +21,7 @@ export const fetchCustomerInfoForJob = async (customerName: string, userId: stri
     `)
     .eq('customer_name', customerName)
     .eq('user_id', userId)
+    .limit(1)
     .single();
 };
 
