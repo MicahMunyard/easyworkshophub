@@ -661,7 +661,7 @@ export type Database = {
           denied_reason: string | null
           id: string
           inventory_item_id: string | null
-          job_id: string
+          job_id: string | null
           notes: string | null
           part_code: string | null
           part_name: string
@@ -681,7 +681,7 @@ export type Database = {
           denied_reason?: string | null
           id?: string
           inventory_item_id?: string | null
-          job_id: string
+          job_id?: string | null
           notes?: string | null
           part_code?: string | null
           part_name: string
@@ -701,7 +701,7 @@ export type Database = {
           denied_reason?: string | null
           id?: string
           inventory_item_id?: string | null
-          job_id?: string
+          job_id?: string | null
           notes?: string | null
           part_code?: string | null
           part_name?: string
