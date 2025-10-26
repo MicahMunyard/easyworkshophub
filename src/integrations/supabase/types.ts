@@ -1894,10 +1894,7 @@ export type Database = {
           has_connection: boolean
         }[]
       }
-      create_ezyparts_diagnostic_tables: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
+      create_ezyparts_diagnostic_tables: { Args: never; Returns: boolean }
       delete_conversations_by_ids: {
         Args: { conversation_ids: string[] }
         Returns: undefined
@@ -1926,7 +1923,7 @@ export type Database = {
         }[]
       }
       get_user_ezyparts_quotes: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           created_at: string
           id: string
