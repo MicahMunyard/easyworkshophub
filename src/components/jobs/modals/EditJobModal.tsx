@@ -13,6 +13,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { JobType } from "@/types/job";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+
+interface Technician {
+  id: string;
+  name: string;
+}
 
 interface EditJobModalProps {
   isOpen: boolean;
@@ -23,10 +30,53 @@ interface EditJobModalProps {
 
 const EditJobModal: React.FC<EditJobModalProps> = ({ isOpen, onClose, job, onSave }) => {
   const [editedJob, setEditedJob] = useState<JobType | null>(job);
+  const [technicians, setTechnicians] = useState<Technician[]>([]);
+  const [loadingTechnicians, setLoadingTechnicians] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     setEditedJob(job);
   }, [job]);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchTechnicians();
+    }
+  }, [isOpen]);
+
+  const fetchTechnicians = async () => {
+    try {
+      setLoadingTechnicians(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast({
+          title: "Error",
+          description: "User not authenticated",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('user_technicians')
+        .select('id, name')
+        .eq('user_id', user.id)
+        .order('name');
+
+      if (error) throw error;
+      setTechnicians(data || []);
+    } catch (error) {
+      console.error('Error fetching technicians:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load technicians",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingTechnicians(false);
+    }
+  };
 
   if (!editedJob) return null;
 
@@ -135,17 +185,20 @@ const EditJobModal: React.FC<EditJobModalProps> = ({ isOpen, onClose, job, onSav
             <div className="grid gap-2">
               <Label htmlFor="assignedTo">Assigned Technician</Label>
               <Select 
-                value={editedJob.assignedTo} 
+                value={editedJob.assignedTo || ""} 
                 onValueChange={(value) => handleSelectChange("assignedTo", value)}
+                disabled={loadingTechnicians}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select technician" />
+                  <SelectValue placeholder={loadingTechnicians ? "Loading..." : "Select technician"} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Mike Johnson">Mike Johnson</SelectItem>
-                  <SelectItem value="Sarah Thomas">Sarah Thomas</SelectItem>
-                  <SelectItem value="Alex Rodriguez">Alex Rodriguez</SelectItem>
-                  <SelectItem value="Lisa Chen">Lisa Chen</SelectItem>
+                  <SelectItem value="">Unassigned</SelectItem>
+                  {technicians.map((tech) => (
+                    <SelectItem key={tech.id} value={tech.id}>
+                      {tech.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

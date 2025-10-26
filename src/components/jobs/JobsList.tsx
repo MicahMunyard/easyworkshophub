@@ -76,7 +76,7 @@ const JobsList: React.FC<JobsListProps> = ({
         {jobs.map((job) => (
           <TableRow 
             key={job.id} 
-            className={`bg-workshop-carbon text-white transition-all duration-200 ${isBookingJob(job.id) ? "bg-opacity-90 border-l-4 border-l-workshop-blue" : ""} hover:border-workshop-red hover:border-2`}
+            className={`bg-white text-gray-900 transition-all duration-200 border border-transparent ${isBookingJob(job.id) ? "border-l-4 border-l-workshop-blue" : ""} hover:border-workshop-red hover:border-2`}
           >
             <TableCell className="font-medium">
               {job.id}
