@@ -7,6 +7,7 @@ import { Invoice, InvoiceStatus, InvoiceItem } from "@/types/invoice";
 import { format } from "date-fns";
 import { JobType } from "@/types/job";
 import { useJobParts } from "@/hooks/invoicing/useJobParts";
+import { supabase } from "@/integrations/supabase/client";
 
 const invoiceSchema = z.object({
   invoiceNumber: z.string().min(1, { message: "Invoice number is required" }),
@@ -36,6 +37,7 @@ export type InvoiceFormValues = z.infer<typeof invoiceSchema>;
 export const useInvoiceForm = (completedJobs: JobType[]) => {
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const { parts: approvedParts } = useJobParts(selectedBookingId);
+  const LABOUR_RATE = 100; // Default hourly rate, could be from settings
   
   const form = useForm<InvoiceFormValues>({
     resolver: zodResolver(invoiceSchema),
@@ -93,7 +95,7 @@ export const useInvoiceForm = (completedJobs: JobType[]) => {
     }
   };
 
-  const handleJobChange = (jobId: string) => {
+  const handleJobChange = async (jobId: string) => {
     const selectedJob = completedJobs.find(job => job.id === jobId);
     if (selectedJob) {
       setSelectedBookingId(jobId);
@@ -128,6 +130,27 @@ export const useInvoiceForm = (completedJobs: JobType[]) => {
           total: jobCost
         }
       ];
+
+      // Fetch time entries and add labour costs
+      const { data: timeEntries } = await supabase
+        .from('time_entries')
+        .select('duration')
+        .eq('booking_id', jobId)
+        .not('duration', 'is', null);
+
+      const totalSeconds = timeEntries?.reduce((sum, entry) => sum + (entry.duration || 0), 0) || 0;
+      const totalHours = totalSeconds / 3600;
+
+      if (totalHours > 0) {
+        const labourCost = totalHours * LABOUR_RATE;
+        invoiceItems.push({
+          id: `labour-${Date.now()}`,
+          description: `Labour - ${totalHours.toFixed(2)} hours @ $${LABOUR_RATE}/hour`,
+          quantity: 1,
+          unitPrice: labourCost,
+          total: labourCost
+        });
+      }
       
       form.setValue('items', invoiceItems);
     }

@@ -124,6 +124,20 @@ export const useTimeTracking = (jobId: string, technicianId: string) => {
 
       if (error) throw error;
 
+      // Sync total_time to user_bookings
+      const { data: allEntries } = await supabase
+        .from('time_entries')
+        .select('duration')
+        .eq('booking_id', jobId)
+        .not('duration', 'is', null);
+
+      const newTotalTime = allEntries?.reduce((sum, e) => sum + (e.duration || 0), 0) || 0;
+
+      await supabase
+        .from('user_bookings')
+        .update({ total_time: newTotalTime })
+        .eq('id', jobId);
+
       setIsTimerRunning(false);
       setCurrentEntry(null);
       // Don't reset elapsedTime - keep it visible when paused
@@ -140,7 +154,7 @@ export const useTimeTracking = (jobId: string, technicianId: string) => {
         variant: "destructive"
       });
     }
-  }, [currentEntry, user, toast]);
+  }, [currentEntry, user, toast, jobId]);
 
   const stopTimer = useCallback(async () => {
     if (!currentEntry || !user) return;
@@ -156,13 +170,27 @@ export const useTimeTracking = (jobId: string, technicianId: string) => {
 
       if (error) throw error;
 
+      // Sync total_time to user_bookings
+      const { data: allEntries } = await supabase
+        .from('time_entries')
+        .select('duration')
+        .eq('booking_id', jobId)
+        .not('duration', 'is', null);
+
+      const newTotalTime = allEntries?.reduce((sum, e) => sum + (e.duration || 0), 0) || 0;
+
+      await supabase
+        .from('user_bookings')
+        .update({ total_time: newTotalTime })
+        .eq('id', jobId);
+
       setIsTimerRunning(false);
       setCurrentEntry(null);
       setElapsedTime(0);
     } catch (error) {
       console.error('Error stopping timer:', error);
     }
-  }, [currentEntry, user]);
+  }, [currentEntry, user, jobId]);
 
   return {
     isTimerRunning,

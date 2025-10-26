@@ -29,9 +29,23 @@ export const useUpdateJobStatus = (
     }
     
     try {
+      const updates: any = { status: newStatus };
+
+      // If completing the job, also update total_time
+      if (newStatus === 'completed') {
+        const { data: timeEntries } = await supabase
+          .from('time_entries')
+          .select('duration')
+          .eq('booking_id', jobId)
+          .not('duration', 'is', null);
+        
+        const totalTime = timeEntries?.reduce((sum, entry) => sum + (entry.duration || 0), 0) || 0;
+        updates.total_time = totalTime;
+      }
+
       const { error } = await supabase
-        .from('jobs')
-        .update({ status: newStatus })
+        .from('user_bookings')
+        .update(updates)
         .eq('id', jobId);
       
       if (error) throw error;
