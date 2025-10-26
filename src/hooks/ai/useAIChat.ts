@@ -10,7 +10,22 @@ type Message = {
 
 type ChatType = 'general_help' | 'technical_help';
 
-export const useAIChat = (chatType: ChatType) => {
+export type ChatContext = {
+  currentPage?: string;
+  vehicle?: {
+    make?: string;
+    model?: string;
+    year?: string;
+    vin?: string;
+  };
+  job?: {
+    id?: string;
+    service?: string;
+    status?: string;
+  };
+};
+
+export const useAIChat = (chatType: ChatType, context?: ChatContext) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -74,7 +89,7 @@ export const useAIChat = (chatType: ChatType) => {
         await saveMessage(convId, 'user', userMessage);
       }
 
-      // Call streaming endpoint
+      // Call streaming endpoint with context
       const response = await fetch(CHAT_URL, {
         method: 'POST',
         headers: {
@@ -85,6 +100,7 @@ export const useAIChat = (chatType: ChatType) => {
           messages: [userMsg],
           conversationId: convId,
           chatType,
+          context,
         }),
       });
 

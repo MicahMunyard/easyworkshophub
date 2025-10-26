@@ -59,6 +59,50 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_chat_analytics: {
+        Row: {
+          category: string | null
+          context_data: Json | null
+          context_type: string | null
+          conversation_id: string | null
+          created_at: string | null
+          id: string
+          question: string
+          response_time_ms: number | null
+          user_id: string | null
+        }
+        Insert: {
+          category?: string | null
+          context_data?: Json | null
+          context_type?: string | null
+          conversation_id?: string | null
+          created_at?: string | null
+          id?: string
+          question: string
+          response_time_ms?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          category?: string | null
+          context_data?: Json | null
+          context_type?: string | null
+          conversation_id?: string | null
+          created_at?: string | null
+          id?: string
+          question?: string
+          response_time_ms?: number | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_chat_analytics_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "ai_chat_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_chat_conversations: {
         Row: {
           chat_type: string
@@ -1985,6 +2029,14 @@ export type Database = {
           profile_picture_url: string
           unread: boolean
           user_id: string
+        }[]
+      }
+      get_common_questions: {
+        Args: { days_ago?: number; limit_count?: number }
+        Returns: {
+          category: string
+          count: number
+          question: string
         }[]
       }
       get_user_ezyparts_quotes: {

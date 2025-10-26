@@ -4,25 +4,36 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageCircle, Send, X, Minimize2, Maximize2 } from 'lucide-react';
-import { useAIChat } from '@/hooks/ai/useAIChat';
+import { useAIChat, ChatContext } from '@/hooks/ai/useAIChat';
 import { cn } from '@/lib/utils';
+import { useLocation } from 'react-router-dom';
 
 type AIChatWidgetProps = {
   chatType: 'general_help' | 'technical_help';
   technicianId?: string;
   title?: string;
+  context?: ChatContext;
 };
 
 const AIChatWidget: React.FC<AIChatWidgetProps> = ({ 
   chatType, 
   technicianId,
-  title = 'AI Assistant' 
+  title = 'AI Assistant',
+  context: providedContext
 }) => {
+  const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { messages, isLoading, sendMessage, clearChat } = useAIChat(chatType);
+  
+  // Auto-detect context from current page
+  const autoContext: ChatContext = {
+    currentPage: location.pathname.replace('/', '') || 'dashboard',
+    ...providedContext
+  };
+  
+  const { messages, isLoading, sendMessage, clearChat } = useAIChat(chatType, autoContext);
 
   // Auto-scroll to bottom
   useEffect(() => {
