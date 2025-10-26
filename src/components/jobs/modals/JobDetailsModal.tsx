@@ -35,16 +35,8 @@ const JobDetailsModal: React.FC<JobDetailsModalProps> = ({ isOpen, onClose, job,
 
   const StatusIcon = jobStatuses[job.status].icon;
   
-  // Handle close with a proper function rather than direct reference
-  const handleClose = () => {
-    // Delay the close slightly to prevent freezing
-    setTimeout(() => {
-      onClose();
-    }, 50);
-  };
-
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -95,7 +87,7 @@ const JobDetailsModal: React.FC<JobDetailsModalProps> = ({ isOpen, onClose, job,
               <div className="text-sm text-muted-foreground flex items-center gap-1">
                 <User className="h-3.5 w-3.5" /> Assigned To
               </div>
-              <div className="font-medium">{job.assignedTo}</div>
+              <div className="font-medium">{job.assignedToName || 'Unassigned'}</div>
             </div>
           </div>
 
@@ -138,14 +130,10 @@ const JobDetailsModal: React.FC<JobDetailsModalProps> = ({ isOpen, onClose, job,
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose}>
+          <Button variant="outline" onClick={onClose}>
             Close
           </Button>
-          <Button onClick={() => {
-            handleClose();
-            // Slightly delay the edit action to prevent UI freezing
-            setTimeout(() => onEdit(job), 100);
-          }}>
+          <Button onClick={() => onEdit(job)}>
             Edit Job
           </Button>
         </DialogFooter>

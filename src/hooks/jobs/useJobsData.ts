@@ -24,6 +24,7 @@ export const useJobsData = () => {
         return;
       }
       
+      // Fetch bookings
       const { data, error } = await supabase
         .from('user_bookings')
         .select('*')
@@ -33,6 +34,22 @@ export const useJobsData = () => {
       if (error) {
         throw error;
       }
+
+      // Fetch technicians to map names
+      const { data: technicians, error: techError } = await supabase
+        .from('user_technicians')
+        .select('id, name')
+        .eq('user_id', user.id);
+
+      if (techError) {
+        console.error("Error fetching technicians:", techError);
+      }
+
+      // Create technician map for quick lookup
+      const techMap: Record<string, string> = {};
+      (technicians || []).forEach(tech => {
+        techMap[tech.id] = tech.name;
+      });
       
       if (data) {
         console.log(`Fetched ${data.length} bookings for user ${user.id}`);
@@ -44,6 +61,7 @@ export const useJobsData = () => {
           service: booking.service,
           status: booking.status as "pending" | "confirmed" | "inProgress" | "working" | "completed" | "cancelled",
           assignedTo: booking.technician_id || '',
+          assignedToName: booking.technician_id ? (techMap[booking.technician_id] || '') : '',
           date: booking.booking_date,
           time: booking.booking_time || '',
           timeEstimate: booking.time_estimate || '1 hour',

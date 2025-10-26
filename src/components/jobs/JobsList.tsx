@@ -90,7 +90,7 @@ const JobsList: React.FC<JobsListProps> = ({
             <TableCell>
               <StatusBadge status={job.status} />
             </TableCell>
-            <TableCell>{job.assignedTo}</TableCell>
+            <TableCell>{job.assignedToName || 'Unassigned'}</TableCell>
             <TableCell>{formatDate(job.date)}</TableCell>
             <TableCell>{job.time || 'Not specified'}</TableCell>
             <TableCell>

@@ -7,6 +7,7 @@ export interface JobType {
   service: string;
   status: "pending" | "confirmed" | "inProgress" | "working" | "completed" | "cancelled";
   assignedTo: string; // technician_id (can be null)
+  assignedToName?: string; // technician name for display
   date: string; // booking_date
   time?: string; // booking_time
   timeEstimate: string; // time_estimate

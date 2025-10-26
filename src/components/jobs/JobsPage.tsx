@@ -50,7 +50,7 @@ const JobsPage = () => {
   const handleEditJob = (job: typeof selectedJob) => {
     setSelectedJob(job);
     setIsDetailsModalOpen(false);
-    setIsEditModalOpen(true);
+    setTimeout(() => setIsEditModalOpen(true), 10);
   };
 
   const handleReassignJob = (job: typeof selectedJob) => {
