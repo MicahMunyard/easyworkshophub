@@ -161,8 +161,10 @@ export const useInvoiceForm = (completedJobs: JobType[]) => {
     if (approvedParts.length > 0 && selectedBookingId) {
       const currentItems = form.getValues().items;
       
-      // Keep only the first item (service) and add parts
+      // Keep service item (first) and labour item (if exists)
       const serviceItem = currentItems[0];
+      const labourItem = currentItems.find(item => item.id.startsWith('labour-'));
+      
       const partItems = approvedParts.map(part => {
         const unitPrice = part.unit_cost || (part.inventory_item as any)?.price || 0;
         const total = part.total_cost || (unitPrice * part.quantity);
@@ -176,7 +178,14 @@ export const useInvoiceForm = (completedJobs: JobType[]) => {
         };
       });
       
-      form.setValue('items', [serviceItem, ...partItems]);
+      // Rebuild items: service + labour (if exists) + parts
+      const newItems = [serviceItem];
+      if (labourItem) {
+        newItems.push(labourItem);
+      }
+      newItems.push(...partItems);
+      
+      form.setValue('items', newItems);
     }
   }, [approvedParts, selectedBookingId]);
 
