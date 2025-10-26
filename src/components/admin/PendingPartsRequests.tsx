@@ -196,10 +196,10 @@ export const PendingPartsRequests = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="inventory-item">Link to Inventory Item</Label>
+              <Label htmlFor="inventory-item">Link to Inventory Item *</Label>
               <Select value={selectedInventoryId} onValueChange={setSelectedInventoryId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select inventory item (optional)" />
+                <SelectTrigger className={!selectedInventoryId ? "border-destructive" : ""}>
+                  <SelectValue placeholder="Select inventory item (required)" />
                 </SelectTrigger>
                 <SelectContent>
                   {inventoryItems
@@ -215,7 +215,7 @@ export const PendingPartsRequests = () => {
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                Linking will deduct stock and assign cost automatically
+                Required for proper inventory tracking and invoice pricing
               </p>
             </div>
           </div>
@@ -224,7 +224,7 @@ export const PendingPartsRequests = () => {
             <Button variant="outline" onClick={() => setActionType(null)}>
               Cancel
             </Button>
-            <Button onClick={handleApprove}>
+            <Button onClick={handleApprove} disabled={!selectedInventoryId}>
               <CheckCircle className="h-4 w-4 mr-2" />
               Approve Request
             </Button>
