@@ -32,12 +32,14 @@ import EmailDesignerPage from './pages/EmailDesignerPage';
 import EzyPartsDashboard from './pages/EzyPartsDashboard';
 import VehicleSearch from './components/ezyparts/vehicle-search/VehicleSearch';
 import EmailCallback from './pages/email/callback';
+import AIChatWidget from './components/ai/AIChatWidget';
 
 const App = () => {
   const { user } = useAuth();
   
   return (
     <NotificationProvider>
+      {user && <AIChatWidget chatType="general_help" title="WorkshopBase Help" />}
       <Routes>
         {/* Auth Routes - should be accessible without authentication */}
         <Route path="/auth/signin" element={<Auth />} />

@@ -84,3 +84,6 @@ verify_jwt = false
 
 [functions.facebook-send-message]
 verify_jwt = true
+
+[functions.ai-chat]
+verify_jwt = true

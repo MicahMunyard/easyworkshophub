@@ -8,6 +8,7 @@ import TechnicianStats from "@/components/technician/TechnicianStats";
 import JobDetailView from "@/components/technician/JobDetailView";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import AIChatWidget from "@/components/ai/AIChatWidget";
 
 interface TechnicianDashboardProps {
   technicianProfile: TechnicianProfile | null;
@@ -110,6 +111,11 @@ const TechnicianDashboard: React.FC<TechnicianDashboardProps> = ({
   
   return (
     <div className="space-y-6">
+      <AIChatWidget 
+        chatType="technical_help" 
+        technicianId={technicianProfile?.id}
+        title="Technical Assistant" 
+      />
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight">
           Welcome, {technicianProfile?.name || 'Technician'}
