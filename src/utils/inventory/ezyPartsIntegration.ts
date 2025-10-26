@@ -40,6 +40,7 @@ export const convertEzyPartsToInventoryItems = (
       inStock: part.qty,
       minStock,
       price: part.nettPriceEach,
+      retailPrice: part.retailPriceEa,
       location: 'Main Warehouse',
       lastOrder: new Date().toISOString(),
       imageUrl,

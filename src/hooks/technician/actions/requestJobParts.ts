@@ -35,14 +35,36 @@ export const useRequestJobParts = (
     }
     
     try {
-      // Save parts requests to database
-      const requests = parts.map(part => ({
-        booking_id: jobId, // UUID pointing to user_bookings
-        part_name: part.name,
-        quantity: part.quantity,
-        requested_by: technicianId,
-        status: 'pending'
-      }));
+      // Fetch inventory items to get retail prices
+      const partNames = parts.map(p => p.name);
+      const { data: inventoryItems } = await supabase
+        .from('user_inventory_items')
+        .select('name, retail_price, price')
+        .in('name', partNames);
+      
+      // Create a map of part names to retail prices
+      const priceMap = new Map(
+        (inventoryItems || []).map(item => [
+          item.name, 
+          item.retail_price || item.price || 0
+        ])
+      );
+      
+      // Save parts requests to database with retail pricing
+      const requests = parts.map(part => {
+        const unitCost = priceMap.get(part.name) || 0;
+        const totalCost = unitCost * part.quantity;
+        
+        return {
+          booking_id: jobId,
+          part_name: part.name,
+          quantity: part.quantity,
+          unit_cost: unitCost,
+          total_cost: totalCost,
+          requested_by: technicianId,
+          status: 'pending'
+        };
+      });
 
       const { data, error } = await supabase
         .from('job_parts_requests')

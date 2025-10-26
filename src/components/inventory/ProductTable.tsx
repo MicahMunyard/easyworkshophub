@@ -61,24 +61,25 @@ const ProductTable: React.FC<ProductTableProps> = ({
   return (
     <ScrollArea className="h-[calc(100vh-320px)]">
       <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Product</TableHead>
-            <TableHead>Code</TableHead>
-            <TableHead>Brand</TableHead>
-            <TableHead className="hidden md:table-cell">Supplier</TableHead>
-            <TableHead>Price</TableHead>
-            <TableHead>Stock</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Product</TableHead>
+          <TableHead>Code</TableHead>
+          <TableHead>Brand</TableHead>
+          <TableHead className="hidden md:table-cell">Supplier</TableHead>
+          <TableHead>Cost Price</TableHead>
+          <TableHead>Retail Price</TableHead>
+          <TableHead className="hidden lg:table-cell">Stock</TableHead>
+          <TableHead className="text-right">Actions</TableHead>
+        </TableRow>
+      </TableHeader>
         <TableBody>
           {items.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                No products found. Add your first product to get started.
-              </TableCell>
-            </TableRow>
+          <TableRow>
+            <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+              No products found. Add your first product to get started.
+            </TableCell>
+          </TableRow>
           ) : (
             items.map((item) => {
               const stockPercentage = (item.inStock / Math.max(item.minStock, 1)) * 100;
@@ -121,9 +122,12 @@ const ProductTable: React.FC<ProductTableProps> = ({
                   <TableCell className="hidden md:table-cell">
                     {getSupplierName(item.supplierId)}
                   </TableCell>
-                  <TableCell className="font-medium">
-                    ${item.price.toFixed(2)}
-                  </TableCell>
+            <TableCell className="text-sm text-muted-foreground">
+              ${item.price.toFixed(2)}
+            </TableCell>
+            <TableCell className="font-medium text-green-600">
+              ${(item.retailPrice || item.price).toFixed(2)}
+            </TableCell>
                   <TableCell>
                     <div className="w-32">
                       <div className="flex justify-between text-sm mb-1">

@@ -166,7 +166,7 @@ export const useInvoiceForm = (completedJobs: JobType[]) => {
       const labourItem = currentItems.find(item => item.id.startsWith('labour-'));
       
       const partItems = approvedParts.map(part => {
-        const unitPrice = part.unit_cost || (part.inventory_item as any)?.price || 0;
+        const unitPrice = part.unit_cost || (part.inventory_item as any)?.retailPrice || (part.inventory_item as any)?.price || 0;
         const total = part.total_cost || (unitPrice * part.quantity);
         
         return {

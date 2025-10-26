@@ -35,6 +35,7 @@ const formSchema = z.object({
   inStock: z.coerce.number().min(0, { message: 'Stock cannot be negative' }),
   minStock: z.coerce.number().min(0, { message: 'Minimum stock cannot be negative' }),
   price: z.coerce.number().min(0, { message: 'Price cannot be negative' }),
+  retailPrice: z.coerce.number().min(0).optional(),
   location: z.string().optional(),
   imageUrl: z.string().optional(),
 });
@@ -62,6 +63,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ item, suppliers, onSubmit, on
       inStock: item?.inStock || 0,
       minStock: item?.minStock || 0,
       price: item?.price || 0,
+      retailPrice: item?.retailPrice || 0,
       location: item?.location || '',
       imageUrl: item?.imageUrl || '',
     },
@@ -215,7 +217,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ item, suppliers, onSubmit, on
           />
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <FormField
             control={form.control}
             name="inStock"
@@ -252,10 +254,38 @@ const ProductForm: React.FC<ProductFormProps> = ({ item, suppliers, onSubmit, on
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center gap-2">
-                  <DollarSign className="h-4 w-4" /> Unit Price
+                  <DollarSign className="h-4 w-4" /> Cost Price
                 </FormLabel>
                 <FormControl>
-                  <Input type="number" min="0" step="0.01" {...field} />
+                  <Input 
+                    type="number" 
+                    min="0" 
+                    step="0.01" 
+                    placeholder="Wholesale price"
+                    {...field} 
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="retailPrice"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center gap-2">
+                  <DollarSign className="h-4 w-4" /> Retail Price
+                </FormLabel>
+                <FormControl>
+                  <Input 
+                    type="number" 
+                    min="0" 
+                    step="0.01" 
+                    placeholder="Customer price"
+                    {...field} 
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>

@@ -1398,6 +1398,7 @@ export type Database = {
           min_stock: number
           name: string
           price: number | null
+          retail_price: number | null
           status: string | null
           supplier: string | null
           supplier_id: string | null
@@ -1418,6 +1419,7 @@ export type Database = {
           min_stock?: number
           name: string
           price?: number | null
+          retail_price?: number | null
           status?: string | null
           supplier?: string | null
           supplier_id?: string | null
@@ -1438,6 +1440,7 @@ export type Database = {
           min_stock?: number
           name?: string
           price?: number | null
+          retail_price?: number | null
           status?: string | null
           supplier?: string | null
           supplier_id?: string | null
