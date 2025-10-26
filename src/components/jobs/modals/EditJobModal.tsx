@@ -185,15 +185,15 @@ const EditJobModal: React.FC<EditJobModalProps> = ({ isOpen, onClose, job, onSav
             <div className="grid gap-2">
               <Label htmlFor="assignedTo">Assigned Technician</Label>
               <Select 
-                value={editedJob.assignedTo || ""} 
-                onValueChange={(value) => handleSelectChange("assignedTo", value)}
+                value={editedJob.assignedTo || "unassigned"} 
+                onValueChange={(value) => handleSelectChange("assignedTo", value === "unassigned" ? "" : value)}
                 disabled={loadingTechnicians}
               >
                 <SelectTrigger>
                   <SelectValue placeholder={loadingTechnicians ? "Loading..." : "Select technician"} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Unassigned</SelectItem>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
                   {technicians.map((tech) => (
                     <SelectItem key={tech.id} value={tech.id}>
                       {tech.name}
