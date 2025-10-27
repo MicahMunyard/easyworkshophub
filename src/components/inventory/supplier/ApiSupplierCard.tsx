@@ -25,6 +25,10 @@ import dbaLogo from '@/assets/brands/dba-logo.png';
 import daycoLogo from '@/assets/brands/dayco-logo.png';
 import chicaneLogo from '@/assets/brands/chicane-logo.png';
 import narvaLogo from '@/assets/brands/narva-logo.jpg';
+import alciusLogo from '@/assets/brands/alcius-logo.jpg';
+import centuryLogo from '@/assets/brands/century-logo.jpg';
+import bremboLogo from '@/assets/brands/brembo-logo.jpg';
+import bendixLogo from '@/assets/brands/bendix-logo.png';
 
 interface ApiSupplierCardProps {
   supplier: Supplier;
@@ -64,6 +68,10 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({
     { src: daycoLogo, alt: 'Dayco' },
     { src: chicaneLogo, alt: 'Chicane' },
     { src: narvaLogo, alt: 'Narva' },
+    { src: alciusLogo, alt: 'Alcius' },
+    { src: centuryLogo, alt: 'Century' },
+    { src: bremboLogo, alt: 'Brembo' },
+    { src: bendixLogo, alt: 'Bendix' },
   ];
 
   return (
