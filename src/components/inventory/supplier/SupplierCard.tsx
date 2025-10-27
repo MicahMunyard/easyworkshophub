@@ -3,7 +3,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Edit, Trash2, Phone, Mail, MapPin, ShoppingCart } from 'lucide-react';
+import { Edit, Trash2, Phone, Mail, MapPin, ShoppingCart, Settings } from 'lucide-react';
 import { Supplier } from '@/types/inventory';
 
 interface SupplierCardProps {
@@ -23,16 +23,29 @@ const SupplierCard: React.FC<SupplierCardProps> = ({
     <Card className="relative">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
-          <div>
-            <CardTitle className="text-lg">{supplier.name}</CardTitle>
-            <div className="flex items-center gap-2 mt-1">
-              <Badge variant="outline">{supplier.category}</Badge>
-              <Badge 
-                variant={supplier.status === 'active' ? 'default' : 'secondary'}
-                className={supplier.status === 'active' ? 'bg-green-100 text-green-800' : ''}
-              >
-                {supplier.status}
-              </Badge>
+          <div className="flex items-center gap-3">
+            {supplier.logoUrl ? (
+              <img 
+                src={supplier.logoUrl} 
+                alt={`${supplier.name} logo`}
+                className="w-12 h-12 object-contain rounded"
+              />
+            ) : (
+              <div className="w-12 h-12 bg-gray-100 rounded flex items-center justify-center">
+                <Settings className="h-6 w-6 text-gray-400" />
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <CardTitle className="text-lg">{supplier.name}</CardTitle>
+              <div className="flex items-center gap-2 mt-1">
+                <Badge variant="outline">{supplier.category}</Badge>
+                <Badge 
+                  variant={supplier.status === 'active' ? 'default' : 'secondary'}
+                  className={supplier.status === 'active' ? 'bg-green-100 text-green-800' : ''}
+                >
+                  {supplier.status}
+                </Badge>
+              </div>
             </div>
           </div>
         </div>
