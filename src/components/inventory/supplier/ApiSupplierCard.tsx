@@ -5,6 +5,16 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Settings, CheckCircle, Edit, FileText, ShoppingCart } from 'lucide-react';
 import { Supplier } from '@/types/inventory';
+import ntkLogo from '@/assets/brands/ntk-logo.jpg';
+import ngkLogo from '@/assets/brands/ngk-logo.jpg';
+import wesfilLogo from '@/assets/brands/wesfil-logo.jpg';
+import superproLogo from '@/assets/brands/superpro-logo.jpg';
+import rycoLogo from '@/assets/brands/ryco-logo.jpg';
+import roadsafeLogo from '@/assets/brands/roadsafe-logo.jpg';
+import protexLogo from '@/assets/brands/protex-logo.jpg';
+import projectaLogo from '@/assets/brands/projecta-logo.jpg';
+import penriteLogo from '@/assets/brands/penrite-logo.jpg';
+import patLogo from '@/assets/brands/pat-logo.jpg';
 
 interface ApiSupplierCardProps {
   supplier: Supplier;
@@ -22,6 +32,19 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({
   onNewOrder
 }) => {
   const isConnected = supplier.apiConfig?.isConnected || false;
+
+  const brandLogos = [
+    { src: ntkLogo, alt: 'NTK' },
+    { src: ngkLogo, alt: 'NGK' },
+    { src: wesfilLogo, alt: 'Wesfil' },
+    { src: superproLogo, alt: 'SuperPro' },
+    { src: rycoLogo, alt: 'Ryco' },
+    { src: roadsafeLogo, alt: 'RoadSafe' },
+    { src: protexLogo, alt: 'Protex' },
+    { src: projectaLogo, alt: 'Projecta' },
+    { src: penriteLogo, alt: 'Penrite' },
+    { src: patLogo, alt: 'PAT' },
+  ];
 
   return (
     <Card className="relative">
@@ -78,6 +101,22 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({
             <p className="font-medium capitalize">{supplier.apiConfig.type}</p>
           </div>
         )}
+
+        {/* Brand Logos Grid */}
+        <div className="pt-2 border-t">
+          <div className="text-xs text-muted-foreground mb-2">Available Brands</div>
+          <div className="grid grid-cols-5 gap-2">
+            {brandLogos.map((logo, index) => (
+              <div key={index} className="bg-background border rounded p-1 flex items-center justify-center">
+                <img 
+                  src={logo.src} 
+                  alt={logo.alt}
+                  className="w-full h-8 object-contain"
+                />
+              </div>
+            ))}
+          </div>
+        </div>
 
         <div className="flex flex-col gap-2 pt-2">
           <Button 
