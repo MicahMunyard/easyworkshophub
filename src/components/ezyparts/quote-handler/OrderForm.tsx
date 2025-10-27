@@ -11,6 +11,7 @@ import { SendHorizontal, Package2 } from 'lucide-react';
 import { OrderFormValues } from './types';
 import { useEzyPartsOrder } from '@/hooks/ezyparts/useEzyPartsOrder';
 import { useToast } from '@/hooks/use-toast';
+import { useEzyParts } from '@/contexts/EzyPartsContext';
 
 interface OrderFormProps {
   values: OrderFormValues;
@@ -43,6 +44,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({
   vehicleData
 }) => {
   const { submitOrder, isSubmitting } = useEzyPartsOrder();
+  const { currentQuote } = useEzyParts();
   const { toast } = useToast();
 
   const handleEzyPartsOrder = async () => {
@@ -54,6 +56,22 @@ export const OrderForm: React.FC<OrderFormProps> = ({
       });
       return;
     }
+
+    // Extract EzyParts credentials from the quote
+    if (!currentQuote || !currentQuote.headers) {
+      toast({
+        title: "Missing Quote Data",
+        description: "Unable to submit order. Please ensure you have a valid quote loaded.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const ezypartsCredentials = {
+      customerAccount: currentQuote.headers.customerAccount,
+      customerId: currentQuote.headers.customerId,
+      password: currentQuote.headers.password || ''
+    };
 
     try {
       const orderData = {
@@ -67,7 +85,8 @@ export const OrderForm: React.FC<OrderFormProps> = ({
         orderNotes: values.orderNotes,
         deliveryType: values.deliveryType,
         forceOrder: values.forceOrder,
-        vehicleData
+        vehicleData,
+        ezypartsCredentials
       };
 
       await submitOrder(orderData);

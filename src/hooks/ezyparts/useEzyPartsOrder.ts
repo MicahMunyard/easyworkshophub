@@ -26,6 +26,12 @@ interface OrderSubmissionData {
     make?: string;
     model?: string;
   };
+  // EzyParts authentication credentials from the quote
+  ezypartsCredentials?: {
+    customerAccount: string;
+    customerId: string;
+    password: string;
+  };
 }
 
 interface OrderSubmissionResponse {

@@ -46,6 +46,7 @@ export interface QuoteResponseHeaders {
   locationName: string;
   host: string;
   userAgent: string;
+  password?: string; // EzyParts account password for order submission
 }
 
 export interface PartItem {

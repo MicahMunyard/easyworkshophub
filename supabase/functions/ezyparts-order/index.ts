@@ -28,6 +28,12 @@ interface OrderSubmissionData {
     make?: string;
     model?: string;
   };
+  // EzyParts authentication credentials from the quote
+  ezypartsCredentials?: {
+    customerAccount: string;
+    customerId: string;
+    password: string;
+  };
 }
 
 serve(async (req) => {
@@ -136,15 +142,29 @@ serve(async (req) => {
 
     console.log('Date served formatted as:', dateServed);
 
+    // Validate that EzyParts credentials are provided from the quote
+    if (!order_data.ezypartsCredentials) {
+      console.error('No EzyParts credentials provided in order data');
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'EzyParts credentials are required. Please ensure the order is created from a valid quote.' 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+
+    console.log('Using EzyParts credentials from quote for account:', order_data.ezypartsCredentials.customerAccount);
+
     // Build the order request payload exactly as specified in the documentation
     const orderRequest = {
       inputMetaData: {
         checkCurrentPosition: !order_data.forceOrder // Force order indicator (inverted)
       },
       headers: {
-        customerAccount: "400022", // Default account from staging
-        customerId: "400022_workshopbase", // Default customer ID
-        password: "Burson2023", // Default password for staging
+        customerAccount: order_data.ezypartsCredentials.customerAccount,
+        customerId: order_data.ezypartsCredentials.customerId,
+        password: order_data.ezypartsCredentials.password,
         locationId: order_data.locationId || "",
         locationName: order_data.locationName || "",
         customerName: order_data.customerName || "WorkshopBase Customer",
