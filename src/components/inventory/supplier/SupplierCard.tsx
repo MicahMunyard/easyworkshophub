@@ -93,7 +93,7 @@ const SupplierCard: React.FC<SupplierCardProps> = ({
         )}
 
         {/* Brand Logos Grid - Only show for TOLICCS */}
-        {supplier.name === 'TOLICCS' && (
+        {supplier.name.includes('TOLICCS') && (
           <div className="pt-2 border-t">
             <div className="text-xs text-muted-foreground mb-2">Available Brands</div>
             <div className="grid grid-cols-4 gap-2">
