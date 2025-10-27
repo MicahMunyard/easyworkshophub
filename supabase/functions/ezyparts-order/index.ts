@@ -51,7 +51,17 @@ serve(async (req) => {
     };
 
     console.log('Processing order for user:', user_id);
-    console.log('Order data:', JSON.stringify(order_data, null, 2));
+    
+    // Redact sensitive data from logs
+    const redactedOrderData = {
+      ...order_data,
+      ezypartsCredentials: order_data.ezypartsCredentials ? {
+        customerAccount: order_data.ezypartsCredentials.customerAccount,
+        customerId: order_data.ezypartsCredentials.customerId,
+        password: '********'
+      } : undefined
+    };
+    console.log('Order data:', JSON.stringify(redactedOrderData, null, 2));
 
     // Get EzyParts configuration from secrets with validation
     const environment = Deno.env.get('EZYPARTS_ENVIRONMENT') || 'staging';
@@ -70,15 +80,18 @@ serve(async (req) => {
     // Determine API endpoints based on environment
     const endpoints = environment === 'production' ? {
       auth: 'https://api.ezyparts.burson.com.au/authorizationserver/oauth/token',
-      api: 'https://api.ezyparts.burson.com.au/bapcorocc/v2/EzyParts/gms'
+      apiPrimary: 'https://api.ezyparts.burson.com.au/bapcorocc/v2/EzyParts/orders/gms',
+      apiFallback: 'https://api.ezyparts.burson.com.au/bapcorocc/v2/EzyParts/gms'
     } : {
       auth: 'https://api.ezypartsqa.burson.com.au/authorizationserver/oauth/token',
-      api: 'https://api.ezypartsqa.burson.com.au/bapcorocc/v2/EzyParts/gms'
+      apiPrimary: 'https://api.ezypartsqa.burson.com.au/bapcorocc/v2/EzyParts/orders/gms',
+      apiFallback: 'https://api.ezypartsqa.burson.com.au/bapcorocc/v2/EzyParts/gms'
     };
 
     console.log('Using environment:', environment);
     console.log('Auth endpoint:', endpoints.auth);
-    console.log('API endpoint:', endpoints.api);
+    console.log('Primary API endpoint:', endpoints.apiPrimary);
+    console.log('Fallback API endpoint:', endpoints.apiFallback);
 
     // Validate required fields
     if (!order_data.parts || !Array.isArray(order_data.parts) || order_data.parts.length === 0) {
@@ -157,14 +170,11 @@ serve(async (req) => {
     console.log('Using EzyParts credentials for account:', order_data.ezypartsCredentials.customerAccount);
 
     // Build the order request payload exactly as specified in the documentation
-    const orderRequest = {
-      inputMetaData: {
-        checkCurrentPosition: !order_data.forceOrder // Force order indicator (inverted)
-      },
-      headers: {
-        customerAccount: order_data.ezypartsCredentials.customerAccount,
-        customerId: order_data.ezypartsCredentials.customerId,
-        password: order_data.ezypartsCredentials.password, // Lowercase as per API requirement
+    const buildOrderRequest = (useCapitalPassword = false) => {
+      const headers: any = {
+        customerAccount: order_data.ezypartsCredentials!.customerAccount,
+        customerId: order_data.ezypartsCredentials!.customerId,
+        password: order_data.ezypartsCredentials!.password,
         locationId: order_data.locationId || "",
         locationName: order_data.locationName || "",
         customerName: order_data.customerName || "WorkshopBase Customer",
@@ -182,37 +192,98 @@ serve(async (req) => {
         host: "workshopbase.com",
         userAgent: "Mozilla/5.0",
         salesOrderSalesAuditList: []
-      },
-      parts: order_data.parts.map(part => ({
-        qty: part.qty,
-        sku: part.sku,
-        nettPriceEach: part.nettPriceEach,
-        retailPriceEa: part.retailPriceEa || part.nettPriceEach * 1.2 // Default 20% markup if not provided
-      }))
+      };
+
+      // If capital Password variant is requested, duplicate the password field
+      if (useCapitalPassword) {
+        headers['Password'] = headers.password;
+      }
+
+      return {
+        inputMetaData: {
+          checkCurrentPosition: !order_data.forceOrder
+        },
+        headers,
+        parts: order_data.parts.map(part => ({
+          qty: part.qty,
+          sku: part.sku,
+          nettPriceEach: part.nettPriceEach,
+          retailPriceEa: part.retailPriceEa || part.nettPriceEach * 1.2
+        }))
+      };
     };
 
-    console.log('Submitting order to EzyParts:', JSON.stringify(orderRequest, null, 2));
+    // Helper function to redact sensitive data from logs
+    const redactPayload = (payload: any) => {
+      const redacted = JSON.parse(JSON.stringify(payload));
+      if (redacted.headers?.password) {
+        redacted.headers.password = '********';
+      }
+      if (redacted.headers?.Password) {
+        redacted.headers.Password = '********';
+      }
+      return redacted;
+    };
 
-    // Step 3: Submit order to EzyParts using correct /gms endpoint
-    const orderResponse = await fetch(endpoints.api, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${tokenData.access_token}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify(orderRequest)
-    });
+    // Helper function to submit order with retry logic
+    const submitOrder = async (endpoint: string, useCapitalPassword = false, attemptNumber = 1) => {
+      const orderRequest = buildOrderRequest(useCapitalPassword);
+      
+      console.log(`Attempt ${attemptNumber}: Submitting to ${endpoint}`);
+      console.log(`Using ${useCapitalPassword ? 'capitalized Password' : 'lowercase password'} field`);
+      console.log('Order payload (redacted):', JSON.stringify(redactPayload(orderRequest), null, 2));
 
-    const responseText = await orderResponse.text();
-    console.log('Raw API response:', responseText);
-    console.log('Response status:', orderResponse.status);
-    console.log('Response headers:', Object.fromEntries(orderResponse.headers.entries()));
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${tokenData.access_token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(orderRequest)
+      });
+
+      const responseText = await response.text();
+      console.log('Response status:', response.status);
+      
+      return { response, responseText };
+    };
+
+    // Step 3: Submit order with retry logic
+    let orderResponse;
+    let responseText;
+    let lastError;
+
+    // First attempt: primary endpoint with lowercase password
+    try {
+      const result = await submitOrder(endpoints.apiPrimary, false, 1);
+      orderResponse = result.response;
+      responseText = result.responseText;
+
+      // If 404, try fallback endpoint
+      if (orderResponse.status === 404) {
+        console.log('Primary endpoint returned 404, trying fallback endpoint...');
+        const fallbackResult = await submitOrder(endpoints.apiFallback, false, 2);
+        orderResponse = fallbackResult.response;
+        responseText = fallbackResult.responseText;
+      }
+
+      // If 400 with Password error, retry with capitalized Password
+      if (orderResponse.status === 400 && responseText.includes('Password')) {
+        console.log('Received Password property error, retrying with capitalized Password field...');
+        const capitalResult = await submitOrder(endpoints.apiPrimary, true, 3);
+        orderResponse = capitalResult.response;
+        responseText = capitalResult.responseText;
+      }
+    } catch (fetchError) {
+      console.error('Fetch error during order submission:', fetchError);
+      throw fetchError;
+    }
+
+    console.log('Final response body:', responseText);
 
     if (!orderResponse.ok) {
       console.error('Order submission failed with status:', orderResponse.status);
-      console.error('Response headers:', Object.fromEntries(orderResponse.headers.entries()));
-      console.error('Response body:', responseText);
       
       // Try to parse error response for better error handling
       let errorDetails;
@@ -246,7 +317,7 @@ serve(async (req) => {
       
       return new Response(JSON.stringify(errorResponse), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400 // Return 400 instead of 500 for API errors
+        status: 400
       });
     }
 
