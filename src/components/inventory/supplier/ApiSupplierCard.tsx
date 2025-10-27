@@ -15,6 +15,16 @@ import protexLogo from '@/assets/brands/protex-logo.jpg';
 import projectaLogo from '@/assets/brands/projecta-logo.jpg';
 import penriteLogo from '@/assets/brands/penrite-logo.jpg';
 import patLogo from '@/assets/brands/pat-logo.jpg';
+import milwaukeeLogo from '@/assets/brands/milwaukee-logo.jpg';
+import kybLogo from '@/assets/brands/kyb-logo.jpg';
+import jasLogo from '@/assets/brands/jas-logo.png';
+import fuchsLogo from '@/assets/brands/fuchs-logo.jpg';
+import exedyLogo from '@/assets/brands/exedy-logo.png';
+import endurantLogo from '@/assets/brands/endurant-logo.jpg';
+import dbaLogo from '@/assets/brands/dba-logo.png';
+import daycoLogo from '@/assets/brands/dayco-logo.png';
+import chicaneLogo from '@/assets/brands/chicane-logo.png';
+import narvaLogo from '@/assets/brands/narva-logo.jpg';
 
 interface ApiSupplierCardProps {
   supplier: Supplier;
@@ -44,6 +54,16 @@ const ApiSupplierCard: React.FC<ApiSupplierCardProps> = ({
     { src: projectaLogo, alt: 'Projecta' },
     { src: penriteLogo, alt: 'Penrite' },
     { src: patLogo, alt: 'PAT' },
+    { src: milwaukeeLogo, alt: 'Milwaukee' },
+    { src: kybLogo, alt: 'KYB' },
+    { src: jasLogo, alt: 'JAS Oceania' },
+    { src: fuchsLogo, alt: 'Fuchs' },
+    { src: exedyLogo, alt: 'Exedy' },
+    { src: endurantLogo, alt: 'Endurant' },
+    { src: dbaLogo, alt: 'DBA' },
+    { src: daycoLogo, alt: 'Dayco' },
+    { src: chicaneLogo, alt: 'Chicane' },
+    { src: narvaLogo, alt: 'Narva' },
   ];
 
   return (
