@@ -1456,6 +1456,39 @@ export type Database = {
         }
         Relationships: []
       }
+      user_ezyparts_credentials: {
+        Row: {
+          created_at: string | null
+          customer_account: string
+          customer_id: string
+          id: string
+          location_id: string | null
+          password: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          customer_account: string
+          customer_id: string
+          id?: string
+          location_id?: string | null
+          password: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          customer_account?: string
+          customer_id?: string
+          id?: string
+          location_id?: string | null
+          password?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_inventory_categories: {
         Row: {
           color: string

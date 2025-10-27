@@ -11,7 +11,7 @@ import { SendHorizontal, Package2 } from 'lucide-react';
 import { OrderFormValues } from './types';
 import { useEzyPartsOrder } from '@/hooks/ezyparts/useEzyPartsOrder';
 import { useToast } from '@/hooks/use-toast';
-import { useEzyParts } from '@/contexts/EzyPartsContext';
+import { useEzyPartsCredentials } from '@/hooks/ezyparts/useEzyPartsCredentials';
 
 interface OrderFormProps {
   values: OrderFormValues;
@@ -44,7 +44,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({
   vehicleData
 }) => {
   const { submitOrder, isSubmitting } = useEzyPartsOrder();
-  const { currentQuote } = useEzyParts();
+  const { credentials, hasCredentials } = useEzyPartsCredentials();
   const { toast } = useToast();
 
   const handleEzyPartsOrder = async () => {
@@ -57,20 +57,20 @@ export const OrderForm: React.FC<OrderFormProps> = ({
       return;
     }
 
-    // Extract EzyParts credentials from the quote
-    if (!currentQuote || !currentQuote.headers) {
+    // Check for stored credentials
+    if (!hasCredentials) {
       toast({
-        title: "Missing Quote Data",
-        description: "Unable to submit order. Please ensure you have a valid quote loaded.",
+        title: "EzyParts Credentials Missing",
+        description: "Please configure your EzyParts credentials in Settings > EzyParts Integration.",
         variant: "destructive"
       });
       return;
     }
 
     const ezypartsCredentials = {
-      customerAccount: currentQuote.headers.customerAccount,
-      customerId: currentQuote.headers.customerId,
-      password: currentQuote.headers.password || ''
+      customerAccount: credentials!.customer_account,
+      customerId: credentials!.customer_id,
+      password: credentials!.password
     };
 
     try {

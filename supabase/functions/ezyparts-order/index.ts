@@ -164,7 +164,7 @@ serve(async (req) => {
       headers: {
         customerAccount: order_data.ezypartsCredentials.customerAccount,
         customerId: order_data.ezypartsCredentials.customerId,
-        password: order_data.ezypartsCredentials.password,
+        Password: order_data.ezypartsCredentials.password, // Capital P required by EzyParts API
         locationId: order_data.locationId || "",
         locationName: order_data.locationName || "",
         customerName: order_data.customerName || "WorkshopBase Customer",

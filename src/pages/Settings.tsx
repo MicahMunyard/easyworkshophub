@@ -14,6 +14,7 @@ import { AlertCircle, Loader2, Lock, Settings as SettingsIcon } from 'lucide-rea
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import NotificationSettings from '@/components/settings/NotificationSettings';
+import { EzyPartsSettings } from '@/components/settings/EzyPartsSettings';
 
 const passwordSchema = z.object({
   currentPassword: z.string().min(6, { message: 'Password must be at least 6 characters' }),
@@ -200,9 +201,13 @@ const Settings: React.FC = () => {
           </Card>
         </TabsContent>
         
-        <TabsContent value="notifications">
-          <NotificationSettings />
-        </TabsContent>
+            <TabsContent value="notifications">
+              <NotificationSettings />
+            </TabsContent>
+
+            <TabsContent value="ezyparts">
+              <EzyPartsSettings />
+            </TabsContent>
         
         <TabsContent value="security">
           <Card>

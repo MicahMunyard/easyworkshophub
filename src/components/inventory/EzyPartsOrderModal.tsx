@@ -14,8 +14,7 @@ import { useEzyPartsOrder } from '@/hooks/ezyparts/useEzyPartsOrder';
 import { InventoryItem } from '@/types/inventory';
 import { ShoppingCart, Plus, Minus, Package, AlertTriangle, CheckCircle, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useEzyParts } from '@/contexts/EzyPartsContext';
-import { supabase } from '@/integrations/supabase/client';
+import { useEzyPartsCredentials } from '@/hooks/ezyparts/useEzyPartsCredentials';
 
 interface OrderLineItem {
   inventoryItem: InventoryItem;
@@ -40,7 +39,7 @@ const EzyPartsOrderModal: React.FC<EzyPartsOrderModalProps> = ({
 }) => {
   const { inventoryItems } = useInventoryItems();
   const { submitOrder, isSubmitting } = useEzyPartsOrder();
-  const { currentQuote } = useEzyParts();
+  const { credentials, hasCredentials } = useEzyPartsCredentials();
   const { toast } = useToast();
   
   const [selectedItems, setSelectedItems] = useState<OrderLineItem[]>([]);
@@ -55,55 +54,12 @@ const EzyPartsOrderModal: React.FC<EzyPartsOrderModalProps> = ({
   const [showDiscrepancies, setShowDiscrepancies] = useState(false);
   const [orderDiscrepancies, setOrderDiscrepancies] = useState<any>(null);
   const [forceOrder, setForceOrder] = useState(false);
-  const [ezyPartsCredentials, setEzyPartsCredentials] = useState<{
-    customerAccount: string;
-    customerId: string;
-    password: string;
-  } | null>(null);
 
   // Filter inventory items that came from EzyParts (Burson Auto Parts)
   const ezyPartsItems = inventoryItems.filter(item => 
     item.supplierId === 'burson-auto-parts' || 
     item.supplier === 'Burson Auto Parts'
   );
-
-  // Load EzyParts credentials from current quote or latest saved quote
-  useEffect(() => {
-    const loadCredentials = async () => {
-      // Try to get credentials from current quote first
-      if (currentQuote?.headers) {
-        setEzyPartsCredentials({
-          customerAccount: currentQuote.headers.customerAccount,
-          customerId: currentQuote.headers.customerId,
-          password: currentQuote.headers.password || ''
-        });
-        return;
-      }
-
-      // Otherwise, try to load from the most recent saved quote
-      const { data: quotes } = await supabase
-        .from('ezyparts_quotes')
-        .select('quote_data')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-
-      if (quotes) {
-        const quoteData = quotes.quote_data as any;
-        if (quoteData?.headers) {
-          setEzyPartsCredentials({
-            customerAccount: quoteData.headers.customerAccount,
-            customerId: quoteData.headers.customerId,
-            password: quoteData.headers.password || ''
-          });
-        }
-      }
-    };
-
-    if (isOpen) {
-      loadCredentials();
-    }
-  }, [isOpen, currentQuote]);
 
   // Auto-select prefill item when modal opens
   useEffect(() => {
@@ -191,8 +147,8 @@ const EzyPartsOrderModal: React.FC<EzyPartsOrderModalProps> = ({
     }
     
     // Check EzyParts credentials
-    if (!ezyPartsCredentials) {
-      validationErrors.push("EzyParts credentials not available. Please create or load a quote first.");
+    if (!hasCredentials) {
+      validationErrors.push("EzyParts credentials not configured. Please add credentials in Settings > EzyParts Integration.");
     }
     
     // Check customer name (required)
@@ -279,7 +235,11 @@ const EzyPartsOrderModal: React.FC<EzyPartsOrderModalProps> = ({
         orderNotes: orderDetails.orderNotes || undefined,
         deliveryType: orderDetails.deliveryType,
         forceOrder: forceOrder,
-        ezypartsCredentials: ezyPartsCredentials!
+        ezypartsCredentials: {
+          customerAccount: credentials!.customer_account,
+          customerId: credentials!.customer_id,
+          password: credentials!.password
+        }
       };
 
       console.log('Order payload:', JSON.stringify(orderData, null, 2));
