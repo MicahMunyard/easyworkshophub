@@ -70,10 +70,10 @@ serve(async (req) => {
     // Determine API endpoints based on environment
     const endpoints = environment === 'production' ? {
       auth: 'https://api.ezyparts.burson.com.au/authorizationserver/oauth/token',
-      api: 'https://api.ezyparts.burson.com.au/bapcorocc/v2/EzyParts/orders/gms'
+      api: 'https://api.ezyparts.burson.com.au/bapcorocc/v2/EzyParts/gms'
     } : {
       auth: 'https://api.ezypartsqa.burson.com.au/authorizationserver/oauth/token',
-      api: 'https://api.ezypartsqa.burson.com.au/bapcorocc/v2/EzyParts/orders/gms'
+      api: 'https://api.ezypartsqa.burson.com.au/bapcorocc/v2/EzyParts/gms'
     };
 
     console.log('Using environment:', environment);
