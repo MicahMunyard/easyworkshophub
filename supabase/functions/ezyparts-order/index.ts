@@ -77,13 +77,13 @@ serve(async (req) => {
       throw new Error('EzyParts OAuth credentials not configured');
     }
 
-    // Determine API endpoint based on environment (using /gms endpoint without /orders)
+    // Determine API endpoint based on environment (using /orders/gms endpoint)
     const endpoints = environment === 'production' ? {
       auth: 'https://api.ezyparts.burson.com.au/authorizationserver/oauth/token',
-      api: 'https://api.ezyparts.burson.com.au/bapcorocc/v2/EzyParts/gms'
+      api: 'https://api.ezyparts.burson.com.au/bapcorocc/v2/EzyParts/orders/gms'
     } : {
       auth: 'https://api.ezypartsqa.burson.com.au/authorizationserver/oauth/token',
-      api: 'https://api.ezypartsqa.burson.com.au/bapcorocc/v2/EzyParts/gms'
+      api: 'https://api.ezypartsqa.burson.com.au/bapcorocc/v2/EzyParts/orders/gms'
     };
 
     console.log('Using environment:', environment);
@@ -218,8 +218,21 @@ serve(async (req) => {
     // Step 3: Submit order to EzyParts API
     const orderRequest = buildOrderRequest();
     
+    console.log('=== DETAILED REQUEST LOGGING ===');
     console.log('Submitting order to:', endpoints.api);
+    console.log('Request method: POST');
+    console.log('Request headers:', JSON.stringify({
+      'Authorization': 'Bearer [REDACTED]',
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    }, null, 2));
     console.log('Order payload (redacted):', JSON.stringify(redactPayload(orderRequest), null, 2));
+    console.log('Payload keys:', Object.keys(orderRequest));
+    console.log('Headers object keys:', Object.keys(orderRequest.headers));
+    console.log('Headers object (all values):', JSON.stringify({
+      ...orderRequest.headers,
+      password: '********'
+    }, null, 2));
 
     const orderResponse = await fetch(endpoints.api, {
       method: 'POST',
@@ -232,7 +245,10 @@ serve(async (req) => {
     });
 
     const responseText = await orderResponse.text();
+    console.log('=== DETAILED RESPONSE LOGGING ===');
     console.log('Response status:', orderResponse.status);
+    console.log('Response status text:', orderResponse.statusText);
+    console.log('Response headers:', JSON.stringify(Object.fromEntries(orderResponse.headers.entries()), null, 2));
 
     console.log('Final response body:', responseText);
 
