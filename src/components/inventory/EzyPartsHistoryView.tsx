@@ -31,22 +31,54 @@ import {
   FileText, 
   ShoppingBag
 } from 'lucide-react';
-import { getSavedQuotes } from '@/utils/inventory/ezyPartsIntegration';
 import { format } from 'date-fns';
 import { useInventoryItems } from '@/hooks/inventory/useInventoryItems';
 import { QuoteResponse } from '@/types/ezyparts';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 const EzyPartsHistoryView: React.FC = () => {
+  const { user } = useAuth();
   const { inventoryItems } = useInventoryItems();
   const [savedQuotes, setSavedQuotes] = useState<any[]>([]);
   const [selectedQuote, setSelectedQuote] = useState<QuoteResponse | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
   useEffect(() => {
-    // Load saved quotes from localStorage
-    const quotes = getSavedQuotes();
-    setSavedQuotes(quotes);
-  }, []);
+    // Load saved quotes from Supabase
+    const loadQuotes = async () => {
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('ezyparts_quotes')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error loading quotes:', error);
+        return;
+      }
+
+      // Transform to match the expected format
+      const transformedQuotes = data.map(quote => {
+        const quoteData = quote.quote_data as any;
+        return {
+          quote: quoteData,
+          timestamp: quote.created_at,
+          vehicle: {
+            make: quoteData?.headers?.make || '',
+            model: quoteData?.headers?.model || '',
+            rego: quoteData?.headers?.rego || ''
+          }
+        };
+      });
+
+      setSavedQuotes(transformedQuotes);
+    };
+
+    loadQuotes();
+  }, [user]);
 
   const handleSelectQuote = (quote: QuoteResponse) => {
     setSelectedQuote(quote);

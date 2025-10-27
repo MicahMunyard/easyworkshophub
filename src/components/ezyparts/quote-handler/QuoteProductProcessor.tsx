@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { PartItem, QuoteResponse } from '@/types/ezyparts';
 import { useInventoryItems } from '@/hooks/inventory/useInventoryItems';
-import { addEzyPartsQuoteToInventory, saveQuoteToLocalStorage } from '@/utils/inventory/ezyPartsIntegration';
+import { addEzyPartsQuoteToInventory } from '@/utils/inventory/ezyPartsIntegration';
 import { formatCurrency } from './utils';
 
 interface ProductSelectionProps {
@@ -89,9 +89,6 @@ const QuoteProductProcessor: React.FC<ProductSelectionProps> = ({
         ...quote,
         parts: getSelectedParts()
       };
-      
-      // Save the complete quote for reference
-      saveQuoteToLocalStorage(quote);
       
       // Add selected parts to inventory - now properly handling async function
       const addedInventoryItems = await addEzyPartsQuoteToInventory(selectedPartsQuote, addInventoryItem);

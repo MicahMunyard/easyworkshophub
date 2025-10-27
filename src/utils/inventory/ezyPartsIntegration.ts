@@ -103,33 +103,7 @@ export const addEzyPartsQuoteToInventory = async (
 };
 
 /**
- * Saves the EzyParts quote to localStorage for future reference
- */
-export const saveQuoteToLocalStorage = (quote: QuoteResponse): void => {
-  try {
-    // Get existing quotes or initialize empty array
-    const existingQuotes = JSON.parse(localStorage.getItem('ezypartsQuotes') || '[]');
-    
-    // Add the new quote with timestamp
-    existingQuotes.push({
-      quote,
-      timestamp: new Date().toISOString(),
-      vehicle: {
-        make: quote.headers.make,
-        model: quote.headers.model,
-        rego: quote.headers.rego
-      }
-    });
-    
-    // Save back to localStorage
-    localStorage.setItem('ezypartsQuotes', JSON.stringify(existingQuotes));
-  } catch (error) {
-    console.error('Error saving EzyParts quote to localStorage:', error);
-  }
-};
-
-/**
- * Retrieve saved EzyParts quotes from localStorage
+ * Retrieve saved EzyParts quotes from localStorage (deprecated - use Supabase instead)
  */
 export const getSavedQuotes = () => {
   try {

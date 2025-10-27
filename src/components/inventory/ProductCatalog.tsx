@@ -11,6 +11,7 @@ import { useSuppliers } from '@/hooks/inventory/useSuppliers';
 import ProductTable from './ProductTable';
 import ProductFilters from './ProductFilters';
 import ReceiveStockDialog from './ReceiveStockDialog';
+import EzyPartsOrderModal from './EzyPartsOrderModal';
 
 type ProductCatalogProps = {
   onAddToOrder?: (item: InventoryItem) => void;
@@ -35,6 +36,8 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ onAddToOrder }) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | undefined>(undefined);
   const [receiveStockItem, setReceiveStockItem] = useState<InventoryItem | null>(null);
+  const [isEzyPartsOrderOpen, setIsEzyPartsOrderOpen] = useState(false);
+  const [orderingItem, setOrderingItem] = useState<InventoryItem | null>(null);
 
   // Calculate the maximum price for the price range slider
   const maxPrice = Math.max(...inventoryItems.map(item => item.price), 100);
@@ -101,9 +104,19 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ onAddToOrder }) => {
   };
 
   const handleOrderNow = (item: InventoryItem) => {
-    // TODO: Open EzyParts order modal pre-filled with this item
-    console.log('Order now for item:', item);
-    // This will be implemented when we create the EzyParts order modal integration
+    setOrderingItem(item);
+    setIsEzyPartsOrderOpen(true);
+  };
+
+  const handleOrderSuccess = async (orderNumber: string, items: any[]) => {
+    // Update each ordered item's status to 'on_order'
+    for (const orderItem of items) {
+      await updateItemOrderStatus(orderItem.inventoryItem.id, 'on_order', {
+        ezypartsOrderNumber: orderNumber,
+        orderedQuantity: orderItem.quantity,
+        orderDate: new Date().toISOString()
+      });
+    }
   };
 
   const handleReceiveStock = (item: InventoryItem) => {
@@ -199,6 +212,16 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ onAddToOrder }) => {
         open={!!receiveStockItem}
         onOpenChange={(open) => !open && setReceiveStockItem(null)}
         onReceive={handleConfirmReceive}
+      />
+
+      <EzyPartsOrderModal
+        isOpen={isEzyPartsOrderOpen}
+        onClose={() => {
+          setIsEzyPartsOrderOpen(false);
+          setOrderingItem(null);
+        }}
+        prefillItem={orderingItem || undefined}
+        onOrderSuccess={handleOrderSuccess}
       />
     </div>
   );

@@ -26,9 +26,16 @@ interface OrderLineItem {
 interface EzyPartsOrderModalProps {
   isOpen: boolean;
   onClose: () => void;
+  prefillItem?: InventoryItem;
+  onOrderSuccess?: (orderNumber: string, items: OrderLineItem[]) => void;
 }
 
-const EzyPartsOrderModal: React.FC<EzyPartsOrderModalProps> = ({ isOpen, onClose }) => {
+const EzyPartsOrderModal: React.FC<EzyPartsOrderModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  prefillItem,
+  onOrderSuccess 
+}) => {
   const { inventoryItems } = useInventoryItems();
   const { submitOrder, isSubmitting } = useEzyPartsOrder();
   const { toast } = useToast();
@@ -51,6 +58,20 @@ const EzyPartsOrderModal: React.FC<EzyPartsOrderModalProps> = ({ isOpen, onClose
     item.supplierId === 'burson-auto-parts' || 
     item.supplier === 'Burson Auto Parts'
   );
+
+  // Auto-select prefill item when modal opens
+  useEffect(() => {
+    if (isOpen && prefillItem && selectedItems.length === 0) {
+      const orderItem: OrderLineItem = {
+        inventoryItem: prefillItem,
+        quantity: prefillItem.quotedQuantity || 1,
+        nettPriceEach: prefillItem.price || 0,
+        retailPriceEa: prefillItem.retailPrice || (prefillItem.price ? prefillItem.price * 1.2 : 0),
+        sku: extractSkuFromDescription(prefillItem.description) || prefillItem.code
+      };
+      setSelectedItems([orderItem]);
+    }
+  }, [isOpen, prefillItem]);
 
   const addItemToOrder = (item: InventoryItem) => {
     const existingItem = selectedItems.find(selected => selected.inventoryItem.id === item.id);
@@ -146,6 +167,11 @@ const EzyPartsOrderModal: React.FC<EzyPartsOrderModalProps> = ({ isOpen, onClose
       const response = await submitOrder(orderData);
 
       if (response.success) {
+        // Call success callback to update inventory items
+        if (onOrderSuccess && response.salesOrderNumber) {
+          onOrderSuccess(response.salesOrderNumber, selectedItems);
+        }
+
         if (response.failedItems && response.failedItems.length > 0) {
           // Handle discrepancies
           setOrderDiscrepancies(response);

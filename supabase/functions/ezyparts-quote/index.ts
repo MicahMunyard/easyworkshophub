@@ -180,8 +180,8 @@ serve(async (req) => {
       
       console.log("Quote stored successfully with ID:", quoteData[0].id);
 
-      // Process parts and add to inventory with vehicle fitment
-      const inventoryResult = await processPartsToInventory(supabase, payload, userId);
+      // Process parts and add to inventory with vehicle fitment (as quoted items)
+      const inventoryResult = await processPartsToInventory(supabase, payload, userId, quoteData[0].id);
       
       if (inventoryResult.success) {
         console.log("Successfully processed", inventoryResult.addedCount, "parts to inventory");
@@ -258,9 +258,10 @@ serve(async (req) => {
   }
 });
 
-async function processPartsToInventory(supabase: any, payload: any, userId: string) {
+async function processPartsToInventory(supabase: any, payload: any, userId: string, quoteId: string) {
   try {
     console.log("Processing parts to inventory for user:", userId);
+    console.log("Quote ID:", quoteId);
     
     if (!payload.parts || !Array.isArray(payload.parts) || payload.parts.length === 0) {
       throw new Error("No parts found in payload");
@@ -321,13 +322,17 @@ async function processPartsToInventory(supabase: any, payload: any, userId: stri
         category: category,
         supplier: 'Burson Auto Parts',
         supplier_id: 'burson-auto-parts',
-        in_stock: part.qty || 1,
+        in_stock: 0, // Items are quoted, not yet in stock
         min_stock: 5,
         price: parseFloat(part.nettPriceEach) || 0,
+        retail_price: parseFloat(part.retailPriceEa) || 0,
         location: 'Main Warehouse',
         status: 'normal',
         image_url: imageUrl || null,
         brand: part.brand || 'Unknown',
+        order_status: 'quoted',
+        ezyparts_quote_id: quoteId,
+        quoted_quantity: part.qty || 1,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
@@ -468,7 +473,7 @@ function generateProductImageUrl(sku: string, brand: string): string {
 
 function createSuccessRedirectResponse(partsCount: number, vehicleFitmentCount: number = 0): Response {
   const baseUrl = 'https://app.workshopbase.com.au';
-  const successUrl = `${baseUrl}/inventory?tab=inventory&ezyparts_products=added`;
+  const successUrl = `${baseUrl}/inventory?tab=inventory&ezyparts_products=quoted`;
   
   const vehicleText = vehicleFitmentCount > 0 ? ` with vehicle fitment data for ${vehicleFitmentCount} items` : '';
   
@@ -477,48 +482,15 @@ function createSuccessRedirectResponse(partsCount: number, vehicleFitmentCount: 
     <!DOCTYPE html>
     <html>
       <head>
-        <title>EzyParts Parts Added Successfully</title>
+        <title>EzyParts Quote Saved Successfully</title>
         <meta http-equiv="refresh" content="3; url=${successUrl}">
         <style>
-          body { 
-            font-family: Arial, sans-serif; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            height: 100vh; 
-            margin: 0;
-            background-color: #f0f9ff;
-          }
-          .container {
-            text-align: center;
-            background: white;
-            padding: 2rem;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            border-left: 4px solid #10b981;
-            max-width: 500px;
-          }
-          .success-icon {
-            color: #10b981;
-            font-size: 48px;
-            margin-bottom: 16px;
-          }
-          .loading {
-            display: inline-block;
-            animation: spin 1s linear infinite;
-          }
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        </style>
-      </head>
-      <body>
+...
         <div class="container">
           <div class="success-icon">✅</div>
-          <h2>Parts Successfully Added!</h2>
-          <p><strong>${partsCount} part${partsCount !== 1 ? 's' : ''}</strong> from Burson Auto Parts have been added to your WorkshopBase inventory${vehicleText}.</p>
-          <p>Product categories, brand information, and vehicle fitment tags have been included for easy filtering and identification.</p>
+          <h2>Quote Successfully Saved!</h2>
+          <p><strong>${partsCount} part${partsCount !== 1 ? 's' : ''}</strong> from Burson Auto Parts have been added to your WorkshopBase inventory as quoted items${vehicleText}.</p>
+          <p>You can now order these items directly from your inventory by clicking "Order Now".</p>
           <p><span class="loading">⟳</span> Redirecting to your inventory in 3 seconds...</p>
           <p><a href="${successUrl}" style="color: #2563eb; text-decoration: none;">Click here to view your inventory now →</a></p>
         </div>
