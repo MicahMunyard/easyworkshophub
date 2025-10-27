@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -119,12 +119,12 @@ export const useEzyPartsCredentials = () => {
     }
   };
 
-  const hasCredentials = () => {
+  const hasCredentials = useMemo(() => {
     return credentials !== null && 
-           credentials.customer_account && 
-           credentials.customer_id && 
-           credentials.password;
-  };
+           !!credentials.customer_account && 
+           !!credentials.customer_id && 
+           !!credentials.password;
+  }, [credentials]);
 
   useEffect(() => {
     fetchCredentials();
@@ -135,7 +135,7 @@ export const useEzyPartsCredentials = () => {
     loading,
     saveCredentials,
     deleteCredentials,
-    hasCredentials: hasCredentials(),
+    hasCredentials,
     refetch: fetchCredentials
   };
 };
