@@ -119,8 +119,16 @@ const EzyPartsOrderModal: React.FC<EzyPartsOrderModalProps> = ({
 
   // Extract SKU from item description (EzyParts items often have SKU in description)
   const extractSkuFromDescription = (description: string): string | null => {
-    const skuMatch = description.match(/SKU:\s*(\w+)/i);
-    return skuMatch ? skuMatch[1] : null;
+    if (!description) return null;
+    
+    // Updated regex to handle SKUs with hyphens, numbers, and special characters
+    const skuMatch = description.match(/SKU:\s*([\w-]+)/i);
+    
+    if (skuMatch && skuMatch[1]) {
+      return skuMatch[1].trim();
+    }
+    
+    return null;
   };
 
   const calculateOrderTotal = () => {
@@ -128,25 +136,83 @@ const EzyPartsOrderModal: React.FC<EzyPartsOrderModalProps> = ({
   };
 
   const handleSubmitOrder = async () => {
+    // Comprehensive validation before submission
+    const validationErrors: string[] = [];
+    
+    // Check for selected items
     if (selectedItems.length === 0) {
-      toast({
-        title: "No Items Selected",
-        description: "Please select at least one item to order.",
-        variant: "destructive"
-      });
-      return;
+      validationErrors.push("Please select at least one item to order");
     }
-
-    if (!orderDetails.customerName || !orderDetails.customerAddress) {
+    
+    // Check customer name (required)
+    if (!orderDetails.customerName.trim()) {
+      validationErrors.push("Customer name is required");
+    }
+    
+    // Check customer address (MANDATORY per EzyParts API)
+    if (!orderDetails.customerAddress.trim()) {
+      validationErrors.push("Customer address is required (mandatory field for EzyParts)");
+    }
+    
+    // Validate SKUs for all items
+    const itemsWithoutSku = selectedItems.filter(item => {
+      const sku = extractSkuFromDescription(item.inventoryItem.description);
+      return !sku || !item.sku;
+    });
+    
+    if (itemsWithoutSku.length > 0) {
+      validationErrors.push(
+        `${itemsWithoutSku.length} item(s) missing SKU information. All items must have SKU in their description.`
+      );
+      console.error('Items without valid SKU:', itemsWithoutSku.map(item => ({
+        name: item.inventoryItem.name,
+        description: item.inventoryItem.description,
+        extractedSku: extractSkuFromDescription(item.inventoryItem.description)
+      })));
+    }
+    
+    // Validate quantities and prices
+    const invalidItems = selectedItems.filter(item => 
+      item.quantity <= 0 || item.nettPriceEach < 0
+    );
+    
+    if (invalidItems.length > 0) {
+      validationErrors.push("All items must have valid quantity (> 0) and price (>= 0)");
+    }
+    
+    // Show validation errors if any
+    if (validationErrors.length > 0) {
       toast({
-        title: "Missing Required Fields",
-        description: "Please fill in customer name and delivery address.",
-        variant: "destructive"
+        title: "Cannot Submit Order",
+        description: (
+          <div className="space-y-1">
+            {validationErrors.map((error, i) => (
+              <div key={i} className="text-sm">• {error}</div>
+            ))}
+          </div>
+        ),
+        variant: "destructive",
+        duration: 6000
       });
       return;
     }
 
     try {
+      // Log the order data being sent for debugging
+      console.log('=== Submitting EzyParts Order ===');
+      console.log('Customer:', {
+        name: orderDetails.customerName,
+        address: orderDetails.customerAddress,
+        suburb: orderDetails.customerSuburb,
+        deliveryType: orderDetails.deliveryType
+      });
+      console.log('Items:', selectedItems.map(item => ({
+        name: item.inventoryItem.name,
+        sku: item.sku,
+        quantity: item.quantity,
+        price: item.nettPriceEach
+      })));
+      
       // Prepare order data according to EzyParts API specification
       const orderData = {
         parts: selectedItems.map(item => ({
@@ -163,6 +229,8 @@ const EzyPartsOrderModal: React.FC<EzyPartsOrderModalProps> = ({
         deliveryType: orderDetails.deliveryType,
         forceOrder: forceOrder
       };
+
+      console.log('Order payload:', JSON.stringify(orderData, null, 2));
 
       const response = await submitOrder(orderData);
 
@@ -207,10 +275,42 @@ const EzyPartsOrderModal: React.FC<EzyPartsOrderModalProps> = ({
       }
     } catch (error) {
       console.error('Order submission error:', error);
+      
+      // Try to extract detailed error information
+      let errorMessage = "Failed to submit order to EzyParts";
+      let errorDetails = null;
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        
+        // Try to parse structured error from message
+        try {
+          const jsonMatch = error.message.match(/\{.*\}/s);
+          if (jsonMatch) {
+            errorDetails = JSON.parse(jsonMatch[0]);
+            if (errorDetails.message) {
+              errorMessage = errorDetails.message;
+            }
+          }
+        } catch (parseError) {
+          // Use original error message
+        }
+      }
+      
       toast({
         title: "Order Submission Failed",
-        description: error instanceof Error ? error.message : "Failed to submit order to EzyParts",
-        variant: "destructive"
+        description: (
+          <div className="space-y-2">
+            <div>{errorMessage}</div>
+            {errorDetails && errorDetails.details && (
+              <div className="text-xs opacity-75 mt-2 max-h-32 overflow-auto">
+                <pre>{JSON.stringify(errorDetails.details, null, 2)}</pre>
+              </div>
+            )}
+          </div>
+        ),
+        variant: "destructive",
+        duration: 8000
       });
     }
   };

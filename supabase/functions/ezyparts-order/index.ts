@@ -80,13 +80,20 @@ serve(async (req) => {
     }
 
     // Validate each part has required fields
+    const invalidParts = [];
     for (const part of order_data.parts) {
       if (!part.sku || !part.qty || part.nettPriceEach === undefined) {
-        throw new Error('Each part must have sku, qty, and nettPriceEach');
+        invalidParts.push(part);
       }
+    }
+    
+    if (invalidParts.length > 0) {
+      console.error('Invalid parts found:', JSON.stringify(invalidParts, null, 2));
+      throw new Error(`${invalidParts.length} part(s) missing required fields (sku, qty, or nettPriceEach)`);
     }
 
     console.log('Input validation passed for', order_data.parts.length, 'parts');
+    console.log('Parts payload:', JSON.stringify(order_data.parts, null, 2));
 
     // Step 1: Get OAuth token
     console.log('Requesting OAuth token...');
@@ -183,20 +190,44 @@ serve(async (req) => {
     console.log('Response headers:', Object.fromEntries(orderResponse.headers.entries()));
 
     if (!orderResponse.ok) {
-      console.error('Order submission failed:', responseText);
+      console.error('Order submission failed with status:', orderResponse.status);
+      console.error('Response headers:', Object.fromEntries(orderResponse.headers.entries()));
+      console.error('Response body:', responseText);
       
       // Try to parse error response for better error handling
-      let errorDetails = responseText;
+      let errorDetails;
+      let errorMessage = responseText;
+      
       try {
-        const errorJson = JSON.parse(responseText);
-        if (errorJson.errors && Array.isArray(errorJson.errors)) {
-          errorDetails = errorJson.errors.map(e => e.message).join(', ');
+        errorDetails = JSON.parse(responseText);
+        console.error('Parsed error details:', JSON.stringify(errorDetails, null, 2));
+        
+        if (errorDetails.errors && Array.isArray(errorDetails.errors)) {
+          errorMessage = errorDetails.errors.map((e: any) => e.message || e.error || String(e)).join(', ');
+        } else if (errorDetails.error) {
+          errorMessage = errorDetails.error;
+        } else if (errorDetails.message) {
+          errorMessage = errorDetails.message;
         }
       } catch (parseError) {
         console.log('Could not parse error response as JSON, using raw text');
+        errorDetails = { rawError: responseText };
       }
       
-      throw new Error(`Order submission failed: ${orderResponse.status} ${orderResponse.statusText} - ${errorDetails}`);
+      // Return detailed error information
+      const errorResponse = {
+        success: false,
+        error: `EzyParts API Error (${orderResponse.status})`,
+        message: errorMessage,
+        details: errorDetails,
+        statusCode: orderResponse.status,
+        statusText: orderResponse.statusText
+      };
+      
+      return new Response(JSON.stringify(errorResponse), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400 // Return 400 instead of 500 for API errors
+      });
     }
 
     let orderResult;
@@ -230,11 +261,14 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in EzyParts order submission:', error);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     
     return new Response(JSON.stringify({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred',
-      message: 'Failed to submit order to EzyParts'
+      message: 'Failed to submit order to EzyParts',
+      errorType: error instanceof Error ? error.constructor.name : typeof error,
+      timestamp: new Date().toISOString()
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500
