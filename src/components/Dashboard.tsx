@@ -50,7 +50,7 @@ const Dashboard: React.FC = () => {
   } = useDashboardData();
 
   return (
-    <div className="space-y-4 md:space-y-6">
+    <div className="w-full space-y-4 md:space-y-6">
       {/* Main title moved to the left with an icon */}
       <div className="flex items-center gap-2">
         <VideoIcon className="mr-1 h-6 w-6 text-workshop-red" />
