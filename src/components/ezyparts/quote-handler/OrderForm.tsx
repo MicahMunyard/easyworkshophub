@@ -44,10 +44,19 @@ export const OrderForm: React.FC<OrderFormProps> = ({
   vehicleData
 }) => {
   const { submitOrder, isSubmitting } = useEzyPartsOrder();
-  const { credentials, hasCredentials } = useEzyPartsCredentials();
+  const { credentials, hasCredentials, loading, refetch } = useEzyPartsCredentials();
   const { toast } = useToast();
 
   const handleEzyPartsOrder = async () => {
+    // Check if credentials are loading
+    if (loading) {
+      toast({
+        title: "Loading",
+        description: "Checking EzyParts credentials...",
+      });
+      return;
+    }
+
     if (cartItems.length === 0) {
       toast({
         title: "No Items to Order",
@@ -57,14 +66,19 @@ export const OrderForm: React.FC<OrderFormProps> = ({
       return;
     }
 
-    // Check for stored credentials
+    // Check for stored credentials - attempt refetch if missing
     if (!hasCredentials) {
-      toast({
-        title: "EzyParts Credentials Missing",
-        description: "Please configure your EzyParts credentials in Settings > EzyParts Integration.",
-        variant: "destructive"
-      });
-      return;
+      await refetch();
+      
+      // Re-check after refetch
+      if (!hasCredentials) {
+        toast({
+          title: "EzyParts Credentials Missing",
+          description: "Please configure your EzyParts credentials using the 'Configure EzyParts' button in the Inventory page header.",
+          variant: "destructive"
+        });
+        return;
+      }
     }
 
     const ezypartsCredentials = {
@@ -169,10 +183,10 @@ export const OrderForm: React.FC<OrderFormProps> = ({
         <Button
           className="w-full"
           onClick={handleEzyPartsOrder}
-          disabled={disabled || isSubmitting || cartItems.length === 0}
+          disabled={disabled || isSubmitting || loading || cartItems.length === 0}
         >
           <SendHorizontal className="mr-2 h-4 w-4" />
-          {isSubmitting ? 'Submitting Order...' : 'Submit Order to EzyParts'}
+          {isSubmitting ? 'Submitting Order...' : loading ? 'Loading credentials...' : 'Submit Order to EzyParts'}
         </Button>
         
         <Button

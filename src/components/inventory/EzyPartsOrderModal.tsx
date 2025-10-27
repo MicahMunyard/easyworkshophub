@@ -39,7 +39,7 @@ const EzyPartsOrderModal: React.FC<EzyPartsOrderModalProps> = ({
 }) => {
   const { inventoryItems } = useInventoryItems();
   const { submitOrder, isSubmitting } = useEzyPartsOrder();
-  const { credentials, hasCredentials } = useEzyPartsCredentials();
+  const { credentials, hasCredentials, loading, refetch } = useEzyPartsCredentials();
   const { toast } = useToast();
   
   const [selectedItems, setSelectedItems] = useState<OrderLineItem[]>([]);
@@ -138,6 +138,15 @@ const EzyPartsOrderModal: React.FC<EzyPartsOrderModalProps> = ({
   };
 
   const handleSubmitOrder = async () => {
+    // Check if credentials are still loading
+    if (loading) {
+      toast({
+        title: "Loading",
+        description: "Checking EzyParts credentials...",
+      });
+      return;
+    }
+
     // Comprehensive validation before submission
     const validationErrors: string[] = [];
     
@@ -146,9 +155,14 @@ const EzyPartsOrderModal: React.FC<EzyPartsOrderModalProps> = ({
       validationErrors.push("Please select at least one item to order");
     }
     
-    // Check EzyParts credentials
+    // Check EzyParts credentials - attempt refetch if missing
     if (!hasCredentials) {
-      validationErrors.push("EzyParts credentials not configured. Please add credentials in Settings > EzyParts Integration.");
+      await refetch();
+      
+      // Re-check after refetch
+      if (!hasCredentials) {
+        validationErrors.push("EzyParts credentials not configured. Use the 'Configure EzyParts' button in the Inventory page header.");
+      }
     }
     
     // Check customer name (required)

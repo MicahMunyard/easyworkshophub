@@ -154,7 +154,7 @@ serve(async (req) => {
       );
     }
 
-    console.log('Using EzyParts credentials from quote for account:', order_data.ezypartsCredentials.customerAccount);
+    console.log('Using EzyParts credentials for account:', order_data.ezypartsCredentials.customerAccount);
 
     // Build the order request payload exactly as specified in the documentation
     const orderRequest = {
@@ -164,7 +164,7 @@ serve(async (req) => {
       headers: {
         customerAccount: order_data.ezypartsCredentials.customerAccount,
         customerId: order_data.ezypartsCredentials.customerId,
-        Password: order_data.ezypartsCredentials.password, // Capital P required by EzyParts API
+        password: order_data.ezypartsCredentials.password, // Lowercase as per API requirement
         locationId: order_data.locationId || "",
         locationName: order_data.locationName || "",
         customerName: order_data.customerName || "WorkshopBase Customer",
