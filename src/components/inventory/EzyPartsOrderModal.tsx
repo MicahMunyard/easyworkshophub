@@ -445,24 +445,34 @@ const EzyPartsOrderModal: React.FC<EzyPartsOrderModalProps> = ({
               
               <div className="grid grid-cols-1 gap-3">
                 <div>
-                  <Label htmlFor="customerName">Customer Name *</Label>
+                  <Label htmlFor="customerName">
+                    Customer Name * 
+                    <span className="text-xs text-muted-foreground ml-2">
+                      ({orderDetails.customerName.length}/34)
+                    </span>
+                  </Label>
                   <Input
                     id="customerName"
                     value={orderDetails.customerName}
                     onChange={(e) => setOrderDetails({...orderDetails, customerName: e.target.value})}
-                    placeholder="Enter customer name (max 34 characters)"
+                    placeholder="Enter customer name"
                     maxLength={34}
                   />
                 </div>
                 
                 <div>
-                  <Label htmlFor="customerAddress">Delivery Address *</Label>
+                  <Label htmlFor="customerAddress">
+                    Delivery Address * 
+                    <span className="text-xs text-muted-foreground ml-2">
+                      ({orderDetails.customerAddress.length}/90)
+                    </span>
+                  </Label>
                   <Input
                     id="customerAddress"
                     value={orderDetails.customerAddress}
                     onChange={(e) => setOrderDetails({...orderDetails, customerAddress: e.target.value})}
-                    placeholder="Enter delivery address (max 30 characters)"
-                    maxLength={30}
+                    placeholder="Enter delivery address"
+                    maxLength={90}
                   />
                 </div>
                 
@@ -477,12 +487,17 @@ const EzyPartsOrderModal: React.FC<EzyPartsOrderModalProps> = ({
                 </div>
                 
                 <div>
-                  <Label htmlFor="purchaseOrder">Purchase Order</Label>
+                  <Label htmlFor="purchaseOrder">
+                    Purchase Order 
+                    <span className="text-xs text-muted-foreground ml-2">
+                      ({orderDetails.purchaseOrder.length}/15)
+                    </span>
+                  </Label>
                   <Input
                     id="purchaseOrder"
                     value={orderDetails.purchaseOrder}
                     onChange={(e) => setOrderDetails({...orderDetails, purchaseOrder: e.target.value})}
-                    placeholder="PO reference (max 15 characters)"
+                    placeholder="PO reference"
                     maxLength={15}
                   />
                 </div>

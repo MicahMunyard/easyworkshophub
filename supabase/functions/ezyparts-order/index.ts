@@ -117,11 +117,15 @@ serve(async (req) => {
 
     // Step 2: Prepare order submission request according to EzyParts API spec
     const currentDate = new Date();
-    const dateServed = currentDate.toLocaleDateString('en-AU', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    }).replace(/\//g, '/'); // Ensure dd/mm/yyyy format
+    
+    // Format date as dd/mm/yyyy hh:mm:ss (24-hour format) as per EzyParts spec
+    const day = String(currentDate.getDate()).padStart(2, '0');
+    const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+    const year = currentDate.getFullYear();
+    const hours = String(currentDate.getHours()).padStart(2, '0');
+    const minutes = String(currentDate.getMinutes()).padStart(2, '0');
+    const seconds = String(currentDate.getSeconds()).padStart(2, '0');
+    const dateServed = `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
 
     console.log('Date served formatted as:', dateServed);
 
