@@ -1496,6 +1496,8 @@ export type Database = {
           code: string | null
           created_at: string | null
           description: string | null
+          ezyparts_order_number: string | null
+          ezyparts_quote_id: string | null
           id: string
           image_url: string | null
           in_stock: number
@@ -1503,7 +1505,11 @@ export type Database = {
           location: string | null
           min_stock: number
           name: string
+          order_date: string | null
+          order_status: string | null
+          ordered_quantity: number | null
           price: number | null
+          quoted_quantity: number | null
           retail_price: number | null
           status: string | null
           supplier: string | null
@@ -1517,6 +1523,8 @@ export type Database = {
           code?: string | null
           created_at?: string | null
           description?: string | null
+          ezyparts_order_number?: string | null
+          ezyparts_quote_id?: string | null
           id?: string
           image_url?: string | null
           in_stock?: number
@@ -1524,7 +1532,11 @@ export type Database = {
           location?: string | null
           min_stock?: number
           name: string
+          order_date?: string | null
+          order_status?: string | null
+          ordered_quantity?: number | null
           price?: number | null
+          quoted_quantity?: number | null
           retail_price?: number | null
           status?: string | null
           supplier?: string | null
@@ -1538,6 +1550,8 @@ export type Database = {
           code?: string | null
           created_at?: string | null
           description?: string | null
+          ezyparts_order_number?: string | null
+          ezyparts_quote_id?: string | null
           id?: string
           image_url?: string | null
           in_stock?: number
@@ -1545,7 +1559,11 @@ export type Database = {
           location?: string | null
           min_stock?: number
           name?: string
+          order_date?: string | null
+          order_status?: string | null
+          ordered_quantity?: number | null
           price?: number | null
+          quoted_quantity?: number | null
           retail_price?: number | null
           status?: string | null
           supplier?: string | null
@@ -1553,7 +1571,15 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_inventory_items_ezyparts_quote_id_fkey"
+            columns: ["ezyparts_quote_id"]
+            isOneToOne: false
+            referencedRelation: "ezyparts_quotes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_inventory_order_items: {
         Row: {

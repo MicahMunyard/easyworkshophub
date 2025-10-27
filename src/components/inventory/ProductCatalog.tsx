@@ -10,20 +10,31 @@ import { useInventoryItems } from '@/hooks/inventory/useInventoryItems';
 import { useSuppliers } from '@/hooks/inventory/useSuppliers';
 import ProductTable from './ProductTable';
 import ProductFilters from './ProductFilters';
+import ReceiveStockDialog from './ReceiveStockDialog';
 
 type ProductCatalogProps = {
   onAddToOrder?: (item: InventoryItem) => void;
 };
 
 const ProductCatalog: React.FC<ProductCatalogProps> = ({ onAddToOrder }) => {
-  const { inventoryItems, addInventoryItem, updateInventoryItem, deleteInventoryItem, duplicateInventoryItem } = useInventoryItems();
+  const { 
+    inventoryItems, 
+    addInventoryItem, 
+    updateInventoryItem, 
+    deleteInventoryItem, 
+    duplicateInventoryItem,
+    updateItemOrderStatus,
+    receiveItemIntoStock,
+  } = useInventoryItems();
   const { suppliers } = useSuppliers();
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [supplierFilter, setSupplierFilter] = useState<string>('all');
   const [brandFilter, setBrandFilter] = useState<string>('all');
+  const [orderStatusFilter, setOrderStatusFilter] = useState<string>('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | undefined>(undefined);
+  const [receiveStockItem, setReceiveStockItem] = useState<InventoryItem | null>(null);
 
   // Calculate the maximum price for the price range slider
   const maxPrice = Math.max(...inventoryItems.map(item => item.price), 100);
@@ -54,8 +65,11 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ onAddToOrder }) => {
     const matchesSupplier = supplierFilter === 'all' || item.supplierId === supplierFilter;
     const matchesBrand = brandFilter === 'all' || item.brand === brandFilter;
     const matchesPriceRange = item.price >= priceRange[0] && item.price <= priceRange[1];
+    const matchesOrderStatus = orderStatusFilter === 'all' || 
+      (orderStatusFilter === 'in_stock' && (!item.orderStatus || item.orderStatus === 'in_stock')) ||
+      item.orderStatus === orderStatusFilter;
     
-    return matchesSearch && matchesCategory && matchesSupplier && matchesBrand && matchesPriceRange;
+    return matchesSearch && matchesCategory && matchesSupplier && matchesBrand && matchesPriceRange && matchesOrderStatus;
   });
 
   const handleOpenDialog = (item?: InventoryItem) => {
@@ -84,6 +98,21 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ onAddToOrder }) => {
 
   const handleDuplicateItem = (item: InventoryItem) => {
     duplicateInventoryItem(item);
+  };
+
+  const handleOrderNow = (item: InventoryItem) => {
+    // TODO: Open EzyParts order modal pre-filled with this item
+    console.log('Order now for item:', item);
+    // This will be implemented when we create the EzyParts order modal integration
+  };
+
+  const handleReceiveStock = (item: InventoryItem) => {
+    setReceiveStockItem(item);
+  };
+
+  const handleConfirmReceive = (itemId: string, quantity: number) => {
+    receiveItemIntoStock(itemId, quantity);
+    setReceiveStockItem(null);
   };
 
   const getSupplierName = (supplierId: string) => {
@@ -122,6 +151,8 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ onAddToOrder }) => {
               setSupplierFilter={setSupplierFilter}
               brandFilter={brandFilter}
               setBrandFilter={setBrandFilter}
+              orderStatusFilter={orderStatusFilter}
+              setOrderStatusFilter={setOrderStatusFilter}
               priceRange={priceRange}
               setPriceRange={setPriceRange}
               maxPrice={maxPrice}
@@ -139,6 +170,8 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ onAddToOrder }) => {
             onDelete={handleDeleteItem}
             onDuplicate={handleDuplicateItem}
             onAddToOrder={onAddToOrder}
+            onOrderNow={handleOrderNow}
+            onReceiveStock={handleReceiveStock}
             getSupplierName={getSupplierName}
           />
         </CardContent>
@@ -160,6 +193,13 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ onAddToOrder }) => {
           />
         </DialogContent>
       </Dialog>
+
+      <ReceiveStockDialog
+        item={receiveStockItem}
+        open={!!receiveStockItem}
+        onOpenChange={(open) => !open && setReceiveStockItem(null)}
+        onReceive={handleConfirmReceive}
+      />
     </div>
   );
 };

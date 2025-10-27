@@ -8,7 +8,8 @@ import { PartItem, QuoteResponse } from '@/types/ezyparts';
  * so they can be added to the inventory management system
  */
 export const convertEzyPartsToInventoryItems = (
-  quote: QuoteResponse
+  quote: QuoteResponse,
+  quoteId?: string
 ): Omit<InventoryItem, 'id' | 'status'>[] => {
   // If no quote or parts are provided, return empty array
   if (!quote || !quote.parts || !quote.parts.length) {
@@ -37,7 +38,7 @@ export const convertEzyPartsToInventoryItems = (
       category: part.productCategory || 'Auto Parts',
       supplier: supplierName,
       supplierId,
-      inStock: part.qty,
+      inStock: 0, // Items are quoted, not yet in stock
       minStock,
       price: part.nettPriceEach,
       retailPrice: part.retailPriceEa,
@@ -45,6 +46,9 @@ export const convertEzyPartsToInventoryItems = (
       lastOrder: new Date().toISOString(),
       imageUrl,
       brand: part.brand,
+      orderStatus: 'quoted' as const,
+      ezypartsQuoteId: quoteId,
+      quotedQuantity: part.qty,
     };
   });
 };
@@ -75,10 +79,11 @@ function generateProductImageUrl(sku: string, brand: string): string {
  */
 export const addEzyPartsQuoteToInventory = async (
   quote: QuoteResponse,
-  addInventoryItem: (item: Omit<InventoryItem, 'id' | 'status'>) => Promise<InventoryItem | null>
+  addInventoryItem: (item: Omit<InventoryItem, 'id' | 'status'>) => Promise<InventoryItem | null>,
+  quoteId?: string
 ): Promise<InventoryItem[]> => {
-  // Convert EzyParts parts to inventory items
-  const inventoryItems = convertEzyPartsToInventoryItems(quote);
+  // Convert EzyParts parts to inventory items (as quoted items)
+  const inventoryItems = convertEzyPartsToInventoryItems(quote, quoteId);
   
   // Add each item to inventory and collect the results
   const addedItems: InventoryItem[] = [];

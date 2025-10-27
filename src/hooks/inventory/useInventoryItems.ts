@@ -90,7 +90,13 @@ export const useInventoryItems = () => {
         status: item.status as 'normal' | 'low' | 'critical',
         imageUrl: item.image_url || undefined,
         brand: item.brand || undefined,
-        vehicleFitment: fitmentMap.get(item.id) || []
+        vehicleFitment: fitmentMap.get(item.id) || [],
+        orderStatus: item.order_status as 'quoted' | 'on_order' | 'in_stock' | null || null,
+        ezypartsQuoteId: item.ezyparts_quote_id || undefined,
+        ezypartsOrderNumber: item.ezyparts_order_number || undefined,
+        quotedQuantity: item.quoted_quantity || undefined,
+        orderedQuantity: item.ordered_quantity || undefined,
+        orderDate: item.order_date || undefined,
       }));
 
       setInventoryItems(transformedItems);
@@ -152,11 +158,15 @@ export const useInventoryItems = () => {
           in_stock: newItem.inStock,
           min_stock: newItem.minStock,
           price: newItem.price,
+          retail_price: newItem.retailPrice,
           location: newItem.location,
           status: newItem.status,
           last_order: newItem.lastOrder ? newItem.lastOrder : null,
           image_url: newItem.imageUrl || null,
-          brand: newItem.brand || null
+          brand: newItem.brand || null,
+          order_status: newItem.orderStatus || null,
+          ezyparts_quote_id: newItem.ezypartsQuoteId || null,
+          quoted_quantity: newItem.quotedQuantity || null,
         })
         .select()
         .single();
@@ -287,6 +297,113 @@ export const useInventoryItems = () => {
     });
   };
 
+  // Update item order status
+  const updateItemOrderStatus = async (
+    id: string, 
+    orderStatus: 'quoted' | 'on_order' | 'in_stock',
+    additionalData?: {
+      ezypartsOrderNumber?: string;
+      orderedQuantity?: number;
+      orderDate?: string;
+    }
+  ) => {
+    if (!user) return;
+
+    try {
+      const updateData: any = {
+        order_status: orderStatus,
+      };
+
+      if (additionalData?.ezypartsOrderNumber) {
+        updateData.ezyparts_order_number = additionalData.ezypartsOrderNumber;
+      }
+      if (additionalData?.orderedQuantity !== undefined) {
+        updateData.ordered_quantity = additionalData.orderedQuantity;
+      }
+      if (additionalData?.orderDate) {
+        updateData.order_date = additionalData.orderDate;
+      }
+
+      const { error } = await supabase
+        .from('user_inventory_items')
+        .update(updateData)
+        .eq('id', id)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setInventoryItems(prev => prev.map(item => {
+        if (item.id === id) {
+          return {
+            ...item,
+            orderStatus,
+            ...(additionalData?.ezypartsOrderNumber && { ezypartsOrderNumber: additionalData.ezypartsOrderNumber }),
+            ...(additionalData?.orderedQuantity !== undefined && { orderedQuantity: additionalData.orderedQuantity }),
+            ...(additionalData?.orderDate && { orderDate: additionalData.orderDate }),
+          };
+        }
+        return item;
+      }));
+
+      toast({
+        title: "Order Status Updated",
+        description: `Item status changed to ${orderStatus}.`,
+      });
+    } catch (error) {
+      console.error('Error updating order status:', error);
+      toast({
+        title: "Error Updating Status",
+        description: "Failed to update order status.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Receive item into stock
+  const receiveItemIntoStock = async (id: string, quantity: number) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('user_inventory_items')
+        .update({
+          order_status: 'in_stock',
+          in_stock: quantity,
+        })
+        .eq('id', id)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setInventoryItems(prev => prev.map(item => {
+        if (item.id === id) {
+          const updated = {
+            ...item,
+            orderStatus: 'in_stock' as const,
+            inStock: quantity,
+          };
+          updated.status = updateItemStatus(updated);
+          return updated;
+        }
+        return item;
+      }));
+
+      toast({
+        title: "Stock Received",
+        description: `${quantity} unit(s) have been added to stock.`,
+      });
+    } catch (error) {
+      console.error('Error receiving stock:', error);
+      toast({
+        title: "Error Receiving Stock",
+        description: "Failed to receive items into stock.",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Refresh inventory items (useful after EzyParts webhook)
   const refreshInventoryItems = () => {
     loadInventoryItems();
@@ -299,6 +416,8 @@ export const useInventoryItems = () => {
     updateInventoryItem,
     deleteInventoryItem,
     duplicateInventoryItem,
-    refreshInventoryItems
+    refreshInventoryItems,
+    updateItemOrderStatus,
+    receiveItemIntoStock,
   };
 };

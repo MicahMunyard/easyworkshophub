@@ -109,13 +109,16 @@ const EzyPartsSelection: React.FC = () => {
     setIsProcessing(true);
     
     try {
-      // Convert EzyParts parts to inventory items
-      const inventoryItems = convertEzyPartsToInventoryItems(currentQuote);
+      // Get the quote ID from URL params if available
+      const quoteId = searchParams.get('quote_id');
+      
+      // Convert EzyParts parts to inventory items (as quoted items)
+      const inventoryItems = convertEzyPartsToInventoryItems(currentQuote, quoteId || undefined);
       
       // Add each item to inventory
       let addedCount = 0;
       for (const item of inventoryItems) {
-        addInventoryItem(item);
+        await addInventoryItem(item);
         addedCount++;
       }
       

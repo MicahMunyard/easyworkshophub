@@ -54,6 +54,12 @@ export interface InventoryItem {
   partGroup?: string;
   barcode?: string;
   retailPrice?: number;
+  orderStatus?: 'quoted' | 'on_order' | 'in_stock' | null;
+  ezypartsQuoteId?: string;
+  ezypartsOrderNumber?: string;
+  quotedQuantity?: number;
+  orderedQuantity?: number;
+  orderDate?: string;
 }
 
 export interface OrderItem {

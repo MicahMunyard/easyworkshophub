@@ -15,6 +15,8 @@ type ProductFiltersProps = {
   setSupplierFilter: (value: string) => void;
   brandFilter?: string;
   setBrandFilter?: (value: string) => void;
+  orderStatusFilter?: string;
+  setOrderStatusFilter?: (value: string) => void;
   priceRange: [number, number];
   setPriceRange: (value: [number, number]) => void;
   maxPrice: number;
@@ -33,6 +35,8 @@ const ProductFilters: React.FC<ProductFiltersProps> = ({
   setSupplierFilter,
   brandFilter = 'all',
   setBrandFilter,
+  orderStatusFilter = 'all',
+  setOrderStatusFilter,
   priceRange,
   setPriceRange,
   maxPrice,
@@ -55,7 +59,7 @@ const ProductFilters: React.FC<ProductFiltersProps> = ({
       </div>
 
       {/* Filter Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {/* Category Filter */}
         <div className="space-y-2">
           <Label className="flex items-center gap-2 text-sm font-medium">
@@ -74,6 +78,26 @@ const ProductFilters: React.FC<ProductFiltersProps> = ({
             </SelectContent>
           </Select>
         </div>
+
+        {/* Order Status Filter */}
+        {setOrderStatusFilter && (
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2 text-sm font-medium">
+              <Filter className="h-4 w-4" /> Status
+            </Label>
+            <Select value={orderStatusFilter} onValueChange={setOrderStatusFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="All statuses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Items</SelectItem>
+                <SelectItem value="quoted">Quoted</SelectItem>
+                <SelectItem value="on_order">On Order</SelectItem>
+                <SelectItem value="in_stock">In Stock</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         {/* Brand Filter */}
         {setBrandFilter && (

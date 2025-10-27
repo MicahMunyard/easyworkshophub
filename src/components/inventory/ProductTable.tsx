@@ -2,11 +2,12 @@
 import React from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { InventoryItem } from '@/types/inventory';
-import { Barcode, Copy, Edit, ShoppingCart, Tag } from 'lucide-react';
+import { Barcode, Copy, Edit, ShoppingCart, Tag, FileText, Truck } from 'lucide-react';
 import { getCategoryIcon, getCategoryColor, getCategoryById } from './config/productCategories';
 import { useUserCategories } from '@/hooks/inventory/useUserCategories';
 
@@ -16,6 +17,8 @@ interface ProductTableProps {
   onDelete: (id: string, name: string) => void;
   onDuplicate: (item: InventoryItem) => void;
   onAddToOrder?: (item: InventoryItem) => void;
+  onOrderNow?: (item: InventoryItem) => void;
+  onReceiveStock?: (item: InventoryItem) => void;
   getSupplierName: (supplierId: string) => string;
 }
 
@@ -25,6 +28,8 @@ const ProductTable: React.FC<ProductTableProps> = ({
   onDelete,
   onDuplicate,
   onAddToOrder,
+  onOrderNow,
+  onReceiveStock,
   getSupplierName
 }) => {
   const { userCategories } = useUserCategories();
@@ -129,25 +134,71 @@ const ProductTable: React.FC<ProductTableProps> = ({
               ${(item.retailPrice || item.price).toFixed(2)}
             </TableCell>
                   <TableCell>
-                    <div className="w-32">
-                      <div className="flex justify-between text-sm mb-1">
-                        <span>{item.inStock} in stock</span>
-                        <span className={cn(
-                          item.status === "critical" ? "text-destructive" :
-                          item.status === "low" ? "text-amber-500" : "text-muted-foreground"
-                        )}>
-                          Min: {item.minStock}
-                        </span>
+                    {item.orderStatus === 'quoted' && onOrderNow && (
+                      <div className="space-y-2">
+                        <Badge variant="secondary" className="flex items-center gap-1 w-fit">
+                          <FileText className="h-3 w-3" />
+                          Quoted
+                        </Badge>
+                        <div className="text-sm text-muted-foreground">
+                          Qty: {item.quotedQuantity || 0}
+                        </div>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => onOrderNow(item)}
+                          className="w-full"
+                        >
+                          Order Now
+                        </Button>
                       </div>
-                      <Progress 
-                        value={Math.min(stockPercentage, 100)} 
-                        className={cn(
-                          "h-2",
-                          item.status === "critical" ? "text-destructive" :
-                          item.status === "low" ? "text-amber-500" : ""
-                        )} 
-                      />
-                    </div>
+                    )}
+
+                    {item.orderStatus === 'on_order' && onReceiveStock && (
+                      <div className="space-y-2">
+                        <Badge variant="outline" className="flex items-center gap-1 w-fit border-amber-500 text-amber-600">
+                          <Truck className="h-3 w-3" />
+                          On Order
+                        </Badge>
+                        <div className="text-sm text-muted-foreground">
+                          Qty: {item.orderedQuantity || 0}
+                        </div>
+                        {item.ezypartsOrderNumber && (
+                          <div className="text-xs text-muted-foreground">
+                            #{item.ezypartsOrderNumber}
+                          </div>
+                        )}
+                        <Button 
+                          size="sm"
+                          onClick={() => onReceiveStock(item)}
+                          className="w-full"
+                        >
+                          Receive Stock
+                        </Button>
+                      </div>
+                    )}
+
+                    {(!item.orderStatus || item.orderStatus === 'in_stock') && (
+                      <div className="w-32">
+                        <div className="flex justify-between text-sm mb-1">
+                          <span>{item.inStock} in stock</span>
+                          <span className={cn(
+                            item.status === "critical" ? "text-destructive" :
+                            item.status === "low" ? "text-amber-500" : "text-muted-foreground"
+                          )}>
+                            Min: {item.minStock}
+                          </span>
+                        </div>
+                        <Progress 
+                          value={Math.min(stockPercentage, 100)} 
+                          className={cn(
+                            "h-2",
+                            item.status === "critical" ? "text-destructive" :
+                            item.status === "low" ? "text-amber-500" : ""
+                          )} 
+                        />
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">

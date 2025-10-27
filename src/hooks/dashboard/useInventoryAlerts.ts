@@ -20,7 +20,43 @@ export const useInventoryAlerts = () => {
     }
   };
 
+  const fetchQuotedItems = async (userId: string): Promise<number> => {
+    try {
+      const { data, error } = await supabase
+        .from('user_inventory_items')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('order_status', 'quoted');
+        
+      if (error) throw error;
+      
+      return data?.length || 0;
+    } catch (error) {
+      console.error('Error fetching quoted items:', error);
+      return 0;
+    }
+  };
+
+  const fetchOnOrderItems = async (userId: string): Promise<number> => {
+    try {
+      const { data, error } = await supabase
+        .from('user_inventory_items')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('order_status', 'on_order');
+        
+      if (error) throw error;
+      
+      return data?.length || 0;
+    } catch (error) {
+      console.error('Error fetching on order items:', error);
+      return 0;
+    }
+  };
+
   return {
-    fetchLowStockItems
+    fetchLowStockItems,
+    fetchQuotedItems,
+    fetchOnOrderItems,
   };
 };
