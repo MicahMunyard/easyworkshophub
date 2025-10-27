@@ -92,21 +92,23 @@ const SupplierCard: React.FC<SupplierCardProps> = ({
           </div>
         )}
 
-        {/* Brand Logos Grid */}
-        <div className="pt-2 border-t">
-          <div className="text-xs text-muted-foreground mb-2">Available Brands</div>
-          <div className="grid grid-cols-4 gap-2">
-            {brandLogos.map((logo, index) => (
-              <div key={index} className="bg-background border rounded p-1 flex items-center justify-center">
-                <img 
-                  src={logo.src} 
-                  alt={logo.alt}
-                  className="w-full h-8 object-contain"
-                />
-              </div>
-            ))}
+        {/* Brand Logos Grid - Only show for TOLICCS */}
+        {supplier.name === 'TOLICCS' && (
+          <div className="pt-2 border-t">
+            <div className="text-xs text-muted-foreground mb-2">Available Brands</div>
+            <div className="grid grid-cols-4 gap-2">
+              {brandLogos.map((logo, index) => (
+                <div key={index} className="bg-background border rounded p-1 flex items-center justify-center">
+                  <img 
+                    src={logo.src} 
+                    alt={logo.alt}
+                    className="w-full h-8 object-contain"
+                  />
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="flex flex-col gap-2 pt-2">
           <div className="flex gap-2">
