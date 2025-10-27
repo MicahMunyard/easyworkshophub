@@ -321,7 +321,7 @@ async function processPartsToInventory(supabase: any, payload: any, userId: stri
         description: `${part.partDescription || 'Unknown Part'} - SKU: ${part.sku || part.partNumber} - Vehicle: ${vehicleInfo.make} ${vehicleInfo.model}`,
         category: category,
         supplier: 'Burson Auto Parts',
-        supplier_id: 'burson-auto-parts',
+        supplier_id: '145eeddc-5b99-42d1-b413-e513cf014c7d', // Burson Auto Parts UUID
         in_stock: 0, // Items are quoted, not yet in stock
         min_stock: 5,
         price: parseFloat(part.nettPriceEach) || 0,
