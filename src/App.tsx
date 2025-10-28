@@ -34,6 +34,8 @@ import VehicleSearch from './components/ezyparts/vehicle-search/VehicleSearch';
 import EmailCallback from './pages/email/callback';
 import AuthCallback from './pages/AuthCallback';
 import AIChatWidget from './components/ai/AIChatWidget';
+import OnboardingRoute from './components/OnboardingRoute';
+import Onboarding from './pages/Onboarding';
 
 const App = () => {
   const { user } = useAuth();
@@ -48,8 +50,11 @@ const App = () => {
         <Route path="/auth/reset-password" element={<Auth />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
 
-        {/* App Routes with Layout */}
-        <Route element={<Layout><Outlet /></Layout>}>
+        {/* Onboarding */}
+        <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+
+        {/* App Routes with Layout - Protected by Onboarding */}
+        <Route element={<OnboardingRoute><Layout><Outlet /></Layout></OnboardingRoute>}>
           {/* Main Pages */}
           <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
           <Route path="/booking-diary" element={<ProtectedRoute><BookingDiary /></ProtectedRoute>} />

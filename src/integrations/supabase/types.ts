@@ -936,6 +936,9 @@ export type Database = {
           created_at: string | null
           full_name: string | null
           id: number
+          onboarding_completed: boolean | null
+          onboarding_data: Json | null
+          onboarding_step: number | null
           phone_number: string | null
           updated_at: string | null
           user_id: string | null
@@ -947,6 +950,9 @@ export type Database = {
           created_at?: string | null
           full_name?: string | null
           id?: never
+          onboarding_completed?: boolean | null
+          onboarding_data?: Json | null
+          onboarding_step?: number | null
           phone_number?: string | null
           updated_at?: string | null
           user_id?: string | null
@@ -958,6 +964,9 @@ export type Database = {
           created_at?: string | null
           full_name?: string | null
           id?: never
+          onboarding_completed?: boolean | null
+          onboarding_data?: Json | null
+          onboarding_step?: number | null
           phone_number?: string | null
           updated_at?: string | null
           user_id?: string | null

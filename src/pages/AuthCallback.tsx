@@ -35,14 +35,25 @@ const AuthCallback = () => {
 
         console.log('Session set successfully:', data);
 
+        // Check onboarding status
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('onboarding_completed')
+          .eq('user_id', data.user.id)
+          .single();
+
         // Show success message
         toast({
           title: 'Email confirmed!',
           description: 'Your account has been verified successfully.',
         });
 
-        // Redirect to dashboard
-        navigate('/', { replace: true });
+        // Redirect based on onboarding status
+        if (profileData?.onboarding_completed === false) {
+          navigate('/onboarding', { replace: true });
+        } else {
+          navigate('/', { replace: true });
+        }
       } catch (err: any) {
         console.error('Auth callback error:', err);
         setError(err.message || 'Failed to authenticate');

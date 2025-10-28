@@ -139,6 +139,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       console.log("Sign up response:", data);
+      
+      // Note: User will be redirected to onboarding after email verification
+      // via AuthCallback component which checks onboarding_completed status
+      
       toast({
         title: "Account created",
         description: "Please check your email to confirm your account.",
