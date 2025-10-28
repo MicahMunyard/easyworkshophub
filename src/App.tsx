@@ -32,6 +32,7 @@ import EmailDesignerPage from './pages/EmailDesignerPage';
 import EzyPartsDashboard from './pages/EzyPartsDashboard';
 import VehicleSearch from './components/ezyparts/vehicle-search/VehicleSearch';
 import EmailCallback from './pages/email/callback';
+import AuthCallback from './pages/AuthCallback';
 import AIChatWidget from './components/ai/AIChatWidget';
 
 const App = () => {
@@ -45,6 +46,7 @@ const App = () => {
         <Route path="/auth/signin" element={<Auth />} />
         <Route path="/auth/signup" element={<Auth />} />
         <Route path="/auth/reset-password" element={<Auth />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
 
         {/* App Routes with Layout */}
         <Route element={<Layout><Outlet /></Layout>}>

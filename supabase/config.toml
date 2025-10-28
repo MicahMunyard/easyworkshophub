@@ -47,8 +47,12 @@ image_transformation = { enabled = true }
 [auth]
 enabled = true
 port = 54329
-site_url = "http://127.0.0.1:3000"
-additional_redirect_urls = ["https://127.0.0.1:3000"]
+site_url = "https://app.workshopbase.com.au"
+additional_redirect_urls = [
+  "https://app.workshopbase.com.au/auth/callback",
+  "http://127.0.0.1:3000",
+  "http://127.0.0.1:3000/auth/callback"
+]
 jwt_expiry = 3600
 enable_signup = true
 enable_email_confirmations = false
