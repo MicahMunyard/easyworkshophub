@@ -13,7 +13,6 @@ import Auth from "./pages/Auth";
 import Jobs from "./pages/Jobs";
 import Invoicing from "./pages/Invoicing";
 import Index from "./pages/Index";
-import { NotificationProvider } from "./contexts/NotificationContext";
 import Workshop from "./pages/Workshop";
 import BookingDiary from "./pages/BookingDiary";
 import EmailIntegration from "./pages/EmailIntegration";
@@ -41,7 +40,7 @@ const App = () => {
   const { user } = useAuth();
   
   return (
-    <NotificationProvider>
+    <>
       {user && <AIChatWidget chatType="general_help" title="WorkshopBase Help" />}
       <Routes>
         {/* Auth Routes - should be accessible without authentication */}
@@ -90,7 +89,7 @@ const App = () => {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
-    </NotificationProvider>
+    </>
   );
 };
 
