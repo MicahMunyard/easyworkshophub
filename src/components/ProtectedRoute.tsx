@@ -9,7 +9,7 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { user, loading } = useAuth();
+  const { user, loading, profile } = useAuth();
   const location = useLocation();
   const { toast } = useToast();
 
@@ -34,8 +34,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
   if (!user) {
     console.log("Redirecting to /auth/signin from protected route");
-    // Redirect to sign in page, but save the location they were trying to access
     return <Navigate to="/auth/signin" state={{ from: location }} replace />;
+  }
+
+  // Check account approval status
+  if (profile && profile.account_status !== "approved") {
+    console.log("Account not approved, status:", profile.account_status);
+    return <Navigate to="/pending-approval" replace />;
   }
 
   return <>{children}</>;

@@ -35,6 +35,8 @@ import AuthCallback from './pages/AuthCallback';
 import AIChatWidget from './components/ai/AIChatWidget';
 import OnboardingRoute from './components/OnboardingRoute';
 import Onboarding from './pages/Onboarding';
+import PendingApproval from './pages/PendingApproval';
+import AccountApprovals from './pages/admin/AccountApprovals';
 
 const App = () => {
   const { user } = useAuth();
@@ -49,8 +51,14 @@ const App = () => {
         <Route path="/auth/reset-password" element={<Auth />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
 
+        {/* Pending Approval - for users awaiting account approval */}
+        <Route path="/pending-approval" element={<ProtectedRoute><PendingApproval /></ProtectedRoute>} />
+
         {/* Onboarding */}
         <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+        
+        {/* Admin Routes */}
+        <Route path="/admin/accounts" element={<ProtectedRoute><OnboardingRoute><Layout><AccountApprovals /></Layout></OnboardingRoute></ProtectedRoute>} />
 
         {/* App Routes with Layout - Protected by Onboarding */}
         <Route element={<OnboardingRoute><Layout><Outlet /></Layout></OnboardingRoute>}>
