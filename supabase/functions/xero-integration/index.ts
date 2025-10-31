@@ -366,23 +366,66 @@ serve(async (req) => {
           Status: 'AUTHORISED' // or DRAFT
         };
   
-        // Call the Xero API to create the invoice
-        const xeroResponse = await fetch('https://api.xero.com/api.xro/2.0/Invoices', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${xeroAccessToken}`,
-            'Xero-Tenant-Id': xeroTenantId,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify({ Invoices: [xeroInvoice] })
-        });
+        // Call the Xero API to create or update the invoice
+        const isUpdate = Boolean(invoice.xeroInvoiceId);
+        const xeroResponse = await fetch(
+          isUpdate 
+            ? `https://api.xero.com/api.xro/2.0/Invoices/${invoice.xeroInvoiceId}`
+            : 'https://api.xero.com/api.xro/2.0/Invoices',
+          {
+            method: isUpdate ? 'POST' : 'POST',
+            headers: {
+              'Authorization': `Bearer ${xeroAccessToken}`,
+              'Xero-Tenant-Id': xeroTenantId,
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            },
+            body: JSON.stringify({ Invoices: [xeroInvoice] })
+          }
+        );
   
         if (!xeroResponse.ok) {
           const errorText = await xeroResponse.text();
-          console.error('Error creating invoice in Xero:', errorText);
+          console.error('Error syncing invoice to Xero:', errorText);
+          
+          // Check if token expired (401)
+          if (xeroResponse.status === 401) {
+            // Attempt token refresh
+            const refreshResponse = await fetch("https://identity.xero.com/connect/token", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+                Authorization: `Basic ${btoa(`${XERO_CLIENT_ID}:${XERO_CLIENT_SECRET}`)}`
+              },
+              body: new URLSearchParams({
+                grant_type: "refresh_token",
+                refresh_token: integration.refresh_token
+              })
+            });
+
+            if (refreshResponse.ok) {
+              const newTokenData = await refreshResponse.json();
+              
+              // Update tokens in database
+              await supabase
+                .from("accounting_integrations")
+                .update({
+                  access_token: newTokenData.access_token,
+                  refresh_token: newTokenData.refresh_token,
+                  expires_at: new Date(Date.now() + newTokenData.expires_in * 1000).toISOString()
+                })
+                .eq('user_id', user.id)
+                .eq('provider', provider);
+
+              return new Response(
+                JSON.stringify({ success: false, error: 'Token expired. Please try again.' }),
+                { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+              );
+            }
+          }
+          
           return new Response(
-            JSON.stringify({ success: false, error: `Failed to create invoice in Xero: ${errorText}` }),
+            JSON.stringify({ success: false, error: `Failed to sync invoice to Xero: ${errorText}` }),
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
@@ -390,6 +433,21 @@ serve(async (req) => {
         const xeroData = await xeroResponse.json();
         const externalId = xeroData.Invoices[0].InvoiceID;
   
+        // Update the local invoice record with the Xero invoice ID
+        const { error: updateError } = await supabase
+          .from('user_invoices')
+          .update({
+            xero_invoice_id: externalId,
+            last_synced_at: new Date().toISOString()
+          })
+          .eq('id', invoice.id)
+          .eq('user_id', user.id);
+
+        if (updateError) {
+          console.error('Failed to update invoice with Xero ID:', updateError);
+          // Still return success since the invoice was created in Xero
+        }
+
         return new Response(
           JSON.stringify({ success: true, externalId }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }

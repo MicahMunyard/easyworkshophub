@@ -1831,6 +1831,8 @@ export type Database = {
           id: string
           invoice_number: string
           job_id: string
+          last_synced_at: string | null
+          myob_invoice_id: string | null
           notes: string | null
           status: string
           subtotal: number
@@ -1839,6 +1841,7 @@ export type Database = {
           total: number
           updated_at: string | null
           user_id: string
+          xero_invoice_id: string | null
         }
         Insert: {
           created_at?: string | null
@@ -1851,6 +1854,8 @@ export type Database = {
           id?: string
           invoice_number: string
           job_id: string
+          last_synced_at?: string | null
+          myob_invoice_id?: string | null
           notes?: string | null
           status?: string
           subtotal?: number
@@ -1859,6 +1864,7 @@ export type Database = {
           total?: number
           updated_at?: string | null
           user_id: string
+          xero_invoice_id?: string | null
         }
         Update: {
           created_at?: string | null
@@ -1871,6 +1877,8 @@ export type Database = {
           id?: string
           invoice_number?: string
           job_id?: string
+          last_synced_at?: string | null
+          myob_invoice_id?: string | null
           notes?: string | null
           status?: string
           subtotal?: number
@@ -1879,6 +1887,7 @@ export type Database = {
           total?: number
           updated_at?: string | null
           user_id?: string
+          xero_invoice_id?: string | null
         }
         Relationships: []
       }
