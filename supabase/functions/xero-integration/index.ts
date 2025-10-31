@@ -36,7 +36,7 @@ serve(async (req) => {
       }
       
       const scopes = "offline_access accounting.transactions accounting.contacts accounting.settings";
-      const state = crypto.randomUUID();
+      const state = globalThis.crypto.randomUUID();
       
       const authUrl = `https://login.xero.com/identity/connect/authorize?response_type=code&client_id=${XERO_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(scopes)}&state=${state}`;
       
