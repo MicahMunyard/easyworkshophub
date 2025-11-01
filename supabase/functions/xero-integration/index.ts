@@ -10,6 +10,123 @@ const XERO_CLIENT_SECRET = Deno.env.get("XERO_CLIENT_SECRET") as string;
 const XERO_WEBHOOK_KEY = Deno.env.get("XERO_WEBHOOK_KEY") as string;
 const REDIRECT_URI = "https://app.workshopbase.com.au/integrations/xero/oauth";
 
+// ============= Helper Functions =============
+
+async function refreshXeroToken(supabase: any, userId: string, provider: string, integration: any) {
+  const refreshResponse = await fetch("https://identity.xero.com/connect/token", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      Authorization: `Basic ${btoa(`${XERO_CLIENT_ID}:${XERO_CLIENT_SECRET}`)}`
+    },
+    body: new URLSearchParams({
+      grant_type: "refresh_token",
+      refresh_token: integration.refresh_token
+    })
+  });
+
+  if (!refreshResponse.ok) {
+    throw new Error("Failed to refresh token");
+  }
+
+  const newTokenData = await refreshResponse.json();
+  
+  await supabase
+    .from("accounting_integrations")
+    .update({
+      access_token: newTokenData.access_token,
+      refresh_token: newTokenData.refresh_token,
+      expires_at: new Date(Date.now() + newTokenData.expires_in * 1000).toISOString()
+    })
+    .eq('user_id', userId)
+    .eq('provider', provider);
+
+  return newTokenData.access_token;
+}
+
+async function fetchAccountMapping(supabase: any, userId: string) {
+  const { data: mapping, error } = await supabase
+    .from('xero_account_mappings')
+    .select('*')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error fetching account mapping:', error);
+    return null;
+  }
+
+  return mapping;
+}
+
+async function logSyncOperation(
+  supabase: any,
+  userId: string,
+  resourceType: string,
+  resourceId: string | null,
+  operation: string,
+  status: 'success' | 'error',
+  xeroId: string | null,
+  requestPayload: any,
+  responseData: any,
+  errorMessage: string | null
+) {
+  await supabase
+    .from('xero_sync_history')
+    .insert({
+      user_id: userId,
+      resource_type: resourceType,
+      resource_id: resourceId,
+      operation: operation,
+      status: status,
+      xero_id: xeroId,
+      request_payload: requestPayload,
+      response_data: responseData,
+      error_message: errorMessage,
+      synced_at: new Date().toISOString()
+    });
+}
+
+async function callXeroAPI(
+  supabase: any,
+  userId: string,
+  provider: string,
+  integration: any,
+  url: string,
+  method: string = 'GET',
+  body: any = null
+) {
+  let accessToken = integration.access_token;
+  const tenantId = integration.tenant_id;
+  
+  const makeRequest = async (token: string) => {
+    const options: RequestInit = {
+      method: method,
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Xero-Tenant-Id': tenantId,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
+    };
+    
+    if (body && (method === 'POST' || method === 'PUT')) {
+      options.body = JSON.stringify(body);
+    }
+    
+    return await fetch(url, options);
+  };
+  
+  let response = await makeRequest(accessToken);
+  
+  if (response.status === 401) {
+    accessToken = await refreshXeroToken(supabase, userId, provider, integration);
+    response = await makeRequest(accessToken);
+  }
+  
+  return response;
+}
+
 serve(async (req) => {
   // Handle CORS for preflight requests
   if (req.method === "OPTIONS") {
@@ -325,7 +442,6 @@ serve(async (req) => {
     
     // Get webhook URL endpoint (helper for UI to show the webhook URL)
     if (path === "get-webhook-url") {
-      // Return the webhook URL to be configured in Xero
       const webhookUrl = `${SUPABASE_URL}/functions/v1/xero-integration/webhook`;
       
       return new Response(
@@ -335,6 +451,549 @@ serve(async (req) => {
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // Fetch Chart of Accounts endpoint
+    if (path === "fetch-chart-of-accounts") {
+      try {
+        const authHeader = req.headers.get("Authorization");
+        if (!authHeader) {
+          return new Response(
+            JSON.stringify({ error: "No authorization header" }),
+            { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const token = authHeader.replace("Bearer ", "");
+        const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+
+        if (userError || !user) {
+          return new Response(
+            JSON.stringify({ error: "Invalid user token" }),
+            { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const { data: integration, error: integrationError } = await supabase
+          .from('accounting_integrations')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('provider', 'xero')
+          .maybeSingle();
+
+        if (integrationError || !integration) {
+          return new Response(
+            JSON.stringify({ error: 'Not connected to Xero' }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const response = await callXeroAPI(
+          supabase,
+          user.id,
+          'xero',
+          integration,
+          'https://api.xero.com/api.xro/2.0/Accounts',
+          'GET'
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Error fetching accounts from Xero:', errorText);
+          return new Response(
+            JSON.stringify({ error: 'Failed to fetch accounts from Xero' }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const data = await response.json();
+        
+        const accounts = data.Accounts
+          .filter((account: any) => 
+            ['REVENUE', 'EXPENSE', 'BANK', 'CURRENT', 'CURRLIAB'].includes(account.Class) &&
+            account.Status === 'ACTIVE'
+          )
+          .map((account: any) => ({
+            accountID: account.AccountID,
+            code: account.Code,
+            name: account.Name,
+            type: account.Type,
+            taxType: account.TaxType,
+            description: account.Description,
+            class: account.Class,
+            status: account.Status,
+            enablePaymentsToAccount: account.EnablePaymentsToAccount
+          }));
+
+        return new Response(
+          JSON.stringify({ accounts }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+
+      } catch (error) {
+        console.error("Error in fetch-chart-of-accounts:", error);
+        return new Response(
+          JSON.stringify({ error: error.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // Fetch Tax Rates endpoint
+    if (path === "fetch-tax-rates") {
+      try {
+        const authHeader = req.headers.get("Authorization");
+        if (!authHeader) {
+          return new Response(
+            JSON.stringify({ error: "No authorization header" }),
+            { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const token = authHeader.replace("Bearer ", "");
+        const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+
+        if (userError || !user) {
+          return new Response(
+            JSON.stringify({ error: "Invalid user token" }),
+            { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const { data: integration, error: integrationError } = await supabase
+          .from('accounting_integrations')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('provider', 'xero')
+          .maybeSingle();
+
+        if (integrationError || !integration) {
+          return new Response(
+            JSON.stringify({ error: 'Not connected to Xero' }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const response = await callXeroAPI(
+          supabase,
+          user.id,
+          'xero',
+          integration,
+          'https://api.xero.com/api.xro/2.0/TaxRates',
+          'GET'
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Error fetching tax rates from Xero:', errorText);
+          return new Response(
+            JSON.stringify({ error: 'Failed to fetch tax rates from Xero' }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const data = await response.json();
+        
+        const taxRates = data.TaxRates
+          .filter((rate: any) => rate.Status === 'ACTIVE')
+          .map((rate: any) => ({
+            name: rate.Name,
+            taxType: rate.TaxType,
+            displayTaxRate: rate.DisplayTaxRate,
+            effectiveRate: rate.EffectiveRate,
+            status: rate.Status
+          }));
+
+        return new Response(
+          JSON.stringify({ taxRates }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+
+      } catch (error) {
+        console.error("Error in fetch-tax-rates:", error);
+        return new Response(
+          JSON.stringify({ error: error.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // Save Account Mapping endpoint
+    if (path === "save-account-mapping") {
+      try {
+        const authHeader = req.headers.get("Authorization");
+        if (!authHeader) {
+          return new Response(
+            JSON.stringify({ error: "No authorization header" }),
+            { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const token = authHeader.replace("Bearer ", "");
+        const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+
+        if (userError || !user) {
+          return new Response(
+            JSON.stringify({ error: "Invalid user token" }),
+            { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const mapping = await req.json();
+
+        if (!mapping.invoice_account_code || !mapping.invoice_tax_code) {
+          return new Response(
+            JSON.stringify({ error: 'Missing required account mappings' }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const { data, error } = await supabase
+          .from('xero_account_mappings')
+          .upsert({
+            user_id: user.id,
+            invoice_account_code: mapping.invoice_account_code,
+            cash_payment_account_code: mapping.cash_payment_account_code,
+            bank_payment_account_code: mapping.bank_payment_account_code,
+            credit_account_code: mapping.credit_account_code,
+            bill_account_code: mapping.bill_account_code,
+            bill_cash_payment_account_code: mapping.bill_cash_payment_account_code,
+            bill_bank_payment_account_code: mapping.bill_bank_payment_account_code,
+            supplier_credit_account_code: mapping.supplier_credit_account_code,
+            invoice_tax_code: mapping.invoice_tax_code,
+            invoice_tax_free_code: mapping.invoice_tax_free_code,
+            bill_tax_code: mapping.bill_tax_code,
+            bill_tax_free_code: mapping.bill_tax_free_code,
+            is_configured: true,
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'user_id'
+          })
+          .select()
+          .maybeSingle();
+
+        if (error) {
+          console.error('Error saving account mapping:', error);
+          return new Response(
+            JSON.stringify({ error: 'Failed to save account mapping' }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        return new Response(
+          JSON.stringify({ success: true, mapping: data }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+
+      } catch (error) {
+        console.error("Error in save-account-mapping:", error);
+        return new Response(
+          JSON.stringify({ error: error.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // Sync Bill endpoint
+    if (path === "sync-bill") {
+      try {
+        const { bill } = await req.json();
+
+        const authHeader = req.headers.get("Authorization");
+        if (!authHeader) {
+          return new Response(
+            JSON.stringify({ error: "No authorization header" }),
+            { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const token = authHeader.replace("Bearer ", "");
+        const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+
+        if (userError || !user) {
+          return new Response(
+            JSON.stringify({ error: "Invalid user token" }),
+            { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const { data: integration, error: integrationError } = await supabase
+          .from('accounting_integrations')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('provider', 'xero')
+          .maybeSingle();
+
+        if (integrationError || !integration) {
+          return new Response(
+            JSON.stringify({ error: 'Not connected to Xero' }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const mapping = await fetchAccountMapping(supabase, user.id);
+        if (!mapping || !mapping.is_configured) {
+          return new Response(
+            JSON.stringify({ error: 'Account mapping not configured' }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const { data: billItems, error: itemsError } = await supabase
+          .from('user_bill_items')
+          .select('*')
+          .eq('bill_id', bill.id);
+
+        if (itemsError || !billItems) {
+          return new Response(
+            JSON.stringify({ error: 'Failed to fetch bill items' }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const xeroBill = {
+          Type: 'ACCPAY',
+          Contact: {
+            Name: bill.supplier_name
+          },
+          Date: bill.bill_date,
+          DueDate: bill.due_date || bill.bill_date,
+          LineItems: billItems.map((item: any) => ({
+            Description: item.description,
+            Quantity: item.quantity,
+            UnitAmount: item.unit_price,
+            AccountCode: item.account_code || mapping.bill_account_code,
+            TaxType: item.tax_rate > 0 ? mapping.bill_tax_code : mapping.bill_tax_free_code
+          })),
+          Reference: bill.bill_number,
+          Status: bill.status === 'draft' ? 'DRAFT' : 'AUTHORISED'
+        };
+
+        const isUpdate = Boolean(bill.xero_bill_id);
+        const xeroUrl = isUpdate 
+          ? `https://api.xero.com/api.xro/2.0/Invoices/${bill.xero_bill_id}`
+          : 'https://api.xero.com/api.xro/2.0/Invoices';
+
+        const response = await callXeroAPI(
+          supabase,
+          user.id,
+          'xero',
+          integration,
+          xeroUrl,
+          'POST',
+          { Invoices: [xeroBill] }
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Error syncing bill to Xero:', errorText);
+          
+          await logSyncOperation(
+            supabase,
+            user.id,
+            'bill',
+            bill.id,
+            isUpdate ? 'update' : 'create',
+            'error',
+            null,
+            xeroBill,
+            null,
+            errorText
+          );
+
+          await supabase
+            .from('user_bills')
+            .update({ last_sync_error: errorText })
+            .eq('id', bill.id);
+
+          return new Response(
+            JSON.stringify({ success: false, error: `Failed to sync bill to Xero: ${errorText}` }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const xeroData = await response.json();
+        const xeroBillId = xeroData.Invoices[0].InvoiceID;
+
+        const { error: updateError } = await supabase
+          .from('user_bills')
+          .update({
+            xero_bill_id: xeroBillId,
+            xero_synced_at: new Date().toISOString(),
+            last_sync_error: null
+          })
+          .eq('id', bill.id);
+
+        if (updateError) {
+          console.error('Failed to update bill with Xero ID:', updateError);
+        }
+
+        await logSyncOperation(
+          supabase,
+          user.id,
+          'bill',
+          bill.id,
+          isUpdate ? 'update' : 'create',
+          'success',
+          xeroBillId,
+          xeroBill,
+          xeroData,
+          null
+        );
+
+        return new Response(
+          JSON.stringify({ success: true, xeroBillId }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+
+      } catch (error) {
+        console.error("Error in sync-bill:", error);
+        return new Response(
+          JSON.stringify({ error: error.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // Sync Bill Payment endpoint
+    if (path === "sync-bill-payment") {
+      try {
+        const { billId, paymentAmount, paymentDate, paymentAccountCode } = await req.json();
+
+        const authHeader = req.headers.get("Authorization");
+        if (!authHeader) {
+          return new Response(
+            JSON.stringify({ error: "No authorization header" }),
+            { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const token = authHeader.replace("Bearer ", "");
+        const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+
+        if (userError || !user) {
+          return new Response(
+            JSON.stringify({ error: "Invalid user token" }),
+            { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const { data: bill, error: billError } = await supabase
+          .from('user_bills')
+          .select('*')
+          .eq('id', billId)
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (billError || !bill || !bill.xero_bill_id) {
+          return new Response(
+            JSON.stringify({ error: 'Bill not found or not synced to Xero' }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const { data: integration, error: integrationError } = await supabase
+          .from('accounting_integrations')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('provider', 'xero')
+          .maybeSingle();
+
+        if (integrationError || !integration) {
+          return new Response(
+            JSON.stringify({ error: 'Not connected to Xero' }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const mapping = await fetchAccountMapping(supabase, user.id);
+        if (!mapping || !mapping.is_configured) {
+          return new Response(
+            JSON.stringify({ error: 'Account mapping not configured' }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const xeroPayment = {
+          Invoice: {
+            InvoiceID: bill.xero_bill_id
+          },
+          Account: {
+            Code: paymentAccountCode || mapping.bill_bank_payment_account_code
+          },
+          Date: paymentDate || new Date().toISOString().split('T')[0],
+          Amount: paymentAmount
+        };
+
+        const response = await callXeroAPI(
+          supabase,
+          user.id,
+          'xero',
+          integration,
+          'https://api.xero.com/api.xro/2.0/Payments',
+          'POST',
+          { Payments: [xeroPayment] }
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Error syncing bill payment to Xero:', errorText);
+          
+          await logSyncOperation(
+            supabase,
+            user.id,
+            'bill_payment',
+            billId,
+            'create',
+            'error',
+            null,
+            xeroPayment,
+            null,
+            errorText
+          );
+
+          return new Response(
+            JSON.stringify({ success: false, error: `Failed to sync payment to Xero: ${errorText}` }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const xeroData = await response.json();
+        const paymentId = xeroData.Payments[0].PaymentID;
+
+        await supabase
+          .from('user_bills')
+          .update({
+            status: 'paid',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', billId);
+
+        await logSyncOperation(
+          supabase,
+          user.id,
+          'bill_payment',
+          billId,
+          'create',
+          'success',
+          paymentId,
+          xeroPayment,
+          xeroData,
+          null
+        );
+
+        return new Response(
+          JSON.stringify({ success: true, paymentId }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+
+      } catch (error) {
+        console.error("Error in sync-bill-payment:", error);
+        return new Response(
+          JSON.stringify({ error: error.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // Sync invoice to Xero
