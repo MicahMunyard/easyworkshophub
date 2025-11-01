@@ -1340,6 +1340,131 @@ export type Database = {
           },
         ]
       }
+      user_bill_items: {
+        Row: {
+          account_code: string | null
+          bill_id: string
+          created_at: string | null
+          description: string
+          id: string
+          inventory_item_id: string | null
+          quantity: number
+          tax_rate: number | null
+          total: number
+          unit_price: number
+        }
+        Insert: {
+          account_code?: string | null
+          bill_id: string
+          created_at?: string | null
+          description: string
+          id?: string
+          inventory_item_id?: string | null
+          quantity?: number
+          tax_rate?: number | null
+          total?: number
+          unit_price?: number
+        }
+        Update: {
+          account_code?: string | null
+          bill_id?: string
+          created_at?: string | null
+          description?: string
+          id?: string
+          inventory_item_id?: string | null
+          quantity?: number
+          tax_rate?: number | null
+          total?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_bill_items_bill_id_fkey"
+            columns: ["bill_id"]
+            isOneToOne: false
+            referencedRelation: "user_bills"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_bill_items_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: false
+            referencedRelation: "user_inventory_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_bills: {
+        Row: {
+          bill_date: string
+          bill_number: string
+          created_at: string | null
+          due_date: string | null
+          expense_type: string | null
+          id: string
+          last_sync_error: string | null
+          notes: string | null
+          status: string
+          subtotal: number
+          supplier_id: string | null
+          supplier_name: string
+          tax_total: number
+          total: number
+          updated_at: string | null
+          user_id: string
+          xero_bill_id: string | null
+          xero_synced_at: string | null
+        }
+        Insert: {
+          bill_date: string
+          bill_number: string
+          created_at?: string | null
+          due_date?: string | null
+          expense_type?: string | null
+          id?: string
+          last_sync_error?: string | null
+          notes?: string | null
+          status?: string
+          subtotal?: number
+          supplier_id?: string | null
+          supplier_name: string
+          tax_total?: number
+          total?: number
+          updated_at?: string | null
+          user_id: string
+          xero_bill_id?: string | null
+          xero_synced_at?: string | null
+        }
+        Update: {
+          bill_date?: string
+          bill_number?: string
+          created_at?: string | null
+          due_date?: string | null
+          expense_type?: string | null
+          id?: string
+          last_sync_error?: string | null
+          notes?: string | null
+          status?: string
+          subtotal?: number
+          supplier_id?: string | null
+          supplier_name?: string
+          tax_total?: number
+          total?: number
+          updated_at?: string | null
+          user_id?: string
+          xero_bill_id?: string | null
+          xero_synced_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_bills_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "user_inventory_suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_bookings: {
         Row: {
           bay_id: string | null
@@ -2095,6 +2220,156 @@ export type Database = {
           model?: string
           year_from?: number | null
           year_to?: number | null
+        }
+        Relationships: []
+      }
+      xero_account_mappings: {
+        Row: {
+          bank_payment_account_code: string | null
+          bill_account_code: string | null
+          bill_bank_payment_account_code: string | null
+          bill_cash_payment_account_code: string | null
+          bill_tax_code: string | null
+          bill_tax_free_code: string | null
+          cash_payment_account_code: string | null
+          created_at: string | null
+          credit_account_code: string | null
+          id: string
+          invoice_account_code: string | null
+          invoice_tax_code: string | null
+          invoice_tax_free_code: string | null
+          is_configured: boolean | null
+          supplier_credit_account_code: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          bank_payment_account_code?: string | null
+          bill_account_code?: string | null
+          bill_bank_payment_account_code?: string | null
+          bill_cash_payment_account_code?: string | null
+          bill_tax_code?: string | null
+          bill_tax_free_code?: string | null
+          cash_payment_account_code?: string | null
+          created_at?: string | null
+          credit_account_code?: string | null
+          id?: string
+          invoice_account_code?: string | null
+          invoice_tax_code?: string | null
+          invoice_tax_free_code?: string | null
+          is_configured?: boolean | null
+          supplier_credit_account_code?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          bank_payment_account_code?: string | null
+          bill_account_code?: string | null
+          bill_bank_payment_account_code?: string | null
+          bill_cash_payment_account_code?: string | null
+          bill_tax_code?: string | null
+          bill_tax_free_code?: string | null
+          cash_payment_account_code?: string | null
+          created_at?: string | null
+          credit_account_code?: string | null
+          id?: string
+          invoice_account_code?: string | null
+          invoice_tax_code?: string | null
+          invoice_tax_free_code?: string | null
+          is_configured?: boolean | null
+          supplier_credit_account_code?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      xero_sync_history: {
+        Row: {
+          error_message: string | null
+          id: string
+          operation: string
+          request_payload: Json | null
+          resource_id: string | null
+          resource_type: string
+          response_data: Json | null
+          status: string
+          synced_at: string | null
+          user_id: string
+          xero_id: string | null
+        }
+        Insert: {
+          error_message?: string | null
+          id?: string
+          operation: string
+          request_payload?: Json | null
+          resource_id?: string | null
+          resource_type: string
+          response_data?: Json | null
+          status: string
+          synced_at?: string | null
+          user_id: string
+          xero_id?: string | null
+        }
+        Update: {
+          error_message?: string | null
+          id?: string
+          operation?: string
+          request_payload?: Json | null
+          resource_id?: string | null
+          resource_type?: string
+          response_data?: Json | null
+          status?: string
+          synced_at?: string | null
+          user_id?: string
+          xero_id?: string | null
+        }
+        Relationships: []
+      }
+      xero_sync_queue: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          last_attempt_at: string | null
+          last_error: string | null
+          max_retries: number | null
+          operation: string
+          payload: Json | null
+          resource_id: string
+          resource_type: string
+          retry_count: number | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          last_attempt_at?: string | null
+          last_error?: string | null
+          max_retries?: number | null
+          operation: string
+          payload?: Json | null
+          resource_id: string
+          resource_type: string
+          retry_count?: number | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          last_attempt_at?: string | null
+          last_error?: string | null
+          max_retries?: number | null
+          operation?: string
+          payload?: Json | null
+          resource_id?: string
+          resource_type?: string
+          retry_count?: number | null
+          status?: string
+          user_id?: string
         }
         Relationships: []
       }
