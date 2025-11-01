@@ -12,7 +12,7 @@ const REDIRECT_URI = "https://app.workshopbase.com.au/integrations/xero/oauth";
 
 // ============= Helper Functions =============
 
-async function refreshXeroToken(supabase: any, userId: string, provider: string, integration: any) {
+async function refreshXeroToken(supabaseClient: any, userId: string, provider: string, integration: any) {
   const refreshResponse = await fetch("https://identity.xero.com/connect/token", {
     method: "POST",
     headers: {
@@ -31,7 +31,7 @@ async function refreshXeroToken(supabase: any, userId: string, provider: string,
 
   const newTokenData = await refreshResponse.json();
   
-  await supabase
+  await supabaseClient
     .from("accounting_integrations")
     .update({
       access_token: newTokenData.access_token,
@@ -44,8 +44,8 @@ async function refreshXeroToken(supabase: any, userId: string, provider: string,
   return newTokenData.access_token;
 }
 
-async function fetchAccountMapping(supabase: any, userId: string) {
-  const { data: mapping, error } = await supabase
+async function fetchAccountMapping(supabaseClient: any, userId: string) {
+  const { data: mapping, error } = await supabaseClient
     .from('xero_account_mappings')
     .select('*')
     .eq('user_id', userId)
@@ -60,7 +60,7 @@ async function fetchAccountMapping(supabase: any, userId: string) {
 }
 
 async function logSyncOperation(
-  supabase: any,
+  supabaseClient: any,
   userId: string,
   resourceType: string,
   resourceId: string | null,
@@ -69,9 +69,9 @@ async function logSyncOperation(
   xeroId: string | null,
   requestPayload: any,
   responseData: any,
-  errorMessage: string | null
+  errorMessage: string | null = null
 ) {
-  await supabase
+  await supabaseClient
     .from('xero_sync_history')
     .insert({
       user_id: userId,
@@ -88,7 +88,7 @@ async function logSyncOperation(
 }
 
 async function callXeroAPI(
-  supabase: any,
+  supabaseClient: any,
   userId: string,
   provider: string,
   integration: any,
@@ -120,11 +120,16 @@ async function callXeroAPI(
   let response = await makeRequest(accessToken);
   
   if (response.status === 401) {
-    accessToken = await refreshXeroToken(supabase, userId, provider, integration);
+    accessToken = await refreshXeroToken(supabaseClient, userId, provider, integration);
     response = await makeRequest(accessToken);
   }
   
-  return response;
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText);
+  }
+  
+  return await response.json();
 }
 
 serve(async (req) => {
@@ -327,7 +332,6 @@ serve(async (req) => {
         );
       }
       
-      // Verify the signature using HMAC-SHA256
       try {
         const hmac = await crypto.subtle.importKey(
           "raw",
@@ -352,7 +356,6 @@ serve(async (req) => {
         console.log("Calculated signature:", signature.toLowerCase());
         console.log("Received signature:", xeroSignature.toLowerCase());
 
-        // Compare signatures (case-insensitive)
         if (signature.toLowerCase() !== xeroSignature.toLowerCase()) {
           console.error("Webhook signature validation failed");
           return new Response(
@@ -370,14 +373,11 @@ serve(async (req) => {
         );
       }
       
-      // Parse the webhook payload
       try {
         const webhookData = JSON.parse(rawBody);
         console.log("Parsed webhook data:", JSON.stringify(webhookData).substring(0, 200) + "...");
         
-        // Process the webhook event
         try {
-          // Handle various webhook events
           if (webhookData.events && webhookData.events.length > 0) {
             for (const event of webhookData.events) {
               console.log(`Processing event: ${event.eventType} for resource: ${event.resourceId}`);
@@ -386,7 +386,6 @@ serve(async (req) => {
                   event.eventType === "PAYMENT.CREATED") {
                 const resourceId = event.resourceId;
                 
-                // Try to find matching invoice
                 const { data: invoice, error: findInvoiceError } = await supabase
                   .from("user_invoices")
                   .select("*")
@@ -398,7 +397,6 @@ serve(async (req) => {
                 } else if (invoice) {
                   console.log(`Found matching invoice: ${invoice.id}`);
                   
-                  // If this is a payment and it would change the invoice to paid
                   if (event.eventType === "PAYMENT.CREATED" && 
                       event.eventData && 
                       event.eventData.status === "PAID") {
@@ -419,7 +417,6 @@ serve(async (req) => {
                     }
                   }
                 } else {
-                  // Check if it's a bill payment instead
                   const { data: bill, error: findBillError } = await supabase
                     .from("user_bills")
                     .select("*")
@@ -431,7 +428,6 @@ serve(async (req) => {
                   } else if (bill) {
                     console.log(`Found matching bill: ${bill.id}`);
                     
-                    // If this is a payment event for a bill
                     if (event.eventType === "PAYMENT.CREATED") {
                       const { error: updateError } = await supabase
                         .from("user_bills")
@@ -453,10 +449,8 @@ serve(async (req) => {
                   }
                 }
               } else if (event.eventType === "CONTACT.UPDATED" || event.eventType === "CONTACT.CREATED") {
-                // Placeholder for future customer sync
                 console.log(`Contact event received: ${event.eventType} - will be handled in Phase 4`);
               } else if (event.eventType === "ITEM.UPDATED" || event.eventType === "ITEM.CREATED") {
-                // Placeholder for future inventory sync
                 console.log(`Item event received: ${event.eventType} - will be handled in Phase 4`);
               }
             }
@@ -464,24 +458,23 @@ serve(async (req) => {
         } catch (processError) {
           console.error("Error processing webhook event:", processError);
         }
-      } catch (parseError) {
-        console.error("Error parsing webhook payload:", parseError);
+        
         return new Response(
-          JSON.stringify({ error: "Invalid webhook payload" }),
+          JSON.stringify({ status: "received" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      } catch (parseError) {
+        console.error("Error parsing webhook data:", parseError);
+        return new Response(
+          JSON.stringify({ error: "Failed to parse webhook data" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      
-      // Always return 200 OK to Xero to acknowledge receipt
-      return new Response(
-        JSON.stringify({ success: true }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
     }
     
-    // Get webhook URL endpoint (helper for UI to show the webhook URL)
+    // Get webhook URL endpoint
     if (path === "get-webhook-url") {
-      const webhookUrl = `${SUPABASE_URL}/functions/v1/xero-integration/webhook`;
+      const webhookUrl = "https://qyjjbpyqxwrluhymvshn.supabase.co/functions/v1/xero-integration/webhook";
       
       return new Response(
         JSON.stringify({ 
@@ -503,8 +496,12 @@ serve(async (req) => {
           );
         }
 
-        const token = authHeader.replace("Bearer ", "");
-        const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+        // Create authenticated Supabase client for user-scoped operations
+        const supabaseUser = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+          global: { headers: { Authorization: authHeader } }
+        });
+
+        const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
 
         if (userError || !user) {
           return new Response(
@@ -513,7 +510,7 @@ serve(async (req) => {
           );
         }
 
-        const { data: integration, error: integrationError } = await supabase
+        const { data: integration, error: integrationError } = await supabaseUser
           .from('accounting_integrations')
           .select('*')
           .eq('user_id', user.id)
@@ -527,8 +524,8 @@ serve(async (req) => {
           );
         }
 
-        const response = await callXeroAPI(
-          supabase,
+        const data = await callXeroAPI(
+          supabaseUser,
           user.id,
           'xero',
           integration,
@@ -536,22 +533,8 @@ serve(async (req) => {
           'GET'
         );
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('Error fetching accounts from Xero:', errorText);
-          return new Response(
-            JSON.stringify({ error: 'Failed to fetch accounts from Xero' }),
-            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-
-        const data = await response.json();
-        
         const accounts = data.Accounts
-          .filter((account: any) => 
-            ['REVENUE', 'EXPENSE', 'BANK', 'CURRENT', 'CURRLIAB'].includes(account.Class) &&
-            account.Status === 'ACTIVE'
-          )
+          .filter((account: any) => account.Status === 'ACTIVE')
           .map((account: any) => ({
             accountID: account.AccountID,
             code: account.Code,
@@ -589,8 +572,12 @@ serve(async (req) => {
           );
         }
 
-        const token = authHeader.replace("Bearer ", "");
-        const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+        // Create authenticated Supabase client for user-scoped operations
+        const supabaseUser = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+          global: { headers: { Authorization: authHeader } }
+        });
+
+        const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
 
         if (userError || !user) {
           return new Response(
@@ -599,7 +586,7 @@ serve(async (req) => {
           );
         }
 
-        const { data: integration, error: integrationError } = await supabase
+        const { data: integration, error: integrationError } = await supabaseUser
           .from('accounting_integrations')
           .select('*')
           .eq('user_id', user.id)
@@ -613,8 +600,8 @@ serve(async (req) => {
           );
         }
 
-        const response = await callXeroAPI(
-          supabase,
+        const data = await callXeroAPI(
+          supabaseUser,
           user.id,
           'xero',
           integration,
@@ -622,17 +609,6 @@ serve(async (req) => {
           'GET'
         );
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('Error fetching tax rates from Xero:', errorText);
-          return new Response(
-            JSON.stringify({ error: 'Failed to fetch tax rates from Xero' }),
-            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-
-        const data = await response.json();
-        
         const taxRates = data.TaxRates
           .filter((rate: any) => rate.Status === 'ACTIVE')
           .map((rate: any) => ({
@@ -668,8 +644,12 @@ serve(async (req) => {
           );
         }
 
-        const token = authHeader.replace("Bearer ", "");
-        const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+        // Create authenticated Supabase client for user-scoped operations
+        const supabaseUser = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+          global: { headers: { Authorization: authHeader } }
+        });
+
+        const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
 
         if (userError || !user) {
           return new Response(
@@ -687,7 +667,7 @@ serve(async (req) => {
           );
         }
 
-      const { data, error } = await supabase
+      const { data, error } = await supabaseUser
         .from('xero_account_mappings')
         .upsert({
           user_id: user.id,
@@ -749,8 +729,12 @@ serve(async (req) => {
           );
         }
 
-        const token = authHeader.replace("Bearer ", "");
-        const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+        // Create authenticated Supabase client for user-scoped operations
+        const supabaseUser = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+          global: { headers: { Authorization: authHeader } }
+        });
+
+        const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
 
         if (userError || !user) {
           return new Response(
@@ -759,7 +743,7 @@ serve(async (req) => {
           );
         }
 
-        const { data: integration, error: integrationError } = await supabase
+        const { data: integration, error: integrationError } = await supabaseUser
           .from('accounting_integrations')
           .select('*')
           .eq('user_id', user.id)
@@ -773,7 +757,7 @@ serve(async (req) => {
           );
         }
 
-        const mapping = await fetchAccountMapping(supabase, user.id);
+        const mapping = await fetchAccountMapping(supabaseUser, user.id);
         if (!mapping || !mapping.is_configured) {
           return new Response(
             JSON.stringify({ error: 'Account mapping not configured' }),
@@ -781,7 +765,7 @@ serve(async (req) => {
           );
         }
 
-        const { data: billItems, error: itemsError } = await supabase
+        const { data: billItems, error: itemsError } = await supabaseUser
           .from('user_bill_items')
           .select('*')
           .eq('bill_id', bill.id);
@@ -816,22 +800,54 @@ serve(async (req) => {
           ? `https://api.xero.com/api.xro/2.0/Invoices/${bill.xero_bill_id}`
           : 'https://api.xero.com/api.xro/2.0/Invoices';
 
-        const response = await callXeroAPI(
-          supabase,
-          user.id,
-          'xero',
-          integration,
-          xeroUrl,
-          'POST',
-          { Invoices: [xeroBill] }
-        );
+        try {
+          const xeroData = await callXeroAPI(
+            supabaseUser,
+            user.id,
+            'xero',
+            integration,
+            xeroUrl,
+            'POST',
+            { Invoices: [xeroBill] }
+          );
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('Error syncing bill to Xero:', errorText);
+          const xeroBillId = xeroData.Invoices[0].InvoiceID;
+
+          const { error: updateError } = await supabaseUser
+            .from('user_bills')
+            .update({
+              xero_bill_id: xeroBillId,
+              xero_synced_at: new Date().toISOString(),
+              last_sync_error: null
+            })
+            .eq('id', bill.id);
+
+          if (updateError) {
+            console.error('Failed to update bill with Xero ID:', updateError);
+          }
+
+          await logSyncOperation(
+            supabaseUser,
+            user.id,
+            'bill',
+            bill.id,
+            isUpdate ? 'update' : 'create',
+            'success',
+            xeroBillId,
+            xeroBill,
+            xeroData,
+            null
+          );
+
+          return new Response(
+            JSON.stringify({ success: true, xeroBillId }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        } catch (apiError) {
+          console.error('Error syncing bill to Xero:', apiError);
           
           await logSyncOperation(
-            supabase,
+            supabaseUser,
             user.id,
             'bill',
             bill.id,
@@ -840,53 +856,19 @@ serve(async (req) => {
             null,
             xeroBill,
             null,
-            errorText
+            apiError.message
           );
 
-          await supabase
+          await supabaseUser
             .from('user_bills')
-            .update({ last_sync_error: errorText })
+            .update({ last_sync_error: apiError.message })
             .eq('id', bill.id);
 
           return new Response(
-            JSON.stringify({ success: false, error: `Failed to sync bill to Xero: ${errorText}` }),
+            JSON.stringify({ success: false, error: `Failed to sync bill to Xero: ${apiError.message}` }),
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
-
-        const xeroData = await response.json();
-        const xeroBillId = xeroData.Invoices[0].InvoiceID;
-
-        const { error: updateError } = await supabase
-          .from('user_bills')
-          .update({
-            xero_bill_id: xeroBillId,
-            xero_synced_at: new Date().toISOString(),
-            last_sync_error: null
-          })
-          .eq('id', bill.id);
-
-        if (updateError) {
-          console.error('Failed to update bill with Xero ID:', updateError);
-        }
-
-        await logSyncOperation(
-          supabase,
-          user.id,
-          'bill',
-          bill.id,
-          isUpdate ? 'update' : 'create',
-          'success',
-          xeroBillId,
-          xeroBill,
-          xeroData,
-          null
-        );
-
-        return new Response(
-          JSON.stringify({ success: true, xeroBillId }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
 
       } catch (error) {
         console.error("Error in sync-bill:", error);
@@ -910,8 +892,12 @@ serve(async (req) => {
           );
         }
 
-        const token = authHeader.replace("Bearer ", "");
-        const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+        // Create authenticated Supabase client for user-scoped operations
+        const supabaseUser = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+          global: { headers: { Authorization: authHeader } }
+        });
+
+        const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
 
         if (userError || !user) {
           return new Response(
@@ -920,7 +906,7 @@ serve(async (req) => {
           );
         }
 
-        const { data: bill, error: billError } = await supabase
+        const { data: bill, error: billError } = await supabaseUser
           .from('user_bills')
           .select('*')
           .eq('id', billId)
@@ -934,7 +920,7 @@ serve(async (req) => {
           );
         }
 
-        const { data: integration, error: integrationError } = await supabase
+        const { data: integration, error: integrationError } = await supabaseUser
           .from('accounting_integrations')
           .select('*')
           .eq('user_id', user.id)
@@ -948,7 +934,7 @@ serve(async (req) => {
           );
         }
 
-        const mapping = await fetchAccountMapping(supabase, user.id);
+        const mapping = await fetchAccountMapping(supabaseUser, user.id);
         if (!mapping || !mapping.is_configured) {
           return new Response(
             JSON.stringify({ error: 'Account mapping not configured' }),
@@ -967,22 +953,49 @@ serve(async (req) => {
           Amount: paymentAmount
         };
 
-        const response = await callXeroAPI(
-          supabase,
-          user.id,
-          'xero',
-          integration,
-          'https://api.xero.com/api.xro/2.0/Payments',
-          'POST',
-          { Payments: [xeroPayment] }
-        );
+        try {
+          const xeroData = await callXeroAPI(
+            supabaseUser,
+            user.id,
+            'xero',
+            integration,
+            'https://api.xero.com/api.xro/2.0/Payments',
+            'POST',
+            { Payments: [xeroPayment] }
+          );
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('Error syncing bill payment to Xero:', errorText);
+          const paymentId = xeroData.Payments[0].PaymentID;
+
+          await supabaseUser
+            .from('user_bills')
+            .update({
+              status: 'paid',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', billId);
+
+          await logSyncOperation(
+            supabaseUser,
+            user.id,
+            'bill_payment',
+            billId,
+            'create',
+            'success',
+            paymentId,
+            xeroPayment,
+            xeroData,
+            null
+          );
+
+          return new Response(
+            JSON.stringify({ success: true, paymentId }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        } catch (apiError) {
+          console.error('Error syncing bill payment to Xero:', apiError);
           
           await logSyncOperation(
-            supabase,
+            supabaseUser,
             user.id,
             'bill_payment',
             billId,
@@ -991,43 +1004,14 @@ serve(async (req) => {
             null,
             xeroPayment,
             null,
-            errorText
+            apiError.message
           );
 
           return new Response(
-            JSON.stringify({ success: false, error: `Failed to sync payment to Xero: ${errorText}` }),
+            JSON.stringify({ success: false, error: `Failed to sync payment to Xero: ${apiError.message}` }),
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
-
-        const xeroData = await response.json();
-        const paymentId = xeroData.Payments[0].PaymentID;
-
-        await supabase
-          .from('user_bills')
-          .update({
-            status: 'paid',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', billId);
-
-        await logSyncOperation(
-          supabase,
-          user.id,
-          'bill_payment',
-          billId,
-          'create',
-          'success',
-          paymentId,
-          xeroPayment,
-          xeroData,
-          null
-        );
-
-        return new Response(
-          JSON.stringify({ success: true, paymentId }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
 
       } catch (error) {
         console.error("Error in sync-bill-payment:", error);
@@ -1050,7 +1034,6 @@ serve(async (req) => {
           );
         }
 
-        // Get user from auth
         const authHeader = req.headers.get('Authorization');
         if (!authHeader) {
           return new Response(
@@ -1059,8 +1042,12 @@ serve(async (req) => {
           );
         }
 
-        const token = authHeader.replace('Bearer ', '');
-        const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+        // Create authenticated Supabase client for user-scoped operations
+        const supabaseUser = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+          global: { headers: { Authorization: authHeader } }
+        });
+
+        const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
 
         if (userError || !user) {
           return new Response(
@@ -1069,8 +1056,7 @@ serve(async (req) => {
           );
         }
 
-        // Fetch the invoice
-        const { data: invoice, error: invoiceError } = await supabase
+        const { data: invoice, error: invoiceError } = await supabaseUser
           .from('user_invoices')
           .select('*')
           .eq('id', invoiceId)
@@ -1084,7 +1070,6 @@ serve(async (req) => {
           );
         }
 
-        // Check if invoice has been synced to Xero
         if (!invoice.xero_invoice_id) {
           return new Response(
             JSON.stringify({ 
@@ -1097,8 +1082,7 @@ serve(async (req) => {
 
         const provider = 'xero';
 
-        // Get Xero integration details
-        const { data: integration, error: integrationError } = await supabase
+        const { data: integration, error: integrationError } = await supabaseUser
           .from('accounting_integrations')
           .select('*')
           .eq('user_id', user.id)
@@ -1112,8 +1096,7 @@ serve(async (req) => {
           );
         }
 
-        // Fetch account mapping
-        const mapping = await fetchAccountMapping(supabase, user.id);
+        const mapping = await fetchAccountMapping(supabaseUser, user.id);
         if (!mapping || !mapping.is_configured) {
           return new Response(
             JSON.stringify({ 
@@ -1124,7 +1107,6 @@ serve(async (req) => {
           );
         }
 
-        // Use provided account code or default from mapping
         const accountCode = paymentAccountCode || mapping.bank_payment_account_code;
         if (!accountCode) {
           return new Response(
@@ -1136,7 +1118,6 @@ serve(async (req) => {
           );
         }
 
-        // Create Xero payment object
         const xeroPayment = {
           Invoice: {
             InvoiceID: invoice.xero_invoice_id
@@ -1148,10 +1129,9 @@ serve(async (req) => {
           Amount: paymentAmount
         };
 
-        // Call Xero API to create payment
         const xeroUrl = 'https://api.xero.com/api.xro/2.0/Payments';
         const xeroData = await callXeroAPI(
-          supabase,
+          supabaseUser,
           user.id,
           provider,
           integration,
@@ -1169,8 +1149,7 @@ serve(async (req) => {
 
         const externalPaymentId = xeroData.Payments[0].PaymentID;
 
-        // Update local invoice status to paid
-        const { error: updateError } = await supabase
+        const { error: updateError } = await supabaseUser
           .from('user_invoices')
           .update({
             status: 'paid',
@@ -1183,9 +1162,8 @@ serve(async (req) => {
           console.error('Failed to update invoice status:', updateError);
         }
 
-        // Log the sync operation
         await logSyncOperation(
-          supabase,
+          supabaseUser,
           user.id,
           'payment',
           invoice.id,
@@ -1193,7 +1171,8 @@ serve(async (req) => {
           'success',
           externalPaymentId,
           { payment: xeroPayment },
-          xeroData
+          xeroData,
+          null
         );
 
         return new Response(
@@ -1218,7 +1197,6 @@ serve(async (req) => {
           throw new Error(`Provider ${provider} not supported`);
         }
   
-        // Get the user ID from the request
         const authHeader = req.headers.get("Authorization");
         if (!authHeader) {
           return new Response(
@@ -1227,8 +1205,12 @@ serve(async (req) => {
           );
         }
   
-        const token = authHeader.replace("Bearer ", "");
-        const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+        // Create authenticated Supabase client for user-scoped operations
+        const supabaseUser = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+          global: { headers: { Authorization: authHeader } }
+        });
+
+        const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
   
         if (userError || !user) {
           return new Response(
@@ -1237,8 +1219,7 @@ serve(async (req) => {
           );
         }
   
-        // Retrieve the Xero access token and tenant ID from the database
-        const { data: integration, error: integrationError } = await supabase
+        const { data: integration, error: integrationError } = await supabaseUser
           .from('accounting_integrations')
           .select('*')
           .eq('user_id', user.id)
@@ -1263,8 +1244,7 @@ serve(async (req) => {
         const xeroAccessToken = integration.access_token;
         const xeroTenantId = integration.tenant_id;
   
-        // Fetch account mapping to use configured account and tax codes
-        const mapping = await fetchAccountMapping(supabase, user.id);
+        const mapping = await fetchAccountMapping(supabaseUser, user.id);
         if (!mapping || !mapping.is_configured) {
           return new Response(
             JSON.stringify({ 
@@ -1275,9 +1255,8 @@ serve(async (req) => {
           );
         }
 
-        // Map WorkshopBase invoice to Xero invoice format
         const xeroInvoice = {
-          Type: 'ACCREC', // Sales invoice
+          Type: 'ACCREC',
           Contact: {
             Name: invoice.customerName
           },
@@ -1296,14 +1275,13 @@ serve(async (req) => {
           Status: 'AUTHORISED'
         };
   
-        // Call the Xero API to create or update the invoice using helper
         const isUpdate = Boolean(invoice.xeroInvoiceId);
         const xeroUrl = isUpdate 
           ? `https://api.xero.com/api.xro/2.0/Invoices/${invoice.xeroInvoiceId}`
           : 'https://api.xero.com/api.xro/2.0/Invoices';
         
         const xeroData = await callXeroAPI(
-          supabase,
+          supabaseUser,
           user.id,
           provider,
           integration,
@@ -1321,8 +1299,7 @@ serve(async (req) => {
   
         const externalId = xeroData.Invoices[0].InvoiceID;
   
-        // Update the local invoice record with the Xero invoice ID
-        const { error: updateError } = await supabase
+        const { error: updateError } = await supabaseUser
           .from('user_invoices')
           .update({
             xero_invoice_id: externalId,
@@ -1333,12 +1310,10 @@ serve(async (req) => {
 
         if (updateError) {
           console.error('Failed to update invoice with Xero ID:', updateError);
-          // Still return success since the invoice was created in Xero
         }
 
-        // Log the sync operation
         await logSyncOperation(
-          supabase,
+          supabaseUser,
           user.id,
           'invoice',
           invoice.id,
@@ -1346,7 +1321,8 @@ serve(async (req) => {
           'success',
           externalId,
           { invoice: xeroInvoice },
-          xeroData
+          xeroData,
+          null
         );
 
         return new Response(
@@ -1374,8 +1350,12 @@ serve(async (req) => {
           );
         }
 
-        const token = authHeader.replace("Bearer ", "");
-        const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+        // Create authenticated Supabase client for user-scoped operations
+        const supabaseUser = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+          global: { headers: { Authorization: authHeader } }
+        });
+
+        const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
 
         if (userError || !user) {
           return new Response(
@@ -1393,8 +1373,7 @@ serve(async (req) => {
           );
         }
 
-        // Get Xero integration
-        const { data: integration, error: integrationError } = await supabase
+        const { data: integration, error: integrationError } = await supabaseUser
           .from('accounting_integrations')
           .select('*')
           .eq('user_id', user.id)
@@ -1408,8 +1387,7 @@ serve(async (req) => {
           );
         }
 
-        // Fetch customers
-        const { data: customers, error: customersError } = await supabase
+        const { data: customers, error: customersError } = await supabaseUser
           .from('user_customers')
           .select('id, name, email, phone, status, xero_contact_id')
           .eq('user_id', user.id)
@@ -1425,7 +1403,6 @@ serve(async (req) => {
 
         const results = [];
 
-        // Process each customer
         for (const customer of customers) {
           try {
             const contactPayload = {
@@ -1441,13 +1418,12 @@ serve(async (req) => {
 
             let url = 'https://api.xero.com/api.xro/2.0/Contacts';
             
-            // If already synced, update existing contact
             if (customer.xero_contact_id) {
               url = `https://api.xero.com/api.xro/2.0/Contacts/${customer.xero_contact_id}`;
             }
 
             const xeroResponse = await callXeroAPI(
-              supabase,
+              supabaseUser,
               user.id,
               'xero',
               integration,
@@ -1458,8 +1434,7 @@ serve(async (req) => {
 
             const xeroContactId = xeroResponse.Contacts[0].ContactID;
 
-            // Update local record
-            await supabase
+            await supabaseUser
               .from('user_customers')
               .update({
                 xero_contact_id: xeroContactId,
@@ -1467,9 +1442,8 @@ serve(async (req) => {
               })
               .eq('id', customer.id);
 
-            // Log sync operation
             await logSyncOperation(
-              supabase,
+              supabaseUser,
               user.id,
               'customer',
               customer.id,
@@ -1477,7 +1451,8 @@ serve(async (req) => {
               'success',
               xeroContactId,
               contactPayload,
-              xeroResponse
+              xeroResponse,
+              null
             );
 
             results.push({
@@ -1490,7 +1465,7 @@ serve(async (req) => {
             console.error(`Error syncing customer ${customer.id}:`, error);
             
             await logSyncOperation(
-              supabase,
+              supabaseUser,
               user.id,
               'customer',
               customer.id,
@@ -1535,8 +1510,12 @@ serve(async (req) => {
           );
         }
 
-        const token = authHeader.replace("Bearer ", "");
-        const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+        // Create authenticated Supabase client for user-scoped operations
+        const supabaseUser = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+          global: { headers: { Authorization: authHeader } }
+        });
+
+        const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
 
         if (userError || !user) {
           return new Response(
@@ -1554,8 +1533,7 @@ serve(async (req) => {
           );
         }
 
-        // Get Xero integration
-        const { data: integration, error: integrationError } = await supabase
+        const { data: integration, error: integrationError } = await supabaseUser
           .from('accounting_integrations')
           .select('*')
           .eq('user_id', user.id)
@@ -1569,8 +1547,7 @@ serve(async (req) => {
           );
         }
 
-        // Fetch suppliers
-        const { data: suppliers, error: suppliersError } = await supabase
+        const { data: suppliers, error: suppliersError } = await supabaseUser
           .from('user_inventory_suppliers')
           .select('id, name, email, phone, address, contactperson, status, xero_contact_id')
           .eq('user_id', user.id)
@@ -1586,7 +1563,6 @@ serve(async (req) => {
 
         const results = [];
 
-        // Process each supplier
         for (const supplier of suppliers) {
           try {
             const contactPayload = {
@@ -1610,13 +1586,12 @@ serve(async (req) => {
 
             let url = 'https://api.xero.com/api.xro/2.0/Contacts';
             
-            // If already synced, update existing contact
             if (supplier.xero_contact_id) {
               url = `https://api.xero.com/api.xro/2.0/Contacts/${supplier.xero_contact_id}`;
             }
 
             const xeroResponse = await callXeroAPI(
-              supabase,
+              supabaseUser,
               user.id,
               'xero',
               integration,
@@ -1627,8 +1602,7 @@ serve(async (req) => {
 
             const xeroContactId = xeroResponse.Contacts[0].ContactID;
 
-            // Update local record
-            await supabase
+            await supabaseUser
               .from('user_inventory_suppliers')
               .update({
                 xero_contact_id: xeroContactId,
@@ -1636,9 +1610,8 @@ serve(async (req) => {
               })
               .eq('id', supplier.id);
 
-            // Log sync operation
             await logSyncOperation(
-              supabase,
+              supabaseUser,
               user.id,
               'supplier',
               supplier.id,
@@ -1646,7 +1619,8 @@ serve(async (req) => {
               'success',
               xeroContactId,
               contactPayload,
-              xeroResponse
+              xeroResponse,
+              null
             );
 
             results.push({
@@ -1659,7 +1633,7 @@ serve(async (req) => {
             console.error(`Error syncing supplier ${supplier.id}:`, error);
             
             await logSyncOperation(
-              supabase,
+              supabaseUser,
               user.id,
               'supplier',
               supplier.id,
@@ -1704,8 +1678,12 @@ serve(async (req) => {
           );
         }
 
-        const token = authHeader.replace("Bearer ", "");
-        const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+        // Create authenticated Supabase client for user-scoped operations
+        const supabaseUser = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+          global: { headers: { Authorization: authHeader } }
+        });
+
+        const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
 
         if (userError || !user) {
           return new Response(
@@ -1723,8 +1701,7 @@ serve(async (req) => {
           );
         }
 
-        // Get Xero integration
-        const { data: integration, error: integrationError } = await supabase
+        const { data: integration, error: integrationError } = await supabaseUser
           .from('accounting_integrations')
           .select('*')
           .eq('user_id', user.id)
@@ -1738,8 +1715,7 @@ serve(async (req) => {
           );
         }
 
-        // Fetch account mapping
-        const mapping = await fetchAccountMapping(supabase, user.id);
+        const mapping = await fetchAccountMapping(supabaseUser, user.id);
         
         if (!mapping || !mapping.inventory_asset_account_code || 
             !mapping.inventory_cogs_account_code || !mapping.inventory_sales_account_code) {
@@ -1751,8 +1727,7 @@ serve(async (req) => {
           );
         }
 
-        // Fetch inventory item
-        const { data: item, error: itemError } = await supabase
+        const { data: item, error: itemError } = await supabaseUser
           .from('user_inventory_items')
           .select('id, code, name, description, price, retailprice, instock, category, brand, xero_item_id')
           .eq('user_id', user.id)
@@ -1767,7 +1742,6 @@ serve(async (req) => {
           );
         }
 
-        // Create Xero item payload
         const itemPayload = {
           Code: item.code || item.id.substring(0, 30),
           Name: item.name,
@@ -1788,13 +1762,12 @@ serve(async (req) => {
 
         let url = 'https://api.xero.com/api.xro/2.0/Items';
         
-        // If already synced, update existing item
         if (item.xero_item_id) {
           url = `https://api.xero.com/api.xro/2.0/Items/${item.xero_item_id}`;
         }
 
         const xeroResponse = await callXeroAPI(
-          supabase,
+          supabaseUser,
           user.id,
           'xero',
           integration,
@@ -1805,8 +1778,7 @@ serve(async (req) => {
 
         const xeroItemId = xeroResponse.Items[0].ItemID;
 
-        // Update local record
-        await supabase
+        await supabaseUser
           .from('user_inventory_items')
           .update({
             xero_item_id: xeroItemId,
@@ -1814,9 +1786,8 @@ serve(async (req) => {
           })
           .eq('id', item.id);
 
-        // Log sync operation
         await logSyncOperation(
-          supabase,
+          supabaseUser,
           user.id,
           'inventory',
           item.id,
@@ -1824,7 +1795,8 @@ serve(async (req) => {
           'success',
           xeroItemId,
           itemPayload,
-          xeroResponse
+          xeroResponse,
+          null
         );
 
         return new Response(
@@ -1840,12 +1812,15 @@ serve(async (req) => {
         
         const { itemId } = await req.json().catch(() => ({}));
         if (itemId) {
-          const token = req.headers.get("Authorization")?.replace("Bearer ", "");
-          if (token) {
-            const { data: { user } } = await supabase.auth.getUser(token);
+          const authHeader = req.headers.get("Authorization");
+          if (authHeader) {
+            const supabaseUser = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+              global: { headers: { Authorization: authHeader } }
+            });
+            const { data: { user } } = await supabaseUser.auth.getUser();
             if (user) {
               await logSyncOperation(
-                supabase,
+                supabaseUser,
                 user.id,
                 'inventory',
                 itemId,
