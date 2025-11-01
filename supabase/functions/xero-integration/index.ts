@@ -50,17 +50,48 @@ serve(async (req) => {
     
     // OAuth callback handling
     if (path === "oauth-callback") {
+      console.log("[DEBUG] Starting oauth-callback processing");
+      
       const params = await req.json();
       const code = params.code;
       
+      console.log("[DEBUG] Received authorization code:", code ? "present" : "missing");
+      
       if (!code) {
+        console.error("[ERROR] No authorization code provided");
         return new Response(
           JSON.stringify({ error: "No authorization code provided" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
       
+      // Get user ID from the request first
+      const authHeader = req.headers.get("Authorization");
+      console.log("[DEBUG] Authorization header:", authHeader ? "present" : "missing");
+      
+      if (!authHeader) {
+        console.error("[ERROR] No authorization header");
+        return new Response(
+          JSON.stringify({ error: "No authorization header" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      const token = authHeader.replace("Bearer ", "");
+      const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+      
+      if (userError || !user) {
+        console.error("[ERROR] Invalid user token:", userError);
+        return new Response(
+          JSON.stringify({ error: "Invalid user token" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      console.log("[DEBUG] User authenticated:", user.id);
+      
       // Exchange code for access token
+      console.log("[DEBUG] Exchanging authorization code for access token");
       const tokenResponse = await fetch("https://identity.xero.com/connect/token", {
         method: "POST",
         headers: {
@@ -76,7 +107,7 @@ serve(async (req) => {
       
       if (!tokenResponse.ok) {
         const errorText = await tokenResponse.text();
-        console.error("Error exchanging code for token:", errorText);
+        console.error("[ERROR] Failed to exchange code for token:", errorText);
         return new Response(
           JSON.stringify({ error: "Failed to exchange code for token" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -84,27 +115,42 @@ serve(async (req) => {
       }
       
       const tokenData = await tokenResponse.json();
+      console.log("[DEBUG] Token exchange successful, expires in:", tokenData.expires_in);
       
-      // Get user ID from the request
-      const authHeader = req.headers.get("Authorization");
-      if (!authHeader) {
-        return new Response(
-          JSON.stringify({ error: "No authorization header" }),
-          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+      // Get tenant ID from Xero /connections endpoint
+      console.log("[DEBUG] Fetching tenant ID from Xero connections endpoint");
+      let tenantId = null;
       
-      const token = authHeader.replace("Bearer ", "");
-      const { data: { user }, error: userError } = await supabase.auth.getUser(token);
-      
-      if (userError || !user) {
-        return new Response(
-          JSON.stringify({ error: "Invalid user token" }),
-          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      try {
+        const connectionsResponse = await fetch("https://api.xero.com/connections", {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${tokenData.access_token}`,
+            "Content-Type": "application/json"
+          }
+        });
+        
+        if (connectionsResponse.ok) {
+          const connections = await connectionsResponse.json();
+          console.log("[DEBUG] Retrieved", connections.length, "Xero connections");
+          
+          if (connections && connections.length > 0) {
+            // Use the first tenant ID (most common case is single tenant)
+            tenantId = connections[0].tenantId;
+            console.log("[DEBUG] Using tenant ID:", tenantId);
+          } else {
+            console.warn("[WARN] No Xero connections found for this user");
+          }
+        } else {
+          const errorText = await connectionsResponse.text();
+          console.error("[ERROR] Failed to fetch connections:", errorText);
+        }
+      } catch (connectionError) {
+        console.error("[ERROR] Exception fetching tenant ID:", connectionError);
       }
       
       // Store the tokens in the database
+      console.log("[DEBUG] Storing integration data in database");
       const { error: storeError } = await supabase
         .from("accounting_integrations")
         .upsert({
@@ -113,19 +159,20 @@ serve(async (req) => {
           access_token: tokenData.access_token,
           refresh_token: tokenData.refresh_token,
           expires_at: new Date(Date.now() + tokenData.expires_in * 1000).toISOString(),
-          tenant_id: tokenData.tenantId || null,
+          tenant_id: tenantId,
           connected_at: new Date().toISOString(),
           status: "active"
         });
       
       if (storeError) {
-        console.error("Error storing token:", storeError);
+        console.error("[ERROR] Error storing token:", storeError);
         return new Response(
           JSON.stringify({ error: "Failed to store integration data" }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
       
+      console.log("[DEBUG] OAuth callback completed successfully");
       return new Response(
         JSON.stringify({ success: true }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
