@@ -1356,6 +1356,510 @@ serve(async (req) => {
       }
     }
     
+    // Sync customers to Xero contacts
+    if (path === "sync-customers") {
+      try {
+        const authHeader = req.headers.get("Authorization");
+        if (!authHeader) {
+          return new Response(
+            JSON.stringify({ error: "No authorization header" }),
+            { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const token = authHeader.replace("Bearer ", "");
+        const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+
+        if (userError || !user) {
+          return new Response(
+            JSON.stringify({ error: "Invalid user token" }),
+            { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const { customerIds } = await req.json();
+
+        if (!customerIds || !Array.isArray(customerIds) || customerIds.length === 0) {
+          return new Response(
+            JSON.stringify({ error: "customerIds array is required" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Get Xero integration
+        const { data: integration, error: integrationError } = await supabase
+          .from('accounting_integrations')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('provider', 'xero')
+          .single();
+
+        if (integrationError || !integration) {
+          return new Response(
+            JSON.stringify({ error: 'Not connected to Xero' }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Fetch customers
+        const { data: customers, error: customersError } = await supabase
+          .from('user_customers')
+          .select('id, name, email, phone, status, xero_contact_id')
+          .eq('user_id', user.id)
+          .in('id', customerIds);
+
+        if (customersError) {
+          console.error('Error fetching customers:', customersError);
+          return new Response(
+            JSON.stringify({ error: 'Failed to fetch customers' }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const results = [];
+
+        // Process each customer
+        for (const customer of customers) {
+          try {
+            const contactPayload = {
+              Name: customer.name,
+              EmailAddress: customer.email || undefined,
+              IsCustomer: true,
+              Phones: customer.phone ? [{
+                PhoneType: "DEFAULT",
+                PhoneNumber: customer.phone
+              }] : [],
+              ContactStatus: customer.status === 'active' ? 'ACTIVE' : 'ARCHIVED'
+            };
+
+            let url = 'https://api.xero.com/api.xro/2.0/Contacts';
+            
+            // If already synced, update existing contact
+            if (customer.xero_contact_id) {
+              url = `https://api.xero.com/api.xro/2.0/Contacts/${customer.xero_contact_id}`;
+            }
+
+            const xeroResponse = await callXeroAPI(
+              supabase,
+              user.id,
+              'xero',
+              integration,
+              url,
+              'POST',
+              contactPayload
+            );
+
+            const xeroContactId = xeroResponse.Contacts[0].ContactID;
+
+            // Update local record
+            await supabase
+              .from('user_customers')
+              .update({
+                xero_contact_id: xeroContactId,
+                xero_synced_at: new Date().toISOString()
+              })
+              .eq('id', customer.id);
+
+            // Log sync operation
+            await logSyncOperation(
+              supabase,
+              user.id,
+              'customer',
+              customer.id,
+              'create',
+              'success',
+              xeroContactId,
+              contactPayload,
+              xeroResponse
+            );
+
+            results.push({
+              customerId: customer.id,
+              success: true,
+              xeroContactId: xeroContactId
+            });
+
+          } catch (error) {
+            console.error(`Error syncing customer ${customer.id}:`, error);
+            
+            await logSyncOperation(
+              supabase,
+              user.id,
+              'customer',
+              customer.id,
+              'create',
+              'error',
+              null,
+              null,
+              null,
+              error.message
+            );
+
+            results.push({
+              customerId: customer.id,
+              success: false,
+              error: error.message
+            });
+          }
+        }
+
+        return new Response(
+          JSON.stringify({ results }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+
+      } catch (error) {
+        console.error('Error in sync-customers:', error);
+        return new Response(
+          JSON.stringify({ error: error.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // Sync suppliers to Xero contacts
+    if (path === "sync-suppliers") {
+      try {
+        const authHeader = req.headers.get("Authorization");
+        if (!authHeader) {
+          return new Response(
+            JSON.stringify({ error: "No authorization header" }),
+            { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const token = authHeader.replace("Bearer ", "");
+        const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+
+        if (userError || !user) {
+          return new Response(
+            JSON.stringify({ error: "Invalid user token" }),
+            { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const { supplierIds } = await req.json();
+
+        if (!supplierIds || !Array.isArray(supplierIds) || supplierIds.length === 0) {
+          return new Response(
+            JSON.stringify({ error: "supplierIds array is required" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Get Xero integration
+        const { data: integration, error: integrationError } = await supabase
+          .from('accounting_integrations')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('provider', 'xero')
+          .single();
+
+        if (integrationError || !integration) {
+          return new Response(
+            JSON.stringify({ error: 'Not connected to Xero' }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Fetch suppliers
+        const { data: suppliers, error: suppliersError } = await supabase
+          .from('user_inventory_suppliers')
+          .select('id, name, email, phone, address, contactperson, status, xero_contact_id')
+          .eq('user_id', user.id)
+          .in('id', supplierIds);
+
+        if (suppliersError) {
+          console.error('Error fetching suppliers:', suppliersError);
+          return new Response(
+            JSON.stringify({ error: 'Failed to fetch suppliers' }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const results = [];
+
+        // Process each supplier
+        for (const supplier of suppliers) {
+          try {
+            const contactPayload = {
+              Name: supplier.name,
+              EmailAddress: supplier.email || undefined,
+              IsSupplier: true,
+              ContactPersons: supplier.contactperson ? [{
+                FirstName: supplier.contactperson,
+                EmailAddress: supplier.email || undefined
+              }] : [],
+              Phones: supplier.phone ? [{
+                PhoneType: "DEFAULT",
+                PhoneNumber: supplier.phone
+              }] : [],
+              Addresses: supplier.address ? [{
+                AddressType: "STREET",
+                AddressLine1: supplier.address
+              }] : [],
+              ContactStatus: supplier.status === 'active' ? 'ACTIVE' : 'ARCHIVED'
+            };
+
+            let url = 'https://api.xero.com/api.xro/2.0/Contacts';
+            
+            // If already synced, update existing contact
+            if (supplier.xero_contact_id) {
+              url = `https://api.xero.com/api.xro/2.0/Contacts/${supplier.xero_contact_id}`;
+            }
+
+            const xeroResponse = await callXeroAPI(
+              supabase,
+              user.id,
+              'xero',
+              integration,
+              url,
+              'POST',
+              contactPayload
+            );
+
+            const xeroContactId = xeroResponse.Contacts[0].ContactID;
+
+            // Update local record
+            await supabase
+              .from('user_inventory_suppliers')
+              .update({
+                xero_contact_id: xeroContactId,
+                xero_synced_at: new Date().toISOString()
+              })
+              .eq('id', supplier.id);
+
+            // Log sync operation
+            await logSyncOperation(
+              supabase,
+              user.id,
+              'supplier',
+              supplier.id,
+              'create',
+              'success',
+              xeroContactId,
+              contactPayload,
+              xeroResponse
+            );
+
+            results.push({
+              supplierId: supplier.id,
+              success: true,
+              xeroContactId: xeroContactId
+            });
+
+          } catch (error) {
+            console.error(`Error syncing supplier ${supplier.id}:`, error);
+            
+            await logSyncOperation(
+              supabase,
+              user.id,
+              'supplier',
+              supplier.id,
+              'create',
+              'error',
+              null,
+              null,
+              null,
+              error.message
+            );
+
+            results.push({
+              supplierId: supplier.id,
+              success: false,
+              error: error.message
+            });
+          }
+        }
+
+        return new Response(
+          JSON.stringify({ results }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+
+      } catch (error) {
+        console.error('Error in sync-suppliers:', error);
+        return new Response(
+          JSON.stringify({ error: error.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // Sync inventory item to Xero
+    if (path === "sync-inventory-item") {
+      try {
+        const authHeader = req.headers.get("Authorization");
+        if (!authHeader) {
+          return new Response(
+            JSON.stringify({ error: "No authorization header" }),
+            { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const token = authHeader.replace("Bearer ", "");
+        const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+
+        if (userError || !user) {
+          return new Response(
+            JSON.stringify({ error: "Invalid user token" }),
+            { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const { itemId } = await req.json();
+
+        if (!itemId) {
+          return new Response(
+            JSON.stringify({ error: "itemId is required" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Get Xero integration
+        const { data: integration, error: integrationError } = await supabase
+          .from('accounting_integrations')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('provider', 'xero')
+          .single();
+
+        if (integrationError || !integration) {
+          return new Response(
+            JSON.stringify({ error: 'Not connected to Xero' }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Fetch account mapping
+        const mapping = await fetchAccountMapping(supabase, user.id);
+        
+        if (!mapping || !mapping.inventory_asset_account_code || 
+            !mapping.inventory_cogs_account_code || !mapping.inventory_sales_account_code) {
+          return new Response(
+            JSON.stringify({ 
+              error: 'Inventory account mapping not configured. Please configure asset, COGS, and sales account codes in settings.' 
+            }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Fetch inventory item
+        const { data: item, error: itemError } = await supabase
+          .from('user_inventory_items')
+          .select('id, code, name, description, price, retailprice, instock, category, brand, xero_item_id')
+          .eq('user_id', user.id)
+          .eq('id', itemId)
+          .single();
+
+        if (itemError || !item) {
+          console.error('Error fetching item:', itemError);
+          return new Response(
+            JSON.stringify({ error: 'Item not found' }),
+            { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Create Xero item payload
+        const itemPayload = {
+          Code: item.code || item.id.substring(0, 30),
+          Name: item.name,
+          Description: item.description || '',
+          IsTrackedAsInventory: true,
+          InventoryAssetAccountCode: mapping.inventory_asset_account_code,
+          PurchaseDetails: {
+            UnitPrice: item.price || 0,
+            AccountCode: mapping.inventory_cogs_account_code,
+            TaxType: mapping.bill_tax_code || 'NONE'
+          },
+          SalesDetails: {
+            UnitPrice: item.retailprice || item.price || 0,
+            AccountCode: mapping.inventory_sales_account_code,
+            TaxType: mapping.invoice_tax_code || 'NONE'
+          }
+        };
+
+        let url = 'https://api.xero.com/api.xro/2.0/Items';
+        
+        // If already synced, update existing item
+        if (item.xero_item_id) {
+          url = `https://api.xero.com/api.xro/2.0/Items/${item.xero_item_id}`;
+        }
+
+        const xeroResponse = await callXeroAPI(
+          supabase,
+          user.id,
+          'xero',
+          integration,
+          url,
+          'POST',
+          itemPayload
+        );
+
+        const xeroItemId = xeroResponse.Items[0].ItemID;
+
+        // Update local record
+        await supabase
+          .from('user_inventory_items')
+          .update({
+            xero_item_id: xeroItemId,
+            xero_synced_at: new Date().toISOString()
+          })
+          .eq('id', item.id);
+
+        // Log sync operation
+        await logSyncOperation(
+          supabase,
+          user.id,
+          'inventory',
+          item.id,
+          'create',
+          'success',
+          xeroItemId,
+          itemPayload,
+          xeroResponse
+        );
+
+        return new Response(
+          JSON.stringify({ 
+            success: true,
+            xeroItemId: xeroItemId
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+
+      } catch (error) {
+        console.error('Error in sync-inventory-item:', error);
+        
+        const { itemId } = await req.json().catch(() => ({}));
+        if (itemId) {
+          const token = req.headers.get("Authorization")?.replace("Bearer ", "");
+          if (token) {
+            const { data: { user } } = await supabase.auth.getUser(token);
+            if (user) {
+              await logSyncOperation(
+                supabase,
+                user.id,
+                'inventory',
+                itemId,
+                'create',
+                'error',
+                null,
+                null,
+                null,
+                error.message
+              );
+            }
+          }
+        }
+
+        return new Response(
+          JSON.stringify({ error: error.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+    
     // Default response for unsupported paths
     return new Response(
       JSON.stringify({ error: "Unsupported path" }),

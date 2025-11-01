@@ -1577,6 +1577,8 @@ export type Database = {
           status: string
           updated_at: string | null
           user_id: string
+          xero_contact_id: string | null
+          xero_synced_at: string | null
         }
         Insert: {
           created_at?: string | null
@@ -1588,6 +1590,8 @@ export type Database = {
           status?: string
           updated_at?: string | null
           user_id: string
+          xero_contact_id?: string | null
+          xero_synced_at?: string | null
         }
         Update: {
           created_at?: string | null
@@ -1599,6 +1603,8 @@ export type Database = {
           status?: string
           updated_at?: string | null
           user_id?: string
+          xero_contact_id?: string | null
+          xero_synced_at?: string | null
         }
         Relationships: []
       }
@@ -1695,6 +1701,8 @@ export type Database = {
           supplier_id: string | null
           updated_at: string | null
           user_id: string
+          xero_item_id: string | null
+          xero_synced_at: string | null
         }
         Insert: {
           brand?: string | null
@@ -1722,6 +1730,8 @@ export type Database = {
           supplier_id?: string | null
           updated_at?: string | null
           user_id: string
+          xero_item_id?: string | null
+          xero_synced_at?: string | null
         }
         Update: {
           brand?: string | null
@@ -1749,6 +1759,8 @@ export type Database = {
           supplier_id?: string | null
           updated_at?: string | null
           user_id?: string
+          xero_item_id?: string | null
+          xero_synced_at?: string | null
         }
         Relationships: [
           {
@@ -1861,6 +1873,8 @@ export type Database = {
           status: string
           updated_at: string
           user_id: string | null
+          xero_contact_id: string | null
+          xero_synced_at: string | null
         }
         Insert: {
           address?: string | null
@@ -1879,6 +1893,8 @@ export type Database = {
           status?: string
           updated_at?: string
           user_id?: string | null
+          xero_contact_id?: string | null
+          xero_synced_at?: string | null
         }
         Update: {
           address?: string | null
@@ -1897,6 +1913,8 @@ export type Database = {
           status?: string
           updated_at?: string
           user_id?: string | null
+          xero_contact_id?: string | null
+          xero_synced_at?: string | null
         }
         Relationships: []
       }
@@ -2235,6 +2253,9 @@ export type Database = {
           created_at: string | null
           credit_account_code: string | null
           id: string
+          inventory_asset_account_code: string | null
+          inventory_cogs_account_code: string | null
+          inventory_sales_account_code: string | null
           invoice_account_code: string | null
           invoice_tax_code: string | null
           invoice_tax_free_code: string | null
@@ -2254,6 +2275,9 @@ export type Database = {
           created_at?: string | null
           credit_account_code?: string | null
           id?: string
+          inventory_asset_account_code?: string | null
+          inventory_cogs_account_code?: string | null
+          inventory_sales_account_code?: string | null
           invoice_account_code?: string | null
           invoice_tax_code?: string | null
           invoice_tax_free_code?: string | null
@@ -2273,6 +2297,9 @@ export type Database = {
           created_at?: string | null
           credit_account_code?: string | null
           id?: string
+          inventory_asset_account_code?: string | null
+          inventory_cogs_account_code?: string | null
+          inventory_sales_account_code?: string | null
           invoice_account_code?: string | null
           invoice_tax_code?: string | null
           invoice_tax_free_code?: string | null
