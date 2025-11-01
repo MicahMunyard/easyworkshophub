@@ -35,6 +35,7 @@ const SyncInvoiceButton: React.FC<SyncInvoiceButtonProps> = ({
   };
 
   const isInvoiceSynced = Boolean(invoice[`${provider}InvoiceId`]);
+  const xeroSyncedAt = invoice.lastSyncedAt;
   
   // Get display name based on provider
   const getProviderDisplayName = () => {
@@ -44,6 +45,11 @@ const SyncInvoiceButton: React.FC<SyncInvoiceButtonProps> = ({
       return 'MYOB';
     }
     return provider;
+  };
+
+  const formatSyncTime = (timestamp: string | undefined) => {
+    if (!timestamp) return '';
+    return new Date(timestamp).toLocaleString();
   };
 
   return (
@@ -67,6 +73,11 @@ const SyncInvoiceButton: React.FC<SyncInvoiceButtonProps> = ({
               ? `Update in ${getProviderDisplayName()}` 
               : `Sync to ${getProviderDisplayName()}`}
           </span>
+          {isInvoiceSynced && xeroSyncedAt && (
+            <span className="text-xs text-muted-foreground ml-1">
+              (Last synced: {formatSyncTime(xeroSyncedAt)})
+            </span>
+          )}
         </>
       )}
     </Button>

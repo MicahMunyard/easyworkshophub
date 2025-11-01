@@ -54,7 +54,11 @@ const XeroOAuthCallback = () => {
   }, [user]);
 
   const handleClose = () => {
-    navigate("/invoicing");
+    if (status === 'success') {
+      navigate('/integrations/xero/chart-of-accounts');
+    } else {
+      navigate('/invoicing');
+    }
   };
 
   return (
@@ -89,7 +93,7 @@ const XeroOAuthCallback = () => {
           
           {status !== "loading" && (
             <Button onClick={handleClose} className="w-full">
-              {status === "success" ? "Continue to Invoicing" : "Try Again"}
+              {status === "success" ? "Continue to Account Setup" : "Try Again"}
             </Button>
           )}
           

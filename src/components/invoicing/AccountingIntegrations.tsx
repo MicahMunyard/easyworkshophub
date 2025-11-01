@@ -1,11 +1,13 @@
 
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Check, ExternalLink, LinkIcon, RefreshCw, X } from "lucide-react";
 import { useAccountingIntegrations } from "@/hooks/invoicing/useAccountingIntegrations";
 import { useXeroWebhook } from "@/hooks/invoicing/useXeroWebhook";
 import { useMyobWebhook } from "@/hooks/invoicing/useMyobWebhook";
+import { useXeroAccountMapping } from "@/hooks/xero/useXeroAccountMapping";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AccountingProvider } from "@/types/accounting";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 
 const AccountingIntegrations: React.FC = () => {
+  const navigate = useNavigate();
   const {
     integrations,
     isLoading,
@@ -26,6 +29,7 @@ const AccountingIntegrations: React.FC = () => {
 
   const { getWebhookUrl: getXeroWebhookUrl } = useXeroWebhook();
   const { getWebhookUrl: getMyobWebhookUrl } = useMyobWebhook();
+  const { mapping } = useXeroAccountMapping();
   const [xeroWebhookUrl, setXeroWebhookUrl] = useState<string>("");
   const [myobWebhookUrl, setMyobWebhookUrl] = useState<string>("");
   const [isLoadingXeroWebhook, setIsLoadingXeroWebhook] = useState<boolean>(false);
@@ -63,6 +67,7 @@ const AccountingIntegrations: React.FC = () => {
 
   const renderIntegrationStatus = (provider: AccountingProvider) => {
     const integration = integrations.find(i => i.provider === provider);
+    const isConfigured = provider === 'xero' ? mapping?.isConfigured : false;
     
     if (!integration) {
       return (
@@ -92,6 +97,26 @@ const AccountingIntegrations: React.FC = () => {
               <span className="text-xs text-muted-foreground">
                 Synced {formatDistanceToNow(new Date(integration.lastSyncAt), { addSuffix: true })}
               </span>
+            )}
+            {provider === 'xero' && !isConfigured && (
+              <Button 
+                variant="default" 
+                size="sm" 
+                onClick={() => navigate('/integrations/xero/chart-of-accounts')}
+                className="ml-2"
+              >
+                Configure Accounts
+              </Button>
+            )}
+            {provider === 'xero' && isConfigured && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => navigate('/integrations/xero/chart-of-accounts')}
+                className="ml-2"
+              >
+                Update Accounts
+              </Button>
             )}
             <Button 
               variant="outline" 

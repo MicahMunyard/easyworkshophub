@@ -37,6 +37,8 @@ import OnboardingRoute from './components/OnboardingRoute';
 import Onboarding from './pages/Onboarding';
 import PendingApproval from './pages/PendingApproval';
 import AccountApprovals from './pages/admin/AccountApprovals';
+import XeroOAuthCallback from './pages/integrations/xero/oauth';
+import ChartOfAccounts from './pages/integrations/xero/ChartOfAccounts';
 
 const App = () => {
   const { user } = useAuth();
@@ -92,6 +94,13 @@ const App = () => {
           
           {/* Email OAuth callback route */}
           <Route path="/email/callback" element={<EmailCallback />} />
+        </Route>
+        
+        {/* Integration Routes (outside main layout) */}
+        <Route path="/integrations/xero/oauth" element={<ProtectedRoute><XeroOAuthCallback /></ProtectedRoute>} />
+        <Route path="/integrations/xero/chart-of-accounts" element={<ProtectedRoute><OnboardingRoute><ChartOfAccounts /></OnboardingRoute></ProtectedRoute>} />
+        
+        <Route element={<OnboardingRoute><Layout><Outlet /></Layout></OnboardingRoute>}>
           
           {/* Redirect any unmatched routes to dashboard */}
           <Route path="*" element={<Navigate to="/" replace />} />
