@@ -8,7 +8,7 @@ const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") as string;
 const XERO_CLIENT_ID = Deno.env.get("XERO_CLIENT_ID") as string;
 const XERO_CLIENT_SECRET = Deno.env.get("XERO_CLIENT_SECRET") as string;
 const XERO_WEBHOOK_KEY = Deno.env.get("XERO_WEBHOOK_KEY") as string;
-const REDIRECT_URI = "https://app.workshopbase.com/integrations/xero/oauth";
+const REDIRECT_URI = "https://app.workshopbase.com.au/integrations/xero/oauth";
 
 serve(async (req) => {
   // Handle CORS for preflight requests
