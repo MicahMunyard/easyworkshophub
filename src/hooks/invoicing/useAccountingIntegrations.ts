@@ -203,6 +203,50 @@ export const useAccountingIntegrations = () => {
     return integrations.some(i => i.provider === provider && i.status === "active");
   };
 
+  const syncInvoicePayment = async (
+    invoiceId: string,
+    paymentAmount: number,
+    paymentDate: string,
+    paymentAccountCode: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    if (!user || !hasActiveIntegration('xero')) {
+      return { success: false, error: 'No active Xero integration' };
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        'xero-integration/sync-invoice-payment',
+        {
+          body: {
+            invoiceId,
+            paymentAmount,
+            paymentDate,
+            paymentAccountCode
+          }
+        }
+      );
+
+      if (error || !data?.success) {
+        throw new Error(error?.message || data?.error || 'Failed to sync payment to Xero');
+      }
+
+      toast({
+        title: 'Payment Synced',
+        description: 'Payment synced to Xero successfully',
+      });
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error syncing payment to Xero:', error);
+      toast({
+        title: 'Payment Sync Failed',
+        description: error instanceof Error ? error.message : 'Error syncing payment to Xero',
+        variant: 'destructive',
+      });
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  };
+
   return {
     integrations,
     isLoading,
@@ -211,6 +255,7 @@ export const useAccountingIntegrations = () => {
     connectMyob,
     disconnectIntegration,
     syncInvoice,
+    syncInvoicePayment,
     refreshIntegrations,
     hasActiveIntegration
   };

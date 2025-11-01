@@ -333,33 +333,29 @@ serve(async (req) => {
       }
       
       try {
-        const hmac = await crypto.subtle.importKey(
+        // Use Deno's built-in crypto API for HMAC-SHA256
+        const encoder = new TextEncoder();
+        const keyData = encoder.encode(XERO_WEBHOOK_KEY);
+        const messageData = encoder.encode(rawBody);
+        
+        const cryptoKey = await crypto.subtle.importKey(
           "raw",
-          new TextEncoder().encode(XERO_WEBHOOK_KEY),
+          keyData,
           { name: "HMAC", hash: "SHA-256" },
           false,
-          ["sign", "verify"]
+          ["sign"]
         );
         
-        const signature = Array.from(
-          new Uint8Array(
-            await crypto.subtle.sign(
-              "HMAC",
-              hmac,
-              new TextEncoder().encode(rawBody)
-            )
-          )
-        )
-          .map((b) => b.toString(16).padStart(2, "0"))
-          .join("");
+        const signature = await crypto.subtle.sign("HMAC", cryptoKey, messageData);
+        const calculatedSignature = btoa(String.fromCharCode(...new Uint8Array(signature)));
 
-        console.log("Calculated signature:", signature.toLowerCase());
-        console.log("Received signature:", xeroSignature.toLowerCase());
+        console.log("Calculated signature:", calculatedSignature);
+        console.log("Received signature:", xeroSignature);
 
-        if (signature.toLowerCase() !== xeroSignature.toLowerCase()) {
+        if (calculatedSignature !== xeroSignature) {
           console.error("Webhook signature validation failed");
           return new Response(
-            JSON.stringify({ error: "Invalid webhook signature", calculated: signature.toLowerCase(), received: xeroSignature.toLowerCase() }),
+            JSON.stringify({ error: "Invalid webhook signature" }),
             { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         } else {

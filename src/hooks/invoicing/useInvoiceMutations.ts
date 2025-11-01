@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { InvoiceStatus } from '@/types/invoice';
 import { CreateInvoiceParams, UpdateInvoiceStatusParams } from './types';
 import { insertInvoice, insertInvoiceItems, updateInvoiceStatusInDB } from './api/invoiceApi';
+import { supabase } from '@/integrations/supabase/client';
 
 export const useInvoiceMutations = (
   onSuccess?: () => void,
@@ -36,7 +37,7 @@ export const useInvoiceMutations = (
           quantity: item.quantity,
           unit_price: item.unitPrice,
           tax_rate: item.taxRate || 0,
-          total: item.total
+          total: Number((item.quantity * item.unitPrice).toFixed(2))
         }));
 
         const { error: itemsError } = await insertInvoiceItems(invoiceItems);
@@ -76,6 +77,16 @@ export const useInvoiceMutations = (
     }
     
     try {
+      // First, fetch the invoice to check if it's synced to Xero
+      const { data: invoiceData, error: fetchError } = await supabase
+        .from('user_invoices')
+        .select('id, total, xero_invoice_id')
+        .eq('id', invoiceId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
       const { error } = await updateInvoiceStatusInDB(invoiceId, user.id, status);
 
       if (error) throw error;
@@ -98,6 +109,41 @@ export const useInvoiceMutations = (
           status,
           updatedAt: new Date().toISOString()
         });
+      }
+
+      // If marking as paid AND invoice is synced to Xero, sync the payment
+      if (status === 'paid' && invoiceData?.xero_invoice_id) {
+        try {
+          const { data: accountingData, error: accountingError } = await supabase
+            .from('accounting_integrations')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('provider', 'xero')
+            .eq('status', 'active')
+            .single();
+
+          if (!accountingError && accountingData) {
+            const { data: accountMappingData } = await supabase
+              .from('xero_account_mappings')
+              .select('cash_payment_account_code')
+              .eq('user_id', user.id)
+              .single();
+
+            const paymentAccountCode = accountMappingData?.cash_payment_account_code || '090';
+
+            await supabase.functions.invoke('xero-integration/sync-invoice-payment', {
+              body: {
+                invoiceId: invoiceData.id,
+                paymentAmount: invoiceData.total,
+                paymentDate: new Date().toISOString().split('T')[0],
+                paymentAccountCode
+              }
+            });
+          }
+        } catch (syncError) {
+          console.warn('Failed to sync payment to Xero:', syncError);
+          // Don't fail the whole operation, payment sync is non-critical
+        }
       }
       
       toast({
