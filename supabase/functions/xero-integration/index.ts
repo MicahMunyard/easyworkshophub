@@ -194,8 +194,12 @@ serve(async (req) => {
         );
       }
       
-      const token = authHeader.replace("Bearer ", "");
-      const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+      // Create authenticated Supabase client for user-scoped operations
+      const supabaseUser = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        global: { headers: { Authorization: authHeader } }
+      });
+      
+      const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
       
       if (userError || !user) {
         console.error("[ERROR] Invalid user token:", userError);
@@ -266,9 +270,9 @@ serve(async (req) => {
         console.error("[ERROR] Exception fetching tenant ID:", connectionError);
       }
       
-      // Store the tokens in the database
+      // Store the tokens in the database using authenticated client
       console.log("[DEBUG] Storing integration data in database");
-      const { error: storeError } = await supabase
+      const { error: storeError } = await supabaseUser
         .from("accounting_integrations")
         .upsert({
           user_id: user.id,
