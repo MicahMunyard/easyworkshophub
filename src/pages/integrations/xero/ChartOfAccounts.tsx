@@ -55,7 +55,7 @@ const ChartOfAccounts: React.FC = () => {
   };
 
   const revenueAccounts = accounts.filter(a => a.type === 'REVENUE');
-  const bankAccounts = accounts.filter(a => a.type === 'BANK');
+  const bankAccounts = accounts.filter(a => a.type === 'BANK' || a.type === 'CURRENT');
   const currentAccounts = accounts.filter(a => a.type === 'CURRENT');
   const expenseAccounts = accounts.filter(a => a.type === 'EXPENSE' || a.type === 'DIRECTCOSTS');
 

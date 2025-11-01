@@ -658,9 +658,11 @@ serve(async (req) => {
           );
         }
 
-        const mapping = await req.json();
+        const requestBody = await req.json();
+        const mapping = requestBody.mapping || requestBody; // Support both wrapped and unwrapped
         
-        console.log('Received mapping data:', JSON.stringify(mapping, null, 2));
+        console.log('Received mapping data:', JSON.stringify(requestBody, null, 2));
+        console.log('Extracted mapping:', JSON.stringify(mapping, null, 2));
 
         // Transform camelCase to snake_case for database
         const dbMapping = {
