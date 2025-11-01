@@ -683,29 +683,32 @@ serve(async (req) => {
           );
         }
 
-        const { data, error } = await supabase
-          .from('xero_account_mappings')
-          .upsert({
-            user_id: user.id,
-            invoice_account_code: mapping.invoice_account_code,
-            cash_payment_account_code: mapping.cash_payment_account_code,
-            bank_payment_account_code: mapping.bank_payment_account_code,
-            credit_account_code: mapping.credit_account_code,
-            bill_account_code: mapping.bill_account_code,
-            bill_cash_payment_account_code: mapping.bill_cash_payment_account_code,
-            bill_bank_payment_account_code: mapping.bill_bank_payment_account_code,
-            supplier_credit_account_code: mapping.supplier_credit_account_code,
-            invoice_tax_code: mapping.invoice_tax_code,
-            invoice_tax_free_code: mapping.invoice_tax_free_code,
-            bill_tax_code: mapping.bill_tax_code,
-            bill_tax_free_code: mapping.bill_tax_free_code,
-            is_configured: true,
-            updated_at: new Date().toISOString()
-          }, {
-            onConflict: 'user_id'
-          })
-          .select()
-          .maybeSingle();
+      const { data, error } = await supabase
+        .from('xero_account_mappings')
+        .upsert({
+          user_id: user.id,
+          invoice_account_code: mapping.invoice_account_code,
+          cash_payment_account_code: mapping.cash_payment_account_code,
+          bank_payment_account_code: mapping.bank_payment_account_code,
+          credit_account_code: mapping.credit_account_code,
+          bill_account_code: mapping.bill_account_code,
+          bill_cash_payment_account_code: mapping.bill_cash_payment_account_code,
+          bill_bank_payment_account_code: mapping.bill_bank_payment_account_code,
+          supplier_credit_account_code: mapping.supplier_credit_account_code,
+          invoice_tax_code: mapping.invoice_tax_code,
+          invoice_tax_free_code: mapping.invoice_tax_free_code,
+          bill_tax_code: mapping.bill_tax_code,
+          bill_tax_free_code: mapping.bill_tax_free_code,
+          inventory_asset_account_code: mapping.inventory_asset_account_code,
+          inventory_cogs_account_code: mapping.inventory_cogs_account_code,
+          inventory_sales_account_code: mapping.inventory_sales_account_code,
+          is_configured: true,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id'
+        })
+        .select()
+        .maybeSingle();
 
         if (error) {
           console.error('Error saving account mapping:', error);
