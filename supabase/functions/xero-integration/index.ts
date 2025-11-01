@@ -659,8 +659,35 @@ serve(async (req) => {
         }
 
         const mapping = await req.json();
+        
+        console.log('Received mapping data:', JSON.stringify(mapping, null, 2));
 
-        if (!mapping.invoice_account_code || !mapping.invoice_tax_code) {
+        // Transform camelCase to snake_case for database
+        const dbMapping = {
+          user_id: user.id,
+          invoice_account_code: mapping.invoiceAccountCode || mapping.invoice_account_code,
+          cash_payment_account_code: mapping.cashPaymentAccountCode || mapping.cash_payment_account_code,
+          bank_payment_account_code: mapping.bankPaymentAccountCode || mapping.bank_payment_account_code,
+          credit_account_code: mapping.creditAccountCode || mapping.credit_account_code,
+          bill_account_code: mapping.billAccountCode || mapping.bill_account_code,
+          bill_cash_payment_account_code: mapping.billCashPaymentAccountCode || mapping.bill_cash_payment_account_code,
+          bill_bank_payment_account_code: mapping.billBankPaymentAccountCode || mapping.bill_bank_payment_account_code,
+          supplier_credit_account_code: mapping.supplierCreditAccountCode || mapping.supplier_credit_account_code,
+          invoice_tax_code: mapping.invoiceTaxCode || mapping.invoice_tax_code,
+          invoice_tax_free_code: mapping.invoiceTaxFreeCode || mapping.invoice_tax_free_code,
+          bill_tax_code: mapping.billTaxCode || mapping.bill_tax_code,
+          bill_tax_free_code: mapping.billTaxFreeCode || mapping.bill_tax_free_code,
+          inventory_asset_account_code: mapping.inventoryAssetAccountCode || mapping.inventory_asset_account_code,
+          inventory_cogs_account_code: mapping.inventoryCOGSAccountCode || mapping.inventory_cogs_account_code,
+          inventory_sales_account_code: mapping.inventorySalesAccountCode || mapping.inventory_sales_account_code,
+          is_configured: mapping.isConfigured !== undefined ? mapping.isConfigured : true,
+          updated_at: new Date().toISOString()
+        };
+
+        console.log('Transformed to dbMapping:', JSON.stringify(dbMapping, null, 2));
+
+        // Validate required fields using the transformed names
+        if (!dbMapping.invoice_account_code || !dbMapping.invoice_tax_code) {
           return new Response(
             JSON.stringify({ error: 'Missing required account mappings' }),
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -669,26 +696,7 @@ serve(async (req) => {
 
       const { data, error } = await supabaseUser
         .from('xero_account_mappings')
-        .upsert({
-          user_id: user.id,
-          invoice_account_code: mapping.invoice_account_code,
-          cash_payment_account_code: mapping.cash_payment_account_code,
-          bank_payment_account_code: mapping.bank_payment_account_code,
-          credit_account_code: mapping.credit_account_code,
-          bill_account_code: mapping.bill_account_code,
-          bill_cash_payment_account_code: mapping.bill_cash_payment_account_code,
-          bill_bank_payment_account_code: mapping.bill_bank_payment_account_code,
-          supplier_credit_account_code: mapping.supplier_credit_account_code,
-          invoice_tax_code: mapping.invoice_tax_code,
-          invoice_tax_free_code: mapping.invoice_tax_free_code,
-          bill_tax_code: mapping.bill_tax_code,
-          bill_tax_free_code: mapping.bill_tax_free_code,
-          inventory_asset_account_code: mapping.inventory_asset_account_code,
-          inventory_cogs_account_code: mapping.inventory_cogs_account_code,
-          inventory_sales_account_code: mapping.inventory_sales_account_code,
-          is_configured: true,
-          updated_at: new Date().toISOString()
-        }, {
+        .upsert(dbMapping, {
           onConflict: 'user_id'
         })
         .select()
