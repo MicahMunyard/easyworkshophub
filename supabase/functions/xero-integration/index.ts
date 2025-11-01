@@ -373,25 +373,24 @@ serve(async (req) => {
         
         // Process the webhook event
         try {
-          // Handle invoice payment status updates
+          // Handle various webhook events
           if (webhookData.events && webhookData.events.length > 0) {
             for (const event of webhookData.events) {
               console.log(`Processing event: ${event.eventType} for resource: ${event.resourceId}`);
               
               if (event.eventType === "INVOICE.UPDATED" || 
                   event.eventType === "PAYMENT.CREATED") {
-                // Get the resource details
                 const resourceId = event.resourceId;
                 
-                // Find the corresponding internal invoice
-                const { data: invoice, error: findError } = await supabase
+                // Try to find matching invoice
+                const { data: invoice, error: findInvoiceError } = await supabase
                   .from("user_invoices")
                   .select("*")
                   .eq("xero_invoice_id", resourceId)
-                  .single();
+                  .maybeSingle();
                 
-                if (findError) {
-                  console.error("Error finding invoice:", findError);
+                if (findInvoiceError) {
+                  console.error("Error finding invoice:", findInvoiceError);
                 } else if (invoice) {
                   console.log(`Found matching invoice: ${invoice.id}`);
                   
@@ -400,7 +399,6 @@ serve(async (req) => {
                       event.eventData && 
                       event.eventData.status === "PAID") {
                     
-                    // Update the invoice status to paid
                     const { error: updateError } = await supabase
                       .from("user_invoices")
                       .update({ 
@@ -417,8 +415,45 @@ serve(async (req) => {
                     }
                   }
                 } else {
-                  console.log(`No matching invoice found for Xero invoice ID: ${resourceId}`);
+                  // Check if it's a bill payment instead
+                  const { data: bill, error: findBillError } = await supabase
+                    .from("user_bills")
+                    .select("*")
+                    .eq("xero_bill_id", resourceId)
+                    .maybeSingle();
+                  
+                  if (findBillError) {
+                    console.error("Error finding bill:", findBillError);
+                  } else if (bill) {
+                    console.log(`Found matching bill: ${bill.id}`);
+                    
+                    // If this is a payment event for a bill
+                    if (event.eventType === "PAYMENT.CREATED") {
+                      const { error: updateError } = await supabase
+                        .from("user_bills")
+                        .update({ 
+                          status: "paid", 
+                          updated_at: new Date().toISOString(),
+                          xero_synced_at: new Date().toISOString()
+                        })
+                        .eq("id", bill.id);
+                      
+                      if (updateError) {
+                        console.error("Failed to update bill status:", updateError);
+                      } else {
+                        console.log(`Bill ${bill.id} marked as paid based on Xero webhook`);
+                      }
+                    }
+                  } else {
+                    console.log(`No matching invoice or bill found for Xero resource ID: ${resourceId}`);
+                  }
                 }
+              } else if (event.eventType === "CONTACT.UPDATED" || event.eventType === "CONTACT.CREATED") {
+                // Placeholder for future customer sync
+                console.log(`Contact event received: ${event.eventType} - will be handled in Phase 4`);
+              } else if (event.eventType === "ITEM.UPDATED" || event.eventType === "ITEM.CREATED") {
+                // Placeholder for future inventory sync
+                console.log(`Item event received: ${event.eventType} - will be handled in Phase 4`);
               }
             }
           }
@@ -996,6 +1031,177 @@ serve(async (req) => {
       }
     }
 
+    // ===== SYNC INVOICE PAYMENT ENDPOINT =====
+    if (path === "sync-invoice-payment") {
+      try {
+        const { invoiceId, paymentAmount, paymentDate, paymentAccountCode } = await req.json();
+
+        if (!invoiceId || !paymentAmount) {
+          return new Response(
+            JSON.stringify({ success: false, error: 'Invoice ID and payment amount are required' }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Get user from auth
+        const authHeader = req.headers.get('Authorization');
+        if (!authHeader) {
+          return new Response(
+            JSON.stringify({ success: false, error: 'Missing authorization header' }),
+            { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const token = authHeader.replace('Bearer ', '');
+        const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+
+        if (userError || !user) {
+          return new Response(
+            JSON.stringify({ success: false, error: 'Invalid or expired token' }),
+            { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Fetch the invoice
+        const { data: invoice, error: invoiceError } = await supabase
+          .from('user_invoices')
+          .select('*')
+          .eq('id', invoiceId)
+          .eq('user_id', user.id)
+          .single();
+
+        if (invoiceError || !invoice) {
+          return new Response(
+            JSON.stringify({ success: false, error: 'Invoice not found' }),
+            { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Check if invoice has been synced to Xero
+        if (!invoice.xero_invoice_id) {
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: 'Invoice must be synced to Xero before recording payments' 
+            }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const provider = 'xero';
+
+        // Get Xero integration details
+        const { data: integration, error: integrationError } = await supabase
+          .from('accounting_integrations')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('provider', provider)
+          .single();
+
+        if (integrationError || !integration || integration.status !== 'active') {
+          return new Response(
+            JSON.stringify({ success: false, error: 'Xero integration not found or inactive' }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Fetch account mapping
+        const mapping = await fetchAccountMapping(supabase, user.id);
+        if (!mapping || !mapping.is_configured) {
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: 'Xero account mapping not configured. Please configure account mappings in settings.' 
+            }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Use provided account code or default from mapping
+        const accountCode = paymentAccountCode || mapping.bank_payment_account_code;
+        if (!accountCode) {
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: 'Payment account code not specified and no default configured in mapping' 
+            }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Create Xero payment object
+        const xeroPayment = {
+          Invoice: {
+            InvoiceID: invoice.xero_invoice_id
+          },
+          Account: {
+            Code: accountCode
+          },
+          Date: paymentDate || new Date().toISOString().split('T')[0],
+          Amount: paymentAmount
+        };
+
+        // Call Xero API to create payment
+        const xeroUrl = 'https://api.xero.com/api.xro/2.0/Payments';
+        const xeroData = await callXeroAPI(
+          supabase,
+          user.id,
+          provider,
+          integration,
+          xeroUrl,
+          'POST',
+          { Payments: [xeroPayment] }
+        );
+
+        if (!xeroData || !xeroData.Payments || xeroData.Payments.length === 0) {
+          return new Response(
+            JSON.stringify({ success: false, error: 'Failed to create payment in Xero' }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const externalPaymentId = xeroData.Payments[0].PaymentID;
+
+        // Update local invoice status to paid
+        const { error: updateError } = await supabase
+          .from('user_invoices')
+          .update({
+            status: 'paid',
+            last_synced_at: new Date().toISOString()
+          })
+          .eq('id', invoice.id)
+          .eq('user_id', user.id);
+
+        if (updateError) {
+          console.error('Failed to update invoice status:', updateError);
+        }
+
+        // Log the sync operation
+        await logSyncOperation(
+          supabase,
+          user.id,
+          'payment',
+          invoice.id,
+          'create',
+          'success',
+          externalPaymentId,
+          { payment: xeroPayment },
+          xeroData
+        );
+
+        return new Response(
+          JSON.stringify({ success: true, externalId: externalPaymentId }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      } catch (error) {
+        console.error('Error in sync-invoice-payment:', error);
+        return new Response(
+          JSON.stringify({ success: false, error: error.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     // Sync invoice to Xero
     if (path === "sync-invoice") {
       try {
@@ -1050,6 +1256,18 @@ serve(async (req) => {
         const xeroAccessToken = integration.access_token;
         const xeroTenantId = integration.tenant_id;
   
+        // Fetch account mapping to use configured account and tax codes
+        const mapping = await fetchAccountMapping(supabase, user.id);
+        if (!mapping || !mapping.is_configured) {
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: 'Xero account mapping not configured. Please configure account mappings in settings.' 
+            }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
         // Map WorkshopBase invoice to Xero invoice format
         const xeroInvoice = {
           Type: 'ACCREC', // Sales invoice
@@ -1062,81 +1280,38 @@ serve(async (req) => {
             Description: item.description,
             Quantity: item.quantity,
             UnitAmount: item.unitPrice,
-            AccountCode: '200', // Replace with your sales account code
-          }),
-          ),
+            AccountCode: mapping.invoice_account_code,
+            TaxType: item.taxRate && item.taxRate > 0 
+              ? mapping.invoice_tax_code 
+              : mapping.invoice_tax_free_code
+          })),
           Reference: invoice.invoiceNumber,
-          SubTotal: invoice.subtotal,
-          TotalTax: invoice.taxTotal,
-          Total: invoice.total,
-          Status: 'AUTHORISED' // or DRAFT
+          Status: 'AUTHORISED'
         };
   
-        // Call the Xero API to create or update the invoice
+        // Call the Xero API to create or update the invoice using helper
         const isUpdate = Boolean(invoice.xeroInvoiceId);
-        const xeroResponse = await fetch(
-          isUpdate 
-            ? `https://api.xero.com/api.xro/2.0/Invoices/${invoice.xeroInvoiceId}`
-            : 'https://api.xero.com/api.xro/2.0/Invoices',
-          {
-            method: isUpdate ? 'POST' : 'POST',
-            headers: {
-              'Authorization': `Bearer ${xeroAccessToken}`,
-              'Xero-Tenant-Id': xeroTenantId,
-              'Content-Type': 'application/json',
-              'Accept': 'application/json'
-            },
-            body: JSON.stringify({ Invoices: [xeroInvoice] })
-          }
+        const xeroUrl = isUpdate 
+          ? `https://api.xero.com/api.xro/2.0/Invoices/${invoice.xeroInvoiceId}`
+          : 'https://api.xero.com/api.xro/2.0/Invoices';
+        
+        const xeroData = await callXeroAPI(
+          supabase,
+          user.id,
+          provider,
+          integration,
+          xeroUrl,
+          'POST',
+          { Invoices: [xeroInvoice] }
         );
-  
-        if (!xeroResponse.ok) {
-          const errorText = await xeroResponse.text();
-          console.error('Error syncing invoice to Xero:', errorText);
-          
-          // Check if token expired (401)
-          if (xeroResponse.status === 401) {
-            // Attempt token refresh
-            const refreshResponse = await fetch("https://identity.xero.com/connect/token", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
-                Authorization: `Basic ${btoa(`${XERO_CLIENT_ID}:${XERO_CLIENT_SECRET}`)}`
-              },
-              body: new URLSearchParams({
-                grant_type: "refresh_token",
-                refresh_token: integration.refresh_token
-              })
-            });
 
-            if (refreshResponse.ok) {
-              const newTokenData = await refreshResponse.json();
-              
-              // Update tokens in database
-              await supabase
-                .from("accounting_integrations")
-                .update({
-                  access_token: newTokenData.access_token,
-                  refresh_token: newTokenData.refresh_token,
-                  expires_at: new Date(Date.now() + newTokenData.expires_in * 1000).toISOString()
-                })
-                .eq('user_id', user.id)
-                .eq('provider', provider);
-
-              return new Response(
-                JSON.stringify({ success: false, error: 'Token expired. Please try again.' }),
-                { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-              );
-            }
-          }
-          
+        if (!xeroData || !xeroData.Invoices || xeroData.Invoices.length === 0) {
           return new Response(
-            JSON.stringify({ success: false, error: `Failed to sync invoice to Xero: ${errorText}` }),
+            JSON.stringify({ success: false, error: 'Failed to sync invoice to Xero' }),
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
   
-        const xeroData = await xeroResponse.json();
         const externalId = xeroData.Invoices[0].InvoiceID;
   
         // Update the local invoice record with the Xero invoice ID
@@ -1153,6 +1328,19 @@ serve(async (req) => {
           console.error('Failed to update invoice with Xero ID:', updateError);
           // Still return success since the invoice was created in Xero
         }
+
+        // Log the sync operation
+        await logSyncOperation(
+          supabase,
+          user.id,
+          'invoice',
+          invoice.id,
+          isUpdate ? 'update' : 'create',
+          'success',
+          externalId,
+          { invoice: xeroInvoice },
+          xeroData
+        );
 
         return new Response(
           JSON.stringify({ success: true, externalId }),
