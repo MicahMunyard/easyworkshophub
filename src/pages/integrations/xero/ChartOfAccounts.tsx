@@ -10,8 +10,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useXeroAccountMapping } from '@/hooks/xero/useXeroAccountMapping';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Info } from 'lucide-react';
 import { XeroAccountMapping } from '@/types/xero';
 
 const ChartOfAccounts: React.FC = () => {
@@ -58,6 +59,27 @@ const ChartOfAccounts: React.FC = () => {
   const bankAccounts = accounts.filter(a => a.type === 'BANK' || a.type === 'CURRENT');
   const currentAccounts = accounts.filter(a => a.type === 'CURRENT');
   const expenseAccounts = accounts.filter(a => a.type === 'EXPENSE' || a.type === 'DIRECTCOSTS');
+
+  // Filter tax rates by type to prevent incorrect selections
+  const outputTaxRates = taxRates.filter(tax => 
+    tax.taxType?.startsWith('OUTPUT') || 
+    tax.name?.toLowerCase().includes('sales') ||
+    tax.name?.toLowerCase().includes('income')
+  );
+
+  const inputTaxRates = taxRates.filter(tax => 
+    tax.taxType?.startsWith('INPUT') || 
+    tax.name?.toLowerCase().includes('purchase') ||
+    tax.name?.toLowerCase().includes('expense')
+  );
+
+  const taxFreeTaxRates = taxRates.filter(tax => 
+    tax.taxType?.includes('NONE') || 
+    tax.taxType?.includes('EXEMPTEXPENSES') ||
+    tax.taxType?.includes('EXEMPTOUTPUT') ||
+    tax.name?.toLowerCase().includes('free') ||
+    tax.name?.toLowerCase().includes('exempt')
+  );
 
   if (isLoading || isFetchingAccounts) {
     return (
@@ -247,28 +269,51 @@ const ChartOfAccounts: React.FC = () => {
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Tax Codes</h3>
             
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Invoice Tax Codes:</strong> Use OUTPUT tax types for sales to customers (e.g., "GST on Income", "OUTPUT").
+                <br />
+                <strong>Bill Tax Codes:</strong> Use INPUT tax types for purchases from suppliers (e.g., "GST on Expenses", "INPUT").
+              </AlertDescription>
+            </Alert>
+            
             <div className="grid gap-4">
               <div className="space-y-2">
-                <Label htmlFor="invoiceTaxCode">Invoice GST</Label>
+                <div>
+                  <Label htmlFor="invoiceTaxCode">Invoice GST</Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    For sales invoices - use OUTPUT tax types only
+                  </p>
+                </div>
                 <Select
                   value={formData.invoiceTaxCode}
                   onValueChange={(value) => setFormData({ ...formData, invoiceTaxCode: value })}
                 >
                   <SelectTrigger id="invoiceTaxCode">
-                    <SelectValue placeholder="Select tax code" />
+                    <SelectValue placeholder="Select OUTPUT tax code" />
                   </SelectTrigger>
                   <SelectContent>
-                    {taxRates.map((tax) => (
-                      <SelectItem key={tax.taxType} value={tax.taxType}>
-                        {tax.name} ({tax.displayTaxRate}%)
-                      </SelectItem>
-                    ))}
+                    {outputTaxRates.length > 0 ? (
+                      outputTaxRates.map((tax) => (
+                        <SelectItem key={tax.taxType} value={tax.taxType}>
+                          {tax.name} ({tax.displayTaxRate}%)
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="" disabled>No OUTPUT tax rates available</SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="invoiceTaxFreeCode">Invoice GST Free</Label>
+                <div>
+                  <Label htmlFor="invoiceTaxFreeCode">Invoice GST Free</Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    For tax-exempt sales (e.g., exports, exempt supplies)
+                  </p>
+                </div>
                 <Select
                   value={formData.invoiceTaxFreeCode}
                   onValueChange={(value) => setFormData({ ...formData, invoiceTaxFreeCode: value })}
@@ -277,7 +322,7 @@ const ChartOfAccounts: React.FC = () => {
                     <SelectValue placeholder="Select tax-free code" />
                   </SelectTrigger>
                   <SelectContent>
-                    {taxRates.map((tax) => (
+                    {taxFreeTaxRates.map((tax) => (
                       <SelectItem key={tax.taxType} value={tax.taxType}>
                         {tax.name}
                       </SelectItem>
@@ -287,26 +332,40 @@ const ChartOfAccounts: React.FC = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="billTaxCode">Bill GST</Label>
+                <div>
+                  <Label htmlFor="billTaxCode">Bill GST</Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    For purchase bills - use INPUT tax types only
+                  </p>
+                </div>
                 <Select
                   value={formData.billTaxCode}
                   onValueChange={(value) => setFormData({ ...formData, billTaxCode: value })}
                 >
                   <SelectTrigger id="billTaxCode">
-                    <SelectValue placeholder="Select tax code" />
+                    <SelectValue placeholder="Select INPUT tax code" />
                   </SelectTrigger>
                   <SelectContent>
-                    {taxRates.map((tax) => (
-                      <SelectItem key={tax.taxType} value={tax.taxType}>
-                        {tax.name} ({tax.displayTaxRate}%)
-                      </SelectItem>
-                    ))}
+                    {inputTaxRates.length > 0 ? (
+                      inputTaxRates.map((tax) => (
+                        <SelectItem key={tax.taxType} value={tax.taxType}>
+                          {tax.name} ({tax.displayTaxRate}%)
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="" disabled>No INPUT tax rates available</SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="billTaxFreeCode">Bill GST Free</Label>
+                <div>
+                  <Label htmlFor="billTaxFreeCode">Bill GST Free</Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    For tax-exempt purchases (e.g., exempt expenses)
+                  </p>
+                </div>
                 <Select
                   value={formData.billTaxFreeCode}
                   onValueChange={(value) => setFormData({ ...formData, billTaxFreeCode: value })}
@@ -315,7 +374,7 @@ const ChartOfAccounts: React.FC = () => {
                     <SelectValue placeholder="Select tax-free code" />
                   </SelectTrigger>
                   <SelectContent>
-                    {taxRates.map((tax) => (
+                    {taxFreeTaxRates.map((tax) => (
                       <SelectItem key={tax.taxType} value={tax.taxType}>
                         {tax.name}
                       </SelectItem>
