@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import * as crypto from "https://deno.land/std@0.177.0/crypto/mod.ts";
+import { createHmac } from "https://deno.land/std@0.177.0/node/crypto.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") as string;
@@ -333,34 +333,23 @@ serve(async (req) => {
       }
       
       try {
-        // Use Deno's built-in crypto API for HMAC-SHA256
-        const encoder = new TextEncoder();
-        const keyData = encoder.encode(XERO_WEBHOOK_KEY);
-        const messageData = encoder.encode(rawBody);
+        // Use Deno's Node-compatible crypto for HMAC-SHA256
+        const calculatedSignature = createHmac("sha256", XERO_WEBHOOK_KEY)
+          .update(rawBody)
+          .digest("base64");
         
-        const cryptoKey = await crypto.subtle.importKey(
-          "raw",
-          keyData,
-          { name: "HMAC", hash: "SHA-256" },
-          false,
-          ["sign"]
-        );
-        
-        const signature = await crypto.subtle.sign("HMAC", cryptoKey, messageData);
-        const calculatedSignature = btoa(String.fromCharCode(...new Uint8Array(signature)));
-
         console.log("Calculated signature:", calculatedSignature);
         console.log("Received signature:", xeroSignature);
-
+        
         if (calculatedSignature !== xeroSignature) {
           console.error("Webhook signature validation failed");
           return new Response(
             JSON.stringify({ error: "Invalid webhook signature" }),
             { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
-        } else {
-          console.log("Webhook signature validation succeeded");
         }
+        
+        console.log("Webhook signature validation succeeded");
       } catch (signError) {
         console.error("Error during signature verification:", signError);
         return new Response(
