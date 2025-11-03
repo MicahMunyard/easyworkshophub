@@ -106,7 +106,7 @@ const InventoryItemSelector: React.FC<InventoryItemSelectorProps> = ({ open, onC
           <div>
             <span className="text-muted-foreground">Available:</span>
             <span className="ml-2 font-medium">
-              {formatStockDisplay(item.inStock, item.isBulkProduct || false, item.bulkQuantity, item.unitOfMeasure)}
+              {formatStockDisplay(item.inStock, item.bulkQuantity, item.unitOfMeasure)}
             </span>
           </div>
           <div>

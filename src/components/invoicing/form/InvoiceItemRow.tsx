@@ -9,7 +9,8 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Trash } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Trash, Link2 } from "lucide-react";
 import { UseFormReturn } from "react-hook-form";
 
 interface InvoiceItemRowProps {
@@ -50,6 +51,9 @@ const InvoiceItemRow: React.FC<InvoiceItemRowProps> = ({
     }
   };
 
+  const itemData = form.getValues(`items.${index}`);
+  const hasInventoryLink = itemData?.inventoryItemId;
+
   return (
     <div className="grid grid-cols-12 gap-4 items-end">
       <div className="col-span-4">
@@ -58,7 +62,15 @@ const InvoiceItemRow: React.FC<InvoiceItemRowProps> = ({
           name={`items.${index}.description`}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Description</FormLabel>
+              <FormLabel className="flex items-center gap-2">
+                Description
+                {hasInventoryLink && (
+                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs flex items-center gap-1">
+                    <Link2 className="h-3 w-3" />
+                    Inventory
+                  </Badge>
+                )}
+              </FormLabel>
               <FormControl>
                 <Input {...field} />
               </FormControl>

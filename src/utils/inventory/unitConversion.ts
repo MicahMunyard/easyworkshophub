@@ -36,18 +36,34 @@ export const calculatePricePerConsumptionUnit = (
  */
 export const formatStockDisplay = (
   inventoryUnits: number,
-  isBulkProduct: boolean,
   bulkQuantity?: number,
-  unitOfMeasure: UnitOfMeasure = 'unit'
+  unitOfMeasure?: string
 ): string => {
-  if (!isBulkProduct || !bulkQuantity) {
-    return `${inventoryUnits} ${getUnitLabel(unitOfMeasure, inventoryUnits)}`;
+  if (!bulkQuantity) {
+    return `${inventoryUnits} units`;
   }
 
-  const consumptionUnits = calculateTotalConsumptionUnits(inventoryUnits, isBulkProduct, bulkQuantity);
+  const consumptionUnits = inventoryUnits * bulkQuantity;
   const containerLabel = inventoryUnits === 1 ? 'container' : 'containers';
   
-  return `${inventoryUnits} ${containerLabel} (${consumptionUnits}${getUnitSymbol(unitOfMeasure)})`;
+  return `${inventoryUnits} ${containerLabel} (${consumptionUnits}${unitOfMeasure ? getUnitSymbol(unitOfMeasure as UnitOfMeasure) : ''})`;
+};
+
+/**
+ * Format price per unit for display
+ * Example: "$2.50/L"
+ */
+export const formatPricePerUnit = (
+  pricePerContainer: number,
+  bulkQuantity?: number,
+  unitOfMeasure?: string
+): string => {
+  if (!bulkQuantity) {
+    return `$${pricePerContainer.toFixed(2)}/unit`;
+  }
+
+  const pricePerUnit = pricePerContainer / bulkQuantity;
+  return `$${pricePerUnit.toFixed(2)}/${unitOfMeasure || 'unit'}`;
 };
 
 /**

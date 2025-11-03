@@ -19,6 +19,7 @@ import WorkshopStats from "./dashboard/WorkshopStats";
 import ImportantAlerts from "./dashboard/ImportantAlerts";
 import RecentActivities from "./dashboard/RecentActivities";
 import InventoryAlerts from "./dashboard/InventoryAlerts";
+import LowStockBulkWidget from "./dashboard/LowStockBulkWidget";
 
 // Sample video data
 const DASHBOARD_VIDEOS = [
@@ -131,6 +132,7 @@ const Dashboard: React.FC = () => {
           appointments={appointments}
         />
         <InventoryAlerts user={user} />
+        <LowStockBulkWidget />
       </div>
     </div>
   );
