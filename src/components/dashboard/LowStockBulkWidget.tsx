@@ -48,18 +48,18 @@ const LowStockBulkWidget: React.FC = () => {
   }
 
   return (
-    <Card className="border-amber-200 hover:border-amber-300 transition-colors">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base font-semibold flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-amber-500" />
-            Low Stock: Bulk Products
-            {lowStockBulkProducts.length > 0 && (
-              <Badge variant="destructive" className="ml-2">
-                {lowStockBulkProducts.length}
-              </Badge>
-            )}
+      <Card className="border-amber-200 hover:border-amber-300 transition-colors">
+      <CardHeader className="pb-2 sm:pb-3">
+        <div className="flex items-start gap-2 flex-wrap">
+          <CardTitle className="text-sm sm:text-base font-semibold flex items-center gap-2 flex-1 min-w-0">
+            <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-amber-500 flex-shrink-0" />
+            <span className="truncate">Low Stock: Bulk Products</span>
           </CardTitle>
+          {lowStockBulkProducts.length > 0 && (
+            <Badge variant="destructive" className="flex-shrink-0">
+              {lowStockBulkProducts.length}
+            </Badge>
+          )}
         </div>
       </CardHeader>
       <CardContent>
@@ -78,30 +78,30 @@ const LowStockBulkWidget: React.FC = () => {
               const isCritical = stockPercentage < 50;
 
               return (
-                <div key={item.id} className="space-y-2 p-3 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
+                <div key={item.id} className="space-y-2 p-2 sm:p-3 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors">
+                  <div className="flex flex-col sm:flex-row sm:items-start gap-2">
+                    <div className="flex-1 min-w-0 space-y-1.5">
+                      <div className="flex items-center gap-2">
                         {item.unitOfMeasure === 'litre' ? (
                           <Droplet className="h-4 w-4 text-blue-500 flex-shrink-0" />
                         ) : (
                           <Package2 className="h-4 w-4 text-blue-500 flex-shrink-0" />
                         )}
-                        <h4 className="font-medium text-sm truncate">{item.name}</h4>
+                        <h4 className="font-medium text-sm break-words">{item.name}</h4>
                       </div>
-                      <div className="flex items-center gap-4 text-xs">
-                        <div>
-                          <span className="text-muted-foreground">Current: </span>
-                          <span className={`font-medium ${isCritical ? 'text-destructive' : 'text-amber-600'}`}>
+                      <div className="flex flex-col xs:flex-row xs:items-center gap-1 xs:gap-3 text-xs">
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-muted-foreground whitespace-nowrap">Curr:</span>
+                          <span className={`font-medium break-words ${isCritical ? 'text-destructive' : 'text-amber-600'}`}>
                             {item.bulkQuantity
                               ? formatStockDisplay(item.inStock, item.bulkQuantity, item.unitOfMeasure)
                               : `${item.inStock} units`
                             }
                           </span>
                         </div>
-                        <div>
-                          <span className="text-muted-foreground">Min: </span>
-                          <span className="font-medium">
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-muted-foreground whitespace-nowrap">Min:</span>
+                          <span className="font-medium break-words">
                             {item.bulkQuantity
                               ? formatStockDisplay(item.minStock, item.bulkQuantity, item.unitOfMeasure)
                               : `${item.minStock} units`
@@ -113,7 +113,7 @@ const LowStockBulkWidget: React.FC = () => {
                     <Button
                       size="sm"
                       variant="outline"
-                      className="flex-shrink-0"
+                      className="w-full sm:w-auto flex-shrink-0"
                       onClick={() => navigate('/inventory?tab=suppliers')}
                     >
                       Reorder
@@ -131,11 +131,11 @@ const LowStockBulkWidget: React.FC = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                className="w-full mt-2"
+                className="w-full mt-1 sm:mt-2 text-xs sm:text-sm"
                 onClick={() => navigate('/inventory')}
               >
                 View All Inventory
-                <ArrowRight className="h-4 w-4 ml-2" />
+                <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 ml-2" />
               </Button>
             )}
           </div>
@@ -145,7 +145,7 @@ const LowStockBulkWidget: React.FC = () => {
           <Button
             variant="link"
             size="sm"
-            className="w-full mt-2 text-muted-foreground hover:text-foreground"
+            className="w-full mt-1 sm:mt-2 text-xs sm:text-sm text-muted-foreground hover:text-foreground"
             onClick={() => navigate('/inventory')}
           >
             View All Inventory →
