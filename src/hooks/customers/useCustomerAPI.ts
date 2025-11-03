@@ -114,7 +114,9 @@ export const useCustomerAPI = () => {
           booking_date, 
           status, 
           cost,
-          technician_id
+          technician_id,
+          notes,
+          duration
         `)
         .eq('user_id', user?.id)
         .eq('customer_phone', customerData.phone)
@@ -140,16 +142,45 @@ export const useCustomerAPI = () => {
           }
         }
         
-        let bookingCost = booking.cost || 0;
+        // Check for invoice
+        const { data: invoice } = await supabase
+          .from('user_invoices')
+          .select('id, total')
+          .eq('job_id', booking.id)
+          .maybeSingle();
+        
+        // Get invoice items if invoice exists
+        let invoiceItems = [];
+        if (invoice) {
+          const { data: items } = await supabase
+            .from('user_invoice_items')
+            .select('description, quantity, unit_price, total')
+            .eq('invoice_id', invoice.id);
+          
+          invoiceItems = items || [];
+        }
+        
+        const bookingCost = invoice?.total || booking.cost || 0;
         
         return {
           id: typeof booking.id === 'string' ? parseInt(booking.id.replace(/-/g, '').substring(0, 8), 16) : booking.id,
+          bookingId: booking.id,
           date: booking.booking_date,
           service: booking.service,
           vehicle: booking.car,
           cost: bookingCost,
           status: booking.status as "pending" | "confirmed" | "completed" | "cancelled",
-          mechanic: technicianName
+          mechanic: technicianName,
+          notes: booking.notes,
+          duration: booking.duration,
+          invoiceId: invoice?.id,
+          invoiceTotal: invoice?.total,
+          invoiceItems: invoiceItems.map(item => ({
+            description: item.description,
+            quantity: item.quantity,
+            unitPrice: item.unit_price,
+            total: item.total
+          }))
         };
       }));
       

@@ -11,14 +11,27 @@ export interface CustomerType {
   totalSpending?: number; // New field to track total spending
 }
 
-export interface CustomerDetailType extends CustomerType {
-  bookingHistory: {
-    id: number;
-    date: string;
-    service: string;
-    vehicle: string;
-    cost: number;
-    status: "pending" | "confirmed" | "completed" | "cancelled";
-    mechanic?: string;
+export interface BookingHistoryItem {
+  id: number;
+  bookingId: string;
+  date: string;
+  service: string;
+  vehicle: string;
+  cost: number;
+  status: "pending" | "confirmed" | "completed" | "cancelled";
+  mechanic?: string;
+  notes?: string;
+  duration?: number;
+  invoiceId?: string;
+  invoiceTotal?: number;
+  invoiceItems?: {
+    description: string;
+    quantity: number;
+    unitPrice: number;
+    total: number;
   }[];
+}
+
+export interface CustomerDetailType extends CustomerType {
+  bookingHistory: BookingHistoryItem[];
 }
