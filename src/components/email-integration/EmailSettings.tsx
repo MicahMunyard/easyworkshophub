@@ -6,9 +6,11 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useEmailConnection } from "@/hooks/email/useEmailConnection";
 import { Loader2, Mail, AlertTriangle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import EmailSignatureSettings from "./EmailSignatureSettings";
 
 interface EmailSettingsProps {
   isConnected: boolean;
@@ -124,8 +126,14 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({
   };
 
   return (
-    <div className="space-y-6">
-      {!isConnected ? (
+    <Tabs defaultValue="connection" className="w-full">
+      <TabsList className="grid w-full grid-cols-2">
+        <TabsTrigger value="connection">Email Connection</TabsTrigger>
+        <TabsTrigger value="signatures">Signatures</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="connection" className="space-y-6">
+        {!isConnected ? (
         <>
           <Card>
             <CardHeader>
@@ -349,7 +357,12 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({
           </Card>
         </>
       )}
-    </div>
+      </TabsContent>
+
+      <TabsContent value="signatures">
+        <EmailSignatureSettings />
+      </TabsContent>
+    </Tabs>
   );
 };
 

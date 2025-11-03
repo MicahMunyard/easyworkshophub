@@ -3,9 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Loader2, Send, Bold, Italic, Underline, Paperclip } from "lucide-react";
 import { EmailType } from "@/types/email";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { useEmailSignatures } from "@/hooks/email/useEmailSignatures";
 
 interface EmailReplyFormProps {
   email: EmailType;
@@ -28,7 +30,9 @@ const EmailReplyForm: React.FC<EmailReplyFormProps> = ({
   const [isSending, setIsSending] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<string>("");
   const [attachments, setAttachments] = useState<File[]>([]);
-  const [signature, setSignature] = useState<string>("");
+  const [selectedSignatureId, setSelectedSignatureId] = useState<string>("");
+  const [includeSignature, setIncludeSignature] = useState(true);
+  const { signatures, defaultSignature } = useEmailSignatures();
   const [templates, setTemplates] = useState<Template[]>([
     // Default templates
     {
@@ -42,6 +46,13 @@ const EmailReplyForm: React.FC<EmailReplyFormProps> = ({
       body: `Hi ${email.from},\n\nWe've confirmed your booking request and added it to our schedule.\n\nPlease let us know if you need to make any changes.\n\nThanks,\nWorkshop Team`
     }
   ]);
+
+  // Set default signature on mount
+  useEffect(() => {
+    if (defaultSignature && !selectedSignatureId) {
+      setSelectedSignatureId(defaultSignature.id);
+    }
+  }, [defaultSignature]);
 
   const handleFormatText = (format: string) => {
     const textarea = document.querySelector('textarea');
@@ -95,7 +106,17 @@ const EmailReplyForm: React.FC<EmailReplyFormProps> = ({
     
     setIsSending(true);
     try {
-      const success = await onSendReply(replyContent + (signature ? `\n\n${signature}` : ""));
+      let finalContent = replyContent;
+      
+      // Append signature if enabled
+      if (includeSignature) {
+        const signatureToUse = signatures.find(s => s.id === selectedSignatureId) || defaultSignature;
+        if (signatureToUse) {
+          finalContent = `${replyContent}\n\n<div style="border-top: 1px solid #e5e7eb; margin-top: 16px; padding-top: 16px;">${signatureToUse.html_content}</div>`;
+        }
+      }
+      
+      const success = await onSendReply(finalContent);
       if (success) {
         onCancel();
       }
@@ -197,6 +218,33 @@ const EmailReplyForm: React.FC<EmailReplyFormProps> = ({
             </div>
           </div>
         )}
+      </div>
+
+      <div className="space-y-4 border-t pt-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="include-signature"
+              checked={includeSignature}
+              onCheckedChange={setIncludeSignature}
+            />
+            <Label htmlFor="include-signature">Include signature</Label>
+          </div>
+          {includeSignature && signatures.length > 0 && (
+            <Select value={selectedSignatureId} onValueChange={setSelectedSignatureId}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Select signature" />
+              </SelectTrigger>
+              <SelectContent>
+                {signatures.map((sig) => (
+                  <SelectItem key={sig.id} value={sig.id}>
+                    {sig.name} {sig.is_default ? "(Default)" : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
       </div>
       
       <div className="flex justify-end space-x-2">

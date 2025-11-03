@@ -566,6 +566,39 @@ export type Database = {
         }
         Relationships: []
       }
+      email_signatures: {
+        Row: {
+          created_at: string | null
+          html_content: string
+          id: string
+          is_default: boolean | null
+          name: string
+          plain_text_content: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          html_content: string
+          id?: string
+          is_default?: boolean | null
+          name: string
+          plain_text_content: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          html_content?: string
+          id?: string
+          is_default?: boolean | null
+          name?: string
+          plain_text_content?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       email_templates: {
         Row: {
           body: string
@@ -937,7 +970,12 @@ export type Database = {
           approved_at: string | null
           approved_by: string | null
           avatar_url: string | null
+          company_address: string | null
+          company_logo_url: string | null
+          company_website: string | null
           created_at: string | null
+          email_display_name: string | null
+          email_reply_to: string | null
           full_name: string | null
           id: number
           onboarding_completed: boolean | null
@@ -955,7 +993,12 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           avatar_url?: string | null
+          company_address?: string | null
+          company_logo_url?: string | null
+          company_website?: string | null
           created_at?: string | null
+          email_display_name?: string | null
+          email_reply_to?: string | null
           full_name?: string | null
           id?: never
           onboarding_completed?: boolean | null
@@ -973,7 +1016,12 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           avatar_url?: string | null
+          company_address?: string | null
+          company_logo_url?: string | null
+          company_website?: string | null
           created_at?: string | null
+          email_display_name?: string | null
+          email_reply_to?: string | null
           full_name?: string | null
           id?: never
           onboarding_completed?: boolean | null
