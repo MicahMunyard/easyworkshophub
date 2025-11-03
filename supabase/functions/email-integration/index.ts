@@ -751,16 +751,39 @@ async function handleSendEmailEndpoint(req: Request) {
 }
 
 // Helper function to send email via Gmail API
+// Helper function to construct multipart MIME email
+function constructMimeEmail(to: string, subject: string, htmlBody: string): string {
+  const boundary = '----=_Part_' + Date.now();
+  
+  // Generate plain text version by stripping HTML tags
+  const textBody = htmlBody.replace(/<[^>]*>/g, '').replace(/\n\n+/g, '\n').trim();
+  
+  const email = [
+    `To: ${to}`,
+    `Subject: ${subject}`,
+    'MIME-Version: 1.0',
+    `Content-Type: multipart/alternative; boundary="${boundary}"`,
+    '',
+    `--${boundary}`,
+    'Content-Type: text/plain; charset=utf-8',
+    '',
+    textBody,
+    '',
+    `--${boundary}`,
+    'Content-Type: text/html; charset=utf-8',
+    '',
+    htmlBody,
+    '',
+    `--${boundary}--`
+  ].join('\r\n');
+  
+  return email;
+}
+
 async function sendGmailEmail(accessToken: string, to: string, subject: string, body: string): Promise<boolean> {
   try {
-    // Construct the email in RFC 2822 format
-    const email = [
-      `To: ${to}`,
-      `Subject: ${subject}`,
-      'Content-Type: text/plain; charset=utf-8',
-      '',
-      body
-    ].join('\r\n');
+    // Construct multipart MIME email with both HTML and plain text versions
+    const email = constructMimeEmail(to, subject, body);
     
     // Encode the email in base64url format
     const encodedEmail = btoa(email)
@@ -801,7 +824,7 @@ async function sendOutlookEmail(accessToken: string, to: string, subject: string
       message: {
         subject: subject,
         body: {
-          contentType: 'Text',
+          contentType: 'HTML',
           content: body
         },
         toRecipients: [
