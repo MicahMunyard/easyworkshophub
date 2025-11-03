@@ -2,6 +2,7 @@
 export const getCurrentTabFromPath = (currentPath: string): string => {
   if (currentPath === '/') return 'dashboard';
   if (currentPath.includes('/booking-diary') || currentPath.includes('/jobs')) return 'bookings';
+  if (currentPath.includes('/invoicing')) return 'invoicing';
   if (currentPath.includes('/email-integration')) return 'email';
   if (currentPath.includes('/communication')) return 'communication';
   if (currentPath.includes('/inventory') || currentPath.includes('/suppliers')) return 'inventory';
