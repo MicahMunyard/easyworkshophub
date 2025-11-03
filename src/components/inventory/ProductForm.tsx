@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { InventoryItem, Supplier } from '@/types/inventory';
+import BulkProductFields from './BulkProductFields';
 import { Barcode, FileText, ShoppingBag, DollarSign, MapPin, Hash, ImageIcon, Tag, Trash2 } from 'lucide-react';
 import CategorySelector from './CategorySelector';
 
@@ -38,6 +39,9 @@ const formSchema = z.object({
   retailPrice: z.coerce.number().min(0).optional(),
   location: z.string().optional(),
   imageUrl: z.string().optional(),
+  unitOfMeasure: z.enum(['unit', 'litre', 'ml', 'kg', 'g']).optional(),
+  isBulkProduct: z.boolean().optional(),
+  bulkQuantity: z.coerce.number().positive().optional(),
 });
 
 type ProductFormProps = {
@@ -66,6 +70,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ item, suppliers, onSubmit, on
       retailPrice: item?.retailPrice || 0,
       location: item?.location || '',
       imageUrl: item?.imageUrl || '',
+      unitOfMeasure: item?.unitOfMeasure || 'unit',
+      isBulkProduct: item?.isBulkProduct || false,
+      bulkQuantity: item?.bulkQuantity || undefined,
     },
   });
 
@@ -338,6 +345,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ item, suppliers, onSubmit, on
             </FormItem>
           )}
         />
+
+        <BulkProductFields form={form} />
         
         <div className="flex justify-between items-center pt-2">
           <div>

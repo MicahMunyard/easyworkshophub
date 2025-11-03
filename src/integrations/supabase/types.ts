@@ -740,6 +740,53 @@ export type Database = {
         }
         Relationships: []
       }
+      inventory_transactions: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          inventory_item_id: string
+          notes: string | null
+          quantity_after: number
+          quantity_change: number
+          reference_id: string | null
+          reference_type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          inventory_item_id: string
+          notes?: string | null
+          quantity_after: number
+          quantity_change: number
+          reference_id?: string | null
+          reference_type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          inventory_item_id?: string
+          notes?: string | null
+          quantity_after?: number
+          quantity_change?: number
+          reference_id?: string | null
+          reference_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_transactions_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: false
+            referencedRelation: "user_inventory_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_vehicle_fitment: {
         Row: {
           created_at: string | null
@@ -1725,6 +1772,7 @@ export type Database = {
       user_inventory_items: {
         Row: {
           brand: string | null
+          bulk_quantity: number | null
           category: string | null
           code: string | null
           created_at: string | null
@@ -1734,6 +1782,7 @@ export type Database = {
           id: string
           image_url: string | null
           in_stock: number
+          is_bulk_product: boolean | null
           last_order: string | null
           location: string | null
           min_stock: number
@@ -1747,6 +1796,7 @@ export type Database = {
           status: string | null
           supplier: string | null
           supplier_id: string | null
+          unit_of_measure: string | null
           updated_at: string | null
           user_id: string
           xero_item_id: string | null
@@ -1754,6 +1804,7 @@ export type Database = {
         }
         Insert: {
           brand?: string | null
+          bulk_quantity?: number | null
           category?: string | null
           code?: string | null
           created_at?: string | null
@@ -1763,6 +1814,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           in_stock?: number
+          is_bulk_product?: boolean | null
           last_order?: string | null
           location?: string | null
           min_stock?: number
@@ -1776,6 +1828,7 @@ export type Database = {
           status?: string | null
           supplier?: string | null
           supplier_id?: string | null
+          unit_of_measure?: string | null
           updated_at?: string | null
           user_id: string
           xero_item_id?: string | null
@@ -1783,6 +1836,7 @@ export type Database = {
         }
         Update: {
           brand?: string | null
+          bulk_quantity?: number | null
           category?: string | null
           code?: string | null
           created_at?: string | null
@@ -1792,6 +1846,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           in_stock?: number
+          is_bulk_product?: boolean | null
           last_order?: string | null
           location?: string | null
           min_stock?: number
@@ -1805,6 +1860,7 @@ export type Database = {
           status?: string | null
           supplier?: string | null
           supplier_id?: string | null
+          unit_of_measure?: string | null
           updated_at?: string | null
           user_id?: string
           xero_item_id?: string | null
@@ -1971,6 +2027,7 @@ export type Database = {
           created_at: string | null
           description: string
           id: string
+          inventory_item_id: string | null
           invoice_id: string
           quantity: number
           tax_rate: number | null
@@ -1982,6 +2039,7 @@ export type Database = {
           created_at?: string | null
           description: string
           id?: string
+          inventory_item_id?: string | null
           invoice_id: string
           quantity?: number
           tax_rate?: number | null
@@ -1993,6 +2051,7 @@ export type Database = {
           created_at?: string | null
           description?: string
           id?: string
+          inventory_item_id?: string | null
           invoice_id?: string
           quantity?: number
           tax_rate?: number | null
@@ -2001,6 +2060,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "user_invoice_items_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: false
+            referencedRelation: "user_inventory_items"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "user_invoice_items_invoice_id_fkey"
             columns: ["invoice_id"]

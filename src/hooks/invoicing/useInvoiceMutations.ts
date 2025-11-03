@@ -5,6 +5,7 @@ import { InvoiceStatus } from '@/types/invoice';
 import { CreateInvoiceParams, UpdateInvoiceStatusParams } from './types';
 import { insertInvoice, insertInvoiceItems, updateInvoiceStatusInDB } from './api/invoiceApi';
 import { supabase } from '@/integrations/supabase/client';
+import { useInventoryTransactions } from '../inventory/useInventoryTransactions';
 
 export const useInvoiceMutations = (
   onSuccess?: () => void,
@@ -14,6 +15,7 @@ export const useInvoiceMutations = (
 ) => {
   const { toast } = useToast();
   const { user } = useAuth();
+  const { deductInventoryStock } = useInventoryTransactions();
 
   const createInvoice = async (invoice: CreateInvoiceParams) => {
     if (!user) {
@@ -31,18 +33,43 @@ export const useInvoiceMutations = (
       if (invoiceError) throw invoiceError;
 
       if (invoiceData) {
-        const invoiceItems = invoice.items.map(item => ({
+        const invoiceItems = invoice.items.map((item: any) => ({
           invoice_id: invoiceData.id,
           description: item.description,
           quantity: item.quantity,
           unit_price: item.unitPrice,
           tax_rate: item.taxRate || 0,
-          total: Number((item.quantity * item.unitPrice).toFixed(2))
+          total: Number((item.quantity * item.unitPrice).toFixed(2)),
+          inventory_item_id: item.inventoryItemId || null
         }));
 
         const { error: itemsError } = await insertInvoiceItems(invoiceItems);
 
         if (itemsError) throw itemsError;
+
+        // Deduct inventory stock for items linked to inventory
+        const inventoryDeductions: string[] = [];
+        for (const item of invoice.items as any[]) {
+          if (item.inventoryItemId) {
+            const success = await deductInventoryStock(
+              item.inventoryItemId,
+              item.quantity,
+              invoiceData.id,
+              'invoice',
+              user.id,
+              `Sold via invoice ${invoice.invoiceNumber}`
+            );
+            
+            if (success) {
+              inventoryDeductions.push(item.description);
+            }
+          }
+        }
+
+        // Show success message with inventory updates
+        if (inventoryDeductions.length > 0) {
+          console.log(`Inventory updated for ${inventoryDeductions.length} items`);
+        }
       }
       
       if (onSuccess) {

@@ -1,9 +1,10 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Package } from "lucide-react";
 import { UseFormReturn } from "react-hook-form";
 import InvoiceItemRow from './InvoiceItemRow';
+import InventoryItemSelector from '../InventoryItemSelector';
 
 interface InvoiceItemsSectionProps {
   form: UseFormReturn<any>;
@@ -20,14 +21,47 @@ const InvoiceItemsSection: React.FC<InvoiceItemsSectionProps> = ({
   removeItem,
   updateItemTotal
 }) => {
+  const [showInventorySelector, setShowInventorySelector] = useState(false);
+
+  const handleInventoryItemSelect = (item: any, quantity: number, unitPrice: number) => {
+    const items = form.getValues('items') || [];
+    const newItem = {
+      id: Math.random().toString(),
+      description: `${item.name} - ${quantity}${item.unitOfMeasure === 'unit' ? '' : item.unitOfMeasure}`,
+      quantity: quantity,
+      unitPrice: unitPrice,
+      taxRate: 10,
+      total: quantity * unitPrice,
+      inventoryItemId: item.id
+    };
+    
+    form.setValue('items', [...items, newItem]);
+    updateItemTotal(items.length);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-medium">Invoice Items</h3>
-        <Button type="button" variant="outline" onClick={addItem}>
-          <Plus className="h-4 w-4 mr-2" /> Add Item
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={() => setShowInventorySelector(true)}
+          >
+            <Package className="h-4 w-4 mr-2" /> Add from Inventory
+          </Button>
+          <Button type="button" variant="outline" onClick={addItem}>
+            <Plus className="h-4 w-4 mr-2" /> Add Item
+          </Button>
+        </div>
       </div>
+
+      <InventoryItemSelector
+        open={showInventorySelector}
+        onClose={() => setShowInventorySelector(false)}
+        onSelect={handleInventoryItemSelect}
+      />
 
       <div className="space-y-4">
         {watchItems.map((item, index) => (

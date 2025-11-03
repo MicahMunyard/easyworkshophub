@@ -88,6 +88,9 @@ export const useInventoryItems = () => {
         location: item.location || '',
         lastOrder: item.last_order?.toString() || '',
         status: item.status as 'normal' | 'low' | 'critical',
+        unitOfMeasure: (item.unit_of_measure as any) || 'unit',
+        isBulkProduct: item.is_bulk_product || false,
+        bulkQuantity: item.bulk_quantity ? parseFloat(item.bulk_quantity.toString()) : undefined,
         imageUrl: item.image_url || undefined,
         brand: item.brand || undefined,
         vehicleFitment: fitmentMap.get(item.id) || [],
@@ -167,6 +170,9 @@ export const useInventoryItems = () => {
           order_status: newItem.orderStatus || null,
           ezyparts_quote_id: newItem.ezypartsQuoteId || null,
           quoted_quantity: newItem.quotedQuantity || null,
+          unit_of_measure: newItem.unitOfMeasure || 'unit',
+          is_bulk_product: newItem.isBulkProduct || false,
+          bulk_quantity: newItem.bulkQuantity || null,
         })
         .select()
         .single();
@@ -212,7 +218,10 @@ export const useInventoryItems = () => {
         location: updatedData.location,
         last_order: updatedData.lastOrder ? updatedData.lastOrder : null,
         image_url: updatedData.imageUrl || null,
-        brand: updatedData.brand || null
+        brand: updatedData.brand || null,
+        unit_of_measure: updatedData.unitOfMeasure || 'unit',
+        is_bulk_product: updatedData.isBulkProduct || false,
+        bulk_quantity: updatedData.bulkQuantity || null,
       };
 
       const { error } = await supabase

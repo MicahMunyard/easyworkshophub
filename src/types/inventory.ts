@@ -33,6 +33,8 @@ export interface ProductSpecification {
   unit?: string;
 }
 
+export type UnitOfMeasure = 'unit' | 'litre' | 'ml' | 'kg' | 'g';
+
 export interface InventoryItem {
   id: string;
   code: string;
@@ -60,6 +62,9 @@ export interface InventoryItem {
   quotedQuantity?: number;
   orderedQuantity?: number;
   orderDate?: string;
+  unitOfMeasure?: UnitOfMeasure;
+  isBulkProduct?: boolean;
+  bulkQuantity?: number;
 }
 
 export interface OrderItem {

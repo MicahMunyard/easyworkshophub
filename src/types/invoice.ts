@@ -8,6 +8,7 @@ export interface InvoiceItem {
   unitPrice: number;
   total: number;
   taxRate?: number;
+  inventoryItemId?: string;
 }
 
 export interface Invoice {
