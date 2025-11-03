@@ -7,7 +7,11 @@ import EmailListPanel from "./EmailListPanel";
 import EmailDetailPanel from "./EmailDetailPanel";
 import EmailComposeForm from "./EmailComposeForm";
 
-const EmailInbox = () => {
+interface EmailInboxProps {
+  onOpenBookingModal: (email: EmailType) => void;
+}
+
+const EmailInbox: React.FC<EmailInboxProps> = ({ onOpenBookingModal }) => {
   const { toast } = useToast();
   const {
     emails,
@@ -31,14 +35,9 @@ const EmailInbox = () => {
   }, [folder, refreshEmails]);
 
   const handleCreateBooking = async (email: EmailType) => {
-    const success = await createBookingFromEmail(email);
-    if (success) {
-      toast({
-        title: "Booking Created",
-        description: "A new booking has been created from this email.",
-      });
-    }
-    return success;
+    // Open the booking modal instead of automatically creating booking
+    onOpenBookingModal(email);
+    return true;
   };
 
   const handleSendReply = async (content: string) => {

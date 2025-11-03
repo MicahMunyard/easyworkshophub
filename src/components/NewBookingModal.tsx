@@ -21,9 +21,17 @@ interface NewBookingModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (booking: BookingType) => void;
+  initialData?: Partial<BookingType>;
+  emailId?: string;
 }
 
-const NewBookingModal: React.FC<NewBookingModalProps> = ({ isOpen, onClose, onSave }) => {
+const NewBookingModal: React.FC<NewBookingModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  onSave, 
+  initialData,
+  emailId 
+}) => {
   const {
     newBooking,
     date,
@@ -39,7 +47,7 @@ const NewBookingModal: React.FC<NewBookingModalProps> = ({ isOpen, onClose, onSa
     handleSubmit,
     handleCloseModal,
     setNewBooking
-  } = useNewBookingForm(isOpen, onClose, onSave);
+  } = useNewBookingForm(isOpen, onClose, onSave, initialData);
 
   const [activeTab, setActiveTab] = useState<string>("vehicle");
   const [isManualEntry, setIsManualEntry] = useState<boolean>(false);

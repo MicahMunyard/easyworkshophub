@@ -49,10 +49,19 @@ const defaultBooking: BookingType = {
 export const useNewBookingForm = (
   isOpen: boolean,
   onClose: () => void,
-  onSave: (booking: BookingType) => void
+  onSave: (booking: BookingType) => void,
+  initialData?: Partial<BookingType>
 ) => {
-  const [newBooking, setNewBooking] = useState<BookingType>({...defaultBooking});
-  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [newBooking, setNewBooking] = useState<BookingType>(() => ({
+    ...defaultBooking,
+    ...initialData
+  }));
+  const [date, setDate] = useState<Date | undefined>(() => {
+    if (initialData?.date) {
+      return new Date(initialData.date);
+    }
+    return new Date();
+  });
   const [technicians, setTechnicians] = useState<TechnicianOption[]>([]);
   const [services, setServices] = useState<ServiceOption[]>([]);
   const [bays, setBays] = useState<BayOption[]>([]);

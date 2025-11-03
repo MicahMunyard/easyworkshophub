@@ -9,6 +9,12 @@ import EmailSettings from "@/components/email-integration/EmailSettings";
 import EmailAutomation from "@/components/email-integration/EmailAutomation";
 import { useEmailConnection } from "@/hooks/email/useEmailConnection";
 import { useEmailFetch } from "@/hooks/email/useEmailFetch";
+import NewBookingModal from "@/components/NewBookingModal";
+import { BookingType } from "@/types/booking";
+import { EmailType } from "@/types/email";
+import { useEmailBookingModal } from "@/hooks/email/useEmailBookingModal";
+import { useToast } from "@/hooks/use-toast";
+import { useBookings } from "@/hooks/useBookings";
 
 const EmailIntegration = () => {
   const { user } = useAuth();
@@ -16,6 +22,12 @@ const EmailIntegration = () => {
   const [activeTab, setActiveTab] = useState("inbox");
   const [isCheckingConnection, setIsCheckingConnection] = useState(true);
   const { fetchEmailsByFolder } = useEmailFetch();
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [selectedEmail, setSelectedEmail] = useState<EmailType | null>(null);
+  const [bookingInitialData, setBookingInitialData] = useState<Partial<BookingType> | undefined>(undefined);
+  const { prepareBookingDataFromEmail, markEmailAsProcessed } = useEmailBookingModal();
+  const { toast } = useToast();
+  const { addBooking } = useBookings();
   
   // Check connection when component mounts
   useEffect(() => {
@@ -33,6 +45,51 @@ const EmailIntegration = () => {
       setActiveTab("settings");
     }
   }, [isConnected, isCheckingConnection]);
+
+  const handleOpenBookingModal = (email: EmailType) => {
+    setSelectedEmail(email);
+    const initialData = prepareBookingDataFromEmail(email);
+    setBookingInitialData(initialData);
+    setIsBookingModalOpen(true);
+  };
+
+  const handleSaveBooking = async (booking: BookingType) => {
+    if (!selectedEmail) return;
+
+    try {
+      // Save booking to database
+      const success = await addBooking(booking);
+      
+      if (!success) {
+        throw new Error("Failed to create booking");
+      }
+      
+      // Mark email as processed
+      await markEmailAsProcessed(selectedEmail.id, booking.id);
+      
+      toast({
+        title: "Success",
+        description: "Booking created successfully from email"
+      });
+      
+      setIsBookingModalOpen(false);
+      setSelectedEmail(null);
+      setBookingInitialData(undefined);
+    } catch (error) {
+      console.error("Error saving booking:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to create booking. Please try again."
+      });
+    }
+  };
+
+  const handleCloseBookingModal = () => {
+    setIsBookingModalOpen(false);
+    setSelectedEmail(null);
+    setBookingInitialData(undefined);
+  };
 
   return (
     <div className="space-y-6">
@@ -56,7 +113,7 @@ const EmailIntegration = () => {
         
         <TabsContent value="inbox" className="space-y-4">
           {isConnected ? (
-            <EmailInbox />
+            <EmailInbox onOpenBookingModal={handleOpenBookingModal} />
           ) : (
             <Card>
               <CardHeader>
@@ -88,6 +145,14 @@ const EmailIntegration = () => {
           <EmailAutomation isConnected={isConnected} />
         </TabsContent>
       </Tabs>
+
+      <NewBookingModal
+        isOpen={isBookingModalOpen}
+        onClose={handleCloseBookingModal}
+        onSave={handleSaveBooking}
+        initialData={bookingInitialData}
+        emailId={selectedEmail?.id}
+      />
     </div>
   );
 };
