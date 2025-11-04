@@ -184,7 +184,7 @@ serve(async (req) => {
           purchaseOrderNumber: order_data.purchaseOrder || "",
           dateServed: dateServed,
           repId: "",
-          encryptedVehicleId: order_data.vehicleData?.encryptedVehicleId || null,
+          encryptedVehicleId: order_data.vehicleData?.encryptedVehicleId?.toString() || "",
           rego: order_data.vehicleData?.rego || "",
           make: order_data.vehicleData?.make || "",
           model: order_data.vehicleData?.model || "",
