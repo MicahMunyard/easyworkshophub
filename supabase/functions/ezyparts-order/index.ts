@@ -175,7 +175,7 @@ serve(async (req) => {
         headers: {
           customerAccount: order_data.ezypartsCredentials!.customerAccount,
           customerId: order_data.ezypartsCredentials!.customerId,
-          Password: order_data.ezypartsCredentials!.password,
+          password: order_data.ezypartsCredentials!.password,
           locationId: order_data.locationId || "",
           locationName: order_data.locationName || "",
           customerName: order_data.customerName || "WorkshopBase Customer",
@@ -231,7 +231,7 @@ serve(async (req) => {
     console.log('Headers object keys:', Object.keys(orderRequest.headers));
     console.log('Headers object (all values):', JSON.stringify({
       ...orderRequest.headers,
-      Password: '********'
+      password: '********'
     }, null, 2));
 
     const orderResponse = await fetch(endpoints.api, {

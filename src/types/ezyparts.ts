@@ -123,7 +123,7 @@ export interface OrderSubmissionRequest {
   headers: {
     customerAccount: string;
     customerId: string;
-    Password: string;
+    password: string;
     locationId: string;
     locationName: string;
     customerName: string;
