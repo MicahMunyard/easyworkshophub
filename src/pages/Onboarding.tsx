@@ -12,9 +12,10 @@ import OnboardingStep3 from '@/components/onboarding/OnboardingStep3';
 import OnboardingStep4 from '@/components/onboarding/OnboardingStep4';
 import OnboardingStep5 from '@/components/onboarding/OnboardingStep5';
 import OnboardingStep6 from '@/components/onboarding/OnboardingStep6';
+import OnboardingStep6_5 from '@/components/onboarding/OnboardingStep6_5';
 import OnboardingStep7 from '@/components/onboarding/OnboardingStep7';
 
-const TOTAL_STEPS = 7;
+const TOTAL_STEPS = 8;
 
 const Onboarding = () => {
   const { user, profile } = useAuth();
@@ -149,7 +150,8 @@ const Onboarding = () => {
         {currentStep === 4 && <OnboardingStep4 data={onboardingData} onNext={handleNext} />}
         {currentStep === 5 && <OnboardingStep5 data={onboardingData} onNext={handleNext} />}
         {currentStep === 6 && <OnboardingStep6 data={onboardingData} onNext={handleNext} />}
-        {currentStep === 7 && <OnboardingStep7 onComplete={completeOnboarding} loading={loading} />}
+        {currentStep === 7 && <OnboardingStep6_5 data={onboardingData} onNext={handleNext} />}
+        {currentStep === 8 && <OnboardingStep7 onComplete={completeOnboarding} loading={loading} />}
       </div>
 
       {/* Footer Navigation */}
