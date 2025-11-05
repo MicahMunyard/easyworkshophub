@@ -21,6 +21,21 @@ interface SendEmailRequest {
   replyToEmail?: string;
 }
 
+/**
+ * Validates email format using RFC-compliant regex
+ */
+function isValidEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
+/**
+ * Sanitizes display name to prevent email header injection
+ */
+function sanitizeDisplayName(name: string): string {
+  return name.replace(/[<>"\n\r]/g, '').trim();
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -55,9 +70,21 @@ serve(async (req) => {
     // Initialize Resend
     const resend = new Resend(RESEND_API_KEY);
     
-    // Get sender email - use verified domain email
-    const SENDER_EMAIL = Deno.env.get("RESEND_SENDER_EMAIL") || "orders@workshopbase.com.au";
-    const fromAddress = `${workshopName} <${SENDER_EMAIL}>`;
+    // Get and validate sender email
+    const rawSenderEmail = (Deno.env.get("RESEND_SENDER_EMAIL") || "").trim();
+    const senderEmail = isValidEmail(rawSenderEmail) 
+      ? rawSenderEmail 
+      : "orders@workshopbase.com.au";
+    
+    // Sanitize workshop name for display
+    const displayName = sanitizeDisplayName(workshopName || "WorkshopBase");
+    const fromAddress = `${displayName} <${senderEmail}>`;
+    
+    // Log what we're sending for debugging
+    console.log("- From:", fromAddress);
+    if (replyToEmail) {
+      console.log("- Reply-To:", replyToEmail);
+    }
     
     // Prepare email data
     const emailData: any = {
