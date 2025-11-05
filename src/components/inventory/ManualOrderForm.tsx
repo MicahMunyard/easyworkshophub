@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Supplier, InventoryItem } from '@/types/inventory';
 import { useInventoryItems } from '@/hooks/inventory/useInventoryItems';
 import { useToast } from '@/components/ui/use-toast';
-import { sendgridService } from '@/services/sendgridService';
+import { supabase } from '@/integrations/supabase/client';
 import { Trash2, Plus } from 'lucide-react';
 
 interface OrderLineItem {
@@ -242,17 +242,25 @@ const ManualOrderForm: React.FC<ManualOrderFormProps> = ({
         <p>Best regards,<br>WorkshopBase Team</p>
       `;
 
-      // Send email using SendGrid service
-      const result = await sendgridService.sendEmail(
-        'WorkshopBase',
-        { email: supplier.email, name: supplier.contactPerson || supplier.name },
+      // Send email using Resend via edge function
+      const { data: emailResult, error: emailError } = await supabase.functions.invoke(
+        'resend-email',
         {
-          to: { email: supplier.email, name: supplier.contactPerson || supplier.name },
-          subject: emailSubject,
-          html: emailContent,
-          text: emailContent.replace(/<[^>]*>/g, '') // Strip HTML for text version
+          body: {
+            workshopName: 'WorkshopBase',
+            options: {
+              to: supplier.email,
+              subject: emailSubject,
+              html: emailContent,
+              text: emailContent.replace(/<[^>]*>/g, '') // Strip HTML for text version
+            }
+          }
         }
       );
+
+      const result = emailError 
+        ? { success: false, error: emailError }
+        : emailResult;
 
       if (result.success) {
         toast({
