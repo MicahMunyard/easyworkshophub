@@ -123,8 +123,8 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ onAddToOrder }) => {
     setReceiveStockItem(item);
   };
 
-  const handleConfirmReceive = (itemId: string, quantity: number) => {
-    receiveItemIntoStock(itemId, quantity);
+  const handleConfirmReceive = (itemId: string, quantity: number, price: number) => {
+    receiveItemIntoStock(itemId, quantity, price);
     setReceiveStockItem(null);
   };
 

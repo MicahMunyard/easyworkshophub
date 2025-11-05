@@ -17,7 +17,7 @@ interface ReceiveStockDialogProps {
   item: InventoryItem | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onReceive: (itemId: string, quantity: number) => void;
+  onReceive: (itemId: string, quantity: number, price: number) => void;
 }
 
 const ReceiveStockDialog: React.FC<ReceiveStockDialogProps> = ({
@@ -27,16 +27,18 @@ const ReceiveStockDialog: React.FC<ReceiveStockDialogProps> = ({
   onReceive,
 }) => {
   const [quantity, setQuantity] = useState(item?.orderedQuantity || 0);
+  const [price, setPrice] = useState(item?.price || 0);
 
   React.useEffect(() => {
     if (item) {
       setQuantity(item.orderedQuantity || 0);
+      setPrice(item.price || 0);
     }
   }, [item]);
 
   const handleReceive = () => {
     if (item && quantity > 0) {
-      onReceive(item.id, quantity);
+      onReceive(item.id, quantity, price);
       onOpenChange(false);
     }
   };
@@ -99,6 +101,27 @@ const ReceiveStockDialog: React.FC<ReceiveStockDialogProps> = ({
             />
             <p className="text-xs text-muted-foreground">
               This quantity will be added to your stock
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="price">Actual Price (from invoice)</Label>
+            <Input
+              id="price"
+              type="number"
+              min="0"
+              step="0.01"
+              value={price}
+              onChange={(e) => setPrice(parseFloat(e.target.value) || 0)}
+              placeholder="Enter actual price"
+            />
+            <p className="text-xs text-muted-foreground">
+              Original price: <span className="font-medium">${item?.price.toFixed(2)}</span>
+              {price !== item?.price && (
+                <span className="ml-2 text-warning">
+                  (Difference: ${Math.abs(price - (item?.price || 0)).toFixed(2)})
+                </span>
+              )}
             </p>
           </div>
         </div>

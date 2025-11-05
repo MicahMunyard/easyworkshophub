@@ -370,38 +370,61 @@ export const useInventoryItems = () => {
   };
 
   // Receive item into stock
-  const receiveItemIntoStock = async (id: string, quantity: number) => {
+  const receiveItemIntoStock = async (id: string, quantity: number, newPrice?: number) => {
     if (!user) return;
 
+    const item = inventoryItems.find(i => i.id === id);
+    if (!item) return;
+
     try {
-      const { error } = await supabase
+      const updateData: any = {
+        order_status: 'in_stock',
+        in_stock: (item.inStock || 0) + quantity,
+      };
+
+      // Update price if provided
+      if (newPrice !== undefined && newPrice !== item.price) {
+        updateData.price = newPrice;
+      }
+
+      const { error: updateError } = await supabase
         .from('user_inventory_items')
-        .update({
-          order_status: 'in_stock',
-          in_stock: quantity,
-        })
+        .update(updateData)
         .eq('id', id)
         .eq('user_id', user.id);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
+
+      // Create inventory transaction
+      await supabase
+        .from('inventory_transactions')
+        .insert({
+          user_id: user.id,
+          inventory_item_id: id,
+          reference_type: 'purchase_order',
+          quantity_change: quantity,
+          quantity_after: (item.inStock || 0) + quantity,
+          notes: `Received stock${newPrice !== undefined && newPrice !== item.price ? ` - Price updated from $${item.price.toFixed(2)} to $${newPrice.toFixed(2)}` : ''}`
+        });
 
       // Update local state
-      setInventoryItems(prev => prev.map(item => {
-        if (item.id === id) {
+      setInventoryItems(prev => prev.map(i => {
+        if (i.id === id) {
           const updated = {
-            ...item,
+            ...i,
             orderStatus: 'in_stock' as const,
-            inStock: quantity,
+            inStock: (i.inStock || 0) + quantity,
+            ...(newPrice !== undefined && newPrice !== i.price && { price: newPrice })
           };
           updated.status = updateItemStatus(updated);
           return updated;
         }
-        return item;
+        return i;
       }));
 
       toast({
         title: "Stock Received",
-        description: `${quantity} unit(s) have been added to stock.`,
+        description: `${quantity} unit(s) received${newPrice !== undefined && newPrice !== item.price ? ` at updated price $${newPrice.toFixed(2)}` : ''}.`,
       });
     } catch (error) {
       console.error('Error receiving stock:', error);
