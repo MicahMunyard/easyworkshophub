@@ -212,16 +212,23 @@ const ManualOrderForm: React.FC<ManualOrderFormProps> = ({
       // Create email content
       const emailSubject = `New Parts Order from ${workshopName}${poNumber ? ` - PO: ${poNumber}` : ''}`;
       const emailContent = `
-        <h2>New Parts Order Request</h2>
-        
-        <div style="background-color: #f9f9f9; padding: 15px; margin-bottom: 20px; border-left: 4px solid #3b82f6;">
-          <p style="margin: 5px 0;"><strong>From:</strong> ${workshopName}</p>
-          ${workshopEmail ? `<p style="margin: 5px 0;"><strong>Email:</strong> ${workshopEmail}</p>` : ''}
-          ${workshopAddress ? `<p style="margin: 5px 0;"><strong>Address:</strong> ${workshopAddress}</p>` : ''}
-        </div>
-        
-        <p>Dear ${supplier.contactPerson || supplier.name},</p>
-        <p>We would like to place the following order:</p>
+        <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto;">
+          ${workshop?.logo ? `
+            <div style="text-align: center; margin-bottom: 20px;">
+              <img src="${workshop.logo}" alt="${workshopName}" style="max-height: 100px; max-width: 300px;" />
+            </div>
+          ` : ''}
+          
+          <h2 style="color: #333; border-bottom: 2px solid #3b82f6; padding-bottom: 10px;">New Parts Order Request</h2>
+          
+          <div style="background-color: #f9f9f9; padding: 15px; margin-bottom: 20px; border-left: 4px solid #3b82f6;">
+            <p style="margin: 5px 0;"><strong>From:</strong> ${workshopName}</p>
+            ${workshopEmail ? `<p style="margin: 5px 0;"><strong>Email:</strong> ${workshopEmail}</p>` : ''}
+            ${workshopAddress ? `<p style="margin: 5px 0;"><strong>Address:</strong> ${workshopAddress}</p>` : ''}
+          </div>
+          
+          <p>Dear ${supplier.contactPerson || supplier.name},</p>
+          <p>We would like to place the following order:</p>
         
         ${poNumber ? `<p><strong>Purchase Order Number:</strong> ${poNumber}</p>` : ''}
         ${capricornNumber ? `<p><strong>Capricorn Number:</strong> ${capricornNumber}</p>` : ''}
@@ -258,11 +265,16 @@ const ManualOrderForm: React.FC<ManualOrderFormProps> = ({
           </tfoot>
         </table>
         
-        ${orderNotes ? `<p><strong>Additional Notes:</strong><br>${orderNotes.replace(/\n/g, '<br>')}</p>` : ''}
+        ${orderNotes ? `
+          <div style="margin-top: 20px; padding: 15px; background-color: #fffbeb; border-left: 4px solid #f59e0b;">
+            <p style="margin: 0;"><strong>Additional Notes:</strong></p>
+            <p style="margin: 5px 0 0 0;">${orderNotes.replace(/\n/g, '<br>')}</p>
+          </div>
+        ` : ''}
         
-        <p>Please confirm availability and provide pricing and delivery information.</p>
-        <p>Thank you for your service.</p>
-        <p>Best regards,<br>${workshopName} Team</p>
+        <p style="margin-top: 30px;">Please confirm receipt and provide delivery information.</p>
+        <p>Thank you,<br/>${workshopName}</p>
+        </div>
       `;
 
       // Send email using Resend via edge function

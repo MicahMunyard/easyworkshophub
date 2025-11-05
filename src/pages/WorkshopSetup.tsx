@@ -3,7 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Settings, Users, Wrench, Ruler, Clock, Warehouse, Lock, Mail } from "lucide-react";
+import { Settings, Users, Wrench, Ruler, Clock, Warehouse, Lock, Mail, Upload, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -57,7 +57,9 @@ const WorkshopSetup: React.FC = () => {
   const [email, setEmail] = useState('');
   const [website, setWebsite] = useState('');
   const [address, setAddress] = useState('');
+  const [logoUrl, setLogoUrl] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
 
   const fetchTechnicians = async () => {
     try {
@@ -131,7 +133,7 @@ const WorkshopSetup: React.FC = () => {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('workshop_name, phone_number, email_reply_to, company_website, company_address')
+        .select('workshop_name, phone_number, email_reply_to, company_website, company_address, company_logo_url')
         .eq('user_id', user.id)
         .single();
       
@@ -143,9 +145,115 @@ const WorkshopSetup: React.FC = () => {
         setEmail(data.email_reply_to || '');
         setWebsite(data.company_website || '');
         setAddress(data.company_address || '');
+        setLogoUrl(data.company_logo_url || '');
       }
     } catch (error) {
       console.error('Error fetching workshop info:', error);
+    }
+  };
+
+  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user) return;
+
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
+    if (!validTypes.includes(file.type)) {
+      toast({
+        title: "Invalid File Type",
+        description: "Please upload a JPG, PNG, WebP, or SVG image",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (5MB)
+    if (file.size > 5242880) {
+      toast({
+        title: "File Too Large",
+        description: "Logo must be less than 5MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploadingLogo(true);
+    try {
+      // Delete old logo if exists
+      if (logoUrl) {
+        const oldPath = logoUrl.split('/').slice(-2).join('/');
+        await supabase.storage.from('company-logos').remove([oldPath]);
+      }
+
+      // Upload new logo
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/logo.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('company-logos')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('company-logos')
+        .getPublicUrl(fileName);
+
+      setLogoUrl(publicUrl);
+
+      // Update profile with new logo URL
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ company_logo_url: publicUrl })
+        .eq('user_id', user.id);
+
+      if (updateError) throw updateError;
+
+      toast({
+        title: "Success",
+        description: "Logo uploaded successfully",
+      });
+    } catch (error) {
+      console.error('Error uploading logo:', error);
+      toast({
+        title: "Error",
+        description: "Failed to upload logo",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploadingLogo(false);
+    }
+  };
+
+  const handleRemoveLogo = async () => {
+    if (!user || !logoUrl) return;
+
+    try {
+      // Delete from storage
+      const oldPath = logoUrl.split('/').slice(-2).join('/');
+      await supabase.storage.from('company-logos').remove([oldPath]);
+
+      // Update profile
+      const { error } = await supabase
+        .from('profiles')
+        .update({ company_logo_url: null })
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      setLogoUrl('');
+      toast({
+        title: "Success",
+        description: "Logo removed successfully",
+      });
+    } catch (error) {
+      console.error('Error removing logo:', error);
+      toast({
+        title: "Error",
+        description: "Failed to remove logo",
+        variant: "destructive",
+      });
     }
   };
 
@@ -551,8 +659,51 @@ const WorkshopSetup: React.FC = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-4">
+                {/* Logo Upload Section */}
                 <div className="space-y-2">
+                  <label className="text-sm font-medium">Company Logo</label>
+                  <div className="flex items-start gap-4">
+                    {logoUrl ? (
+                      <div className="relative">
+                        <img 
+                          src={logoUrl} 
+                          alt="Company logo" 
+                          className="h-24 w-24 object-contain border rounded-lg"
+                        />
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                          onClick={handleRemoveLogo}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="h-24 w-24 border-2 border-dashed rounded-lg flex items-center justify-center bg-muted">
+                        <Upload className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                    )}
+                    <div className="flex-1 space-y-2">
+                      <Input
+                        id="logo-upload"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/svg+xml"
+                        onChange={handleLogoUpload}
+                        disabled={isUploadingLogo}
+                        className="cursor-pointer"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Upload JPG, PNG, WebP, or SVG. Max 5MB. Logo will appear in order emails.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Workshop Details */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
                   <label htmlFor="workshopName" className="text-sm font-medium">
                     Workshop Name
                   </label>
@@ -608,6 +759,7 @@ const WorkshopSetup: React.FC = () => {
                     onChange={(e) => setAddress(e.target.value)}
                   />
                 </div>
+              </div>
               </div>
               <div className="flex justify-end pt-4">
                 <Button 
