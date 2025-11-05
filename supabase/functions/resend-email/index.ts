@@ -55,8 +55,8 @@ serve(async (req) => {
     // Initialize Resend
     const resend = new Resend(RESEND_API_KEY);
     
-    // Get sender email - use onboarding@resend.dev for testing or custom domain
-    const SENDER_EMAIL = Deno.env.get("RESEND_SENDER_EMAIL") || "onboarding@resend.dev";
+    // Get sender email - use verified domain email
+    const SENDER_EMAIL = Deno.env.get("RESEND_SENDER_EMAIL") || "orders@workshopbase.com.au";
     const fromAddress = `${workshopName} <${SENDER_EMAIL}>`;
     
     // Prepare email data

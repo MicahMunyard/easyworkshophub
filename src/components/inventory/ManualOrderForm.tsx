@@ -10,6 +10,7 @@ import { Supplier, InventoryItem } from '@/types/inventory';
 import { useInventoryItems } from '@/hooks/inventory/useInventoryItems';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useWorkshop } from '@/hooks/useWorkshop';
 import { Trash2, Plus } from 'lucide-react';
 
 interface OrderLineItem {
@@ -40,6 +41,7 @@ const ManualOrderForm: React.FC<ManualOrderFormProps> = ({
   supplier
 }) => {
   const { inventoryItems, addInventoryItem, updateItemOrderStatus } = useInventoryItems();
+  const { workshop } = useWorkshop();
   const { toast } = useToast();
   const [orderItems, setOrderItems] = useState<OrderLineItem[]>([]);
   const [orderNotes, setOrderNotes] = useState('');
@@ -194,7 +196,8 @@ const ManualOrderForm: React.FC<ManualOrderFormProps> = ({
       });
 
       // Create email content
-      const emailSubject = `New Parts Order from WorkshopBase${poNumber ? ` - PO: ${poNumber}` : ''}`;
+      const workshopName = workshop?.name || 'WorkshopBase';
+      const emailSubject = `New Parts Order from ${workshopName}${poNumber ? ` - PO: ${poNumber}` : ''}`;
       const emailContent = `
         <h2>New Parts Order Request</h2>
         <p>Dear ${supplier.contactPerson || supplier.name},</p>
@@ -239,7 +242,7 @@ const ManualOrderForm: React.FC<ManualOrderFormProps> = ({
         
         <p>Please confirm availability and provide pricing and delivery information.</p>
         <p>Thank you for your service.</p>
-        <p>Best regards,<br>WorkshopBase Team</p>
+        <p>Best regards,<br>${workshopName} Team</p>
       `;
 
       // Send email using Resend via edge function
@@ -247,13 +250,14 @@ const ManualOrderForm: React.FC<ManualOrderFormProps> = ({
         'resend-email',
         {
           body: {
-            workshopName: 'WorkshopBase',
+            workshopName,
             options: {
               to: supplier.email,
               subject: emailSubject,
               html: emailContent,
               text: emailContent.replace(/<[^>]*>/g, '') // Strip HTML for text version
-            }
+            },
+            replyToEmail: workshop?.email
           }
         }
       );
