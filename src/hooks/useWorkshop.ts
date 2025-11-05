@@ -1,5 +1,5 @@
-
 import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Workshop {
   name: string;
@@ -10,26 +10,36 @@ interface Workshop {
 }
 
 export function useWorkshop() {
-  const [workshop, setWorkshop] = useState<Workshop | null>({
-    name: 'My Workshop',
-    email: 'contact@myworkshop.com',
-  });
+  const [workshop, setWorkshop] = useState<Workshop | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    // In a real app, this would fetch workshop data from the database
-    // For now, we'll just use a mock
     const fetchWorkshop = async () => {
       try {
-        // Mock data
-        setWorkshop({
-          name: 'My Workshop',
-          email: 'contact@myworkshop.com',
-          phone: '555-123-4567',
-          address: '123 Workshop St, Repair City, TX',
-          logo: '/lovable-uploads/toliccs-logo.png',
-        });
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          setLoading(false);
+          return;
+        }
+        
+        const { data, error: fetchError } = await supabase
+          .from('profiles')
+          .select('workshop_name, email_reply_to, phone_number, company_address, company_logo_url')
+          .eq('user_id', user.id)
+          .single();
+        
+        if (fetchError) throw fetchError;
+        
+        if (data) {
+          setWorkshop({
+            name: data.workshop_name || 'My Workshop',
+            email: data.email_reply_to || '',
+            phone: data.phone_number || '',
+            address: data.company_address || '',
+            logo: data.company_logo_url || '/lovable-uploads/toliccs-logo.png',
+          });
+        }
       } catch (err) {
         setError(err instanceof Error ? err : new Error('Failed to load workshop data'));
       } finally {
@@ -38,6 +48,33 @@ export function useWorkshop() {
     };
 
     fetchWorkshop();
+
+    // Subscribe to profile changes for real-time updates
+    const channel = supabase
+      .channel('profile-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+        },
+        (payload) => {
+          const newData = payload.new as any;
+          setWorkshop({
+            name: newData.workshop_name || 'My Workshop',
+            email: newData.email_reply_to || '',
+            phone: newData.phone_number || '',
+            address: newData.company_address || '',
+            logo: newData.company_logo_url || '/lovable-uploads/toliccs-logo.png',
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   return { workshop, loading, error };

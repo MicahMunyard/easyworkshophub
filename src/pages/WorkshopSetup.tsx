@@ -50,6 +50,14 @@ const WorkshopSetup: React.FC = () => {
   
   const [isAddingBay, setIsAddingBay] = useState(false);
   const [isEditingBay, setIsEditingBay] = useState<ServiceBay | null>(null);
+  
+  // Workshop information state
+  const [workshopName, setWorkshopName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [website, setWebsite] = useState('');
+  const [address, setAddress] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   const fetchTechnicians = async () => {
     try {
@@ -117,11 +125,36 @@ const WorkshopSetup: React.FC = () => {
     }
   };
 
+  const fetchWorkshopInfo = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('workshop_name, phone_number, email_reply_to, company_website, company_address')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (error) throw error;
+      
+      if (data) {
+        setWorkshopName(data.workshop_name || '');
+        setPhone(data.phone_number || '');
+        setEmail(data.email_reply_to || '');
+        setWebsite(data.company_website || '');
+        setAddress(data.company_address || '');
+      }
+    } catch (error) {
+      console.error('Error fetching workshop info:', error);
+    }
+  };
+
   useEffect(() => {
     if (user) {
       fetchTechnicians();
       fetchServices();
       fetchServiceBays();
+      fetchWorkshopInfo();
     }
   }, [user]);
 
@@ -455,6 +488,40 @@ const WorkshopSetup: React.FC = () => {
     }
   };
 
+  const handleSaveWorkshopInfo = async () => {
+    if (!user) return;
+    
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          workshop_name: workshopName,
+          phone_number: phone,
+          email_reply_to: email,
+          company_website: website,
+          company_address: address,
+        })
+        .eq('user_id', user.id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "Workshop information saved successfully",
+      });
+    } catch (error) {
+      console.error('Error saving workshop info:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save workshop information",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -492,7 +559,8 @@ const WorkshopSetup: React.FC = () => {
                   <Input
                     id="workshopName"
                     placeholder="Enter workshop name"
-                    defaultValue="TOLICCS Auto Workshop"
+                    value={workshopName}
+                    onChange={(e) => setWorkshopName(e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
@@ -502,7 +570,8 @@ const WorkshopSetup: React.FC = () => {
                   <Input
                     id="phone"
                     placeholder="Enter phone number"
-                    defaultValue="+1 (555) 123-4567"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
@@ -513,7 +582,8 @@ const WorkshopSetup: React.FC = () => {
                     id="email"
                     type="email"
                     placeholder="Enter email address"
-                    defaultValue="info@toliccsauto.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
@@ -523,9 +593,30 @@ const WorkshopSetup: React.FC = () => {
                   <Input
                     id="website"
                     placeholder="Enter website URL"
-                    defaultValue="www.toliccsauto.com"
+                    value={website}
+                    onChange={(e) => setWebsite(e.target.value)}
                   />
                 </div>
+                <div className="space-y-2">
+                  <label htmlFor="address" className="text-sm font-medium">
+                    Address
+                  </label>
+                  <Input
+                    id="address"
+                    placeholder="Enter workshop address"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end pt-4">
+                <Button 
+                  onClick={handleSaveWorkshopInfo} 
+                  disabled={isSaving}
+                  className="bg-workshop-red hover:bg-workshop-red/90"
+                >
+                  {isSaving ? 'Saving...' : 'Save Workshop Information'}
+                </Button>
               </div>
             </CardContent>
           </Card>
