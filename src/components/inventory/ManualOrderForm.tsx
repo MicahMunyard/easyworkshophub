@@ -48,6 +48,20 @@ const ManualOrderForm: React.FC<ManualOrderFormProps> = ({
   const [capricornNumber, setCapricornNumber] = useState('');
   const [poNumber, setPoNumber] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Workshop details (auto-populated from Workshop Setup)
+  const [workshopName, setWorkshopName] = useState('');
+  const [workshopEmail, setWorkshopEmail] = useState('');
+  const [workshopAddress, setWorkshopAddress] = useState('');
+
+  // Auto-populate workshop details when workshop data loads
+  React.useEffect(() => {
+    if (workshop) {
+      setWorkshopName(workshop.name || '');
+      setWorkshopEmail(workshop.email || '');
+      setWorkshopAddress(workshop.address || '');
+    }
+  }, [workshop]);
 
   // Filter items for this supplier
   const supplierItems = inventoryItems.filter(item => item.supplierId === supplier.id);
@@ -196,10 +210,16 @@ const ManualOrderForm: React.FC<ManualOrderFormProps> = ({
       });
 
       // Create email content
-      const workshopName = workshop?.name || 'WorkshopBase';
       const emailSubject = `New Parts Order from ${workshopName}${poNumber ? ` - PO: ${poNumber}` : ''}`;
       const emailContent = `
         <h2>New Parts Order Request</h2>
+        
+        <div style="background-color: #f9f9f9; padding: 15px; margin-bottom: 20px; border-left: 4px solid #3b82f6;">
+          <p style="margin: 5px 0;"><strong>From:</strong> ${workshopName}</p>
+          ${workshopEmail ? `<p style="margin: 5px 0;"><strong>Email:</strong> ${workshopEmail}</p>` : ''}
+          ${workshopAddress ? `<p style="margin: 5px 0;"><strong>Address:</strong> ${workshopAddress}</p>` : ''}
+        </div>
+        
         <p>Dear ${supplier.contactPerson || supplier.name},</p>
         <p>We would like to place the following order:</p>
         
@@ -257,7 +277,7 @@ const ManualOrderForm: React.FC<ManualOrderFormProps> = ({
               html: emailContent,
               text: emailContent.replace(/<[^>]*>/g, '') // Strip HTML for text version
             },
-            replyToEmail: workshop?.email
+            replyToEmail: workshopEmail || workshop?.email
           }
         }
       );
@@ -277,6 +297,10 @@ const ManualOrderForm: React.FC<ManualOrderFormProps> = ({
         setOrderNotes('');
         setCapricornNumber('');
         setPoNumber('');
+        // Reset workshop fields to defaults
+        setWorkshopName(workshop?.name || '');
+        setWorkshopEmail(workshop?.email || '');
+        setWorkshopAddress(workshop?.address || '');
         onClose();
       } else {
         throw new Error(result.error?.message || 'Failed to send order');
@@ -301,8 +325,45 @@ const ManualOrderForm: React.FC<ManualOrderFormProps> = ({
         </DialogHeader>
         
         <div className="space-y-4">
+          {/* Workshop Details */}
+          <div className="space-y-3 p-4 border rounded-lg bg-muted/50">
+            <h3 className="text-sm font-semibold text-foreground">Workshop Details</h3>
+            <div className="grid grid-cols-1 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="workshopName">Workshop Name</Label>
+                <Input
+                  id="workshopName"
+                  placeholder="Enter workshop name"
+                  value={workshopName}
+                  onChange={(e) => setWorkshopName(e.target.value)}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="workshopEmail">Email</Label>
+                <Input
+                  id="workshopEmail"
+                  type="email"
+                  placeholder="Enter workshop email"
+                  value={workshopEmail}
+                  onChange={(e) => setWorkshopEmail(e.target.value)}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="workshopAddress">Address</Label>
+                <Input
+                  id="workshopAddress"
+                  placeholder="Enter workshop address"
+                  value={workshopAddress}
+                  onChange={(e) => setWorkshopAddress(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+          
           {/* Order Reference Fields */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg bg-gray-50">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg bg-muted/50">
             <div className="space-y-2">
               <Label htmlFor="poNumber">Purchase Order Number</Label>
               <Input
