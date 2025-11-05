@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_approval_tokens: {
+        Row: {
+          approved_by_ip: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          token: string
+          used: boolean
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          approved_by_ip?: string | null
+          created_at?: string
+          expires_at: string
+          id?: string
+          token: string
+          used?: boolean
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          approved_by_ip?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          token?: string
+          used?: boolean
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       accounting_integrations: {
         Row: {
           access_token: string | null

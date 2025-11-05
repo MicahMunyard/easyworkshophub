@@ -94,3 +94,9 @@ verify_jwt = true
 
 [functions.xero-integration]
 verify_jwt = false
+
+[functions.send-approval-notification]
+verify_jwt = true
+
+[functions.approve-account]
+verify_jwt = false
