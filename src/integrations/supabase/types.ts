@@ -1308,6 +1308,30 @@ export type Database = {
           },
         ]
       }
+      system_settings: {
+        Row: {
+          id: string
+          setting_key: string
+          setting_value: Json
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          setting_key: string
+          setting_value: Json
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          setting_key?: string
+          setting_value?: Json
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       technician_logins: {
         Row: {
           created_at: string
@@ -2565,6 +2589,7 @@ export type Database = {
           question: string
         }[]
       }
+      get_system_setting: { Args: { key: string }; Returns: Json }
       get_user_ezyparts_quotes: {
         Args: never
         Returns: {

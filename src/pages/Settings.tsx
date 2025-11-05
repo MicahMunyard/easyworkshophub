@@ -15,6 +15,8 @@ import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import NotificationSettings from '@/components/settings/NotificationSettings';
 import { EzyPartsSettings } from '@/components/settings/EzyPartsSettings';
+import { SystemSettings } from '@/components/settings/SystemSettings';
+import { useAdminCheck } from '@/hooks/useAdminCheck';
 
 const passwordSchema = z.object({
   currentPassword: z.string().min(6, { message: 'Password must be at least 6 characters' }),
@@ -29,6 +31,7 @@ type PasswordFormValues = z.infer<typeof passwordSchema>;
 
 const Settings: React.FC = () => {
   const { user, loading, signOut } = useAuth();
+  const { data: isAdmin } = useAdminCheck();
   const [activeTab, setActiveTab] = useState('account');
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -136,6 +139,7 @@ const Settings: React.FC = () => {
           <TabsTrigger value="account">Account</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="security">Security</TabsTrigger>
+          {isAdmin && <TabsTrigger value="system">System</TabsTrigger>}
         </TabsList>
         
         <TabsContent value="account">
@@ -209,117 +213,72 @@ const Settings: React.FC = () => {
               <EzyPartsSettings />
             </TabsContent>
         
-        <TabsContent value="security">
-          <Card>
-            <CardHeader>
-              <CardTitle>Security Settings</CardTitle>
-              <CardDescription>
-                Manage your password and security preferences.
-              </CardDescription>
-            </CardHeader>
-            
-            <form onSubmit={passwordForm.handleSubmit(async (values) => {
-              try {
-                setIsUpdating(true);
-                
-                // First verify the current password by attempting to sign in
-                const { error: signInError } = await supabase.auth.signInWithPassword({
-                  email: user?.email || '',
-                  password: values.currentPassword,
-                });
-                
-                if (signInError) {
-                  toast({
-                    title: "Incorrect password",
-                    description: "The current password you entered is incorrect.",
-                    variant: "destructive",
-                  });
-                  return;
-                }
-                
-                // Update the password
-                const { error } = await supabase.auth.updateUser({
-                  password: values.newPassword,
-                });
-                
-                if (error) throw error;
-                
-                toast({
-                  title: "Password updated",
-                  description: "Your password has been successfully updated.",
-                });
-                
-                passwordForm.reset();
-              } catch (error: any) {
-                toast({
-                  title: "Password update failed",
-                  description: error.message,
-                  variant: "destructive",
-                });
-              } finally {
-                setIsUpdating(false);
-              }
-            })}>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="currentPassword">Current Password</Label>
-                  <Input
-                    id="currentPassword"
-                    type="password"
-                    placeholder="••••••••"
-                    {...passwordForm.register('currentPassword')}
-                  />
-                  {passwordForm.formState.errors.currentPassword && (
-                    <p className="text-sm text-red-500">{passwordForm.formState.errors.currentPassword.message}</p>
-                  )}
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="newPassword">New Password</Label>
-                  <Input
-                    id="newPassword"
-                    type="password"
-                    placeholder="••••••••"
-                    {...passwordForm.register('newPassword')}
-                  />
-                  {passwordForm.formState.errors.newPassword && (
-                    <p className="text-sm text-red-500">{passwordForm.formState.errors.newPassword.message}</p>
-                  )}
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    placeholder="••••••••"
-                    {...passwordForm.register('confirmPassword')}
-                  />
-                  {passwordForm.formState.errors.confirmPassword && (
-                    <p className="text-sm text-red-500">{passwordForm.formState.errors.confirmPassword.message}</p>
-                  )}
-                </div>
+          <TabsContent value="security">
+            <Card>
+              <CardHeader>
+                <CardTitle>Security Settings</CardTitle>
+                <CardDescription>
+                  Manage your password and security preferences
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form
+                  onSubmit={passwordForm.handleSubmit(onPasswordSubmit)}
+                  className="space-y-4"
+                >
+                  <div className="space-y-2">
+                    <Label htmlFor="current_password">Current Password</Label>
+                    <Input
+                      id="current_password"
+                      type="password"
+                      {...passwordForm.register("currentPassword")}
+                    />
+                    {passwordForm.formState.errors.currentPassword && (
+                      <p className="text-sm text-destructive">
+                        {passwordForm.formState.errors.currentPassword.message}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="new_password">New Password</Label>
+                    <Input
+                      id="new_password"
+                      type="password"
+                      {...passwordForm.register("newPassword")}
+                    />
+                    {passwordForm.formState.errors.newPassword && (
+                      <p className="text-sm text-destructive">
+                        {passwordForm.formState.errors.newPassword.message}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="confirm_password">Confirm New Password</Label>
+                    <Input
+                      id="confirm_password"
+                      type="password"
+                      {...passwordForm.register("confirmPassword")}
+                    />
+                    {passwordForm.formState.errors.confirmPassword && (
+                      <p className="text-sm text-destructive">
+                        {passwordForm.formState.errors.confirmPassword.message}
+                      </p>
+                    )}
+                  </div>
+                  <Button type="submit" disabled={isUpdating}>
+                    {isUpdating ? "Updating..." : "Update Password"}
+                  </Button>
+                </form>
               </CardContent>
-              
-              <CardFooter>
-                <Button type="submit" disabled={isUpdating}>
-                  {isUpdating ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Updating...
-                    </>
-                  ) : (
-                    <>
-                      <Lock className="mr-2 h-4 w-4" />
-                      Change Password
-                    </>
-                  )}
-                </Button>
-              </CardFooter>
-            </form>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            </Card>
+          </TabsContent>
+
+          {isAdmin && (
+            <TabsContent value="system">
+              <SystemSettings />
+            </TabsContent>
+          )}
+        </Tabs>
     </div>
   );
 };
