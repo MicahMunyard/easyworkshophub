@@ -70,7 +70,25 @@ const Onboarding = () => {
 
     setLoading(true);
     try {
-      const { error } = await supabase
+      // First, process the onboarding data to populate operational tables
+      const { data: processResult, error: processError } = await supabase
+        .rpc('process_onboarding_data', {
+          p_user_id: user.id
+        });
+
+      if (processError) {
+        console.error('Error processing onboarding data:', processError);
+        toast({
+          title: 'Warning',
+          description: 'Some onboarding data could not be saved. You can configure it manually in Workshop Settings.',
+          variant: 'default',
+        });
+      } else if (processResult) {
+        console.log('Onboarding data processed:', processResult);
+      }
+
+      // Then mark onboarding as completed
+      const { error: updateError } = await supabase
         .from('profiles')
         .update({
           onboarding_completed: true,
@@ -78,11 +96,13 @@ const Onboarding = () => {
         })
         .eq('user_id', user.id);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
 
       toast({
         title: 'Welcome to WorkshopBase!',
-        description: 'Your workshop is all set up and ready to go.',
+        description: processResult?.success 
+          ? `Your workshop is all set up with ${processResult.services_created || 0} services, ${processResult.bays_created || 0} bays, and ${processResult.technicians_created || 0} technicians.`
+          : 'Your workshop is all set up and ready to go.',
       });
 
       navigate('/', { replace: true });
