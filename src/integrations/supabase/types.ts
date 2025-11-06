@@ -2649,6 +2649,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      process_onboarding_data: { Args: { p_user_id: string }; Returns: Json }
       save_ezyparts_quote: {
         Args: { p_quote_data: Json; p_user_id: string }
         Returns: string

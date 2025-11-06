@@ -74,7 +74,16 @@ const Onboarding = () => {
       const { data: processResult, error: processError } = await supabase
         .rpc('process_onboarding_data', {
           p_user_id: user.id
-        });
+        }) as { 
+          data: { 
+            success: boolean; 
+            services_created?: number; 
+            bays_created?: number; 
+            technicians_created?: number;
+            error?: string;
+          } | null; 
+          error: any 
+        };
 
       if (processError) {
         console.error('Error processing onboarding data:', processError);
