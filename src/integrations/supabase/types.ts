@@ -2580,6 +2580,7 @@ export type Database = {
         Args: { tech_email: string; tech_id: string; tech_password: string }
         Returns: undefined
       }
+      approve_user: { Args: { p_user_id: string }; Returns: undefined }
       check_facebook_connection: {
         Args: { user_id_param: string }
         Returns: {
