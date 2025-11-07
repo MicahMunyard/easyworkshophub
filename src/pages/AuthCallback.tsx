@@ -35,6 +35,20 @@ const AuthCallback = () => {
 
         console.log('Session set successfully:', data);
 
+        // Auto-approve the user account after email confirmation
+        const { error: approvalError } = await supabase
+          .from('profiles')
+          .update({
+            account_status: 'approved',
+            approved_at: new Date().toISOString()
+          })
+          .eq('user_id', data.user.id)
+          .eq('account_status', 'pending_approval');
+
+        if (approvalError) {
+          console.error('Error auto-approving account:', approvalError);
+        }
+
         // Check onboarding status
         const { data: profileData } = await supabase
           .from('profiles')
