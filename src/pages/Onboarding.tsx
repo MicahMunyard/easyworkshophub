@@ -18,7 +18,7 @@ import OnboardingStep7 from '@/components/onboarding/OnboardingStep7';
 const TOTAL_STEPS = 8;
 
 const Onboarding = () => {
-  const { user, profile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [onboardingData, setOnboardingData] = useState<any>({});
@@ -106,6 +106,9 @@ const Onboarding = () => {
         .eq('user_id', user.id);
 
       if (updateError) throw updateError;
+
+      // Refresh profile to get updated data before navigation
+      await refreshProfile();
 
       // Send welcome email
       try {
