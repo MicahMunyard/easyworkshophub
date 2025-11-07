@@ -107,6 +107,36 @@ const Onboarding = () => {
 
       if (updateError) throw updateError;
 
+      // Send welcome email
+      try {
+        await supabase.functions.invoke('resend-email', {
+          body: {
+            to: user.email,
+            subject: 'Welcome to WorkshopBase!',
+            html: `
+              <h1>Welcome to WorkshopBase, ${profile?.workshop_name || 'there'}!</h1>
+              <p>Thank you for completing your onboarding. Your workshop is now set up and ready to go!</p>
+              ${processResult?.success ? `
+                <h2>Your Workshop Setup:</h2>
+                <ul>
+                  <li>Services: ${processResult.services_created || 0}</li>
+                  <li>Service Bays: ${processResult.bays_created || 0}</li>
+                  <li>Technicians: ${processResult.technicians_created || 0}</li>
+                </ul>
+              ` : ''}
+              <p>You can now start managing your bookings, customers, and more!</p>
+              <p>If you need any help getting started, feel free to reach out to our support team.</p>
+              <p>Best regards,<br>The WorkshopBase Team</p>
+            `,
+            workshopName: profile?.workshop_name || 'WorkshopBase'
+          }
+        });
+        console.log('Welcome email sent successfully');
+      } catch (emailError) {
+        console.error('Error sending welcome email:', emailError);
+        // Don't block onboarding completion if email fails
+      }
+
       toast({
         title: 'Welcome to WorkshopBase!',
         description: processResult?.success 
