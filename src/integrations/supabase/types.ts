@@ -1050,6 +1050,7 @@ export type Database = {
           approved_at: string | null
           approved_by: string | null
           avatar_url: string | null
+          business_hours: Json | null
           company_address: string | null
           company_logo_url: string | null
           company_website: string | null
@@ -1073,6 +1074,7 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           avatar_url?: string | null
+          business_hours?: Json | null
           company_address?: string | null
           company_logo_url?: string | null
           company_website?: string | null
@@ -1096,6 +1098,7 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           avatar_url?: string | null
+          business_hours?: Json | null
           company_address?: string | null
           company_logo_url?: string | null
           company_website?: string | null

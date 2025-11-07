@@ -60,6 +60,12 @@ const WorkshopSetup: React.FC = () => {
   const [logoUrl, setLogoUrl] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  
+  // Business hours state
+  const [workingDays, setWorkingDays] = useState<string[]>(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']);
+  const [openTime, setOpenTime] = useState('08:00');
+  const [closeTime, setCloseTime] = useState('17:00');
+  const [slotDuration, setSlotDuration] = useState('30');
 
   const fetchTechnicians = async () => {
     try {
@@ -133,7 +139,7 @@ const WorkshopSetup: React.FC = () => {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('workshop_name, phone_number, email_reply_to, company_website, company_address, company_logo_url')
+        .select('workshop_name, phone_number, email_reply_to, company_website, company_address, company_logo_url, business_hours')
         .eq('user_id', user.id)
         .single();
       
@@ -146,6 +152,15 @@ const WorkshopSetup: React.FC = () => {
         setWebsite(data.company_website || '');
         setAddress(data.company_address || '');
         setLogoUrl(data.company_logo_url || '');
+        
+        // Load business hours if available
+        if (data.business_hours) {
+          const hours = data.business_hours as any;
+          setWorkingDays(hours.workingDays || ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']);
+          setOpenTime(hours.openTime || '08:00');
+          setCloseTime(hours.closeTime || '17:00');
+          setSlotDuration(hours.slotDuration || '30');
+        }
       }
     } catch (error) {
       console.error('Error fetching workshop info:', error);
@@ -609,6 +624,12 @@ const WorkshopSetup: React.FC = () => {
           email_reply_to: email,
           company_website: website,
           company_address: address,
+          business_hours: {
+            workingDays,
+            openTime,
+            closeTime,
+            slotDuration
+          }
         })
         .eq('user_id', user.id);
       
@@ -777,34 +798,82 @@ const WorkshopSetup: React.FC = () => {
             <CardHeader>
               <CardTitle>Business Hours</CardTitle>
               <CardDescription>
-                Set your workshop's operating hours.
+                Set your workshop's operating hours and booking slot duration.
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-6">
               <div className="space-y-4">
-                {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => (
-                  <div key={day} className="flex items-center justify-between">
-                    <div className="w-28">{day}</div>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="time"
-                        defaultValue={day !== 'Sunday' ? "08:00" : ""}
-                        className="w-32"
-                        disabled={day === 'Sunday'}
-                      />
-                      <span>to</span>
-                      <Input
-                        type="time"
-                        defaultValue={day !== 'Sunday' ? "17:00" : ""}
-                        className="w-32"
-                        disabled={day === 'Sunday'}
-                      />
-                      <Button variant="ghost" size="sm" className={day === 'Sunday' ? "text-red-500" : ""}>
-                        {day === 'Sunday' ? 'Closed' : 'Open'}
-                      </Button>
-                    </div>
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Working Days</label>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => (
+                      <div
+                        key={day}
+                        className={`flex items-center space-x-2 p-3 border rounded-lg cursor-pointer transition-colors ${
+                          workingDays.includes(day) ? 'bg-accent border-primary' : 'hover:bg-accent/50'
+                        }`}
+                        onClick={() => {
+                          setWorkingDays(prev => 
+                            prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
+                          );
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={workingDays.includes(day)}
+                          onChange={() => {}}
+                          className="cursor-pointer"
+                        />
+                        <label className="cursor-pointer text-sm">{day.slice(0, 3)}</label>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Opening Time</label>
+                    <Input
+                      type="time"
+                      value={openTime}
+                      onChange={(e) => setOpenTime(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Closing Time</label>
+                    <Input
+                      type="time"
+                      value={closeTime}
+                      onChange={(e) => setCloseTime(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Booking Slot Duration</label>
+                  <select
+                    value={slotDuration}
+                    onChange={(e) => setSlotDuration(e.target.value)}
+                    className="w-full p-2 border rounded-md"
+                  >
+                    <option value="15">15 minutes</option>
+                    <option value="30">30 minutes</option>
+                    <option value="60">60 minutes</option>
+                  </select>
+                  <p className="text-xs text-muted-foreground">
+                    This determines the minimum time slot for bookings
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-4 border-t">
+                <Button 
+                  onClick={handleSaveWorkshopInfo} 
+                  disabled={isSaving}
+                  className="bg-workshop-red hover:bg-workshop-red/90"
+                >
+                  {isSaving ? 'Saving...' : 'Save Business Hours'}
+                </Button>
               </div>
             </CardContent>
           </Card>
