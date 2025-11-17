@@ -2,16 +2,20 @@
 import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Facebook, Instagram, RefreshCcw, Trash2 } from "lucide-react";
+import { Facebook, Instagram, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { connectSocialPlatform } from "@/hooks/communication/api/connectSocialPlatform";
 import FacebookIntegration from "./FacebookIntegration";
+import { useConnectedPages } from "@/hooks/facebook/useConnectedPages";
+import { format } from "date-fns";
 
 
 const SocialConnections: React.FC = () => {
   const { user } = useAuth();
   const [isConnecting, setIsConnecting] = useState<string | null>(null);
+  const { pages, isLoading: isPagesLoading, disconnectPage } = useConnectedPages();
+
 
   const handleConnectPlatform = async (platform: 'facebook' | 'instagram' | 'tiktok') => {
     if (!user) return;
@@ -100,10 +104,40 @@ const SocialConnections: React.FC = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8">
-            <p className="text-muted-foreground">No pages connected yet</p>
-            <p className="text-sm text-muted-foreground mt-2">Connect your social media accounts above to see your pages here</p>
-          </div>
+          {isPagesLoading ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">Loading pages...</p>
+            </div>
+          ) : pages.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">No pages connected yet</p>
+              <p className="text-sm text-muted-foreground mt-2">Connect your social media accounts above to see your pages here</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {pages.map((page) => (
+                <div key={page.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <Facebook className="h-6 w-6 text-blue-600" />
+                    <div>
+                      <h4 className="font-medium">{page.page_name}</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Connected {format(new Date(page.created_at), 'MMM d, yyyy')}
+                      </p>
+                    </div>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => disconnectPage(page.id)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Disconnect
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
