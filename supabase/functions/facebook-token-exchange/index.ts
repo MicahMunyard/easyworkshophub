@@ -216,7 +216,7 @@ serve(async (req) => {
           user_id: user.id,
           updated_at: new Date().toISOString()
         }, {
-          onConflict: 'page_id'
+          onConflict: 'user_id,page_id'
         });
         
       if (tokenError) {
