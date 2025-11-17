@@ -4,6 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Message } from '@/types/communication';
 import { useRealtimeMessages } from '../communication/useRealtimeMessages';
+import { isDemoConversation, generateDemoMessages } from '@/utils/demoConversations';
 
 export const useFacebookMessages = (conversationId: string | null) => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -20,6 +21,15 @@ export const useFacebookMessages = (conversationId: string | null) => {
 
     const fetchMessages = async () => {
       try {
+        // Check if this is a demo conversation
+        if (isDemoConversation(conversationId)) {
+          const demoMessages = generateDemoMessages(conversationId);
+          setMessages(demoMessages);
+          console.log('Loaded demo messages:', demoMessages);
+          setIsLoading(false);
+          return;
+        }
+
         const { data, error } = await supabase
           .from('social_messages')
           .select('*')
