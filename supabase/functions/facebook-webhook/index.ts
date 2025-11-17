@@ -120,7 +120,7 @@ serve(async (req) => {
               .from('social_messages')
               .insert({
                 conversation_id: conversation.id,
-                sender_type: isFromCustomer ? 'customer' : 'business',
+                sender_type: isFromCustomer ? 'contact' : 'user',
                 content: messageText,
                 sent_at: timestamp.toISOString()
               });
