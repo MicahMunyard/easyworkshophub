@@ -150,11 +150,27 @@ export const useFacebookAuth = (props?: UseFacebookAuthProps) => {
                 if (pagesResponse?.data && pagesResponse.data.length > 0) {
                   console.log(`✅ Found ${pagesResponse.data.length} pages`);
                   setAvailablePages(pagesResponse.data);
-                  setShowPageSelector(true);
-                  toast({
-                    title: "Facebook Connected",
-                    description: "Please select the pages you want to connect."
-                  });
+                  
+                  // Auto-connect if only one page
+                  if (pagesResponse.data.length === 1) {
+                    console.log('🔄 Auto-connecting single page:', pagesResponse.data[0].name);
+                    toast({
+                      title: "Connecting Facebook Page",
+                      description: `Connecting ${pagesResponse.data[0].name}...`
+                    });
+                    
+                    // Automatically select and connect the single page
+                    const singlePageId = pagesResponse.data[0].id;
+                    handlePageSelection([singlePageId]);
+                  } else {
+                    // Show selector for multiple pages
+                    setShowPageSelector(true);
+                    toast({
+                      title: "Facebook Connected",
+                      description: "Please select the pages you want to connect."
+                    });
+                    setIsLoading(false);
+                  }
                 } else {
                   console.warn('⚠️ No pages found, triggering manual connection');
                   setAvailablePages([]);
@@ -165,7 +181,6 @@ export const useFacebookAuth = (props?: UseFacebookAuthProps) => {
                     onNoPages(accessToken);
                   }
                 }
-                setIsLoading(false);
               }
             );
           });
