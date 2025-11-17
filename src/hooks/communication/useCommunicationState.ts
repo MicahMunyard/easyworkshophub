@@ -54,19 +54,7 @@ export const useCommunicationState = () => {
     checkFacebookConnection();
   }, [user]);
 
-  // Clean up demo conversations on mount
-  useEffect(() => {
-    if (!user) return;
-    
-    // Always clean up demo conversations on mount
-    const cleanup = async () => {
-      await cleanupDemoConversations(user.id);
-      // Refresh conversations after cleanup
-      getConversations();
-    };
-    
-    cleanup();
-  }, [user]);
+  // Note: Demo conversations are now handled in-memory, no cleanup needed
 
   // Set up conversation real-time updates
   useEffect(() => {
@@ -118,7 +106,7 @@ export const useCommunicationState = () => {
     if (!user) return;
     
     setIsLoading(true);
-    const data = await fetchConversations();
+    const data = await fetchConversations(user.id, true); // Enable demo mode
     if (data) {
       console.log("Fetched conversations:", data);
       setConversations(data);
