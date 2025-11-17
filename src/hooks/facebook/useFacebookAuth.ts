@@ -161,7 +161,7 @@ export const useFacebookAuth = (props?: UseFacebookAuthProps) => {
                     
                     // Automatically select and connect the single page
                     const singlePageId = pagesResponse.data[0].id;
-                    handlePageSelection([singlePageId]);
+                    handlePageSelection([singlePageId], accessToken);
                   } else {
                     // Show selector for multiple pages
                     setShowPageSelector(true);
@@ -210,8 +210,10 @@ export const useFacebookAuth = (props?: UseFacebookAuthProps) => {
     }
   };
 
-  const handlePageSelection = async (selectedPageIds: string[]) => {
-    if (selectedPageIds.length === 0 || !userAccessToken) {
+  const handlePageSelection = async (selectedPageIds: string[], tokenOverride?: string) => {
+    const token = tokenOverride || userAccessToken;
+    
+    if (selectedPageIds.length === 0 || !token) {
       toast({
         variant: "destructive",
         title: "Error",
@@ -236,7 +238,7 @@ export const useFacebookAuth = (props?: UseFacebookAuthProps) => {
       // Exchange token with our backend
       const { data, error } = await supabase.functions.invoke('facebook-token-exchange', {
         body: { 
-          userAccessToken,
+          userAccessToken: token,
           selectedPageIds
         },
         headers: {
