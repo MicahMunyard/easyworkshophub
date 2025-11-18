@@ -10,7 +10,7 @@ export interface Notification {
   message: string;
   createdAt: Date;
   read: boolean;
-  type: "job_completed" | "job_assigned" | "invoice_due" | "system";
+  type: "job_completed" | "job_assigned" | "invoice_due" | "system" | "message_received";
   priority: NotificationPriority;
   actionData?: any;
 }
@@ -20,6 +20,7 @@ interface NotificationPreferences {
   assignedJobs: boolean;
   invoiceDue: boolean;
   systemUpdates: boolean;
+  messageReceived: boolean;
 }
 
 interface NotificationContextType {
@@ -51,6 +52,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     assignedJobs: true,
     invoiceDue: true,
     systemUpdates: true,
+    messageReceived: true,
   });
   
   // Debounced localStorage save
