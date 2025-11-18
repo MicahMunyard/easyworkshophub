@@ -2,11 +2,15 @@
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Message } from "@/types/communication";
+import { useNotifications } from "@/contexts/NotificationContext";
 
 export const useRealtimeMessages = (
   conversationId: string | null,
-  onNewMessage: (message: Message) => void
+  onNewMessage: (message: Message) => void,
+  contactName?: string
 ) => {
+  const { addNotification, preferences } = useNotifications();
+  
   useEffect(() => {
     if (!conversationId) return;
 
@@ -38,6 +42,23 @@ export const useRealtimeMessages = (
             isOutgoing: newMessage.sender_type === 'user'
           };
           onNewMessage(typedMessage);
+          
+          // Add notification for incoming messages if preferences allow
+          if (typedMessage.sender_type === 'contact' && preferences.messageReceived) {
+            addNotification({
+              title: `New message from ${contactName || 'Customer'}`,
+              message: typedMessage.content.length > 50 
+                ? typedMessage.content.substring(0, 50) + '...' 
+                : typedMessage.content,
+              type: "message_received",
+              priority: "medium",
+              actionData: {
+                conversationId: typedMessage.conversation_id,
+                contactName: contactName || 'Customer',
+                messagePreview: typedMessage.content
+              }
+            });
+          }
         }
       )
       .subscribe((status) => {
@@ -49,5 +70,5 @@ export const useRealtimeMessages = (
       console.log(`Removing realtime subscription for conversation: ${conversationId}`);
       supabase.removeChannel(channel);
     };
-  }, [conversationId, onNewMessage]);
+  }, [conversationId, onNewMessage, contactName, preferences.messageReceived, addNotification]);
 };

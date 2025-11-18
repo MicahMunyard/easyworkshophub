@@ -154,3 +154,34 @@ export const generateDemoMessages = (conversationId: string): Message[] => {
 export const isDemoConversation = (conversationId: string): boolean => {
   return conversationId.startsWith("demo-");
 };
+
+export const generateDemoNotifications = () => {
+  const now = new Date();
+  
+  return [
+    {
+      title: "New message from Sarah Johnson",
+      message: "Hi there! I need to schedule a service for my 2019 Honda Civic.",
+      type: "message_received" as const,
+      priority: "medium" as const,
+      actionData: {
+        conversationId: "demo-conv-1",
+        contactName: "Sarah Johnson",
+        platform: "facebook",
+        messagePreview: "Hi there! I need to schedule a service for my 2019 Honda Civic."
+      }
+    },
+    {
+      title: "New message from Emma Wilson",
+      message: "Hi! Can you check if my car is ready for pickup?",
+      type: "message_received" as const,
+      priority: "medium" as const,
+      actionData: {
+        conversationId: "demo-conv-3",
+        contactName: "Emma Wilson",
+        platform: "facebook",
+        messagePreview: "Hi! Can you check if my car is ready for pickup?"
+      }
+    }
+  ];
+};

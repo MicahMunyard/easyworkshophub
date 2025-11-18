@@ -10,6 +10,8 @@ import { addContactToCustomers as addContactToCustomersApi } from "./api/addCont
 import { cleanupDemoConversations } from "./api/cleanupDemoConversations";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { useNotifications } from "@/contexts/NotificationContext";
+import { generateDemoNotifications, isDemoConversation } from "@/utils/demoConversations";
 
 // Define a type for the Facebook connection check response
 interface FacebookConnectionResponse {
@@ -18,6 +20,7 @@ interface FacebookConnectionResponse {
 
 export const useCommunicationState = () => {
   const { user } = useAuth();
+  const { addNotification, notifications } = useNotifications();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -110,6 +113,17 @@ export const useCommunicationState = () => {
     if (data) {
       console.log("Fetched conversations:", data);
       setConversations(data);
+      
+      // Add demo notifications if we have demo conversations and no message notifications yet
+      const hasDemoConversations = data.some(conv => isDemoConversation(conv.id));
+      const hasMessageNotifications = notifications.some(n => n.type === 'message_received');
+      
+      if (hasDemoConversations && !hasMessageNotifications) {
+        const demoNotifications = generateDemoNotifications();
+        demoNotifications.forEach(notification => {
+          addNotification(notification);
+        });
+      }
     } else {
       console.log("No conversations found");
     }

@@ -53,6 +53,10 @@ const NotificationBell = () => {
             setIsPopoverOpen(false);
           }
         }
+      } else if (notification.type === "message_received") {
+        // Navigate to communication page
+        setIsPopoverOpen(false);
+        navigate('/communication');
       }
     } catch (error) {
       console.error("Error handling notification click:", error);
