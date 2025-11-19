@@ -1007,6 +1007,57 @@ export type Database = {
         }
         Relationships: []
       }
+      oil_dispensary_data: {
+        Row: {
+          bench_id: string | null
+          capacity: number | null
+          created_at: string | null
+          current_level: number | null
+          id: string
+          notes: string | null
+          oil_type: string | null
+          processed: boolean | null
+          raw_payload: Json
+          received_at: string | null
+          source_ip: string | null
+          timestamp: string | null
+          unit: string | null
+          user_id: string | null
+        }
+        Insert: {
+          bench_id?: string | null
+          capacity?: number | null
+          created_at?: string | null
+          current_level?: number | null
+          id?: string
+          notes?: string | null
+          oil_type?: string | null
+          processed?: boolean | null
+          raw_payload: Json
+          received_at?: string | null
+          source_ip?: string | null
+          timestamp?: string | null
+          unit?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          bench_id?: string | null
+          capacity?: number | null
+          created_at?: string | null
+          current_level?: number | null
+          id?: string
+          notes?: string | null
+          oil_type?: string | null
+          processed?: boolean | null
+          raw_payload?: Json
+          received_at?: string | null
+          source_ip?: string | null
+          timestamp?: string | null
+          unit?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       processed_emails: {
         Row: {
           booking_created: boolean
