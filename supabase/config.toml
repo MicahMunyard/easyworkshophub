@@ -100,3 +100,6 @@ verify_jwt = true
 
 [functions.approve-account]
 verify_jwt = false
+
+[functions.oil-dispensary-webhook]
+verify_jwt = false
