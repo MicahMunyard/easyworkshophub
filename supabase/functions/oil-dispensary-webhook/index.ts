@@ -32,6 +32,33 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Validate webhook secret from header
+    const webhookSecret = req.headers.get('x-webhook-secret');
+    const expectedSecret = Deno.env.get('OIL_DISPENSARY_WEBHOOK_SECRET');
+
+    if (!webhookSecret || webhookSecret !== expectedSecret) {
+      const sourceIp = req.headers.get('x-forwarded-for') || 
+                       req.headers.get('x-real-ip') || 
+                       'unknown';
+      
+      console.warn('Unauthorized webhook attempt:', {
+        sourceIp,
+        hasSecret: !!webhookSecret,
+        timestamp: new Date().toISOString()
+      });
+      
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Unauthorized. Invalid or missing webhook secret.' 
+        }),
+        { 
+          status: 401, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
     // Get request metadata
     const sourceIp = req.headers.get('x-forwarded-for') || 
                      req.headers.get('x-real-ip') || 
@@ -41,7 +68,7 @@ Deno.serve(async (req) => {
     // Parse request body
     const payload: OilDispensaryPayload = await req.json();
 
-    console.log('Oil dispensary webhook received:', {
+    console.log('Oil dispensary webhook received (authenticated):', {
       sourceIp,
       userAgent,
       payloadKeys: Object.keys(payload),
