@@ -2,12 +2,16 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 import { corsHeaders } from '../_shared/cors.ts';
 
 interface OilDispensaryPayload {
-  bench_id?: string;
-  oil_type?: string;
-  current_level?: number;
-  capacity?: number;
-  unit?: string;
-  timestamp?: string;
+  level?: number;
+  device?: {
+    label?: string;
+    reference?: string;
+  };
+  sensor?: {
+    label?: string;
+    number?: number;
+  };
+  createdOn?: string;
   [key: string]: any; // Allow additional fields
 }
 
@@ -80,25 +84,26 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Extract common fields if they exist
-    const {
-      bench_id,
-      oil_type,
-      current_level,
-      capacity,
-      unit,
-      timestamp,
-      ...rest
-    } = payload;
+    // Extract fields from nested structure
+    const currentLevel = payload.level;
+    const benchId = payload.device?.label || payload.device?.reference;
+    const oilType = payload.sensor?.label;
+    const sensorNumber = payload.sensor?.number;
+    const timestamp = payload.createdOn;
+
+    // Build a descriptive oil_type that includes sensor number if available
+    const fullOilType = sensorNumber 
+      ? `${oilType} (Sensor ${sensorNumber})`
+      : oilType;
 
     // Prepare data for insertion
     const insertData = {
-      bench_id: bench_id || null,
+      bench_id: benchId || null,
       raw_payload: payload,
-      oil_type: oil_type || null,
-      current_level: current_level !== undefined ? current_level : null,
-      capacity: capacity !== undefined ? capacity : null,
-      unit: unit || null,
+      oil_type: fullOilType || null,
+      current_level: currentLevel !== undefined ? currentLevel : null,
+      capacity: null, // Not provided in payload
+      unit: 'liters', // Default unit
       timestamp: timestamp ? new Date(timestamp).toISOString() : null,
       source_ip: sourceIp,
       user_id: null, // Will be mapped later when we know which user owns this bench
@@ -120,6 +125,9 @@ Deno.serve(async (req) => {
     console.log('Oil dispensary data stored successfully:', {
       recordId: data.id,
       bench_id: data.bench_id,
+      oil_type: data.oil_type,
+      current_level: data.current_level,
+      sensor_number: sensorNumber,
       receivedAt: data.received_at
     });
 
@@ -130,8 +138,9 @@ Deno.serve(async (req) => {
         message: 'Oil dispensary data received and stored',
         recordId: data.id,
         receivedAt: data.received_at,
-        fieldsDetected: Object.keys(payload),
-        bench_id: bench_id || 'not provided'
+        bench_id: benchId || 'not provided',
+        oil_type: fullOilType || 'not provided',
+        current_level: currentLevel
       }),
       {
         status: 200,
