@@ -25,7 +25,7 @@ const OilBenchConfig: React.FC = () => {
           .from("profiles")
           .select("oil_bench_id")
           .eq("user_id", user.id)
-          .single();
+          .maybeSingle();
 
         if (error) throw error;
 
@@ -40,7 +40,7 @@ const OilBenchConfig: React.FC = () => {
             .eq("bench_id", data.oil_bench_id)
             .order("timestamp", { ascending: false })
             .limit(1)
-            .single();
+            .maybeSingle();
 
           if (oilData?.timestamp) {
             setLastDataReceived(new Date(oilData.timestamp));
@@ -70,7 +70,7 @@ const OilBenchConfig: React.FC = () => {
         .select("bench_id")
         .eq("bench_id", benchId.trim())
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (checkError && checkError.code !== "PGRST116") {
         throw new Error("Error validating bench ID");
