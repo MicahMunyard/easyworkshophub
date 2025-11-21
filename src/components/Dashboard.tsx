@@ -20,6 +20,7 @@ import ImportantAlerts from "./dashboard/ImportantAlerts";
 import RecentActivities from "./dashboard/RecentActivities";
 import InventoryAlerts from "./dashboard/InventoryAlerts";
 import LowStockBulkWidget from "./dashboard/LowStockBulkWidget";
+import OilDispensaryWidget from "./dashboard/OilDispensaryWidget";
 
 // Sample video data
 const DASHBOARD_VIDEOS = [
@@ -134,6 +135,8 @@ const Dashboard: React.FC = () => {
         <InventoryAlerts user={user} />
         <LowStockBulkWidget />
       </div>
+
+      <OilDispensaryWidget />
     </div>
   );
 };

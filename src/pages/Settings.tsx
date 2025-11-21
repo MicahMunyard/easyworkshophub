@@ -17,6 +17,7 @@ import NotificationSettings from '@/components/settings/NotificationSettings';
 import { EzyPartsSettings } from '@/components/settings/EzyPartsSettings';
 import { SystemSettings } from '@/components/settings/SystemSettings';
 import { useAdminCheck } from '@/hooks/useAdminCheck';
+import OilBenchConfig from '@/components/settings/OilBenchConfig';
 
 const passwordSchema = z.object({
   currentPassword: z.string().min(6, { message: 'Password must be at least 6 characters' }),
@@ -139,6 +140,7 @@ const Settings: React.FC = () => {
           <TabsTrigger value="account">Account</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="security">Security</TabsTrigger>
+          <TabsTrigger value="oil-bench">Oil Bench</TabsTrigger>
           {isAdmin && <TabsTrigger value="system">System</TabsTrigger>}
         </TabsList>
         
@@ -271,6 +273,10 @@ const Settings: React.FC = () => {
                 </form>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="oil-bench">
+            <OilBenchConfig />
           </TabsContent>
 
           {isAdmin && (

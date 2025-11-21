@@ -122,6 +122,22 @@ Deno.serve(async (req) => {
       throw error;
     }
 
+    // Try to link this data to a user based on bench_id
+    if (benchId) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('user_id')
+        .eq('oil_bench_id', benchId)
+        .single();
+      
+      if (profile?.user_id) {
+        await supabase
+          .from('oil_dispensary_data')
+          .update({ user_id: profile.user_id, processed: true })
+          .eq('id', data.id);
+      }
+    }
+
     console.log('Oil dispensary data stored successfully:', {
       recordId: data.id,
       bench_id: data.bench_id,
