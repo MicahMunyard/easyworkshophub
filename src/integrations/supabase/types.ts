@@ -1110,6 +1110,7 @@ export type Database = {
           email_reply_to: string | null
           full_name: string | null
           id: number
+          oil_bench_id: string | null
           onboarding_completed: boolean | null
           onboarding_data: Json | null
           onboarding_step: number | null
@@ -1134,6 +1135,7 @@ export type Database = {
           email_reply_to?: string | null
           full_name?: string | null
           id?: never
+          oil_bench_id?: string | null
           onboarding_completed?: boolean | null
           onboarding_data?: Json | null
           onboarding_step?: number | null
@@ -1158,6 +1160,7 @@ export type Database = {
           email_reply_to?: string | null
           full_name?: string | null
           id?: never
+          oil_bench_id?: string | null
           onboarding_completed?: boolean | null
           onboarding_data?: Json | null
           onboarding_step?: number | null
