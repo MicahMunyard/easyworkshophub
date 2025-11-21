@@ -79,7 +79,7 @@ export const useOilDispensaryData = (): OilDispensaryData => {
           .eq("user_id", user.id)
           .eq("bench_id", profile.oil_bench_id)
           .order("timestamp", { ascending: false })
-          .limit(10);
+          .limit(3);
 
         if (oilError) throw oilError;
 
