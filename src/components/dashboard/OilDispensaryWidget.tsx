@@ -1,5 +1,6 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { useOilDispensaryData } from "@/hooks/dashboard/useOilDispensaryData";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Loader2, Droplet, Clock } from "lucide-react";
@@ -19,7 +20,7 @@ const OilDispensaryWidget: React.FC = () => {
     );
   }
 
-  if (error || !benchId) {
+  if (error) {
     return (
       <Card>
         <CardHeader>
@@ -30,7 +31,31 @@ const OilDispensaryWidget: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="text-center py-8 text-muted-foreground">
-            <p>{error || "Configure your bench ID in settings to view oil levels"}</p>
+            <p className="text-red-500">{error}</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!benchId) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Droplet className="h-5 w-5" />
+            Oil Dispensary Monitor
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 space-y-4">
+            <p className="text-muted-foreground">Configure your bench ID in settings to view oil levels</p>
+            <Button 
+              variant="outline" 
+              onClick={() => window.location.href = '/settings?tab=oil-bench'}
+            >
+              Go to Settings
+            </Button>
           </div>
         </CardContent>
       </Card>
