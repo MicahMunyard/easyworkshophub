@@ -1,14 +1,54 @@
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useOilDispensaryData } from "@/hooks/dashboard/useOilDispensaryData";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { Loader2, Droplet, Clock } from "lucide-react";
+import { Loader2, Droplet, Clock, Unplug } from "lucide-react";
 import benchImage from "@/assets/oil-bench.png";
 import { formatDistanceToNow } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const OilDispensaryWidget: React.FC = () => {
   const { benchId, sensors, isLoading, error, lastUpdated } = useOilDispensaryData();
+  const [showDisconnectDialog, setShowDisconnectDialog] = useState(false);
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
+  const queryClient = useQueryClient();
+
+  const handleDisconnect = async () => {
+    setIsDisconnecting(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { error } = await supabase
+        .from("profiles")
+        .update({ oil_bench_id: null })
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+
+      toast.success("Oil bench disconnected successfully");
+      queryClient.invalidateQueries({ queryKey: ["oil-dispensary-data"] });
+      setShowDisconnectDialog(false);
+    } catch (error) {
+      console.error("Error disconnecting bench:", error);
+      toast.error("Failed to disconnect oil bench");
+    } finally {
+      setIsDisconnecting(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -162,12 +202,21 @@ const OilDispensaryWidget: React.FC = () => {
             </div>
 
             {/* Bench Image - Center */}
-            <div className="order-2 flex justify-center">
+            <div className="order-2 flex flex-col items-center gap-4">
               <img
                 src={benchImage}
                 alt="Oil Dispensary Bench"
                 className="max-w-full h-auto max-h-96 object-contain drop-shadow-2xl"
               />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowDisconnectDialog(true)}
+                className="flex items-center gap-2 text-muted-foreground hover:text-destructive hover:border-destructive"
+              >
+                <Unplug className="h-4 w-4" />
+                Disconnect Bench
+              </Button>
             </div>
 
             {/* Sensor 2 - Right */}
@@ -181,6 +230,34 @@ const OilDispensaryWidget: React.FC = () => {
           </div>
         </div>
       </CardContent>
+
+      <AlertDialog open={showDisconnectDialog} onOpenChange={setShowDisconnectDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Disconnect Oil Bench?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will unlink bench ID "{benchId}" from your account. You can reconnect it later from settings.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDisconnect}
+              disabled={isDisconnecting}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {isDisconnecting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Disconnecting...
+                </>
+              ) : (
+                "Disconnect"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 };
