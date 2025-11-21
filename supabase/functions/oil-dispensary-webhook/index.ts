@@ -123,18 +123,27 @@ Deno.serve(async (req) => {
     }
 
     // Try to link this data to a user based on bench_id
-    if (benchId) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('user_id')
-        .eq('oil_bench_id', benchId)
-        .single();
-      
-      if (profile?.user_id) {
-        await supabase
-          .from('oil_dispensary_data')
-          .update({ user_id: profile.user_id, processed: true })
-          .eq('id', data.id);
+    if (benchId && data?.id) {
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('user_id')
+          .eq('oil_bench_id', benchId)
+          .maybeSingle();
+        
+        if (profile?.user_id) {
+          await supabase
+            .from('oil_dispensary_data')
+            .update({ user_id: profile.user_id, processed: true })
+            .eq('id', data.id);
+          
+          console.log('Linked data to user:', profile.user_id);
+        } else {
+          console.log('No user found with bench_id:', benchId);
+        }
+      } catch (linkError) {
+        console.error('Error linking to user:', linkError);
+        // Don't fail the request if linking fails
       }
     }
 

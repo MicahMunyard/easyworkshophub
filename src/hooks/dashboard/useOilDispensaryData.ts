@@ -49,16 +49,25 @@ export const useOilDispensaryData = (): OilDispensaryData => {
           .from("profiles")
           .select("oil_bench_id")
           .eq("user_id", user.id)
-          .single();
+          .maybeSingle();
 
-        if (profileError) throw profileError;
-
-        if (!profile?.oil_bench_id) {
+        if (profileError) {
+          console.error("Error fetching profile:", profileError);
           setData(prev => ({ 
             ...prev, 
             isLoading: false, 
             benchId: null,
-            error: "No bench configured" 
+            error: "Error loading profile. Please try refreshing the page." 
+          }));
+          return;
+        }
+
+        if (!profile || !profile.oil_bench_id) {
+          setData(prev => ({ 
+            ...prev, 
+            isLoading: false, 
+            benchId: null,
+            error: null
           }));
           return;
         }
