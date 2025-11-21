@@ -78,36 +78,39 @@ const OilDispensaryWidget: React.FC = () => {
     };
 
     return (
-      <div className={`flex flex-col ${position === "top" ? "items-center mb-4" : ""}`}>
-        <div className="text-sm font-medium mb-2">{sensor.oil_type}</div>
-        <div className={`${position === "top" ? "w-48" : "w-full"} h-32`}>
+      <div className={`flex flex-col ${position === "top" ? "items-center mb-6" : ""}`}>
+        <div className="text-lg font-semibold mb-3">{sensor.oil_type}</div>
+        <div className={`${position === "top" ? "w-64" : "w-full"} h-64`}>
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={graphData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
               <XAxis dataKey="name" hide />
               <YAxis domain={[0, sensor.capacity]} hide />
               <Tooltip
                 contentStyle={{
                   backgroundColor: "hsl(var(--background))",
                   border: "1px solid hsl(var(--border))",
-                  borderRadius: "6px",
+                  borderRadius: "8px",
+                  padding: "12px",
                 }}
+                labelStyle={{ fontSize: "14px", fontWeight: "600" }}
               />
               <Area
                 type="monotone"
                 dataKey="value"
                 stroke={getColor()}
                 fill={getColor()}
-                fillOpacity={0.6}
+                fillOpacity={0.7}
+                strokeWidth={3}
               />
             </AreaChart>
           </ResponsiveContainer>
         </div>
-        <div className="text-center mt-2 space-y-1">
-          <div className="text-lg font-bold" style={{ color: getColor() }}>
+        <div className="text-center mt-4 space-y-2">
+          <div className="text-3xl font-bold" style={{ color: getColor() }}>
             {sensor.percentage}%
           </div>
-          <div className="text-xs text-muted-foreground">
+          <div className="text-sm text-muted-foreground font-medium">
             {sensor.current_level.toFixed(1)}L / {sensor.capacity}L
           </div>
         </div>
@@ -116,38 +119,45 @@ const OilDispensaryWidget: React.FC = () => {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Droplet className="h-5 w-5" />
-            Oil Dispensary - {benchId}
+    <Card className="min-h-[700px] shadow-lg border-2">
+      <CardHeader className="pb-8">
+        <CardTitle className="flex items-center justify-between text-2xl">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Droplet className="h-7 w-7 text-primary" />
+            </div>
+            <div>
+              <div>Oil Dispensary Monitor</div>
+              <div className="text-sm font-normal text-muted-foreground mt-1">
+                Bench ID: {benchId}
+              </div>
+            </div>
           </div>
           {lastUpdated && (
-            <div className="flex items-center gap-1 text-sm font-normal text-muted-foreground">
-              <Clock className="h-4 w-4" />
-              {formatDistanceToNow(lastUpdated, { addSuffix: true })}
+            <div className="flex items-center gap-2 text-base font-normal text-muted-foreground">
+              <Clock className="h-5 w-5" />
+              Updated {formatDistanceToNow(lastUpdated, { addSuffix: true })}
             </div>
           )}
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-6">
+      <CardContent className="pb-8">
+        <div className="space-y-10">
           {/* Sensor 3 - Top Center */}
           {sensors.sensor3 && (
-            <div className="flex justify-center">
+            <div className="flex justify-center pt-4">
               {renderSensorGraph(sensors.sensor3, "top")}
             </div>
           )}
 
           {/* Main Layout: Sensor 1 - Bench Image - Sensor 2 */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center px-4">
             {/* Sensor 1 - Left */}
             <div className="order-1">
               {sensors.sensor1 ? (
                 renderSensorGraph(sensors.sensor1, "left")
               ) : (
-                <div className="text-center text-muted-foreground text-sm">No data</div>
+                <div className="text-center text-muted-foreground">No data available</div>
               )}
             </div>
 
@@ -156,7 +166,7 @@ const OilDispensaryWidget: React.FC = () => {
               <img
                 src={benchImage}
                 alt="Oil Dispensary Bench"
-                className="max-w-full h-auto max-h-48 object-contain"
+                className="max-w-full h-auto max-h-96 object-contain drop-shadow-2xl"
               />
             </div>
 
@@ -165,7 +175,7 @@ const OilDispensaryWidget: React.FC = () => {
               {sensors.sensor2 ? (
                 renderSensorGraph(sensors.sensor2, "right")
               ) : (
-                <div className="text-center text-muted-foreground text-sm">No data</div>
+                <div className="text-center text-muted-foreground">No data available</div>
               )}
             </div>
           </div>

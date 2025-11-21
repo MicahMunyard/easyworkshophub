@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { ResizablePanel, ResizablePanelGroup, ResizableHandle } from "@/components/ui/resizable";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useAuth } from "@/contexts/AuthContext";
+import { useOilDispensaryData } from "@/hooks/dashboard/useOilDispensaryData";
 
 // Import dashboard components
 import StatsGrid from "./dashboard/StatsGrid";
@@ -50,6 +51,7 @@ const Dashboard: React.FC = () => {
     isLoading,
     formattedAppointments
   } = useDashboardData();
+  const { benchId } = useOilDispensaryData();
 
   return (
     <div className="w-full space-y-4 md:space-y-6">
@@ -98,6 +100,13 @@ const Dashboard: React.FC = () => {
         lowStockItems={lowStockItems}
       />
 
+      {/* Oil Dispensary Widget - Featured prominently if configured */}
+      {benchId && (
+        <div className="w-full">
+          <OilDispensaryWidget />
+        </div>
+      )}
+
       <ResizablePanelGroup direction="horizontal" className="min-h-[600px] rounded-lg border">
         <ResizablePanel defaultSize={65}>
           <ResizablePanelGroup direction="vertical">
@@ -135,8 +144,6 @@ const Dashboard: React.FC = () => {
         <InventoryAlerts user={user} />
         <LowStockBulkWidget />
       </div>
-
-      <OilDispensaryWidget />
     </div>
   );
 };
