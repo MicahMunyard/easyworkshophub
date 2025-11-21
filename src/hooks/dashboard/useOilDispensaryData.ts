@@ -147,6 +147,11 @@ export const useOilDispensaryData = (): OilDispensaryData => {
 
     fetchData();
 
+    // Set up periodic polling (every 30 seconds)
+    const pollInterval = setInterval(() => {
+      fetchData();
+    }, 30000); // 30 seconds
+
     // Set up real-time subscription
     const channel = supabase
       .channel("oil-dispensary-updates")
@@ -165,6 +170,7 @@ export const useOilDispensaryData = (): OilDispensaryData => {
       .subscribe();
 
     return () => {
+      clearInterval(pollInterval);
       supabase.removeChannel(channel);
     };
   }, [user]);

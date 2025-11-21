@@ -82,11 +82,33 @@ const OilBenchConfig: React.FC = () => {
         return;
       }
 
-      // Update profile with bench_id
-      const { error: updateError } = await supabase
+      // Check if profile exists
+      const { data: existingProfile } = await supabase
         .from("profiles")
-        .update({ oil_bench_id: benchId.trim() })
-        .eq("user_id", user.id);
+        .select("id, user_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      let updateError;
+      if (existingProfile) {
+        // Update existing profile
+        const result = await supabase
+          .from("profiles")
+          .update({ oil_bench_id: benchId.trim() })
+          .eq("user_id", user.id);
+        updateError = result.error;
+      } else {
+        // Insert new profile
+        const result = await supabase
+          .from("profiles")
+          .insert({ 
+            user_id: user.id, 
+            oil_bench_id: benchId.trim(),
+            account_status: 'approved',
+            onboarding_completed: true
+          });
+        updateError = result.error;
+      }
 
       if (updateError) throw updateError;
 
