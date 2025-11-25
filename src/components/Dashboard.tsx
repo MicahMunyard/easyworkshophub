@@ -125,7 +125,13 @@ const Dashboard: React.FC = () => {
             <ResizableHandle withHandle />
             <ResizablePanel defaultSize={40}>
               <div className="flex h-full items-center justify-center p-4">
-                <WorkshopStats />
+                <TierGate 
+                  featureKey="reports" 
+                  fallback="blur"
+                  upgradeMessage="Upgrade to Full Access to view workshop performance statistics"
+                >
+                  <WorkshopStats />
+                </TierGate>
               </div>
             </ResizablePanel>
           </ResizablePanelGroup>

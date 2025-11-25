@@ -39,12 +39,12 @@ const NavTabs: React.FC<NavTabsProps> = ({
               <Tooltip key={section.name}>
                 <TooltipTrigger asChild>
                   <button
-                    disabled
+                    onClick={() => onTabChange(section.name.toLowerCase())}
                     className={cn(
-                      "text-white/50 relative transition-all duration-300 cursor-not-allowed flex items-center gap-2",
-                      isMobile && "px-2 py-3 text-left rounded-md",
-                      isSidebar && "px-4 py-3 text-left rounded-md group",
-                      isTopNav && "px-3 py-1 text-sm font-medium"
+                      "text-white/60 relative transition-all duration-300 flex items-center gap-2",
+                      isMobile && "px-2 py-3 text-left rounded-md hover:bg-white/5",
+                      isSidebar && "px-4 py-3 text-left rounded-md group hover:bg-white/5",
+                      isTopNav && "px-3 py-1 text-sm font-medium hover:text-white/70"
                     )}
                   >
                     <span>{section.name}</span>
@@ -52,7 +52,7 @@ const NavTabs: React.FC<NavTabsProps> = ({
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Upgrade to Full Access to unlock</p>
+                  <p>Preview available (Upgrade to unlock)</p>
                 </TooltipContent>
               </Tooltip>
             );
