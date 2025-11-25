@@ -50,14 +50,19 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
             return (
               <Tooltip key={item.name}>
                 <TooltipTrigger asChild>
-                  <div className="nav-item opacity-60 cursor-not-allowed group">
+                  <NavLink
+                    to={item.path}
+                    className={({ isActive }) => 
+                      `nav-item opacity-70 group ${isActive ? "active" : ""}`
+                    }
+                  >
                     {iconMap[item.icon]}
                     <span className="text-muted-foreground">{item.name}</span>
                     <Lock className="h-4 w-4 ml-auto text-muted-foreground" />
-                  </div>
+                  </NavLink>
                 </TooltipTrigger>
                 <TooltipContent side="right">
-                  <p>Upgrade to Full Access to unlock</p>
+                  <p>Click to preview this feature (Full Access required)</p>
                 </TooltipContent>
               </Tooltip>
             );

@@ -1,27 +1,25 @@
-import React, { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
+import React from "react";
 import { useTierAccess } from "@/hooks/useTierAccess";
-import { UpgradePrompt } from "./UpgradePrompt";
+import { LockedPageView } from "./LockedPageView";
 
 interface TierRouteProps {
   featureKey: string;
   children: React.ReactNode;
-  fallback?: 'redirect' | 'upgrade-prompt';
+  pageTitle?: string;
+  pageDescription?: string;
+  pageFeatures?: string[];
+  pageIcon?: React.ReactNode;
 }
 
 export const TierRoute: React.FC<TierRouteProps> = ({ 
   featureKey, 
-  children, 
-  fallback = 'redirect' 
+  children,
+  pageTitle = "Premium Feature",
+  pageDescription = "This feature requires Full Access",
+  pageFeatures = [],
+  pageIcon
 }) => {
   const { hasAccess, isLoading } = useTierAccess(featureKey);
-  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
-
-  useEffect(() => {
-    if (!isLoading && !hasAccess && fallback === 'upgrade-prompt') {
-      setShowUpgradePrompt(true);
-    }
-  }, [isLoading, hasAccess, fallback]);
 
   if (isLoading) {
     return (
@@ -32,20 +30,17 @@ export const TierRoute: React.FC<TierRouteProps> = ({
   }
 
   if (!hasAccess) {
-    if (fallback === 'upgrade-prompt') {
-      return (
-        <>
-          <Navigate to="/" replace />
-          <UpgradePrompt 
-            open={showUpgradePrompt} 
-            onOpenChange={setShowUpgradePrompt}
-            featureKey={featureKey}
-          />
-        </>
-      );
-    }
-    
-    return <Navigate to="/" replace />;
+    return (
+      <LockedPageView
+        featureKey={featureKey}
+        title={pageTitle}
+        description={pageDescription}
+        features={pageFeatures}
+        icon={pageIcon}
+      >
+        {children}
+      </LockedPageView>
+    );
   }
 
   return <>{children}</>;
