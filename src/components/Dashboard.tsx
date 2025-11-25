@@ -146,17 +146,23 @@ const Dashboard: React.FC = () => {
 
       <div className="grid gap-4 md:grid-cols-12">
         <TierGate featureKey="reports" fallback="blur">
-          <RecentActivities 
-            user={user}
-            isLoading={isLoading}
-            appointments={appointments}
-          />
+          <div className="md:col-span-5">
+            <RecentActivities 
+              user={user}
+              isLoading={isLoading}
+              appointments={appointments}
+            />
+          </div>
         </TierGate>
         <TierGate featureKey="inventory" fallback="blur">
-          <InventoryAlerts user={user} />
+          <div className="md:col-span-3">
+            <InventoryAlerts user={user} />
+          </div>
         </TierGate>
         <TierGate featureKey="inventory" fallback="blur">
-          <LowStockBulkWidget />
+          <div className="md:col-span-4">
+            <LowStockBulkWidget />
+          </div>
         </TierGate>
       </div>
     </div>
