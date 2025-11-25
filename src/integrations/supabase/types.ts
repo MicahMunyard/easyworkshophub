@@ -1115,6 +1115,11 @@ export type Database = {
           onboarding_data: Json | null
           onboarding_step: number | null
           phone_number: string | null
+          subscription_tier:
+            | Database["public"]["Enums"]["subscription_tier"]
+            | null
+          tier_updated_at: string | null
+          tier_updated_by: string | null
           updated_at: string | null
           user_id: string | null
           username: string | null
@@ -1140,6 +1145,11 @@ export type Database = {
           onboarding_data?: Json | null
           onboarding_step?: number | null
           phone_number?: string | null
+          subscription_tier?:
+            | Database["public"]["Enums"]["subscription_tier"]
+            | null
+          tier_updated_at?: string | null
+          tier_updated_by?: string | null
           updated_at?: string | null
           user_id?: string | null
           username?: string | null
@@ -1165,6 +1175,11 @@ export type Database = {
           onboarding_data?: Json | null
           onboarding_step?: number | null
           phone_number?: string | null
+          subscription_tier?:
+            | Database["public"]["Enums"]["subscription_tier"]
+            | null
+          tier_updated_at?: string | null
+          tier_updated_by?: string | null
           updated_at?: string | null
           user_id?: string | null
           username?: string | null
@@ -1484,6 +1499,33 @@ export type Database = {
           name?: string
           specialty?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      tier_features: {
+        Row: {
+          created_at: string | null
+          enabled: boolean | null
+          feature_key: string
+          feature_name: string
+          id: string
+          tier: Database["public"]["Enums"]["subscription_tier"]
+        }
+        Insert: {
+          created_at?: string | null
+          enabled?: boolean | null
+          feature_key: string
+          feature_name: string
+          id?: string
+          tier: Database["public"]["Enums"]["subscription_tier"]
+        }
+        Update: {
+          created_at?: string | null
+          enabled?: boolean | null
+          feature_key?: string
+          feature_name?: string
+          id?: string
+          tier?: Database["public"]["Enums"]["subscription_tier"]
         }
         Relationships: []
       }
@@ -2630,7 +2672,24 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      user_tier_overview: {
+        Row: {
+          account_status: string | null
+          created_at: string | null
+          full_name: string | null
+          onboarding_completed: boolean | null
+          subscription_tier:
+            | Database["public"]["Enums"]["subscription_tier"]
+            | null
+          tier_updated_at: string | null
+          tier_updated_by: string | null
+          tier_updated_by_name: string | null
+          user_id: string | null
+          username: string | null
+          workshop_name: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       add_technician_login: {
@@ -2691,6 +2750,10 @@ export type Database = {
           user_id: string
         }[]
       }
+      has_feature_access: {
+        Args: { _feature_key: string; _user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -2743,6 +2806,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
+      subscription_tier: "tier1" | "tier2"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2871,6 +2935,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
+      subscription_tier: ["tier1", "tier2"],
     },
   },
 } as const

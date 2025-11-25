@@ -11,6 +11,7 @@ import { ResizablePanel, ResizablePanelGroup, ResizableHandle } from "@/componen
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOilDispensaryData } from "@/hooks/dashboard/useOilDispensaryData";
+import { TierGate } from "./tier/TierGate";
 
 // Import dashboard components
 import StatsGrid from "./dashboard/StatsGrid";
@@ -83,12 +84,14 @@ const Dashboard: React.FC = () => {
           <Button variant="outline" className="h-9">
             <Clock className="h-4 w-4 mr-2" /> Last 30 days
           </Button>
-          <Button 
-            className="h-9 bg-workshop-red hover:bg-workshop-red/90"
-            onClick={() => navigate("/reports")}
-          >
-            <TrendingUp className="h-4 w-4 mr-2" /> View Reports
-          </Button>
+          <TierGate featureKey="reports" fallback="hide">
+            <Button 
+              className="h-9 bg-workshop-red hover:bg-workshop-red/90"
+              onClick={() => navigate("/reports")}
+            >
+              <TrendingUp className="h-4 w-4 mr-2" /> View Reports
+            </Button>
+          </TierGate>
         </div>
       </div>
 
@@ -136,13 +139,19 @@ const Dashboard: React.FC = () => {
       </ResizablePanelGroup>
 
       <div className="grid gap-4 md:grid-cols-12">
-        <RecentActivities 
-          user={user}
-          isLoading={isLoading}
-          appointments={appointments}
-        />
-        <InventoryAlerts user={user} />
-        <LowStockBulkWidget />
+        <TierGate featureKey="reports" fallback="blur">
+          <RecentActivities 
+            user={user}
+            isLoading={isLoading}
+            appointments={appointments}
+          />
+        </TierGate>
+        <TierGate featureKey="inventory" fallback="blur">
+          <InventoryAlerts user={user} />
+        </TierGate>
+        <TierGate featureKey="inventory" fallback="blur">
+          <LowStockBulkWidget />
+        </TierGate>
       </div>
     </div>
   );
