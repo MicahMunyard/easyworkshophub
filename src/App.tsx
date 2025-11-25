@@ -8,7 +8,9 @@ import {
 } from "react-router-dom";
 import Layout from "./components/Layout";
 import { useAuth } from "./contexts/AuthContext";
+import { TierProvider } from "./contexts/TierContext";
 import ProtectedRoute from "./components/ProtectedRoute";
+import { TierRoute } from "./components/tier/TierRoute";
 import Auth from "./pages/Auth";
 import Jobs from "./pages/Jobs";
 import Invoicing from "./pages/Invoicing";
@@ -44,7 +46,7 @@ const App = () => {
   const { user } = useAuth();
   
   return (
-    <>
+    <TierProvider>
       {user && <AIChatWidget chatType="general_help" title="WorkshopBase Help" />}
       <Routes>
         {/* Auth Routes - should be accessible without authentication */}
@@ -64,30 +66,33 @@ const App = () => {
 
         {/* App Routes with Layout - Protected by Onboarding */}
         <Route element={<OnboardingRoute><Layout><Outlet /></Layout></OnboardingRoute>}>
-          {/* Main Pages */}
+          {/* Main Pages - Tier 1 features (no tier restriction) */}
           <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
           <Route path="/booking-diary" element={<ProtectedRoute><BookingDiary /></ProtectedRoute>} />
           <Route path="/jobs" element={<ProtectedRoute><Jobs /></ProtectedRoute>} />
-          <Route path="/invoicing" element={<ProtectedRoute><Invoicing /></ProtectedRoute>} />
-          <Route path="/email-integration" element={<ProtectedRoute><EmailIntegration /></ProtectedRoute>} />
-          <Route path="/communication" element={<ProtectedRoute><Communication /></ProtectedRoute>} />
-          <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
           <Route path="/customers" element={<ProtectedRoute><Customers /></ProtectedRoute>} />
-          <Route path="/marketing" element={<ProtectedRoute><Marketing /></ProtectedRoute>} />
-          <Route path="/email-marketing" element={<ProtectedRoute><EmailMarketing /></ProtectedRoute>} />
-          <Route path="/reviews" element={<ProtectedRoute><Reviews /></ProtectedRoute>} />
-          <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
-          <Route path="/timesheets" element={<ProtectedRoute><Timesheets /></ProtectedRoute>} />
-          <Route path="/timesheets/entries" element={<ProtectedRoute><Timesheets /></ProtectedRoute>} />
+          
+          {/* Tier 2 features - require tier check */}
+          <Route path="/invoicing" element={<ProtectedRoute><TierRoute featureKey="invoicing"><Invoicing /></TierRoute></ProtectedRoute>} />
+          <Route path="/email-integration" element={<ProtectedRoute><TierRoute featureKey="email"><EmailIntegration /></TierRoute></ProtectedRoute>} />
+          <Route path="/communication" element={<ProtectedRoute><TierRoute featureKey="communication"><Communication /></TierRoute></ProtectedRoute>} />
+          <Route path="/inventory" element={<ProtectedRoute><TierRoute featureKey="inventory"><Inventory /></TierRoute></ProtectedRoute>} />
+          <Route path="/marketing" element={<ProtectedRoute><TierRoute featureKey="marketing"><Marketing /></TierRoute></ProtectedRoute>} />
+          <Route path="/email-marketing" element={<ProtectedRoute><TierRoute featureKey="marketing"><EmailMarketing /></TierRoute></ProtectedRoute>} />
+          <Route path="/reviews" element={<ProtectedRoute><TierRoute featureKey="marketing"><Reviews /></TierRoute></ProtectedRoute>} />
+          <Route path="/reports" element={<ProtectedRoute><TierRoute featureKey="reports"><Reports /></TierRoute></ProtectedRoute>} />
+          <Route path="/timesheets" element={<ProtectedRoute><TierRoute featureKey="timesheets"><Timesheets /></TierRoute></ProtectedRoute>} />
+          <Route path="/timesheets/entries" element={<ProtectedRoute><TierRoute featureKey="timesheets"><Timesheets /></TierRoute></ProtectedRoute>} />
+          
           <Route path="/workshop" element={<ProtectedRoute><Workshop /></ProtectedRoute>} />
           <Route path="/workshop-setup" element={<ProtectedRoute><WorkshopSetup /></ProtectedRoute>} />
           <Route path="/technician-portal" element={<TechnicianPortal />} /> 
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
           <Route path="/help" element={<ProtectedRoute><div className="container py-8"><h1 className="text-3xl font-bold mb-4">Help & Support</h1><p>This page is under construction.</p></div></ProtectedRoute>} />
           
-          {/* EzyParts Routes */}
-          <Route path="/ezyparts" element={<ProtectedRoute><EzyPartsDashboard /></ProtectedRoute>} />
-          <Route path="/ezyparts/search" element={<ProtectedRoute><VehicleSearch /></ProtectedRoute>} />
+          {/* EzyParts Routes - Tier 2 */}
+          <Route path="/ezyparts" element={<ProtectedRoute><TierRoute featureKey="ezyparts"><EzyPartsDashboard /></TierRoute></ProtectedRoute>} />
+          <Route path="/ezyparts/search" element={<ProtectedRoute><TierRoute featureKey="ezyparts"><VehicleSearch /></TierRoute></ProtectedRoute>} />
           
           {/* Route for EmailDesignerPage */}
           <Route path="/email-designer/:mode/:id?" element={<EmailDesignerPage />} />
@@ -106,7 +111,7 @@ const App = () => {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
-    </>
+    </TierProvider>
   );
 };
 
